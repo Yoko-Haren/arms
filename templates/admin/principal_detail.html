@@ -1,0 +1,791 @@
+{% extends 'admin/base.html' %}
+{% load static %}
+
+{% block title %}Principal: {{ principal.full_name }}{% endblock %}
+{% block page_title %}{{ principal.full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ========== LAYOUT ========== */
+    .detail-layout {
+        display: grid;
+        grid-template-columns: 380px 1fr;
+        gap: 1.5rem;
+        align-items: start;
+    }
+    @media (max-width: 1024px) { .detail-layout { grid-template-columns: 1fr; } }
+
+    /* ========== PROFILE HEADER ========== */
+    .profile-header {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--gray-200);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+        position: relative;
+        overflow: hidden;
+    }
+    .profile-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 5px;
+        background: var(--primary-gradient);
+    }
+    .profile-header-left {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+    }
+    .profile-avatar {
+        width: 72px;
+        height: 72px;
+        border-radius: 20px;
+        background: var(--primary-gradient);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2rem;
+        font-weight: 800;
+        flex-shrink: 0;
+        box-shadow: 0 6px 24px rgba(18,52,153,0.35);
+    }
+    .profile-info h3 {
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: var(--gray-700);
+        margin: 0 0 0.3rem;
+        line-height: 1.2;
+    }
+    .profile-info .profile-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        font-size: 0.78rem;
+        color: var(--gray-500);
+    }
+    .profile-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    .profile-meta-item i { color: var(--primary); font-size: 0.75rem; width: 16px; text-align: center; }
+
+    .profile-header-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.5rem;
+    }
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.4rem 1rem;
+        border-radius: 20px;
+        font-size: 0.73rem;
+        font-weight: 600;
+    }
+    .status-pill.active-pill { background: var(--success-light); color: var(--success); }
+    .status-pill.inactive-pill { background: #f5f5f5; color: #9e9e9e; }
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+    .status-dot.dot-active { background: var(--success); }
+    .status-dot.dot-inactive { background: #bdbdbd; }
+
+    /* ========== SIDEBAR CARDS ========== */
+    .sidebar-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+    .info-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--gray-200);
+    }
+    .info-card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid var(--gray-100);
+    }
+    .info-card-header-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius-xs);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .info-card-header-icon.primary-icon { background: var(--primary-light); color: var(--primary); }
+    .info-card-header-icon.info-icon { background: var(--info-light); color: var(--info); }
+    .info-card-header-icon.warning-icon { background: var(--warning-light); color: var(--warning); }
+    .info-card-header h6 {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin: 0;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.55rem 0;
+        border-bottom: 1px solid var(--gray-100);
+        font-size: 0.78rem;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label {
+        color: var(--gray-500);
+        font-weight: 500;
+        flex-shrink: 0;
+    }
+    .info-value {
+        color: var(--gray-700);
+        font-weight: 600;
+        text-align: right;
+        word-break: break-word;
+        max-width: 55%;
+    }
+    .info-value code {
+        background: var(--gray-100);
+        padding: 0.15rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.72rem;
+        color: var(--primary);
+    }
+
+    .badge-role {
+        display: inline-block;
+        padding: 0.2rem 0.7rem;
+        border-radius: 20px;
+        font-size: 0.68rem;
+        font-weight: 600;
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+
+    .card-link-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        width: 100%;
+        padding: 0.6rem;
+        margin-top: 0.75rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-decoration: none;
+        border: 2px solid var(--primary);
+        color: var(--primary);
+        background: white;
+        transition: var(--transition);
+    }
+    .card-link-btn:hover {
+        background: var(--primary);
+        color: white;
+    }
+
+    /* ========== ACTION BUTTONS ========== */
+    .action-btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+    }
+    .btn-action {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.65rem 1rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: 2px solid transparent;
+        background: white;
+        transition: var(--transition);
+        font-family: inherit;
+    }
+    .btn-action.danger-btn {
+        border-color: var(--danger);
+        color: var(--danger);
+    }
+    .btn-action.danger-btn:hover {
+        background: var(--danger);
+        color: white;
+        box-shadow: 0 4px 15px rgba(198,40,40,0.25);
+    }
+    .btn-action.warning-btn {
+        border-color: var(--warning);
+        color: var(--warning);
+    }
+    .btn-action.warning-btn:hover {
+        background: var(--warning);
+        color: white;
+        box-shadow: 0 4px 15px rgba(230,81,0,0.25);
+    }
+
+    /* ========== TABS ========== */
+    .tab-nav {
+        display: flex;
+        gap: 0.25rem;
+        background: var(--gray-100);
+        padding: 0.35rem;
+        border-radius: var(--radius-md);
+        margin-bottom: 1.25rem;
+    }
+    .tab-btn {
+        flex: 1;
+        padding: 0.65rem 1rem;
+        border: none;
+        background: transparent;
+        border-radius: var(--radius-sm);
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--gray-500);
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        font-family: inherit;
+        white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--gray-700); }
+    .tab-btn.active-tab {
+        background: white;
+        color: var(--primary);
+        box-shadow: var(--shadow-sm);
+    }
+    .tab-count {
+        font-size: 0.65rem;
+        padding: 0.15rem 0.5rem;
+        border-radius: 20px;
+        background: var(--gray-200);
+        font-weight: 700;
+    }
+    .tab-btn.active-tab .tab-count {
+        background: var(--primary-light);
+    }
+
+    .tab-panel {
+        display: none;
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+    }
+    .tab-panel.active-panel { display: block; }
+
+    /* ========== LIST ITEMS ========== */
+    .list-item-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.85rem 1.25rem;
+        border-bottom: 1px solid var(--gray-100);
+        transition: var(--transition);
+    }
+    .list-item-row:last-child { border-bottom: none; }
+    .list-item-row:hover { background: var(--gray-50); }
+    .list-item-left { display: flex; flex-direction: column; gap: 0.15rem; }
+    .list-item-name { font-weight: 600; color: var(--gray-700); font-size: 0.8rem; }
+    .list-item-email { font-size: 0.7rem; color: var(--gray-500); }
+    .list-item-badge {
+        padding: 0.25rem 0.7rem;
+        border-radius: 20px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        background: var(--gray-100);
+        color: var(--gray-500);
+        white-space: nowrap;
+    }
+    .list-item-badge.info-badge { background: var(--info-light); color: var(--info); }
+
+    .more-hint {
+        text-align: center;
+        padding: 0.75rem;
+        font-size: 0.72rem;
+        color: var(--gray-500);
+        font-weight: 500;
+        background: var(--gray-50);
+    }
+
+    /* ========== EMPTY STATE ========== */
+    .empty-tab {
+        text-align: center;
+        padding: 3rem 1.5rem;
+    }
+    .empty-tab-icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: var(--gray-100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 1.8rem;
+        color: #bdbdbd;
+    }
+    .empty-tab h5 {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin-bottom: 0.3rem;
+    }
+    .empty-tab p {
+        font-size: 0.78rem;
+        color: var(--gray-500);
+        margin: 0;
+    }
+
+    /* ========== STATS MINI CARDS ========== */
+    .stats-mini-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        padding: 1.25rem;
+    }
+    @media (max-width: 480px) { .stats-mini-grid { grid-template-columns: 1fr; } }
+    .stat-mini-card {
+        background: var(--gray-50);
+        border-radius: var(--radius-md);
+        padding: 1.25rem 1rem;
+        text-align: center;
+        border: 1px solid var(--gray-200);
+        transition: var(--transition);
+    }
+    .stat-mini-card:hover {
+        box-shadow: var(--shadow-sm);
+        transform: translateY(-2px);
+    }
+    .stat-mini-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius-xs);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 0.5rem;
+        font-size: 1rem;
+    }
+    .stat-mini-icon.purple-icon { background: var(--purple-light); color: var(--purple); }
+    .stat-mini-icon.info-icon { background: var(--info-light); color: var(--info); }
+    .stat-mini-icon.success-icon { background: var(--success-light); color: var(--success); }
+    .stat-mini-value {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--gray-700);
+        line-height: 1.1;
+    }
+    .stat-mini-label {
+        font-size: 0.68rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+        margin-top: 0.2rem;
+    }
+
+    /* ========== MODAL ========== */
+    .modal-content {
+        border-radius: var(--radius-lg);
+        border: none;
+        box-shadow: var(--shadow-xl);
+    }
+    .modal-header {
+        border-bottom: 2px solid var(--gray-100);
+        padding: 1.25rem 1.5rem;
+    }
+    .modal-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--gray-700);
+    }
+    .modal-body { padding: 1.5rem; }
+    .modal-footer {
+        border-top: 1px solid var(--gray-100);
+        padding: 1rem 1.5rem;
+        gap: 0.5rem;
+    }
+    .form-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.35rem;
+    }
+    .form-control {
+        width: 100%;
+        padding: 0.6rem 0.75rem;
+        border: 2px solid var(--gray-300);
+        border-radius: var(--radius-sm);
+        font-size: 0.82rem;
+        font-family: inherit;
+        transition: var(--transition);
+    }
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(18,52,153,0.08);
+    }
+    .btn-modal-cancel {
+        padding: 0.55rem 1.25rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.78rem;
+        font-weight: 600;
+        border: 2px solid var(--gray-300);
+        background: white;
+        color: var(--gray-500);
+        cursor: pointer;
+        transition: var(--transition);
+        font-family: inherit;
+    }
+    .btn-modal-cancel:hover { background: var(--gray-50); }
+    .btn-modal-danger {
+        padding: 0.55rem 1.25rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.78rem;
+        font-weight: 600;
+        border: none;
+        background: var(--danger);
+        color: white;
+        cursor: pointer;
+        transition: var(--transition);
+        font-family: inherit;
+    }
+    .btn-modal-danger:hover {
+        background: #a11d1d;
+        box-shadow: 0 4px 15px rgba(198,40,40,0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- PROFILE HEADER -->
+<div class="profile-header">
+    <div class="profile-header-left">
+        <div class="profile-avatar">
+            {{ principal.full_name|slice:":1"|upper }}
+        </div>
+        <div class="profile-info">
+            <h3>{{ principal.full_name }}</h3>
+            <div class="profile-meta">
+                <span class="profile-meta-item">
+                    <i class="fas fa-envelope"></i> {{ principal.user.email }}
+                </span>
+                <span class="profile-meta-item">
+                    <i class="fas fa-building"></i> {{ principal.school_name|default:"No school assigned" }}
+                </span>
+            </div>
+        </div>
+    </div>
+    <div class="profile-header-right">
+        {% if principal.is_active %}
+            <span class="status-pill active-pill">
+                <span class="status-dot dot-active"></span> Active
+            </span>
+        {% else %}
+            <span class="status-pill inactive-pill">
+                <span class="status-dot dot-inactive"></span> Inactive
+            </span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="detail-layout">
+
+    <!-- LEFT SIDEBAR -->
+    <div class="sidebar-stack">
+        
+        <!-- Personal Information -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <div class="info-card-header-icon primary-icon">
+                    <i class="fas fa-id-card"></i>
+                </div>
+                <h6>Personal Information</h6>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Full Name</span>
+                <span class="info-value">{{ principal.full_name }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Username</span>
+                <span class="info-value">{{ principal.user.username }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Email</span>
+                <span class="info-value">{{ principal.user.email }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Role</span>
+                <span class="info-value"><span class="badge-role">{{ principal.get_role_display }}</span></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Employee ID</span>
+                <span class="info-value">{{ principal.employee_number|default:"Not set" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Designation</span>
+                <span class="info-value">{{ principal.designation|default:"—" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Status</span>
+                <span class="info-value">
+                    {% if principal.is_active %}
+                        <span class="status-pill active-pill" style="padding:0.2rem 0.7rem; font-size:0.68rem;">
+                            <span class="status-dot dot-active"></span> Active
+                        </span>
+                    {% else %}
+                        <span class="status-pill inactive-pill" style="padding:0.2rem 0.7rem; font-size:0.68rem;">
+                            <span class="status-dot dot-inactive"></span> Inactive
+                        </span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Created</span>
+                <span class="info-value">{{ principal.created_at|date:"F d, Y" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Last Login</span>
+                <span class="info-value">{{ principal.user.last_login|date:"F d, Y H:i"|default:"Never" }}</span>
+            </div>
+        </div>
+
+        <!-- School Information -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <div class="info-card-header-icon info-icon">
+                    <i class="fas fa-building"></i>
+                </div>
+                <h6>School Information</h6>
+            </div>
+            {% if principal.school %}
+            <div class="info-row">
+                <span class="info-label">School Name</span>
+                <span class="info-value"><strong>{{ principal.school.school_name }}</strong></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">School ID</span>
+                <span class="info-value"><code>{{ principal.school.school_id }}</code></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Short Name</span>
+                <span class="info-value">{{ principal.school.short_name|default:"—" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Grading</span>
+                <span class="info-value">{{ principal.school.get_grading_scale_display }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Address</span>
+                <span class="info-value">{{ principal.school.address|default:"—" }}</span>
+            </div>
+            <a href="{% url 'admin_panel:school_detail' principal.school.id %}" class="card-link-btn">
+                <i class="fas fa-external-link-alt"></i> View School Details
+            </a>
+            {% else %}
+            <div class="empty-tab" style="padding:2rem 1rem;">
+                <div class="empty-tab-icon" style="width:56px;height:56px;font-size:1.3rem;">
+                    <i class="fas fa-building"></i>
+                </div>
+                <p>No school assigned</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Actions -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <div class="info-card-header-icon warning-icon">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <h6>Actions</h6>
+            </div>
+            <div class="action-btn-group">
+                <button type="button" class="btn-action danger-btn" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">
+                    <i class="fas fa-key"></i> Reset Password
+                </button>
+                <form method="POST" action="{% url 'admin_panel:principal_toggle' principal.id %}" style="display:contents;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-action warning-btn" onclick="return confirm('Toggle principal status for {{ principal.full_name|escapejs }}?')">
+                        <i class="fas fa-power-off"></i> {% if principal.is_active %}Deactivate{% else %}Activate{% endif %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT CONTENT - TABS -->
+    <div>
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active-tab" data-tab="registrars">
+                <i class="fas fa-user-check"></i> Registrars
+                <span class="tab-count">{{ registrars|length }}</span>
+            </button>
+            <button class="tab-btn" data-tab="teachers">
+                <i class="fas fa-chalkboard-user"></i> Teachers
+                <span class="tab-count">{{ teachers|length }}</span>
+            </button>
+            <button class="tab-btn" data-tab="stats">
+                <i class="fas fa-chart-simple"></i> School Stats
+            </button>
+        </div>
+
+        <!-- Tab Panel: Registrars -->
+        <div id="tab-registrars" class="tab-panel active-panel">
+            {% if registrars %}
+                {% for reg in registrars %}
+                <div class="list-item-row">
+                    <div class="list-item-left">
+                        <span class="list-item-name">{{ reg.full_name }}</span>
+                        <span class="list-item-email">{{ reg.user.email }}</span>
+                    </div>
+                    <span class="list-item-badge">{{ reg.created_at|date:"M d, Y" }}</span>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-tab">
+                    <div class="empty-tab-icon">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <h5>No Registrars Created</h5>
+                    <p>This principal hasn't created any registrar accounts yet.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Tab Panel: Teachers -->
+        <div id="tab-teachers" class="tab-panel">
+            {% if teachers %}
+                {% for teacher in teachers|slice:":15" %}
+                <div class="list-item-row">
+                    <div class="list-item-left">
+                        <span class="list-item-name">{{ teacher.full_name }}</span>
+                        <span class="list-item-email">{{ teacher.user.email }}</span>
+                    </div>
+                    <span class="list-item-badge info-badge">{{ teacher.teaching_area|default:"No subject" }}</span>
+                </div>
+                {% endfor %}
+                {% if teachers|length > 15 %}
+                    <div class="more-hint">+ {{ teachers|length|add:"-15" }} more teachers</div>
+                {% endif %}
+            {% else %}
+                <div class="empty-tab">
+                    <div class="empty-tab-icon">
+                        <i class="fas fa-chalkboard-user"></i>
+                    </div>
+                    <h5>No Teachers Yet</h5>
+                    <p>Teachers will be added by registrars.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Tab Panel: School Stats -->
+        <div id="tab-stats" class="tab-panel">
+            <div class="stats-mini-grid">
+                <div class="stat-mini-card">
+                    <div class="stat-mini-icon purple-icon">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div class="stat-mini-value">{{ school_stats.total_registrars|default:0 }}</div>
+                    <div class="stat-mini-label">Registrars</div>
+                </div>
+                <div class="stat-mini-card">
+                    <div class="stat-mini-icon info-icon">
+                        <i class="fas fa-chalkboard-user"></i>
+                    </div>
+                    <div class="stat-mini-value">{{ school_stats.total_teachers|default:0 }}</div>
+                    <div class="stat-mini-label">Teachers</div>
+                </div>
+                <div class="stat-mini-card">
+                    <div class="stat-mini-icon success-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-mini-value">{{ school_stats.total_students|default:0 }}</div>
+                    <div class="stat-mini-label">Students</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- RESET PASSWORD MODAL -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'admin_panel:principal_reset_password' principal.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-key" style="color:var(--danger);margin-right:0.5rem;"></i>
+                        Reset Password
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p style="font-size:0.82rem;color:var(--gray-500);margin-bottom:1rem;">
+                        Resetting password for <strong style="color:var(--gray-700);">{{ principal.full_name }}</strong>
+                    </p>
+                    <div>
+                        <label class="form-label">New Password</label>
+                        <input type="password" name="new_password" class="form-control" required minlength="8" placeholder="Enter new password">
+                        <small style="font-size:0.68rem;color:#adb5bd;margin-top:0.3rem;display:block;">Minimum 8 characters.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-modal-danger">
+                        <i class="fas fa-check"></i> Reset Password
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.tab-btn').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            var tabName = this.dataset.tab;
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(function(t) { t.classList.remove('active-tab'); });
+            this.classList.add('active-tab');
+            // Update tab panels
+            document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active-panel'); });
+            document.getElementById('tab-' + tabName).classList.add('active-panel');
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,489 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ assessment.title }} - Login</title>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <style>
+        :root {
+            --primary: #123499;
+            --primary-light: #e8eeff;
+            --success: #2E7D32;
+            --success-light: #e8f5e9;
+            --warning: #E65100;
+            --warning-light: #fff3e0;
+            --danger: #C62828;
+            --danger-light: #ffebee;
+            --purple: #6A1B9A;
+            --purple-light: #f3e5f5;
+            --gray-50: #f8f9fa;
+            --gray-100: #f0f4f8;
+            --gray-200: #e8ecf1;
+            --gray-300: #e0e5ea;
+            --gray-400: #adb5bd;
+            --gray-500: #6c757d;
+            --gray-700: #1a1a2e;
+            --radius-sm: 10px;
+            --radius-md: 16px;
+            --radius-lg: 20px;
+            --shadow-sm: 0 2px 10px rgba(0,0,0,0.04);
+            --shadow-md: 0 2px 12px rgba(0,0,0,0.06);
+            --shadow-lg: 0 20px 50px rgba(0,0,0,0.2);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+        }
+
+        body { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            min-height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background circles */
+        body::before,
+        body::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.05);
+            animation: float 20s ease-in-out infinite;
+        }
+        body::before {
+            width: 400px;
+            height: 400px;
+            top: -100px;
+            left: -100px;
+            animation-delay: 0s;
+        }
+        body::after {
+            width: 350px;
+            height: 350px;
+            bottom: -80px;
+            right: -80px;
+            animation-delay: -10s;
+        }
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(30px, -30px) scale(1.05); }
+            50% { transform: translate(-20px, 20px) scale(0.95); }
+            75% { transform: translate(-40px, -10px) scale(1.02); }
+        }
+
+        /* ========== LOGIN CARD ========== */
+        .login-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 2.2rem 2rem;
+            max-width: 460px;
+            width: 100%;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            z-index: 1;
+            animation: cardEnter 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes cardEnter {
+            from { opacity: 0; transform: translateY(30px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* ========== HEADER ========== */
+        .login-header {
+            text-align: center;
+            margin-bottom: 1.8rem;
+        }
+        .login-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #123499, #667eea);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 8px 25px rgba(18,52,153,0.3);
+        }
+        .login-card h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--gray-700);
+            margin-bottom: 0.3rem;
+            line-height: 1.3;
+        }
+        .login-card .subtitle {
+            font-size: 0.78rem;
+            color: var(--gray-500);
+            font-weight: 500;
+        }
+
+        /* ========== QUIZ INFO BADGES ========== */
+        .info-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            justify-content: center;
+        }
+        .info-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.75rem;
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: 20px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            white-space: nowrap;
+            transition: var(--transition);
+        }
+        .info-badge:hover {
+            background: var(--primary-light);
+            border-color: var(--primary);
+            transform: translateY(-1px);
+        }
+        .info-badge i {
+            font-size: 0.75rem;
+            color: var(--primary);
+        }
+        .info-badge.time i { color: var(--warning); }
+        .info-badge.pass i { color: var(--success); }
+
+        /* ========== ERROR MESSAGE ========== */
+        .error-msg {
+            background: var(--warning-light);
+            color: var(--warning);
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.78rem;
+            font-weight: 500;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-left: 3px solid var(--warning);
+            animation: shake 0.5s ease;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(5px); }
+        }
+        .error-msg i { color: var(--warning); font-size: 1rem; flex-shrink: 0; }
+
+        /* ========== METHOD TABS ========== */
+        .method-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 1.5rem;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            border: 2px solid var(--gray-200);
+            background: var(--gray-50);
+        }
+        .method-tab {
+            flex: 1;
+            padding: 0.7rem 0.5rem;
+            text-align: center;
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-weight: 600;
+            transition: var(--transition);
+            color: var(--gray-500);
+            background: transparent;
+            border: none;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            white-space: nowrap;
+            position: relative;
+        }
+        .method-tab.active {
+            background: var(--primary);
+            color: white;
+            border-radius: var(--radius-sm);
+            box-shadow: 0 4px 15px rgba(18,52,153,0.25);
+        }
+        .method-tab:hover:not(.active) {
+            background: var(--gray-100);
+            color: var(--gray-700);
+        }
+        .method-tab i { font-size: 0.9rem; }
+
+        /* ========== FORM ========== */
+        .method-content {
+            display: none;
+            animation: fadeSlideIn 0.35s ease;
+        }
+        .method-content.active {
+            display: block;
+        }
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.73rem;
+            font-weight: 700;
+            color: var(--gray-700);
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .form-group .input-wrapper {
+            position: relative;
+        }
+        .form-group .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-400);
+            font-size: 0.95rem;
+            transition: var(--transition);
+            pointer-events: none;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.6rem;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-sm);
+            font-size: 0.88rem;
+            font-family: inherit;
+            color: var(--gray-700);
+            background: var(--gray-50);
+            transition: var(--transition);
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(18,52,153,0.08);
+        }
+        .form-group input:focus ~ .input-icon,
+        .form-group input:focus + .input-icon {
+            color: var(--primary);
+        }
+        /* Fix icon positioning since it's inside wrapper */
+        .form-group .input-wrapper .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1;
+        }
+        .form-group .input-wrapper input:focus ~ .input-icon {
+            color: var(--primary);
+        }
+        .form-group input::placeholder {
+            color: var(--gray-400);
+        }
+
+        /* ========== SUBMIT BUTTON ========== */
+        .btn-start {
+            width: 100%;
+            padding: 0.85rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-family: inherit;
+            box-shadow: 0 6px 20px rgba(102,126,234,0.35);
+            letter-spacing: 0.3px;
+        }
+        .btn-start:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(102,126,234,0.5);
+        }
+        .btn-start:active {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(102,126,234,0.3);
+        }
+        .btn-start i { font-size: 1rem; }
+
+        /* ========== FOOTER NOTE ========== */
+        .login-footer {
+            text-align: center;
+            margin-top: 1.2rem;
+            font-size: 0.68rem;
+            color: var(--gray-400);
+        }
+        .login-footer i { font-size: 0.6rem; }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 1.8rem 1.3rem;
+                border-radius: var(--radius-md);
+            }
+            .info-badges {
+                gap: 0.35rem;
+            }
+            .info-badge {
+                font-size: 0.64rem;
+                padding: 0.35rem 0.6rem;
+            }
+            .method-tab {
+                font-size: 0.72rem;
+                padding: 0.6rem 0.4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <!-- Header -->
+        <div class="login-header">
+            <div class="login-icon">
+                <i class="fi fi-rr-stars"></i>
+            </div>
+            <h2>{{ assessment.title }}</h2>
+            <p class="subtitle">{{ assessment.subject.subject_name }} — {{ assessment.section.section_name }}</p>
+        </div>
+
+        <!-- Quiz Info Badges -->
+        <div class="info-badges">
+            <span class="info-badge">
+                <i class="fi fi-rr-question-square"></i> {{ assessment.total_items }} items
+            </span>
+            <span class="info-badge">
+                <i class="fi fi-rr-star"></i> {{ assessment.points_per_item }} pt(s)
+            </span>
+            <span class="info-badge pass">
+                <i class="fi fi-rr-graduation-cap"></i> {{ assessment.passing_score }}% to pass
+            </span>
+            {% if assessment.time_limit_minutes %}
+            <span class="info-badge time">
+                <i class="fi fi-rr-clock"></i> {{ assessment.time_limit_minutes }} min
+            </span>
+            {% endif %}
+        </div>
+
+        <!-- Error Message -->
+        {% if error %}
+        <div class="error-msg">
+            <i class="fi fi-rr-exclamation-triangle"></i>
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <!-- Login Method Tabs -->
+        <div class="method-tabs">
+            <button type="button" class="method-tab active" onclick="switchMethod('name')">
+                <i class="fi fi-rr-user"></i> Full Name
+            </button>
+            <button type="button" class="method-tab" onclick="switchMethod('google')">
+                <i class="fi fi-rr-envelope"></i> Gmail
+            </button>
+        </div>
+
+        <!-- Login Form -->
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="login_type" id="loginType" value="name">
+            
+            <!-- Name Method -->
+            <div id="nameMethod" class="method-content active">
+                <div class="form-group">
+                    <label>Your Full Name</label>
+                    <div class="input-wrapper">
+                        <i class="fi fi-rr-user input-icon"></i>
+                        <input type="text" name="student_name" placeholder="e.g., Juan Dela Cruz" required autocomplete="name">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Google Method -->
+            <div id="googleMethod" class="method-content">
+                <div class="form-group">
+                    <label>Your Gmail Address</label>
+                    <div class="input-wrapper">
+                        <i class="fi fi-rr-envelope input-icon"></i>
+                        <input type="email" name="student_email" placeholder="e.g., juan.delacruz@gmail.com" autocomplete="email">
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn-start">
+                <i class="fi fi-rr-play"></i> Start Quiz
+            </button>
+        </form>
+
+        <!-- Footer -->
+        <div class="login-footer">
+            <i class="fi fi-rr-shield-check"></i> Your responses will be recorded securely
+        </div>
+    </div>
+
+    <script>
+    function switchMethod(method) {
+        // Update hidden input
+        document.getElementById('loginType').value = method;
+        
+        // Update tabs
+        var tabs = document.querySelectorAll('.method-tab');
+        tabs.forEach(function(t) { t.classList.remove('active'); });
+        
+        // Update content panels
+        var contents = document.querySelectorAll('.method-content');
+        contents.forEach(function(c) { c.classList.remove('active'); });
+        
+        if (method === 'name') {
+            tabs[0].classList.add('active');
+            document.getElementById('nameMethod').classList.add('active');
+            // Focus the name input
+            setTimeout(function() {
+                document.querySelector('#nameMethod input').focus();
+            }, 100);
+        } else {
+            tabs[1].classList.add('active');
+            document.getElementById('googleMethod').classList.add('active');
+            // Focus the email input
+            setTimeout(function() {
+                document.querySelector('#googleMethod input').focus();
+            }, 100);
+        }
+    }
+
+    // Auto-focus first input on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        var firstInput = document.querySelector('#nameMethod input');
+        if (firstInput) {
+            firstInput.focus();
+        }
+    });
+    </script>
+</body>
+</html>

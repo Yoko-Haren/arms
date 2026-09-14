@@ -1,0 +1,805 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Classes - Formify LIS</title>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', 'Century Gothic', sans-serif; }
+        :root {
+            --rich-black: #00072D; --dark-blue: #051650; --caribbean-blue: #123499;
+            --secondary-green: #5EA173; --gray-bg: #f5f7fa; --border-color: #e9ecef;
+            --text-primary: #2d3748; --text-secondary: #718096;
+            --sidebar-width: 280px; --sidebar-collapsed-width: 80px;
+            --math-color: #5EA173; --science-color: #123499; --english-color: #f39c12;
+            --physics-color: #9b59b6; --business-color: #e74c3c; --empty-state-color: #a0aec0;
+        }
+        body { background: var(--gray-bg); min-height: 100vh; }
+        .dashboard { display: flex; min-height: 100vh; }
+        .sidebar { width: var(--sidebar-width); background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%); color: white; position: fixed; height: 100vh; overflow-y: auto; overflow-x: hidden; transition: width 0.3s; z-index: 100; display: flex; flex-direction: column; }
+        .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
+        .sidebar.collapsed .sidebar-header h2, .sidebar.collapsed .user-details, .sidebar.collapsed .nav-link span { display: none; }
+        .sidebar.collapsed .sidebar-header { justify-content: center; padding: 1.5rem 0.5rem; }
+        .sidebar.collapsed .user-info { justify-content: center; padding: 0.8rem; margin: 0 0.5rem 1.5rem; }
+        .sidebar.collapsed .nav-link { justify-content: center; padding: 0.85rem 0; gap: 0; }
+        .sidebar.collapsed .nav-link i { margin: 0; }
+        .sidebar.collapsed .user-avatar { margin: 0; }
+        .sidebar.collapsed .fold-btn { margin: 0 auto; }
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
+        .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .logo-area { display: flex; align-items: center; gap: 1rem; overflow: hidden; }
+        .sidebar-header i.fi { font-size: 2rem; color: var(--secondary-green); display: inline-flex; align-items: center; }
+        .sidebar-header h2 { font-size: 1.1rem; font-weight: 600; line-height: 1.3; }
+        .sidebar-header h2 span { font-size: 0.7rem; opacity: 0.7; display: block; }
+        .fold-btn { background: rgba(255,255,255,0.1); border: none; color: white; cursor: pointer; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .fold-btn:hover { background: rgba(255,255,255,0.25); }
+        .user-info { display: flex; align-items: center; gap: 1rem; padding: 1rem; margin: 1rem 1rem 1.5rem; background: rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; }
+        .user-avatar { width: 45px; height: 45px; background: var(--secondary-green); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 700; color: var(--rich-black); flex-shrink: 0; }
+        .user-details h4 { font-size: 0.9rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+        .nav-menu { list-style: none; padding: 0 0.75rem; flex: 1; }
+        .nav-item { margin-bottom: 0.25rem; }
+        .nav-link { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; color: rgba(255,255,255,0.8); text-decoration: none; border-radius: 10px; font-size: 0.9rem; cursor: pointer; white-space: nowrap; overflow: hidden; }
+        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+        .nav-link i.fi { width: 22px; font-size: 1.1rem; text-align: center; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+        .nav-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; }
+        .main-content { flex: 1; margin-left: var(--sidebar-width); padding: 1.5rem; transition: margin-left 0.3s; min-height: 100vh; }
+        .sidebar.collapsed ~ .main-content { margin-left: var(--sidebar-collapsed-width); }
+        .top-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; background: white; padding: 1rem 1.5rem; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .page-title h1 { font-size: 1.3rem; color: var(--rich-black); }
+        .page-title p { color: var(--text-secondary); font-size: 0.8rem; }
+        .top-bar-actions { display: flex; align-items: center; gap: 1.5rem; position: relative; }
+        .date-display { display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.85rem; }
+        .notification-dropdown { position: relative; }
+        .notification-badge { position: relative; cursor: pointer; background: none; border: none; padding: 0.3rem; }
+        .notification-badge i.fi { font-size: 1.3rem; color: var(--text-primary); transition: color 0.2s; }
+        .notification-badge:hover i.fi { color: var(--secondary-green); }
+        .badge-count { position: absolute; top: -5px; right: -8px; background: #dc3545; color: white; font-size: 0.6rem; padding: 0.15rem 0.4rem; border-radius: 10px; min-width: 16px; text-align: center; font-weight: 700; }
+        .badge-count.zero { background: #adb5bd; }
+        .dropdown-menu { position: absolute; top: 45px; right: 0; width: 340px; background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 200; display: none; overflow: hidden; border: 1px solid var(--border-color); }
+        .dropdown-menu.show { display: block; animation: fadeInDown 0.25s ease; }
+        @keyframes fadeInDown { from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)} }
+        .dropdown-header { padding: 0.9rem 1.2rem; background: var(--gray-bg); border-bottom: 1px solid var(--border-color); font-weight: 700; font-size: 0.85rem; color: var(--rich-black); display: flex; justify-content: space-between; }
+        .notification-list { max-height: 380px; overflow-y: auto; }
+        .notification-item { display: flex; align-items: flex-start; gap: 0.8rem; padding: 0.9rem 1.2rem; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: background 0.2s; }
+        .notification-item:hover { background: var(--gray-bg); }
+        .notification-item.unread { background: rgba(94,161,115,0.06); border-left: 3px solid var(--secondary-green); }
+        .notification-icon { width: 36px; height: 36px; background: rgba(94,161,115,0.12); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--secondary-green); flex-shrink: 0; font-size: 0.85rem; }
+        .notification-content .notification-title { font-size: 0.8rem; font-weight: 600; color: var(--rich-black); }
+        .notification-content .notification-message { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; }
+        .notification-content .notification-time { font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.3rem; }
+        .dropdown-footer { padding: 0.7rem; text-align: center; border-top: 1px solid var(--border-color); background: var(--gray-bg); }
+        .dropdown-footer a { color: var(--secondary-green); font-size: 0.75rem; font-weight: 600; cursor: pointer; }
+        .poro-greeting { background: linear-gradient(135deg, #f0f9f0, #e8f5e9); border-radius: 20px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(94,161,115,0.3); flex-wrap: wrap; gap: 1rem; }
+        .poro-greeting-content { display: flex; align-items: center; gap: 1rem; }
+        .character-icon { width: 50px; height: 50px; background: var(--secondary-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(94,161,115,0.3); animation: bounce 2s ease infinite; overflow: hidden; }
+        .character-icon img { width: 100%; height: 100%; object-fit: cover; }
+        @keyframes bounce { 0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)} }
+        .poro-message h3 { font-size: 1rem; color: var(--rich-black); }
+        .poro-message p { font-size: 0.75rem; color: var(--text-secondary); }
+        .schedule-stats { background: var(--secondary-green); color: white; padding: 0.7rem 1.5rem; border-radius: 30px; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 0.8rem; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: white; border-radius: 16px; padding: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 0.8rem; transition: transform 0.2s; cursor: pointer; }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-icon { width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .stat-icon.blue { background: rgba(18,52,153,0.1); color: var(--caribbean-blue); }
+        .stat-icon.green { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .stat-icon.orange { background: rgba(255,193,7,0.1); color: #ffc107; }
+        .stat-content h3 { font-size: 1.3rem; color: var(--rich-black); }
+        .stat-content p { color: var(--text-secondary); font-size: 0.7rem; }
+        .schedule-visual-container { background: white; border-radius: 20px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .schedule-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem; }
+        .schedule-header h2 { font-size: 1rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
+        .schedule-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .btn-icon { padding: 0.5rem 1rem; border: none; border-radius: 8px; background: var(--gray-bg); color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; font-weight: 600; transition: all 0.3s; }
+        .btn-icon:hover:not(:disabled) { background: var(--secondary-green); color: white; }
+        .btn-icon:disabled { opacity: 0.4; cursor: not-allowed; }
+        .schedule-block-visual { transition: filter 0.2s, transform 0.2s; }
+        .schedule-block-visual:hover { filter: brightness(1.08); transform: scaleY(1.03); z-index: 10; }
+        .schedule-block-visual.math { background: var(--math-color); }
+        .schedule-block-visual.science { background: var(--science-color); }
+        .schedule-block-visual.english { background: var(--english-color); }
+        .schedule-block-visual.physics { background: var(--physics-color); }
+        .schedule-block-visual.business { background: var(--business-color); }
+        .legend { display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; padding-top: 1rem; border-top: 1px solid var(--border-color); }
+        .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.65rem; }
+        .legend-color { width: 14px; height: 14px; border-radius: 3px; }
+        .section-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .section-title h3 { color: var(--rich-black); font-size: 1rem; }
+        .class-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .class-card { background: white; border-radius: 16px; padding: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: all 0.3s; border: 2px solid transparent; position: relative; cursor: pointer; }
+        .class-card:hover { border-color: var(--secondary-green); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+        .class-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; gap: 0.5rem; }
+        .class-header h4 { color: var(--rich-black); font-size: 0.85rem; line-height: 1.3; word-break: break-word; }
+        .class-header p { font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.15rem; }
+        .class-badge { color: white; padding: 0.2rem 0.5rem; border-radius: 20px; font-size: 0.6rem; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+        .class-badge.adviser { background: var(--secondary-green); }
+        .class-badge.subject { background: var(--caribbean-blue); }
+        .student-preview { margin: 10px 0; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 8px 0; }
+        .preview-student { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.7rem; }
+        .preview-avatar { width: 24px; height: 24px; background: var(--secondary-green); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.6rem; font-weight: 600; flex-shrink: 0; }
+        .preview-more { font-size: 0.65rem; color: var(--text-secondary); padding-top: 4px; }
+        .class-stats-mini { display: flex; gap: 0.8rem; margin-bottom: 0.5rem; font-size: 0.7rem; color: var(--text-secondary); flex-wrap: wrap; }
+        .class-stats-mini strong { color: var(--rich-black); }
+        .progress-label { font-size: 0.65rem; color: var(--text-secondary); margin-bottom: 0.2rem; }
+        .progress-bar { height: 5px; background: var(--border-color); border-radius: 3px; overflow: hidden; margin-bottom: 0.8rem; }
+        .progress-fill { height: 100%; background: var(--secondary-green); border-radius: 3px; transition: width 0.6s; }
+        .empty-container { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem 1.5rem; text-align: center; min-height: 180px; }
+        .empty-icon { font-size: 2.5rem; color: var(--empty-state-color); margin-bottom: 0.8rem; opacity: 0.6; }
+        .empty-title { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); }
+        .empty-message { font-size: 0.75rem; color: var(--empty-state-color); max-width: 280px; line-height: 1.5; }
+        .recent-activity { background: white; border-radius: 20px; padding: 1.25rem; margin-top: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .activity-item { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color); }
+        .activity-item:last-child { border-bottom: none; }
+        .activity-icon { width: 36px; height: 36px; background: rgba(94,161,115,0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--secondary-green); }
+        .activity-details { flex: 1; }
+        .activity-details p { font-size: 0.85rem; color: var(--text-primary); }
+        .activity-time { font-size: 0.7rem; color: var(--text-secondary); }
+        .see-all-btn { margin-top: 1rem; text-align: center; padding-top: 1rem; border-top: 1px solid var(--border-color); }
+
+        /* Activity Modal */
+        .activity-modal .modal-content { max-width: 700px; }
+        .activity-list-full { max-height: 500px; overflow-y: auto; }
+        .activity-item-full { display: flex; align-items: center; gap: 1rem; padding: 1rem; border-bottom: 1px solid var(--border-color); transition: background 0.2s; }
+        .activity-item-full:hover { background: var(--gray-bg); }
+        .activity-icon-full { width: 42px; height: 42px; background: rgba(94,161,115,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--secondary-green); flex-shrink: 0; }
+        .activity-details-full { flex: 1; }
+        .activity-details-full p { font-size: 0.85rem; color: var(--text-primary); margin-bottom: 0.2rem; }
+        .activity-meta { display: flex; gap: 1rem; font-size: 0.7rem; color: var(--text-secondary); }
+        .activity-meta span { display: flex; align-items: center; gap: 0.3rem; }
+        .activity-status { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 20px; font-size: 0.65rem; font-weight: 600; }
+        .activity-status.completed { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .activity-status.submitted { background: rgba(255,193,7,0.1); color: #f39c12; }
+        .activity-status.pending { background: rgba(128,128,128,0.1); color: #909090; }
+        .activity-status.returned { background: rgba(231,76,60,0.1); color: #e74c3c; }
+
+        /* Class Detail Modal */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 24px; width: 100%; max-width: 560px; max-height: 90vh; display: flex; flex-direction: column; animation: modalSlideIn 0.3s ease; }
+        @keyframes modalSlideIn { from{opacity:0;transform:translateY(-30px)}to{opacity:1;transform:translateY(0)} }
+        .modal-header { padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .modal-header-left { display: flex; align-items: center; gap: 0.8rem; }
+        .modal-header-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+        .modal-header-icon.adviser { background: rgba(94,161,115,0.15); color: var(--secondary-green); }
+        .modal-header-icon.subject { background: rgba(18,52,153,0.1); color: var(--caribbean-blue); }
+        .modal-header h2 { font-size: 1rem; color: var(--rich-black); margin: 0; }
+        .modal-header p { font-size: 0.72rem; color: var(--text-secondary); margin: 0; }
+        .modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--text-secondary); padding: 0.2rem; border-radius: 6px; flex-shrink: 0; }
+        .modal-close:hover { background: var(--gray-bg); color: var(--text-primary); }
+        .modal-meta { display: flex; gap: 1rem; padding: 1rem 1.5rem; background: var(--gray-bg); border-bottom: 1px solid var(--border-color); flex-wrap: wrap; flex-shrink: 0; }
+        .meta-item { display: flex; flex-direction: column; gap: 0.15rem; }
+        .meta-label { font-size: 0.6rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+        .meta-value { font-size: 0.85rem; font-weight: 700; color: var(--rich-black); }
+        .modal-quick-actions { display: flex; gap: 0.5rem; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; flex-shrink: 0; }
+        .quick-btn { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.9rem; border: none; border-radius: 8px; font-size: 0.72rem; font-weight: 600; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+        .quick-btn.green { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .quick-btn.green:hover { background: var(--secondary-green); color: white; }
+        .quick-btn.blue { background: rgba(18,52,153,0.08); color: var(--caribbean-blue); }
+        .quick-btn.blue:hover { background: var(--caribbean-blue); color: white; }
+        .quick-btn.gray { background: var(--gray-bg); color: var(--text-secondary); }
+        .quick-btn.gray:hover { background: var(--border-color); color: var(--text-primary); }
+        .modal-body { padding: 1.2rem 1.5rem; overflow-y: auto; flex: 1; }
+        .student-list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 0.5rem; }
+        .student-list-header h4 { font-size: 0.85rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.4rem; }
+        .student-count-badge { background: var(--secondary-green); color: white; font-size: 0.6rem; padding: 0.15rem 0.5rem; border-radius: 20px; font-weight: 700; }
+        .student-search { display: flex; align-items: center; gap: 0.5rem; background: var(--gray-bg); border-radius: 8px; padding: 0.4rem 0.8rem; border: 1px solid var(--border-color); }
+        .student-search input { border: none; background: none; outline: none; font-size: 0.75rem; color: var(--text-primary); width: 140px; }
+        .student-search i { color: var(--text-secondary); font-size: 0.75rem; }
+        .student-table { width: 100%; border-collapse: collapse; }
+        .student-table th { font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; padding: 0.5rem 0.6rem; text-align: left; border-bottom: 2px solid var(--border-color); background: var(--gray-bg); }
+        .student-table td { font-size: 0.78rem; padding: 0.6rem 0.6rem; border-bottom: 1px solid var(--border-color); color: var(--text-primary); vertical-align: middle; }
+        .student-table tr:last-child td { border-bottom: none; }
+        .student-table tr:hover td { background: rgba(94,161,115,0.04); }
+        .student-avatar-sm { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; color: white; flex-shrink: 0; }
+        .student-name-cell { display: flex; align-items: center; gap: 0.6rem; }
+        .gender-badge { font-size: 0.6rem; padding: 0.1rem 0.4rem; border-radius: 10px; font-weight: 600; }
+        .gender-badge.m { background: rgba(18,52,153,0.1); color: var(--caribbean-blue); }
+        .gender-badge.f { background: rgba(233,30,99,0.1); color: #e91e63; }
+        .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; flex-shrink: 0; }
+        .btn-primary { background: var(--secondary-green); color: white; padding: 0.5rem 1.2rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.8rem; }
+        .btn-primary:hover { background: #4d8f62; }
+
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 0.5rem; }
+        .toast { background: white; border-radius: 12px; padding: 1rem 1.5rem; box-shadow: 0 8px 25px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 0.8rem; min-width: 300px; animation: slideInRight 0.3s ease; border-left: 4px solid var(--secondary-green); }
+        .toast i { color: var(--secondary-green); }
+        .toast-content h4 { font-size: 0.85rem; color: var(--rich-black); }
+        .toast-content p { font-size: 0.7rem; color: var(--text-secondary); }
+        .toast-close { background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 0.9rem; margin-left: auto; }
+        @keyframes slideInRight { from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1} }
+        .mobile-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
+        .mobile-overlay.show { display: block; }
+        @media (max-width: 1200px) { .class-grid { grid-template-columns: repeat(2, 1fr); } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 768px) { .sidebar { transform: translateX(-100%); width: var(--sidebar-width)!important; } .sidebar.mobile-open { transform: translateX(0); } .main-content { margin-left: 0!important; } .class-grid,.stats-grid { grid-template-columns: 1fr; } .schedule-actions { flex-direction: column; } .dropdown-menu { width: 290px; right: -20px; } .toast-container { left: 10px; right: 10px; } .toast { min-width: auto; } .modal-content { max-width: 100%; } }
+    </style>
+</head>
+<body>
+<div class="mobile-overlay" id="mobileOverlay"></div>
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="dashboard">
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area"><i class="fi fi-rr-graduation-cap"></i><h2>Formify <span>Learner Information System</span></h2></div>
+            <button class="fold-btn" id="foldBtn"><i class="fi fi-rr-angle-left"></i></button>
+        </div>
+        <div class="user-info">
+            <div class="user-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+            <div class="user-details"><h4>{{ request.user.get_full_name }}</h4><p>Teacher</p></div>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="{% url 'teachers-dashboard' %}" class="nav-link"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-classes' %}" class="nav-link active"><i class="fi fi-rr-presentation"></i><span>My Classes</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-grades' %}" class="nav-link"><i class="fi fi-rr-pencil"></i><span>Grade Encoding</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-attendance' %}" class="nav-link"><i class="fi fi-rr-calendar-check"></i><span>Attendance</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-forms' %}" class="nav-link"><i class="fi fi-rr-document"></i><span>School Forms</span></a></li>
+            <li class="nav-item"><a href="/teachers/reports/" class="nav-link"><i class="fi fi-rr-chart-line-up"></i><span>Reports</span></a></li>
+            <li class="nav-item"><a href="/teachers/schedule/" class="nav-link"><i class="fi fi-rr-calendar"></i><span>Schedule</span></a></li>
+        </ul>
+        <ul class="nav-menu nav-footer">
+            <li class="nav-item"><a href="{% url 'signout' %}" class="nav-link"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></li>
+        </ul>
+    </div>
+
+    <div class="main-content" id="mainContent">
+        <div class="top-bar">
+            <div class="page-title"><h1>My Classes</h1><p>Manage your classes and view your weekly schedule</p></div>
+            <div class="top-bar-actions">
+                <div class="date-display"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
+                <div class="notification-dropdown">
+                    <button class="notification-badge" id="notificationBtn"><i class="fi fi-rr-bell"></i><span class="badge-count zero" id="notifCount">0</span></button>
+                    <div class="dropdown-menu" id="notificationDropdown">
+                        <div class="dropdown-header"><span>Notifications</span><span style="font-size:0.7rem;opacity:0.7;">0 unread</span></div>
+                        <div class="notification-list"><div class="empty-container" style="min-height:120px;padding:1.5rem;"><i class="fi fi-rr-bell" style="font-size:2rem;color:var(--empty-state-color);opacity:0.5;"></i><p style="font-size:0.75rem;color:var(--empty-state-color);margin-top:0.5rem;">No notifications yet</p></div></div>
+                        <div class="dropdown-footer"><a>Mark all as read</a></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="poro-greeting">
+            <div class="poro-greeting-content">
+                <div class="character-icon"><img src="{% static 'shared/poro/Poro.png' %}" alt="Poro" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fi fi-rr-smile\' style=\'font-size:1.8rem;color:white;\'></i>';"></div>
+                <div class="poro-message"><h3>Poro, your class buddy!</h3><p id="poroMessage">Hey teacher! Here's your daily schedule. Click on any class card to see your students!</p></div>
+            </div>
+            <div class="schedule-stats"><i class="fi fi-rr-clock"></i><span id="todayClassesCount">{{ today_count }}</span> Classes Today</div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-icon blue"><i class="fi fi-rr-presentation"></i></div><div class="stat-content"><h3>{{ total_classes }}</h3><p>Total Classes</p></div></div>
+            <div class="stat-card"><div class="stat-icon green"><i class="fi fi-rr-users"></i></div><div class="stat-content"><h3>{{ total_students }}</h3><p>Total Students</p></div></div>
+            <div class="stat-card"><div class="stat-icon orange"><i class="fi fi-rr-hourglass"></i></div><div class="stat-content"><h3>{{ pending_grades }}</h3><p>Pending Grades</p></div></div>
+            <div class="stat-card"><div class="stat-icon blue"><i class="fi fi-rr-check-circle"></i></div><div class="stat-content"><h3>{{ completion_rate }}%</h3><p>Completion Rate</p></div></div>
+        </div>
+
+        <!-- Schedule Timeline -->
+        <div class="schedule-visual-container" id="scheduleContainer">
+            <div class="schedule-header">
+                <h2><i class="fi fi-rr-calendar"></i> Today's Schedule ({{ today|date:"F j, Y" }})</h2>
+                <div class="schedule-actions">
+                    <button class="btn-icon" id="btnSaveImage" onclick="exportAsImage()"><i class="fi fi-rr-camera"></i> Save as Image</button>
+                    <button class="btn-icon" id="btnSavePDF" onclick="exportAsPDF()"><i class="fi fi-rr-file-pdf"></i> Save as PDF</button>
+                    <button class="btn-icon" id="btnSaveDOCX" onclick="exportAsDOCX()"><i class="fi fi-rr-file-word"></i> Save as DOCX</button>
+                </div>
+            </div>
+            <div id="timelineSchedule" style="overflow-x:auto;"></div>
+            <div class="legend" id="scheduleLegend">
+                <div class="legend-item"><div class="legend-color" style="background:#5EA173;"></div><span>Mathematics</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:#123499;"></div><span>Science</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:#f39c12;"></div><span>English</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:#9b59b6;"></div><span>Physics</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:#e74c3c;"></div><span>Business</span></div>
+            </div>
+        </div>
+
+        <!-- Class Cards -->
+        <div class="section-title">
+            <h3><i class="fi fi-rr-presentation"></i> My Classes</h3>
+            <span style="color:var(--text-secondary);font-size:0.8rem;">{{ total_classes }} class{{ total_classes|pluralize }} · click a card to see students</span>
+        </div>
+        <div class="class-grid" id="classGrid">
+            {% if classes_data %}
+                {% for cls in classes_data %}
+                <div class="class-card" onclick="openClassModal({{ forloop.counter0 }})">
+                    <div class="class-header">
+                        <div>
+                            <h4>{{ cls.name }}</h4>
+                            <p>{{ cls.subject }} · SY 2025-2026</p>
+                        </div>
+                        <span class="class-badge {% if cls.is_advisory %}adviser{% else %}subject{% endif %}">{{ cls.role }}</span>
+                    </div>
+                    <!-- Student Preview - 3 rows -->
+                    <div class="student-preview">
+                        {% with student_list=cls.student_list|slice:":3" %}
+                            {% for student in student_list %}
+                            <div class="preview-student">
+                                <div class="preview-avatar">{{ student.name|slice:":1" }}</div>
+                                <span>{{ student.name|truncatechars:25 }}</span>
+                            </div>
+                            {% endfor %}
+                            {% if cls.students > 3 %}
+                            <div class="preview-more">
+                                + {{ cls.students|add:"-3" }} more students
+                            </div>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                    <div class="class-stats-mini">
+                        <span><strong>{{ cls.students }}</strong> Students</span>
+                        <span><strong>{{ cls.boys }}</strong> Boys</span>
+                        <span><strong>{{ cls.girls }}</strong> Girls</span>
+                    </div>
+                    <div class="progress-label">Q3 Progress</div>
+                    <div class="progress-bar"><div class="progress-fill" style="width:{{ cls.progress }}%"></div></div>
+                    <!-- DOTS BUTTON REMOVED -->
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="grid-column:1/-1;" class="empty-container">
+                    <i class="fi fi-rr-presentation empty-icon"></i>
+                    <div class="empty-title">No Classes Assigned</div>
+                    <div class="empty-message">Contact the School Registrar to set up your teaching load.</div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="recent-activity">
+            <div class="section-title">
+                <h3><i class="fi fi-rr-time-past"></i> Recent Activity</h3>
+                <button class="btn-icon" onclick="showFullActivity()" style="background: none; color: var(--secondary-green);">
+                    See All
+                </button>
+            </div>
+            <div id="recentActivityList">
+                {% if classes_data %}
+                    <div class="activity-item">
+                        <div class="activity-icon"><i class="fi fi-rr-check-circle"></i></div>
+                        <div class="activity-details">
+                            <p>You recorded attendance for <strong>{{ classes_data.0.name }}</strong></p>
+                            <span class="activity-time">Recently</span>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon"><i class="fi fi-rr-pencil"></i></div>
+                        <div class="activity-details">
+                            <p>You worked on grades for <strong>{{ classes_data.0.subject }}</strong></p>
+                            <span class="activity-time">Recently</span>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon"><i class="fi fi-rr-bell"></i></div>
+                        <div class="activity-details">
+                            <p>Reminder: Quarter 3 grades deadline is approaching</p>
+                            <span class="activity-time">{{ today|date:"F j, Y" }}</span>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="empty-container" style="min-height:120px;padding:1.5rem;">
+                        <i class="fi fi-rr-time-past empty-icon" style="font-size:2rem;"></i>
+                        <div class="empty-title">No Recent Activity</div>
+                        <div class="empty-message">Your teaching activity will appear here once you start recording attendance and encoding grades.</div>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="see-all-btn">
+                <button class="btn-icon" onclick="showFullActivity()" style="background: var(--gray-bg);">
+                    See All Activity
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── CLASS DETAIL MODAL ── -->
+<div id="classModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-header-left">
+                <div class="modal-header-icon subject" id="modalIcon"><i class="fi fi-rr-presentation"></i></div>
+                <div>
+                    <h2 id="modalClassName">Class</h2>
+                    <p id="modalSubjectName">Subject</p>
+                </div>
+            </div>
+            <button class="modal-close" onclick="closeClassModal()"><i class="fi fi-rr-cross-small"></i></button>
+        </div>
+        <div class="modal-meta">
+            <div class="meta-item"><span class="meta-label">Total Students</span><span class="meta-value" id="modalTotalStudents">—</span></div>
+            <div class="meta-item"><span class="meta-label">Boys</span><span class="meta-value" id="modalBoys">—</span></div>
+            <div class="meta-item"><span class="meta-label">Girls</span><span class="meta-value" id="modalGirls">—</span></div>
+            <div class="meta-item"><span class="meta-label">Schedule</span><span class="meta-value" id="modalSchedule">—</span></div>
+            <div class="meta-item"><span class="meta-label">Q3 Progress</span><span class="meta-value" id="modalProgress">—</span></div>
+        </div>
+        <div class="modal-quick-actions">
+            <a href="{% url 'teachers-grades' %}" class="quick-btn green"><i class="fi fi-rr-pencil"></i> Encode Grades</a>
+            <a href="{% url 'teachers-attendance' %}" class="quick-btn blue"><i class="fi fi-rr-calendar-check"></i> Take Attendance</a>
+            <a href="{% url 'teachers-forms' %}" class="quick-btn gray"><i class="fi fi-rr-file-pdf"></i> Generate Forms</a>
+        </div>
+        <div class="modal-body">
+            <div class="student-list-header">
+                <h4><i class="fi fi-rr-users"></i> Students <span class="student-count-badge" id="modalStudentBadge">0</span></h4>
+                <div class="student-search">
+                    <i class="fi fi-rr-search"></i>
+                    <input type="text" id="studentSearchInput" placeholder="Search student..." oninput="filterStudents()">
+                </div>
+            </div>
+            <div id="studentListContainer"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-primary" onclick="closeClassModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── ACTIVITY MODAL ── -->
+<div id="activityModal" class="modal">
+    <div class="modal-content activity-modal">
+        <div class="modal-header">
+            <div class="modal-header-left">
+                <div class="modal-header-icon subject">
+                    <i class="fi fi-rr-time-past"></i>
+                </div>
+                <div>
+                    <h2>Recent Activity</h2>
+                    <p>Full history of your recent actions</p>
+                </div>
+            </div>
+            <button class="modal-close" onclick="closeActivityModal()"><i class="fi fi-rr-cross-small"></i></button>
+        </div>
+        <div class="modal-body" style="padding: 0;">
+            <div class="activity-list-full" id="fullActivityList"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-primary" onclick="closeActivityModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Embed classes data for JS -->
+<script>
+    const ALL_CLASSES = {{ classes_data_json|safe }};
+</script>
+
+<script>
+(function() {
+    // ── SIDEBAR ──
+    const sidebar = document.getElementById('sidebar');
+    const foldBtn = document.getElementById('foldBtn');
+    const mc = document.getElementById('mainContent');
+    const mo = document.getElementById('mobileOverlay');
+    let collapsed = false;
+
+    function adj() {
+        if (!mc) return;
+        mc.style.marginLeft = window.innerWidth > 768 ? (collapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)') : '0';
+    }
+    foldBtn.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+            const o = sidebar.classList.toggle('mobile-open');
+            mo.classList.toggle('show', o);
+        } else {
+            collapsed = !collapsed;
+            sidebar.classList.toggle('collapsed', collapsed);
+            foldBtn.querySelector('i').className = collapsed ? 'fi fi-rr-angle-right' : 'fi fi-rr-angle-left';
+            adj();
+        }
+    });
+    mo.addEventListener('click', () => { sidebar.classList.remove('mobile-open'); mo.classList.remove('show'); });
+    window.addEventListener('resize', adj);
+    adj();
+
+    // ── NOTIFICATIONS ──
+    const notifBtn = document.getElementById('notificationBtn');
+    if (notifBtn) {
+        notifBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            document.getElementById('notificationDropdown').classList.toggle('show');
+        });
+    }
+    document.addEventListener('click', () => {
+        const dropdown = document.getElementById('notificationDropdown');
+        if (dropdown) dropdown.classList.remove('show');
+    });
+
+    // ── DATE ──
+    function updateDate() {
+        const dateSpan = document.getElementById('currentDate');
+        if (dateSpan) {
+            dateSpan.textContent = new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'});
+        }
+    }
+    updateDate();
+    setInterval(updateDate, 60000);
+
+    // ── SCHEDULE DATA ──
+    const allScheduleData = {{ schedule_data|safe }};
+    const currentDay = "{{ current_day }}";
+    const scheduleData = allScheduleData.filter(s => s.day === currentDay);
+    const hasSchedule = scheduleData.length > 0;
+
+    function setExportButtons() {
+        ['btnSaveImage','btnSavePDF','btnSaveDOCX'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.disabled = !hasSchedule;
+        });
+    }
+    setExportButtons();
+
+    function gm(h, m) { return h * 60 + m; }
+
+    function renderSchedule() {
+        const c = document.getElementById('timelineSchedule');
+        const legend = document.getElementById('scheduleLegend');
+        if (!c) return;
+
+        if (!hasSchedule) {
+            c.innerHTML = '<div class="empty-container" style="min-height:200px;padding:2rem;text-align:center;"><i class="fi fi-rr-calendar" style="font-size:3rem;color:var(--empty-state-color);opacity:0.6;display:block;margin-bottom:0.8rem;"></i><div class="empty-title">No Classes Today</div><div class="empty-message">You have no classes scheduled for ' + currentDay + '. Enjoy your day!</div></div>';
+            if (legend) legend.style.display = 'none';
+            return;
+        }
+        if (legend) legend.style.display = 'flex';
+
+        const START_MIN = gm(7, 30), END_MIN = gm(18, 0), TOTAL = END_MIN - START_MIN;
+        const labels = [];
+        for (let h = 7; h <= 18; h++) {
+            for (let m of [0, 30]) {
+                const t = h * 60 + m;
+                if (t < START_MIN || t > END_MIN) continue;
+                const dh = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+                labels.push({ t, label: `${dh}:${m === 0 ? '00' : '30'} ${h >= 12 ? 'PM' : 'AM'}` });
+            }
+        }
+
+        let hh = `<div style="min-width:700px;padding-top:8px;">`;
+        hh += `<div style="display:flex;margin-bottom:4px;"><div style="width:80px;flex-shrink:0;"></div><div style="flex:1;position:relative;height:18px;">`;
+        labels.forEach(l => {
+            const pct = ((l.t - START_MIN) / TOTAL) * 100;
+            hh += `<div style="position:absolute;left:${pct}%;transform:translateX(-50%);font-size:0.58rem;color:var(--text-secondary);white-space:nowrap;">${l.label}</div>`;
+        });
+        hh += `</div></div>`;
+        hh += `<div style="display:flex;margin-bottom:12px;"><div style="width:80px;flex-shrink:0;"></div><div style="flex:1;position:relative;height:2px;background:var(--border-color);border-radius:1px;">`;
+        labels.forEach(l => {
+            const pct = ((l.t - START_MIN) / TOTAL) * 100;
+            hh += `<div style="position:absolute;left:${pct}%;width:1px;height:8px;background:var(--border-color);top:-3px;"></div>`;
+        });
+        hh += `</div></div>`;
+
+        scheduleData.forEach(s => {
+            const st = gm(s.startHour, s.startMinute), et = gm(s.endHour, s.endMinute);
+            const lp = ((st - START_MIN) / TOTAL) * 100, wp = ((et - st) / TOTAL) * 100;
+            const safeSection = s.section.replace(/'/g, "\\'");
+            hh += `
+            <div style="display:flex;align-items:center;margin-bottom:10px;">
+                <div style="width:80px;flex-shrink:0;font-size:0.58rem;color:var(--text-secondary);text-align:right;padding-right:10px;font-weight:600;line-height:1.5;">${s.startHour}:${String(s.startMinute).padStart(2,'0')}<br>${s.endHour}:${String(s.endMinute).padStart(2,'0')}</div>
+                <div style="flex:1;position:relative;height:50px;background:var(--gray-bg);border-radius:10px;overflow:hidden;">
+                    <div class="schedule-block-visual ${s.color}" style="position:absolute;left:${lp}%;width:${wp}%;height:100%;border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:0.65rem;text-align:center;padding:0 6px;cursor:pointer;overflow:hidden;white-space:nowrap;"
+                         onclick="openClassModalBySection('${safeSection}')">
+                         ${s.section}
+                    </div>
+                </div>
+            </div>`;
+        });
+        hh += `</div>`;
+        c.innerHTML = hh;
+    }
+
+    // ── CLASS DETAIL MODAL ──
+    let currentStudents = [];
+
+    const avatarColors = ['#5EA173','#123499','#9b59b6','#e74c3c','#f39c12','#1abc9c','#e67e22','#2980b9'];
+    function getAvatarColor(name) {
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        return avatarColors[Math.abs(hash) % avatarColors.length];
+    }
+    function getInitials(name) {
+        const parts = name.trim().split(' ');
+        return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
+    }
+
+    function getScheduleForSection(sectionName) {
+        const matches = allScheduleData.filter(s => s.section === sectionName);
+        if (!matches.length) return 'Not scheduled';
+        const todayMatch = matches.find(s => s.day === currentDay);
+        const s = todayMatch || matches[0];
+        return `${s.startHour}:${String(s.startMinute).padStart(2,'0')} - ${s.endHour}:${String(s.endMinute).padStart(2,'0')} (${s.day})`;
+    }
+
+    function renderStudentTable(students) {
+        const container = document.getElementById('studentListContainer');
+        if (!students || students.length === 0) {
+            container.innerHTML = `
+            <div class="empty-container" style="min-height:140px;">
+                <i class="fi fi-rr-users empty-icon"></i>
+                <div class="empty-title">No students assigned for now</div>
+                <div class="empty-message">Students will appear here once enrollment is completed for this class.</div>
+            </div>`;
+            return;
+        }
+        let html = `<table class="student-table"><thead><tr><th>#</th><th>Student</th><th>LRN</th><th>Gender</th></tr></thead><tbody>`;
+        students.forEach((st, i) => {
+            const initials = getInitials(st.name);
+            const color = getAvatarColor(st.name);
+            const gender = (st.sex || '').toUpperCase();
+            html += `
+            <tr>
+                <td style="color:var(--text-secondary);font-size:0.7rem;">${i + 1}</td>
+                <td><div class="student-name-cell">
+                    <div class="student-avatar-sm" style="background:${color};">${initials}</div>
+                    <span>${st.name}</span>
+                </div></td>
+                <td style="color:var(--text-secondary);font-family:monospace;font-size:0.72rem;">${st.lrn || '—'}</td>
+                <td><span class="gender-badge ${gender === 'M' ? 'm' : 'f'}">${gender === 'M' ? 'Male' : 'Female'}</span></td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+    }
+
+    window.filterStudents = function() {
+        const q = document.getElementById('studentSearchInput').value.toLowerCase();
+        const filtered = currentStudents.filter(s => s.name.toLowerCase().includes(q) || (s.lrn || '').includes(q));
+        renderStudentTable(filtered);
+    };
+
+    function openModal(cls) {
+        const isAdviser = cls.is_advisory;
+        const icon = document.getElementById('modalIcon');
+        icon.className = `modal-header-icon ${isAdviser ? 'adviser' : 'subject'}`;
+        icon.innerHTML = `<i class="fi ${isAdviser ? 'fi-rr-star' : 'fi-rr-presentation'}"></i>`;
+
+        document.getElementById('modalClassName').textContent = cls.name;
+        document.getElementById('modalSubjectName').textContent = cls.subject + (isAdviser ? ' · Advisory' : '');
+        document.getElementById('modalTotalStudents').textContent = cls.students;
+        document.getElementById('modalBoys').textContent = cls.boys;
+        document.getElementById('modalGirls').textContent = cls.girls;
+        document.getElementById('modalSchedule').textContent = getScheduleForSection(cls.section_str || cls.name);
+        document.getElementById('modalProgress').textContent = cls.progress + '%';
+        document.getElementById('modalStudentBadge').textContent = cls.students;
+        document.getElementById('studentSearchInput').value = '';
+
+        currentStudents = cls.student_list || [];
+        renderStudentTable(currentStudents);
+        document.getElementById('classModal').classList.add('active');
+    }
+
+    window.openClassModal = function(index) {
+        const cls = ALL_CLASSES[index];
+        if (cls) openModal(cls);
+    };
+
+    window.openClassModalBySection = function(sectionName) {
+        const cls = ALL_CLASSES.find(c => (c.section_str || c.name) === sectionName);
+        if (cls) openModal(cls);
+    };
+
+    window.closeClassModal = function() {
+        document.getElementById('classModal').classList.remove('active');
+    };
+
+    document.getElementById('classModal').addEventListener('click', function(e) {
+        if (e.target === this) closeClassModal();
+    });
+
+    // ── ACTIVITY MODAL ──
+    function buildFullActivityList() {
+        const container = document.getElementById('fullActivityList');
+        if (!container) return;
+        
+        const recentActivityDiv = document.querySelector('.recent-activity');
+        const activityItems = recentActivityDiv ? recentActivityDiv.querySelectorAll('.activity-item') : [];
+        
+        if (activityItems.length === 0) {
+            container.innerHTML = `
+                <div class="empty-container" style="min-height: 200px;">
+                    <i class="fi fi-rr-time-past empty-icon" style="font-size: 2rem;"></i>
+                    <div class="empty-title">No Recent Activity</div>
+                    <div class="empty-message">Your teaching activity will appear here once you start recording attendance and encoding grades.</div>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        activityItems.forEach(item => {
+            const clone = item.cloneNode(true);
+            clone.className = 'activity-item-full';
+            html += clone.outerHTML;
+        });
+        
+        container.innerHTML = html;
+    }
+
+    window.showFullActivity = function() {
+        buildFullActivityList();
+        document.getElementById('activityModal').classList.add('active');
+    };
+
+    window.closeActivityModal = function() {
+        document.getElementById('activityModal').classList.remove('active');
+    };
+
+    document.getElementById('activityModal').addEventListener('click', function(e) {
+        if (e.target === this) closeActivityModal();
+    });
+
+    // ── TOAST ──
+    function showToast(title, msg, type) {
+        const tc = document.getElementById('toastContainer');
+        const t = document.createElement('div');
+        t.className = 'toast';
+        const color = type === 'error' ? '#dc3545' : 'var(--secondary-green)';
+        t.style.borderLeftColor = color;
+        t.innerHTML = `<i class="fi fi-rr-${type === 'error' ? 'cross-circle' : 'check-circle'}" style="color:${color};"></i><div class="toast-content"><h4>${title}</h4><p>${msg}</p></div><button class="toast-close" onclick="this.parentElement.remove()">&times;</button>`;
+        tc.appendChild(t);
+        setTimeout(() => { if (t.parentElement) t.remove(); }, 4000);
+    }
+
+    // ── EXPORTS ──
+    window.exportAsImage = async function() {
+        if (!hasSchedule) return;
+        showToast('Exporting...', 'Poro is preparing your schedule image.');
+        try {
+            const c = await html2canvas(document.getElementById('scheduleContainer'), {scale:2, backgroundColor:'#ffffff', logging:false});
+            const a = document.createElement('a');
+            a.download = `Schedule_${new Date().toISOString().slice(0,10)}.png`;
+            a.href = c.toDataURL();
+            a.click();
+            showToast('Success!', 'Schedule saved as PNG image.');
+        } catch(e) { showToast('Error', 'Could not export image.', 'error'); }
+    };
+
+    window.exportAsPDF = async function() {
+        if (!hasSchedule) return;
+        showToast('Exporting...', 'Poro is preparing your PDF.');
+        try {
+            const c = await html2canvas(document.getElementById('scheduleContainer'), {scale:2, backgroundColor:'#ffffff', logging:false});
+            const {jsPDF} = window.jspdf;
+            const p = new jsPDF('l','mm','a4');
+            const iw = 280, ih = (c.height * iw) / c.width;
+            p.addImage(c.toDataURL('image/png'), 'PNG', 10, 10, iw, ih);
+            p.save(`Schedule_${new Date().toISOString().slice(0,10)}.pdf`);
+            showToast('Success!', 'Schedule saved as PDF.');
+        } catch(e) { showToast('Error', 'Could not export PDF.', 'error'); }
+    };
+
+    window.exportAsDOCX = function() {
+        if (!hasSchedule) return;
+        showToast('Exporting...', 'Poro is preparing your DOCX.');
+        const el = document.getElementById('scheduleContainer').cloneNode(true);
+        const b = new Blob([`<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>${el.outerHTML}</body></html>`], {type:'application/msword'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(b);
+        a.download = `Schedule_${new Date().toISOString().slice(0,10)}.doc`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        showToast('Success!', 'Schedule saved as DOCX.');
+    };
+
+    // ── PORO ──
+    function updatePoro() {
+        const now = new Date(), ct = now.getHours() * 60 + now.getMinutes();
+        const current = scheduleData.find(s => ct >= gm(s.startHour, s.startMinute) && ct <= gm(s.endHour, s.endMinute));
+        const pm = document.getElementById('poroMessage');
+        if (current) pm.innerHTML = `Hey teacher! You have <strong>${current.subject}</strong> with ${current.section} right now. Time to shine!`;
+        else if (!hasSchedule) pm.innerHTML = "No classes today! Click any class card below to see your students.";
+        else pm.innerHTML = "Hey teacher! Here's your daily schedule. Click any class card to see your students!";
+        const todayCountSpan = document.getElementById('todayClassesCount');
+        if (todayCountSpan) todayCountSpan.textContent = scheduleData.length;
+    }
+
+    renderSchedule();
+    updatePoro();
+    setInterval(updatePoro, 60000);
+})();
+</script>
+</body>
+</html>

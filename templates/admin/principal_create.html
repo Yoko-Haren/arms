@@ -1,0 +1,583 @@
+{% extends 'admin/base.html' %}
+{% load static %}
+
+{% block title %}Create Principal{% endblock %}
+{% block page_title %}Create New Principal Account{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ========== FORM LAYOUT ========== */
+    .form-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    /* ========== FORM SECTION CARDS ========== */
+    .form-section {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--gray-200);
+    }
+    .form-section-header {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--gray-100);
+    }
+    .form-section-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: var(--primary-gradient);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.95rem;
+        flex-shrink: 0;
+    }
+    .form-section-header h6 {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin: 0;
+    }
+    .form-section-header .required-note {
+        font-size: 0.65rem;
+        color: var(--gray-500);
+        margin-left: auto;
+    }
+
+    /* ========== FORM GRID ========== */
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem;
+    }
+    @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
+
+    .form-field { display: flex; flex-direction: column; gap: 0.35rem; }
+    .form-field.full-width { grid-column: 1 / -1; }
+
+    .form-label {
+        font-size: 0.73rem;
+        font-weight: 600;
+        color: var(--gray-700);
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    .required-asterisk {
+        color: var(--danger);
+        font-weight: 700;
+    }
+    .optional-tag {
+        font-size: 0.6rem;
+        font-weight: 500;
+        color: #adb5bd;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .form-input,
+    .form-select {
+        width: 100%;
+        padding: 0.65rem 0.85rem;
+        border: 2px solid var(--gray-300);
+        border-radius: var(--radius-sm);
+        font-size: 0.8rem;
+        font-family: inherit;
+        background: var(--gray-50);
+        color: var(--gray-700);
+        transition: var(--transition);
+    }
+    .form-input:focus,
+    .form-select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(18,52,153,0.08);
+        background: white;
+    }
+    .form-input::placeholder { color: #adb5bd; }
+    .form-input.is-invalid {
+        border-color: var(--danger);
+        background: #fff8f8;
+    }
+    .form-input.is-invalid:focus {
+        box-shadow: 0 0 0 3px rgba(198,40,40,0.08);
+    }
+
+    .field-hint {
+        font-size: 0.68rem;
+        color: var(--gray-500);
+        margin-top: 0.15rem;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    .field-hint i { font-size: 0.6rem; }
+
+    .field-error {
+        font-size: 0.68rem;
+        color: var(--danger);
+        margin-top: 0.15rem;
+        display: none;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    .field-error.visible { display: flex; }
+
+    /* Username Preview */
+    .username-preview {
+        font-size: 0.7rem;
+        color: var(--gray-500);
+        margin-top: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    .username-preview code {
+        background: var(--primary-light);
+        color: var(--primary);
+        padding: 0.15rem 0.5rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: var(--transition);
+    }
+    .username-preview code:hover {
+        background: var(--primary);
+        color: white;
+    }
+
+    /* ========== ALERT BANNERS ========== */
+    .info-banner {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        padding: 1rem 1.25rem;
+        border-radius: var(--radius-md);
+        font-size: 0.8rem;
+        font-weight: 500;
+        margin-bottom: 0;
+    }
+    .info-banner.info-style {
+        background: var(--info-light);
+        color: var(--info);
+        border: 1px solid rgba(21,101,192,0.15);
+    }
+    .info-banner.warning-style {
+        background: var(--warning-light);
+        color: var(--warning);
+        border: 1px solid rgba(230,81,0,0.15);
+    }
+    .info-banner-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 0.9rem;
+    }
+    .info-banner.info-style .info-banner-icon { background: rgba(21,101,192,0.15); }
+    .info-banner.warning-style .info-banner-icon { background: rgba(230,81,0,0.15); }
+    .info-banner-link {
+        font-weight: 600;
+        text-decoration: underline;
+        color: inherit;
+    }
+
+    /* ========== SCHOOL SELECT CARDS ========== */
+    .school-cards-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+    @media (max-width: 640px) { .school-cards-grid { grid-template-columns: 1fr; } }
+
+    .school-select-card {
+        background: white;
+        border: 2px solid var(--gray-300);
+        border-radius: var(--radius-md);
+        padding: 0.9rem 1rem;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .school-select-card:hover {
+        border-color: var(--primary);
+        background: #fafbff;
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
+    }
+    .school-select-card.selected {
+        border-color: var(--primary) !important;
+        background: var(--primary-light) !important;
+        box-shadow: 0 0 0 3px rgba(18,52,153,0.08);
+    }
+
+    .radio-circle {
+        width: 22px;
+        height: 22px;
+        border: 2px solid #c0c7cf;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: var(--transition);
+    }
+    .school-select-card.selected .radio-circle {
+        border-color: var(--primary);
+        background: var(--primary);
+    }
+    .school-select-card.selected .radio-circle::after {
+        content: '';
+        width: 8px;
+        height: 8px;
+        background: white;
+        border-radius: 50%;
+    }
+
+    .school-card-info { flex: 1; min-width: 0; }
+    .school-card-name {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--gray-700);
+        line-height: 1.3;
+    }
+    .school-card-meta {
+        font-size: 0.68rem;
+        color: var(--gray-500);
+        margin-top: 0.1rem;
+    }
+
+    /* ========== FORM ACTIONS ========== */
+    .form-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    @media (max-width: 480px) { .form-actions { flex-direction: column-reverse; } }
+
+    .btn-cancel {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.7rem 1.5rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.8rem;
+        font-weight: 600;
+        border: 2px solid var(--gray-300);
+        background: white;
+        color: var(--gray-500);
+        text-decoration: none;
+        transition: var(--transition);
+        cursor: pointer;
+    }
+    .btn-cancel:hover {
+        border-color: var(--gray-500);
+        color: var(--gray-700);
+        background: var(--gray-50);
+    }
+
+    .btn-submit {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.7rem 2rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.82rem;
+        font-weight: 600;
+        border: none;
+        background: var(--primary-gradient);
+        color: white;
+        cursor: pointer;
+        transition: var(--transition);
+        box-shadow: 0 4px 15px rgba(18,52,153,0.3);
+    }
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 22px rgba(18,52,153,0.45);
+    }
+    .btn-submit:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    /* ========== DIVIDER ========== */
+    .section-divider-text {
+        font-size: 0.7rem;
+        color: #adb5bd;
+        text-align: center;
+        margin: 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .section-divider-text::before,
+    .section-divider-text::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--gray-200);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="form-container">
+
+    <!-- STATUS BANNER -->
+    {% if schools %}
+    <div class="info-banner info-style">
+        <div class="info-banner-icon">
+            <i class="fas fa-building"></i>
+        </div>
+        <div>
+            <strong>{{ schools|length }} school{{ schools|length|pluralize }}</strong> available for principal assignment
+        </div>
+    </div>
+    {% else %}
+    <div class="info-banner warning-style">
+        <div class="info-banner-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div>
+            No schools available. <a href="{% url 'admin_panel:school_create' %}" class="info-banner-link">Create a school first</a>.
+        </div>
+    </div>
+    {% endif %}
+
+    <form method="POST" id="principalForm">
+        {% csrf_token %}
+
+        <!-- ACCOUNT INFORMATION -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <div class="form-section-icon">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <h6>Account Information</h6>
+                <span class="required-note">* Required fields</span>
+            </div>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label">
+                        First Name <span class="required-asterisk">*</span>
+                    </label>
+                    <input type="text" name="first_name" id="first_name" class="form-input" placeholder="e.g., Juan" required>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">
+                        Last Name <span class="required-asterisk">*</span>
+                    </label>
+                    <input type="text" name="last_name" id="last_name" class="form-input" placeholder="e.g., Dela Cruz" required>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">
+                        Username <span class="required-asterisk">*</span>
+                    </label>
+                    <input type="text" name="username" id="username" class="form-input" placeholder="e.g., juan.delacruz" required>
+                    <div class="username-preview" id="usernamePreview"></div>
+                    <div class="field-error" id="usernameError">
+                        <i class="fas fa-times-circle"></i> <span></span>
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">
+                        Email <span class="required-asterisk">*</span>
+                    </label>
+                    <input type="email" name="email" class="form-input" placeholder="e.g., juan.delacruz@deped.gov.ph" required>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">
+                        Password <span class="required-asterisk">*</span>
+                    </label>
+                    <input type="password" name="password" id="password" class="form-input" placeholder="Minimum 6 characters" required minlength="6">
+                    <div class="field-hint">
+                        <i class="fas fa-shield-alt"></i> Minimum 6 characters
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">
+                        Confirm Password <span class="required-asterisk">*</span>
+                    </label>
+                    <input type="password" name="confirm_password" class="form-input" placeholder="Re-enter password" required>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">
+                        Employee ID <span class="optional-tag">Optional</span>
+                    </label>
+                    <input type="text" name="employee_id" class="form-input" placeholder="e.g., DEP-2024-001">
+                </div>
+                <div class="form-field">
+                    <label class="form-label">
+                        Designation <span class="optional-tag">Optional</span>
+                    </label>
+                    <input type="text" name="designation" class="form-input" value="Principal" placeholder="e.g., Principal IV">
+                </div>
+            </div>
+        </div>
+
+        <!-- SCHOOL ASSIGNMENT -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <div class="form-section-icon" style="background: var(--success-gradient);">
+                    <i class="fas fa-building"></i>
+                </div>
+                <h6>School Assignment <span class="required-asterisk">*</span></h6>
+            </div>
+
+            {% if schools %}
+                <!-- Dropdown -->
+                <div class="form-field" style="margin-bottom: 1.25rem;">
+                    <label class="form-label">Select School</label>
+                    <select name="school" id="schoolDropdown" class="form-select" required>
+                        <option value="">— Click here to select a school —</option>
+                        {% for s in schools %}
+                        <option value="{{ s.id }}">{{ s.school_name }} ({{ s.school_id }}) — {{ s.get_grading_scale_display }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Divider -->
+                <div class="section-divider-text">Or click a school card below</div>
+
+                <!-- School Cards -->
+                <div class="school-cards-grid" style="margin-top: 0.75rem;">
+                    {% for s in schools %}
+                    <div class="school-select-card" data-school-id="{{ s.id }}" onclick="pickSchool('{{ s.id }}', this)">
+                        <span class="radio-circle"></span>
+                        <div class="school-card-info">
+                            <div class="school-card-name">{{ s.school_name }}</div>
+                            <div class="school-card-meta">{{ s.school_id }}{% if s.address %} &bull; {{ s.address|truncatechars:25 }}{% endif %}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="info-banner warning-style" style="margin-top: 0;">
+                    <div class="info-banner-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div>
+                        No schools available. <a href="{% url 'admin_panel:school_create' %}" class="info-banner-link">Create a school first</a>.
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- FORM ACTIONS -->
+        <div class="form-actions">
+            <a href="{% url 'admin_panel:principal_list' %}" class="btn-cancel">
+                <i class="fas fa-arrow-left"></i> Cancel
+            </a>
+            <button type="submit" class="btn-submit" {% if not schools %}disabled{% endif %}>
+                <i class="fas fa-save"></i> Create Principal Account
+            </button>
+        </div>
+    </form>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ===== PICK SCHOOL (syncs dropdown + cards) =====
+    function pickSchool(schoolId, element) {
+        document.getElementById('schoolDropdown').value = schoolId;
+        document.querySelectorAll('.school-select-card').forEach(function(c) {
+            c.classList.remove('selected');
+        });
+        element.classList.add('selected');
+    }
+
+    // ===== Sync dropdown change to cards =====
+    document.getElementById('schoolDropdown').addEventListener('change', function() {
+        var schoolId = this.value;
+        document.querySelectorAll('.school-select-card').forEach(function(c) {
+            if (c.getAttribute('data-school-id') === schoolId) {
+                c.classList.add('selected');
+            } else {
+                c.classList.remove('selected');
+            }
+        });
+    });
+
+    // ===== AUTO-GENERATE USERNAME =====
+    var firstName = document.getElementById('first_name');
+    var lastName = document.getElementById('last_name');
+    var usernameInput = document.getElementById('username');
+    var previewSpan = document.getElementById('usernamePreview');
+
+    function generateUsername(first, last) {
+        if (!first && !last) return '';
+        var f = first.toLowerCase().replace(/[^a-z]/g, '').substring(0, 3);
+        var l = last.toLowerCase().replace(/[^a-z]/g, '');
+        if (f && l) return f + '.' + l;
+        return f || l || '';
+    }
+
+    function updatePreview() {
+        if (!usernameInput.value) {
+            var gen = generateUsername(firstName.value, lastName.value);
+            if (gen) {
+                previewSpan.innerHTML = 'Suggested: <code>' + gen + '</code>';
+            } else {
+                previewSpan.innerHTML = '';
+            }
+        } else {
+            previewSpan.innerHTML = '';
+        }
+    }
+
+    firstName.addEventListener('input', updatePreview);
+    lastName.addEventListener('input', updatePreview);
+
+    previewSpan.addEventListener('click', function(e) {
+        if (e.target.tagName === 'CODE' && !usernameInput.value) {
+            usernameInput.value = e.target.innerText;
+            usernameInput.dispatchEvent(new Event('blur'));
+            previewSpan.innerHTML = '';
+        }
+    });
+
+    // ===== CHECK USERNAME =====
+    usernameInput.addEventListener('blur', function() {
+        var username = this.value;
+        if (username.length < 3) return;
+        fetch('{% url "admin_panel:check_username" %}?username=' + encodeURIComponent(username))
+            .then(function(resp) { return resp.json(); })
+            .then(function(data) {
+                var errorDiv = document.getElementById('usernameError');
+                var errorSpan = errorDiv.querySelector('span');
+                if (data.exists) {
+                    usernameInput.classList.add('is-invalid');
+                    errorSpan.textContent = 'This username is already taken.';
+                    errorDiv.classList.add('visible');
+                } else {
+                    usernameInput.classList.remove('is-invalid');
+                    errorDiv.classList.remove('visible');
+                }
+            });
+    });
+</script>
+{% endblock %}

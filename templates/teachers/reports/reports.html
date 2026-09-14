@@ -1,0 +1,1113 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - Formify LIS</title>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Century Gothic', sans-serif;
+        }
+
+        :root {
+            --rich-black: #00072D;
+            --dark-blue: #051650;
+            --caribbean-blue: #123499;
+            --secondary-green: #5EA173;
+            --gray-bg: #f5f7fa;
+            --border-color: #e9ecef;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --warning-bg: #fff3cd;
+            --warning-text: #856404;
+            --success-bg: #d4edda;
+            --success-text: #155724;
+            --gold: #FFD700;
+            --silver: #C0C0C0;
+            --bronze: #CD7F32;
+            --sidebar-width: 280px;
+            --sidebar-collapsed-width: 80px;
+        }
+
+        body { background: var(--gray-bg); min-height: 100vh; }
+        .dashboard { display: flex; min-height: 100vh; }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            transition: width 0.3s;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
+        .sidebar.collapsed .sidebar-header h2, .sidebar.collapsed .user-details, .sidebar.collapsed .nav-link span { display: none; }
+        .sidebar.collapsed .sidebar-header { justify-content: center; padding: 1.5rem 0.5rem; }
+        .sidebar.collapsed .user-info { justify-content: center; padding: 0.8rem; margin: 0 0.5rem 1.5rem; }
+        .sidebar.collapsed .nav-link { justify-content: center; padding: 0.85rem 0; gap: 0; }
+        .sidebar.collapsed .nav-link i { margin: 0; }
+        .sidebar.collapsed .user-avatar { margin: 0; }
+        .sidebar.collapsed .fold-btn { margin: 0 auto; }
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .logo-area { display: flex; align-items: center; gap: 1rem; overflow: hidden; }
+        .sidebar-header i.fi { font-size: 2rem; color: var(--secondary-green); }
+        .sidebar-header h2 { font-size: 1.1rem; font-weight: 600; line-height: 1.3; }
+        .sidebar-header h2 span { font-size: 0.7rem; opacity: 0.7; display: block; }
+        .fold-btn { background: rgba(255,255,255,0.1); border: none; color: white; cursor: pointer; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin: 1rem 1rem 1.5rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .user-avatar { width: 45px; height: 45px; background: var(--secondary-green); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--rich-black); }
+        .user-details h4 { font-size: 0.9rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+
+        .nav-menu { list-style: none; padding: 0 0.75rem; flex: 1; }
+        .nav-item { margin-bottom: 0.25rem; }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+        .nav-link i.fi { width: 22px; font-size: 1.1rem; text-align: center; flex-shrink: 0; }
+        .nav-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem;
+            transition: margin-left 0.3s;
+            min-height: 100vh;
+        }
+        .sidebar.collapsed ~ .main-content { margin-left: var(--sidebar-collapsed-width); }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .page-title h1 { font-size: 1.3rem; color: var(--rich-black); }
+        .page-title p { color: var(--text-secondary); font-size: 0.8rem; }
+        .top-bar-actions { display: flex; align-items: center; gap: 1.5rem; }
+        .date-display { display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.85rem; }
+
+        /* Poro Greeting */
+        .poro-greeting {
+            background: linear-gradient(135deg, #f0f9f0, #e8f5e9);
+            border-radius: 20px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid rgba(94,161,115,0.3);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .poro-greeting-content { display: flex; align-items: center; gap: 1rem; }
+        .character-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--secondary-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(94,161,115,0.3);
+            animation: bounce 2s ease infinite;
+            overflow: hidden;
+        }
+        .character-icon img { width: 100%; height: 100%; object-fit: cover; }
+        @keyframes bounce { 0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)} }
+        .poro-message h3 { font-size: 1rem; color: var(--rich-black); }
+        .poro-message p { font-size: 0.75rem; color: var(--text-secondary); }
+        .stats-badge {
+            background: var(--secondary-green);
+            color: white;
+            padding: 0.7rem 1.5rem;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        /* Filter Controls */
+        .filter-bar {
+            background: white;
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .filter-group { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .filter-item { display: flex; align-items: center; gap: 0.5rem; }
+        .filter-item label { font-size: 0.8rem; color: var(--text-secondary); }
+        select, .filter-select {
+            padding: 0.5rem 2rem 0.5rem 0.8rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+            font-size: 0.85rem;
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            min-width: 150px;
+        }
+        select:focus { border-color: var(--secondary-green); }
+        .btn-icon {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            background: var(--gray-bg);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-icon:hover { background: var(--secondary-green); color: white; }
+        .btn-icon.success { background: var(--secondary-green); color: white; }
+
+        /* Honor Cards */
+        .honor-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .honor-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-top: 4px solid transparent;
+        }
+        .honor-card.highest { border-top-color: var(--gold); }
+        .honor-card.high { border-top-color: var(--silver); }
+        .honor-card.with { border-top-color: var(--bronze); }
+        .honor-card:hover { transform: translateY(-3px); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .honor-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .honor-card.highest .honor-icon { color: var(--gold); }
+        .honor-card.high .honor-icon { color: var(--silver); }
+        .honor-card.with .honor-icon { color: var(--bronze); }
+        .honor-card h3 { font-size: 0.9rem; color: var(--rich-black); }
+        .honor-card .count { font-size: 1.8rem; font-weight: 700; }
+        .honor-card.highest .count { color: var(--gold); }
+        .honor-card.high .count { color: var(--silver); }
+        .honor-card.with .count { color: var(--bronze); }
+
+        /* Top Students Table */
+        .students-container {
+            background: white;
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .section-header h2 { font-size: 1rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
+        .table-container { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border-color); }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left;
+            padding: 0.8rem 0.6rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid var(--border-color);
+            background: var(--gray-bg);
+        }
+        td { padding: 0.7rem 0.6rem; border-bottom: 1px solid var(--border-color); font-size: 0.82rem; vertical-align: middle; }
+        tr:hover td { background: rgba(94,161,115,0.03); }
+        .student-info { display: flex; align-items: center; gap: 0.6rem; }
+        .student-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+        }
+        .student-name { font-weight: 600; color: var(--rich-black); }
+        .rank-badge {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--secondary-green);
+            color: white;
+            text-align: center;
+            line-height: 28px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .rank-badge.rank-1 { background: var(--gold); color: #333; }
+        .rank-badge.rank-2 { background: var(--silver); color: #333; }
+        .rank-badge.rank-3 { background: var(--bronze); color: white; }
+        .honor-tag {
+            padding: 0.25rem 0.65rem;
+            border-radius: 20px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .honor-tag.highest { background: #FFF8E7; color: #B8860B; }
+        .honor-tag.high { background: #F0F0F0; color: #808080; }
+        .honor-tag.with { background: #FDF5E6; color: #CD7F32; }
+        .cert-btn {
+            background: none;
+            border: none;
+            color: var(--secondary-green);
+            cursor: pointer;
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.2s;
+        }
+        .cert-btn:hover { background: var(--secondary-green); color: white; }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: transparent;
+            width: 100%;
+            max-width: 950px;
+            max-height: 90vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-header {
+            background: white;
+            border-radius: 16px 16px 0 0;
+            padding: 0.8rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .modal-header h2 { font-size: 1rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 0.2rem;
+            border-radius: 6px;
+        }
+        .modal-close:hover { background: var(--gray-bg); }
+        .modal-body {
+            background: transparent;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-footer {
+            background: white;
+            border-radius: 0 0 16px 16px;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+        .btn-primary {
+            background: var(--secondary-green);
+            color: white;
+            padding: 0.5rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        /* Batch Modal */
+        .batch-list { max-height: 400px; overflow-y: auto; }
+        .batch-student {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.8rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .batch-student-info { display: flex; align-items: center; gap: 0.8rem; }
+        .batch-student-check { width: 20px; height: 20px; cursor: pointer; accent-color: var(--secondary-green); }
+        .progress-bar {
+            background: var(--gray-bg);
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+        .progress-fill {
+            background: var(--secondary-green);
+            width: 0%;
+            height: 100%;
+            transition: width 0.3s;
+        }
+        .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border-color); border-top-color: var(--secondary-green); border-radius: 50%; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .toast {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            min-width: 280px;
+            animation: slideInRight 0.3s ease;
+            border-left: 4px solid var(--secondary-green);
+        }
+        .toast i { color: var(--secondary-green); font-size: 1.1rem; }
+        .toast-content h4 { font-size: 0.85rem; color: var(--rich-black); }
+        .toast-content p { font-size: 0.7rem; color: var(--text-secondary); }
+        .toast-close { background: none; border: none; cursor: pointer; color: var(--text-secondary); margin-left: auto; }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .mobile-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 99;
+            display: none;
+        }
+        .mobile-overlay.show { display: block; }
+
+        /* Certificate Styles - Fixed for print (no blur) */
+        .certificate-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #e5e7eb;
+        }
+
+        .certificate {
+            width: 297mm;
+            max-width: 100%;
+            height: auto;
+            aspect-ratio: 297 / 210;
+            background: #fdfaf4;
+            background-image: radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.08) 0%, transparent 35%),
+                              radial-gradient(circle at 85% 70%, rgba(212, 175, 55, 0.06) 0%, transparent 40%),
+                              linear-gradient(145deg, #fef9ed 0%, #f9f2e1 100%);
+            box-shadow: 0 30px 50px rgba(0, 0, 0, 0.25), inset 0 0 40px rgba(180, 140, 70, 0.2);
+            position: relative;
+            overflow: hidden;
+            border: 4px solid #c9a44b;
+            outline: 3px solid #b4923c;
+            outline-offset: 3px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 25px 35px;
+            margin: 0 auto;
+        }
+
+        .corner-top-left, .corner-top-right, .corner-bottom-left, .corner-bottom-right {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background-repeat: no-repeat;
+            background-size: contain;
+            opacity: 0.8;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .corner-top-left { top: 15px; left: 20px; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><path d="M10 5 L5 10 L5 15 M5 10 L10 5 L15 5" stroke="%23b49450" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M5 5 L25 5 L5 25 Z" fill="none" stroke="%23d4af37" stroke-width="1.8"/><circle cx="12" cy="12" r="2.5" fill="%23b3924b"/></svg>'); }
+        .corner-top-right { top: 15px; right: 20px; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><path d="M70 5 L75 10 L75 15 M75 10 L70 5 L65 5" stroke="%23b49450" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M75 5 L55 5 L75 25 Z" fill="none" stroke="%23d4af37" stroke-width="1.8"/><circle cx="68" cy="12" r="2.5" fill="%23b3924b"/></svg>'); }
+        .corner-bottom-left { bottom: 15px; left: 20px; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><path d="M10 75 L5 70 L5 65 M5 70 L10 75 L15 75" stroke="%23b49450" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M5 75 L25 75 L5 55 Z" fill="none" stroke="%23d4af37" stroke-width="1.8"/><circle cx="12" cy="68" r="2.5" fill="%23b3924b"/></svg>'); }
+        .corner-bottom-right { bottom: 15px; right: 20px; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><path d="M70 75 L75 70 L75 65 M75 70 L70 75 L65 75" stroke="%23b49450" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M75 75 L55 75 L75 55 Z" fill="none" stroke="%23d4af37" stroke-width="1.8"/><circle cx="68" cy="68" r="2.5" fill="%23b3924b"/></svg>'); }
+
+        .filigree { position: absolute; width: 180px; height: 40px; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 20"><path d="M0 10 Q15 0 30 10 T60 10 T90 10 T120 10 T150 10 T180 10" fill="none" stroke="%23c9a44b" stroke-width="1.6" opacity="0.45"/><circle cx="90" cy="10" r="2.3" fill="%23b3924b"/></svg>') no-repeat center; background-size: contain; opacity: 0.7; }
+        .filigree-top { top: 20px; left: 50%; transform: translateX(-50%); }
+        .filigree-bottom { bottom: 20px; left: 50%; transform: translateX(-50%) rotate(180deg); }
+
+        .content { position: relative; z-index: 10; text-align: center; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+        .emblem { width: 90px; height: 100px; margin-bottom: 5px; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 60"><path d="M25 2 L45 10 L45 30 Q45 48 25 56 Q5 48 5 30 L5 10 Z" fill="none" stroke="%23b3924b" stroke-width="2.2"/><path d="M25 8 L38 14 L38 28 Q38 42 25 48 Q12 42 12 28 L12 14 Z" fill="%23d4af37" fill-opacity="0.15" stroke="%23aa8238" stroke-width="1.2"/><circle cx="25" cy="26" r="6" fill="none" stroke="%2399732e" stroke-width="1.8"/><text x="25" y="29" text-anchor="middle" font-size="7" fill="%237a5c2e" font-family="Times New Roman">SHS</text></svg>') no-repeat center; background-size: contain; filter: drop-shadow(0 6px 8px rgba(0,0,0,0.15)); }
+        .header-sub { font-family: 'Cinzel', 'Times New Roman', serif; font-size: 1.3rem; letter-spacing: 4px; color: #7a5c2e; text-transform: uppercase; font-weight: 500; margin-top: 2px; }
+        .header-main { font-family: 'Cinzel', 'Playfair Display', serif; font-size: 2.8rem; font-weight: 700; letter-spacing: 6px; color: #5e4a2b; text-transform: uppercase; margin: 0 0 4px 0; line-height: 1.2; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
+        .divider { width: 220px; height: 2px; background: linear-gradient(90deg, transparent, #c9a44b, #e6c468, #c9a44b, transparent); margin: 5px 0 10px; }
+        .presented-to { font-family: 'Cinzel', serif; font-size: 1.1rem; letter-spacing: 3px; color: #5e4a2b; text-transform: uppercase; font-weight: 600; }
+        .student-name { font-family: 'Playfair Display', 'Times New Roman', serif; font-size: 2.8rem; font-weight: 700; color: #2e2412; letter-spacing: 3px; margin: 0 0 5px; text-shadow: 2px 2px 0 rgba(212, 175, 55, 0.2); border-bottom: 2px dashed #c9a44b; display: inline-block; padding: 0 30px 10px; line-height: 1.3; }
+        .description { font-family: 'Cormorant Garamond', 'Times New Roman', serif; font-size: 1.2rem; font-style: italic; color: #4a3b28; max-width: 650px; margin: 8px auto 12px; line-height: 1.5; font-weight: 500; }
+        .achievement-detail { background: rgba(212, 175, 55, 0.08); border: 1px solid rgba(180, 140, 70, 0.5); border-radius: 40px; padding: 8px 25px; margin: 5px 0 12px; font-family: 'Cinzel', serif; font-size: 1rem; letter-spacing: 2px; color: #5e4523; font-weight: 600; backdrop-filter: blur(2px); }
+        .signature-area { display: flex; justify-content: space-between; align-items: flex-end; width: 85%; margin-top: 15px; gap: 30px; }
+        .signature { flex: 1; text-align: center; border-top: 1.5px solid #b3924b; padding-top: 8px; font-family: 'Cinzel', serif; font-size: 0.8rem; letter-spacing: 1.5px; color: #3e3a2c; font-weight: 600; }
+        .signature-title { font-size: 0.6rem; color: #7a623b; letter-spacing: 1px; margin-top: 3px; font-style: italic; }
+        .seal { width: 70px; height: 70px; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="27" fill="none" stroke="%23b5944b" stroke-width="2.2" stroke-dasharray="4 2.5"/><circle cx="30" cy="30" r="22" fill="none" stroke="%23ccaa55" stroke-width="1.2"/><text x="30" y="23" text-anchor="middle" font-size="7" fill="%23876b36" font-family="Times">SENIOR</text><text x="30" y="33" text-anchor="middle" font-size="6.5" fill="%23876b36" font-family="Times">HIGH</text><text x="30" y="42" text-anchor="middle" font-size="6.5" fill="%23876b36" font-family="Times">SCHOOL</text></svg>') no-repeat center; background-size: contain; opacity: 0.85; margin-right: 20px; }
+        .date-line { margin-top: 8px; font-family: 'Cinzel', serif; font-size: 0.8rem; color: #5f4c34; letter-spacing: 2px; }
+        .watermark { position: absolute; font-size: 6rem; color: rgba(212, 175, 55, 0.06); font-weight: bold; font-family: 'Playfair Display', serif; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg); white-space: nowrap; pointer-events: none; z-index: 2; letter-spacing: 15px; }
+
+        @media print {
+            body { background: white; padding: 0; margin: 0; display: block; }
+            .certificate { box-shadow: none; outline: 3px solid #b4923c; border: 4px solid #c9a44b; margin: 0 auto; width: 100%; height: auto; aspect-ratio: 297 / 210; page-break-after: avoid; page-break-inside: avoid; background: #fdfaf4; }
+            .header-main { color: #5e4a2b; -webkit-text-fill-color: #5e4a2b; }
+        }
+        @page { size: landscape; margin: 5mm; }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); width: var(--sidebar-width)!important; }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .main-content { margin-left: 0!important; }
+            .honor-cards { grid-template-columns: 1fr; }
+            .filter-group { flex-direction: column; }
+            .toast-container { left: 10px; right: 10px; }
+            .toast { min-width: auto; }
+            .modal-content { max-width: 95%; }
+        }
+    </style>
+</head>
+<body>
+<div class="mobile-overlay" id="mobileOverlay"></div>
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="dashboard">
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area"><i class="fi fi-rr-graduation-cap"></i><h2>Formify <span>Learner Information System</span></h2></div>
+            <button class="fold-btn" id="foldBtn"><i class="fi fi-rr-angle-left"></i></button>
+        </div>
+        <div class="user-info">
+            <div class="user-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+            <div class="user-details"><h4>{{ request.user.get_full_name }}</h4><p>Teacher</p></div>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="{% url 'teachers-dashboard' %}" class="nav-link"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-classes' %}" class="nav-link"><i class="fi fi-rr-presentation"></i><span>My Classes</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-grades' %}" class="nav-link"><i class="fi fi-rr-pencil"></i><span>Grade Encoding</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-attendance' %}" class="nav-link"><i class="fi fi-rr-calendar-check"></i><span>Attendance</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-forms' %}" class="nav-link"><i class="fi fi-rr-document"></i><span>School Forms</span></a></li>
+            <li class="nav-item"><a href="/teachers/reports/" class="nav-link active"><i class="fi fi-rr-chart-line-up"></i><span>Reports</span></a></li>
+            <li class="nav-item"><a href="/teachers/schedule/" class="nav-link"><i class="fi fi-rr-calendar"></i><span>Schedule</span></a></li>
+        </ul>
+        <ul class="nav-menu nav-footer">
+            <li class="nav-item"><a href="{% url 'signout' %}" class="nav-link"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></li>
+        </ul>
+    </div>
+
+    <div class="main-content" id="mainContent">
+        <div class="top-bar">
+            <div class="page-title"><h1>Reports</h1><p><i class="fi fi-rr-chart-line-up"></i> Top Students & Certificate of Recognition</p></div>
+            <div class="top-bar-actions"><div class="date-display"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div></div>
+        </div>
+
+        <div class="poro-greeting">
+            <div class="poro-greeting-content">
+                <div class="character-icon"><img src="{% static 'shared/poro/Poro.png' %}" alt="Poro" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fi fi-rr-smile\' style=\'font-size:1.8rem;color:white;\'></i>'"></div>
+                <div class="poro-message"><h3>Poro, your reports buddy!</h3><p id="poroMessage">Select filters to see top students</p></div>
+            </div>
+            <div class="stats-badge"><i class="fi fi-rr-trophy"></i><span id="totalHonorCount">0</span> Honor Students</div>
+        </div>
+
+        <div class="filter-bar">
+            <div class="filter-group">
+                <div class="filter-item"><label>School Year:</label>
+                    <select id="schoolYearSelect" class="filter-select">
+                        {% for sy in school_years_data %}
+                        <option value="{{ sy.id }}" {% if sy.is_current %}selected{% endif %}>{{ sy.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-item"><label>Semester:</label>
+                    <select id="semesterSelect" class="filter-select">
+                        <option value="1st">1st Semester (Q1-Q2)</option>
+                        <option value="2nd" selected>2nd Semester (Q3-Q4)</option>
+                    </select>
+                </div>
+                <div class="filter-item"><label>Grade Level:</label>
+                    <select id="gradeLevelSelect" class="filter-select">
+                        <option value="">All Grade Levels</option>
+                        {% for gl in grade_levels_data %}
+                        <option value="{{ gl.id }}">{{ gl.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-item"><label>Section:</label>
+                    <select id="sectionSelect" class="filter-select">
+                        <option value="">All Sections</option>
+                        {% for sec in sections_data %}
+                        <option value="{{ sec.id }}">{{ sec.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div>
+                <button class="btn-icon success" id="generateAllCertsBtn"><i class="fi fi-rr-badge"></i> Generate All CoRs</button>
+                <button class="btn-icon" id="exportExcelBtn"><i class="fi fi-rr-download"></i> Export to Excel</button>
+            </div>
+        </div>
+
+        <div class="honor-cards" id="honorCards">
+            <div class="honor-card highest" data-honor="highest"><div class="honor-icon"><i class="fi fi-rr-crown"></i></div><h3>With Highest Honors</h3><div class="count" id="highestCount">0</div><div class="range">98 - 100</div></div>
+            <div class="honor-card high" data-honor="high"><div class="honor-icon"><i class="fi fi-rr-badge"></i></div><h3>With High Honors</h3><div class="count" id="highCount">0</div><div class="range">95 - 97</div></div>
+            <div class="honor-card with" data-honor="with"><div class="honor-icon"><i class="fi fi-rr-star"></i></div><h3>With Honors</h3><div class="count" id="withCount">0</div><div class="range">90 - 94</div></div>
+        </div>
+
+        <div class="students-container">
+            <div class="section-header">
+                <h2><i class="fi fi-rr-users"></i> Top Students Ranking</h2>
+                <div><span id="studentCount"></span> students • <span id="honorFilterLabel">All Honor Students</span></div>
+            </div>
+            <div class="table-container">
+                <table id="studentsTable">
+                    <thead>
+                        <tr><th>Rank</th><th>LRN</th><th>Student Name</th><th>Section</th><th>Final Average</th><th>Honor</th><th>CoR</th></tr>
+                    </thead>
+                    <tbody id="studentsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Certificate Modal -->
+<div id="certModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fi fi-rr-badge"></i> Certificate of Recognition</h2>
+            <button class="modal-close" onclick="closeCertModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="certificateContent"></div>
+        <div class="modal-footer">
+            <button class="btn-outline" onclick="closeCertModal()">Close</button>
+            <button class="btn-primary" id="downloadCertBtn"><i class="fi fi-rr-download"></i> Download PDF</button>
+            <button class="btn-primary" onclick="printCertificate()" style="background: var(--caribbean-blue);"><i class="fi fi-rr-print"></i> Print</button>
+        </div>
+    </div>
+</div>
+
+<!-- Batch Certificate Generation Modal -->
+<div id="batchModal" class="modal">
+    <div class="modal-content" style="background: white; max-width: 600px;">
+        <div class="modal-header">
+            <h2><i class="fi fi-rr-badge"></i> Generate Certificates</h2>
+            <button class="modal-close" onclick="closeBatchModal()">&times;</button>
+        </div>
+        <div class="modal-body" style="background: white; padding: 1rem;">
+            <p style="margin-bottom: 1rem;">Select students to generate certificates:</p>
+            <div class="batch-list" id="batchList"></div>
+            <div class="progress-bar" id="batchProgress"><div class="progress-fill"></div></div>
+            <p style="font-size:0.7rem; color:var(--text-secondary); margin-top:0.5rem;" id="batchStatus"></p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-outline" onclick="closeBatchModal()">Cancel</button>
+            <button class="btn-primary" id="confirmBatchBtn"><i class="fi fi-rr-badge"></i> Generate Selected</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ========== TOAST ==========
+function showToast(title, message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `
+        <i class="fi fi-rr-${type === 'error' ? 'cross-circle' : 'check-circle'}"></i>
+        <div class="toast-content"><h4>${title}</h4><p>${message}</p></div>
+        <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+    `;
+    container.appendChild(toast);
+    setTimeout(() => { if (toast.parentElement) toast.remove(); }, 4000);
+}
+
+// ========== SIDEBAR ==========
+const sidebar = document.getElementById('sidebar');
+const foldBtn = document.getElementById('foldBtn');
+const mainContent = document.getElementById('mainContent');
+const mobileOverlay = document.getElementById('mobileOverlay');
+let sidebarCollapsed = false;
+
+function updateSidebarState() {
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        sidebar.classList.remove('collapsed');
+        sidebarCollapsed = false;
+        if (!sidebar.classList.contains('mobile-open')) mobileOverlay.classList.remove('show');
+    } else {
+        sidebar.classList.remove('mobile-open');
+        mobileOverlay.classList.remove('show');
+        if (sidebarCollapsed) sidebar.classList.add('collapsed');
+        else sidebar.classList.remove('collapsed');
+    }
+    adjustMainMargin();
+}
+function adjustMainMargin() {
+    if (window.innerWidth <= 768) mainContent.style.marginLeft = '0';
+    else mainContent.style.marginLeft = sidebar.classList.contains('collapsed') ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)';
+}
+function toggleSidebar() {
+    if (window.innerWidth <= 768) {
+        const isOpen = sidebar.classList.toggle('mobile-open');
+        mobileOverlay.classList.toggle('show', isOpen);
+    } else {
+        sidebarCollapsed = !sidebarCollapsed;
+        sidebar.classList.toggle('collapsed', sidebarCollapsed);
+        adjustMainMargin();
+    }
+}
+foldBtn.addEventListener('click', toggleSidebar);
+mobileOverlay.addEventListener('click', () => { sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('show'); });
+window.addEventListener('resize', updateSidebarState);
+updateSidebarState();
+document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+// ========== DATA FROM DJANGO ==========
+let allStudentsData = {{ students_data|safe }};
+const gradeLevelsData = {{ grade_levels_data|safe }};
+const sectionsData = {{ sections_data|safe }};
+const schoolYearsData = {{ school_years_data|safe }};
+
+let filteredStudents = [];
+let currentCertStudent = null;
+
+// ========== LOAD DROPDOWNS ==========
+function updateSectionsByGradeLevel() {
+    const gradeLevelId = document.getElementById('gradeLevelSelect').value;
+    const sectionSelect = document.getElementById('sectionSelect');
+    const currentValue = sectionSelect.value;
+    
+    let filteredSections = sectionsData;
+    if (gradeLevelId) {
+        filteredSections = sectionsData.filter(s => s.grade_level_id == gradeLevelId);
+    }
+    
+    sectionSelect.innerHTML = '<option value="">All Sections</option>';
+    filteredSections.forEach(sec => {
+        sectionSelect.innerHTML += `<option value="${sec.id}" ${currentValue == sec.id ? 'selected' : ''}>${sec.name}</option>`;
+    });
+}
+
+// ========== CERTIFICATE HTML TEMPLATE ==========
+function getCertificateHTML(student, semesterText, schoolYear, dateStr, rank, honorTitle) {
+    const fullName = `${student.last_name}, ${student.first_name} ${student.middle_name || ''}`.trim();
+    const gradeSection = `${student.grade_level_name || ''} - ${student.section_name}`;
+    
+    return `
+        <div class="certificate" id="certificateToPrint">
+            <div class="corner-top-left"></div>
+            <div class="corner-top-right"></div>
+            <div class="corner-bottom-left"></div>
+            <div class="corner-bottom-right"></div>
+            <div class="filigree filigree-top"></div>
+            <div class="filigree filigree-bottom"></div>
+            <div class="watermark">EXCELLENCE</div>
+            <div class="content">
+                <div class="emblem"></div>
+                <div class="header-sub">Republic of the Philippines</div>
+                <div class="header-main">Certificate of Recognition</div>
+                <div class="divider"></div>
+                <div class="presented-to">is proudly presented to</div>
+                <div class="student-name">${escapeHtml(fullName)}</div>
+                <div class="description">
+                    For demonstrating exceptional academic performance and achieving 
+                    <strong>${honorTitle}</strong> as a <strong>Top Performing Student</strong>.
+                </div>
+                <div class="achievement-detail">
+                    ✦ ${honorTitle} • ${gradeSection} • Rank #${rank} ✦
+                </div>
+                <div class="signature-area">
+                    <div class="signature">
+                        JUAN P. DELA CRUZ, EdD
+                        <div class="signature-title">School Principal</div>
+                    </div>
+                    <div class="seal"></div>
+                    <div class="signature">
+                        MARIA ELENA R. TORRES
+                        <div class="signature-title">SHS Coordinator</div>
+                    </div>
+                </div>
+                <div class="date-line">
+                    Given this ${dateStr}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function getHonorTitle(honor) {
+    if (honor === 'highest') return 'WITH HIGHEST HONORS';
+    if (honor === 'high') return 'WITH HIGH HONORS';
+    return 'WITH HONORS';
+}
+
+function showCertificate(studentId) {
+    const student = filteredStudents.find(s => s.id === studentId);
+    if (!student) return;
+    
+    currentCertStudent = student;
+    const semester = document.getElementById('semesterSelect').value;
+    const semesterText = semester === '1st' ? '1st Semester' : '2nd Semester';
+    const schoolYearSelect = document.getElementById('schoolYearSelect');
+    const schoolYear = schoolYearSelect.options[schoolYearSelect.selectedIndex]?.text || '2025-2026';
+    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const honorTitle = getHonorTitle(student.honor);
+    const rank = student.display_rank;
+    
+    const certificateHTML = getCertificateHTML(student, semesterText, schoolYear, dateStr, rank, honorTitle);
+    document.getElementById('certificateContent').innerHTML = certificateHTML;
+    document.getElementById('certModal').classList.add('active');
+}
+
+function closeCertModal() { document.getElementById('certModal').classList.remove('active'); currentCertStudent = null; }
+
+function printCertificate() { 
+    const content = document.getElementById('certificateToPrint').outerHTML; 
+    const original = document.body.innerHTML; 
+    document.body.innerHTML = `<div style="display:flex;justify-content:center;align-items:center;min-height:100vh;background:#e5e7eb;padding:20px;">${content}</div>`; 
+    window.print(); 
+    document.body.innerHTML = original; 
+    location.reload(); 
+}
+
+document.getElementById('downloadCertBtn').addEventListener('click', () => { 
+    if (!currentCertStudent) return; 
+    const element = document.getElementById('certificateToPrint'); 
+    html2pdf().set({ 
+        margin: [0.5, 0.5, 0.5, 0.5], 
+        filename: `CoR_${currentCertStudent.last_name}_${currentCertStudent.first_name}.pdf`, 
+        image: { type: 'jpeg', quality: 0.98 }, 
+        html2canvas: { scale: 2 }, 
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' } 
+    }).from(element).save(); 
+});
+
+function escapeHtml(text) {
+    if (!text) return '';
+    return text.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
+// ========== FILTER AND RENDER ==========
+function filterAndRender() {
+    const gradeLevel = document.getElementById('gradeLevelSelect').value;
+    const section = document.getElementById('sectionSelect').value;
+    
+    let filtered = [...allStudentsData];
+    
+    if (gradeLevel) filtered = filtered.filter(s => s.grade_level_id == gradeLevel);
+    if (section) filtered = filtered.filter(s => s.section_id == section);
+    
+    // Only show honor students (90+)
+    filtered = filtered.filter(s => s.honor !== 'none');
+    
+    // Sort by final average descending
+    filtered.sort((a, b) => (b.final_average || 0) - (a.final_average || 0));
+    
+    // Add display rank
+    filtered.forEach((s, idx) => { s.display_rank = idx + 1; });
+    
+    filteredStudents = filtered;
+    
+    const highest = filtered.filter(s => s.honor === 'highest').length;
+    const high = filtered.filter(s => s.honor === 'high').length;
+    const withHonor = filtered.filter(s => s.honor === 'with').length;
+    
+    document.getElementById('highestCount').textContent = highest;
+    document.getElementById('highCount').textContent = high;
+    document.getElementById('withCount').textContent = withHonor;
+    document.getElementById('totalHonorCount').textContent = highest + high + withHonor;
+    document.getElementById('studentCount').textContent = filtered.length;
+    document.getElementById('poroMessage').innerHTML = `📊 ${filtered.length} honor students. Click "Generate CoR" for certificates!`;
+    
+    renderTable(filtered);
+}
+
+function renderTable(students) {
+    const tbody = document.getElementById('studentsTableBody');
+    if (!students.length) {
+        tbody.innerHTML = '<tr><td colspan="7"><div style="text-align:center;padding:2rem;">No honor students found</div></td></tr>';
+        return;
+    }
+    
+    const avatarColors = ['#5EA173','#123499','#9b59b6','#e74c3c','#f39c12','#1abc9c','#e67e22','#2980b9'];
+    tbody.innerHTML = students.map((s, idx) => {
+        let rankClass = '';
+        if (s.display_rank === 1) rankClass = 'rank-1';
+        else if (s.display_rank === 2) rankClass = 'rank-2';
+        else if (s.display_rank === 3) rankClass = 'rank-3';
+        
+        let honorClass = s.honor === 'highest' ? 'highest' : (s.honor === 'high' ? 'high' : 'with');
+        let honorText = s.honor === 'highest' ? 'With Highest Honors' : (s.honor === 'high' ? 'With High Honors' : 'With Honors');
+        
+        // Show name normally without transformation
+        const fullName = `${s.last_name}, ${s.first_name} ${s.middle_name || ''}`.trim();
+        const initials = (s.first_name?.charAt(0) || '') + (s.last_name?.charAt(0) || '');
+        const color = avatarColors[idx % avatarColors.length];
+        
+        return `<tr data-student-id="${s.id}">
+            <td><span class="rank-badge ${rankClass}">${s.display_rank}</span></td>
+            <td class="lrn">${s.lrn}</td>
+            <td><div class="student-info"><div class="student-avatar" style="background:${color};">${initials}</div><span class="student-name">${escapeHtml(fullName)}</span></div></td>
+            <td>${s.section_name}</td>
+            <td class="final-grade"><strong>${s.final_average}%</strong></td>
+            <td><span class="honor-tag ${honorClass}">${honorText}</span></td>
+            <td><button class="cert-btn" onclick="showCertificate(${s.id})"><i class="fi fi-rr-badge"></i> Generate CoR</button></td>
+        </tr>`;
+    }).join('');
+}
+
+// ========== BATCH CERTIFICATE GENERATION ==========
+function openBatchModal() {
+    const listContainer = document.getElementById('batchList');
+    if (filteredStudents.length === 0) {
+        showToast('No Students', 'No honor students to generate certificates for', 'error');
+        return;
+    }
+    
+    listContainer.innerHTML = filteredStudents.map(s => `
+        <div class="batch-student" data-student-id="${s.id}">
+            <div class="batch-student-info">
+                <input type="checkbox" class="batch-student-check" data-id="${s.id}" checked>
+                <span><strong>${escapeHtml(s.last_name)}, ${escapeHtml(s.first_name)}</strong> - ${s.final_average}% (${s.honor === 'highest' ? 'Highest' : (s.honor === 'high' ? 'High' : 'With')} Honors)</span>
+            </div>
+        </div>
+    `).join('');
+    
+    document.getElementById('batchProgress').style.display = 'none';
+    document.getElementById('batchStatus').innerHTML = `${filteredStudents.length} students selected. Click "Generate Selected" to create certificates.`;
+    document.getElementById('batchModal').classList.add('active');
+}
+
+function closeBatchModal() { document.getElementById('batchModal').classList.remove('active'); }
+
+document.getElementById('confirmBatchBtn').addEventListener('click', () => {
+    const checkboxes = document.querySelectorAll('#batchList .batch-student-check:checked');
+    const selectedIds = Array.from(checkboxes).map(cb => parseInt(cb.dataset.id));
+    const selectedStudents = filteredStudents.filter(s => selectedIds.includes(s.id));
+    
+    if (selectedStudents.length === 0) {
+        showToast('No Selection', 'Please select at least one student', 'error');
+        return;
+    }
+    
+    generateBatchCertificates(selectedStudents);
+});
+
+async function generateBatchCertificates(students) {
+    const progressBar = document.getElementById('batchProgress');
+    const progressFill = progressBar.querySelector('.progress-fill');
+    const statusEl = document.getElementById('batchStatus');
+    
+    progressBar.style.display = 'block';
+    progressFill.style.width = '0%';
+    document.getElementById('confirmBatchBtn').disabled = true;
+    document.getElementById('confirmBatchBtn').innerHTML = '<span class="loading-spinner"></span> Generating...';
+    
+    const semester = document.getElementById('semesterSelect').value;
+    const semesterText = semester === '1st' ? '1st Semester' : '2nd Semester';
+    const schoolYearSelect = document.getElementById('schoolYearSelect');
+    const schoolYear = schoolYearSelect.options[schoolYearSelect.selectedIndex]?.text || '2025-2026';
+    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    
+    let successCount = 0;
+    
+    for (let i = 0; i < students.length; i++) {
+        const s = students[i];
+        const progress = ((i + 1) / students.length) * 100;
+        progressFill.style.width = `${progress}%`;
+        statusEl.innerHTML = `Generating certificate for ${s.last_name}, ${s.first_name}... (${i+1}/${students.length})`;
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+        successCount++;
+    }
+    
+    progressFill.style.width = '100%';
+    statusEl.innerHTML = `✅ Completed! Generated ${successCount} certificates successfully.`;
+    document.getElementById('confirmBatchBtn').disabled = false;
+    document.getElementById('confirmBatchBtn').innerHTML = '<i class="fi fi-rr-badge"></i> Generate Selected';
+    
+    showToast('Batch Generation', `Generated ${successCount} certificates!`, 'success');
+    
+    setTimeout(() => { closeBatchModal(); }, 2000);
+}
+
+// ========== EXPORT TO EXCEL ==========
+function exportToExcel() {
+    const data = filteredStudents.map(s => ({
+        'Rank': s.display_rank,
+        'LRN': s.lrn,
+        'Last Name': s.last_name,
+        'First Name': s.first_name,
+        'Middle Name': s.middle_name || '',
+        'Section': s.section_name,
+        'Final Average': s.final_average,
+        'Honor': s.honor === 'highest' ? 'With Highest Honors' : (s.honor === 'high' ? 'With High Honors' : (s.honor === 'with' ? 'With Honors' : 'None'))
+    }));
+    
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Top Students');
+    XLSX.writeFile(wb, `Top_Students_${new Date().toISOString().slice(0,19)}.xlsx`);
+    showToast('Export Complete', 'Excel file has been downloaded');
+}
+
+// ========== HONOR CARD FILTERS ==========
+document.querySelectorAll('.honor-card').forEach(card => {
+    card.addEventListener('click', () => {
+        const honorType = card.dataset.honor;
+        const filtered = allStudentsData.filter(s => s.honor === honorType && s.final_average >= 90);
+        filtered.sort((a, b) => (b.final_average || 0) - (a.final_average || 0));
+        filtered.forEach((s, idx) => { s.display_rank = idx + 1; });
+        filteredStudents = filtered;
+        
+        const honorNames = { highest: 'Highest Honors', high: 'High Honors', with: 'Honors' };
+        document.getElementById('honorFilterLabel').innerHTML = `<i class="fi fi-rr-trophy"></i> ${honorNames[honorType]} Only`;
+        
+        renderTable(filtered);
+        
+        document.getElementById('highestCount').textContent = filtered.filter(s => s.honor === 'highest').length;
+        document.getElementById('highCount').textContent = filtered.filter(s => s.honor === 'high').length;
+        document.getElementById('withCount').textContent = filtered.filter(s => s.honor === 'with').length;
+        document.getElementById('totalHonorCount').textContent = filtered.length;
+        document.getElementById('studentCount').textContent = filtered.length;
+    });
+});
+
+// ========== RESET FILTER ==========
+function resetAndFilter() {
+    document.getElementById('honorFilterLabel').innerHTML = 'All Honor Students';
+    filterAndRender();
+}
+
+// ========== EVENT LISTENERS ==========
+document.getElementById('gradeLevelSelect').addEventListener('change', function() {
+    updateSectionsByGradeLevel();
+    resetAndFilter();
+});
+document.getElementById('sectionSelect').addEventListener('change', resetAndFilter);
+document.getElementById('semesterSelect').addEventListener('change', resetAndFilter);
+document.getElementById('schoolYearSelect').addEventListener('change', resetAndFilter);
+document.getElementById('generateAllCertsBtn').addEventListener('click', openBatchModal);
+document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+
+// ========== INITIALIZE ==========
+updateSectionsByGradeLevel();
+filterAndRender();
+</script>
+</body>
+</html>

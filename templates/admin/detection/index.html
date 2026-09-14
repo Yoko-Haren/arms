@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>AI Anomaly Detection - Formify Admin Portal</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'AvantGarde', 'Century Gothic', sans-serif;
+        }
+
+        :root {
+            --rich-black: #00072D;
+            --dark-blue: #051650;
+            --secondary-green: #5EA173;
+            --gray-bg: #f5f7fb;
+            --border-color: #e9ecef;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --sidebar-width: 280px;
+            --danger-red: #dc3545;
+            --warning-orange: #f39c12;
+            --success-green: #28a745;
+            --info-blue: #17a2b8;
+            --anomaly-critical: #dc3545;
+            --anomaly-high: #f39c12;
+            --anomaly-medium: #ffc107;
+            --anomaly-low: #28a745;
+        }
+
+        body {
+            background: var(--gray-bg);
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar-header i { font-size: 2rem; color: var(--secondary-green); }
+        .sidebar-header h2 { font-size: 1.1rem; font-weight: 600; }
+        .sidebar-header span { font-size: 0.7rem; opacity: 0.7; display: block; }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin: 0 1rem 1.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+        }
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: var(--secondary-green);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--rich-black);
+        }
+        .user-details h4 { font-size: 0.9rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+
+        .nav-menu { list-style: none; padding: 0 0.75rem; }
+        .nav-item { margin-bottom: 0.25rem; }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+        .nav-link i { width: 22px; }
+
+        .nav-footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .welcome h1 { font-size: 1.3rem; color: var(--rich-black); }
+        .welcome p { color: var(--text-secondary); font-size: 0.8rem; }
+        .top-bar-actions { display: flex; align-items: center; gap: 1rem; }
+        .date-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            background: var(--gray-bg);
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+        }
+        .notification-badge { position: relative; cursor: pointer; }
+        .badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: var(--danger-red);
+            color: white;
+            font-size: 0.6rem;
+            padding: 0.2rem 0.4rem;
+            border-radius: 10px;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+        .stat-icon.red { background: rgba(220,53,69,0.1); color: var(--danger-red); }
+        .stat-icon.orange { background: rgba(243,156,18,0.1); color: var(--warning-orange); }
+        .stat-icon.yellow { background: rgba(255,193,7,0.1); color: #ffc107; }
+        .stat-icon.green { background: rgba(40,167,69,0.1); color: var(--success-green); }
+        .stat-info h3 { font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); }
+        .stat-info .value { font-size: 1.5rem; font-weight: 700; color: var(--rich-black); }
+        .stat-info .sub { font-size: 0.65rem; color: var(--text-secondary); }
+
+        /* Filter Bar */
+        .filter-bar {
+            background: white;
+            border-radius: 16px;
+            padding: 0.8rem 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .filter-group { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+        .filter-group label { font-size: 0.8rem; color: var(--text-secondary); }
+        select, input {
+            padding: 0.4rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+            font-size: 0.8rem;
+        }
+        .btn-primary {
+            background: var(--secondary-green);
+            color: white;
+            border: none;
+            padding: 0.4rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            padding: 0.4rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        /* Anomaly List */
+        .anomaly-container {
+            background: white;
+            border-radius: 20px;
+            padding: 1.2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .section-header h2 {
+            font-size: 1rem;
+            color: var(--rich-black);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .section-header h2 i { color: var(--secondary-green); }
+
+        .anomaly-card {
+            background: var(--gray-bg);
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid;
+            transition: all 0.2s;
+        }
+        .anomaly-card.critical { border-left-color: var(--anomaly-critical); }
+        .anomaly-card.high { border-left-color: var(--anomaly-high); }
+        .anomaly-card.medium { border-left-color: var(--anomaly-medium); }
+        .anomaly-card.low { border-left-color: var(--anomaly-low); }
+        .anomaly-card.resolved { opacity: 0.6; background: #fafafa; }
+        .anomaly-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .anomaly-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--rich-black);
+        }
+        .priority-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+        .priority-critical { background: #f8d7da; color: #721c24; }
+        .priority-high { background: #fff3cd; color: #856404; }
+        .priority-medium { background: #fff3cd; color: #856404; }
+        .priority-low { background: #d4edda; color: #155724; }
+        .status-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+        .status-pending { background: #cfe2ff; color: #084298; }
+        .status-resolved { background: #d4edda; color: #155724; }
+        .status-false { background: #e9ecef; color: #6c757d; }
+        .anomaly-details {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        .anomaly-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+        .confidence-score {
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+        }
+        .action-btn.resolve { background: var(--success-green); color: white; }
+        .action-btn.false { background: var(--text-secondary); color: white; }
+        .action-btn:hover { opacity: 0.8; }
+
+        /* AI Confidence Chart */
+        .confidence-chart-container {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--gray-bg);
+            border-radius: 16px;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        .page-btn {
+            background: var(--gray-bg);
+            border: 1px solid var(--border-color);
+            padding: 0.3rem 0.7rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .page-btn.active { background: var(--secondary-green); color: white; border-color: var(--secondary-green); }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: modalSlideIn 0.3s ease;
+        }
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; }
+        .modal-body { padding: 1.5rem; }
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+        .detail-row { display: flex; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); }
+        .detail-label { width: 120px; font-weight: 600; font-size: 0.8rem; color: var(--rich-black); }
+        .detail-value { flex: 1; font-size: 0.8rem; }
+
+        .menu-toggle {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: var(--secondary-green);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 1200px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .menu-toggle { display: block; }
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .filter-bar { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-shield-alt"></i>
+                <h2>Formify <br><span>Admin Portal</span></h2>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar">SA</div>
+                <div class="user-details">
+                    <h4>System Admin</h4>
+                    <p>Super Administrator</p>
+                </div>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="../dashboard/index.html" class="nav-link"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li class="nav-item"><a href="../detection/index.html" class="nav-link active"><i class="fas fa-robot"></i> AI Anomaly Detection</a></li>
+                <li class="nav-item"><a href="../anomalyLogs/index.html" class="nav-link"><i class="fas fa-exclamation-triangle"></i> Anomaly Logs</a></li>
+                <li class="nav-item"><a href="../modelTraining/index.html" class="nav-link"><i class="fas fa-brain"></i> AI Model Training</a></li>
+                <li class="nav-item"><a href="../monitoring/index.html" class="nav-link"><i class="fas fa-chart-line"></i> System Monitoring</a></li>
+                <li class="nav-item"><a href="../auditTrail/index.html" class="nav-link"><i class="fas fa-history"></i> Audit Trail</a></li>
+                <li class="nav-item"><a href="../security/index.html" class="nav-link"><i class="fas fa-shield-alt"></i> Security</a></li>
+                <li class="nav-item"><a href="../settings/index.html" class="nav-link"><i class="fas fa-cog"></i> Settings</a></li>
+            </ul>
+            <ul class="nav-menu nav-footer">
+                <li class="nav-item"><a href="#" class="nav-link"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="top-bar">
+                <div class="welcome">
+                    <h1>AI Anomaly Detection</h1>
+                    <p>Poro AI - Real-time monitoring of suspicious activities</p>
+                </div>
+                <div class="top-bar-actions">
+                    <div class="date-display"><i class="fas fa-calendar"></i><span id="currentDate"></span></div>
+                    <div class="notification-badge"><i class="fas fa-bell"></i><span class="badge">3</span></div>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-icon red"><i class="fas fa-exclamation-circle"></i></div><div class="stat-info"><h3>Active Anomalies</h3><div class="value" id="activeCount">0</div><div class="sub">Pending review</div></div></div>
+                <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-chart-line"></i></div><div class="stat-info"><h3>Avg AI Confidence</h3><div class="value" id="avgConfidence">94.2%</div><div class="sub">Last 7 days</div></div></div>
+                <div class="stat-card"><div class="stat-icon yellow"><i class="fas fa-check-circle"></i></div><div class="stat-info"><h3>Resolved</h3><div class="value" id="resolvedCount">0</div><div class="sub">This month</div></div></div>
+                <div class="stat-card"><div class="stat-icon green"><i class="fas fa-robot"></i></div><div class="stat-info"><h3>False Positives</h3><div class="value" id="falseCount">0</div><div class="sub">AI learning</div></div></div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label>Priority:</label>
+                    <select id="priorityFilter">
+                        <option value="all">All Priorities</option>
+                        <option value="critical">Critical</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Status:</label>
+                    <select id="statusFilter">
+                        <option value="all">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="false_positive">False Positive</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Type:</label>
+                    <select id="typeFilter">
+                        <option value="all">All Types</option>
+                        <option value="grade">Grade Change</option>
+                        <option value="login">Login Anomaly</option>
+                        <option value="access">Access Pattern</option>
+                        <option value="data">Data Export</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <button class="btn-primary" onclick="filterAnomalies()">Apply Filters</button>
+                    <button class="btn-outline" onclick="exportAnomalies()"><i class="fas fa-download"></i> Export</button>
+                </div>
+            </div>
+
+            <!-- Anomaly List -->
+            <div class="anomaly-container">
+                <div class="section-header">
+                    <h2><i class="fas fa-robot"></i> Poro AI Detected Anomalies</h2>
+                    <span class="view-all" id="anomalyCount">0 anomalies found</span>
+                </div>
+                <div id="anomalyList"></div>
+                <div id="paginationControls" class="pagination"></div>
+            </div>
+
+            <!-- AI Confidence Trend -->
+            <div class="anomaly-container" style="margin-top: 1.5rem;">
+                <div class="section-header">
+                    <h2><i class="fas fa-chart-line"></i> AI Detection Confidence Trend (Last 7 Days)</h2>
+                    <button class="view-all" onclick="refreshData()">Refresh</button>
+                </div>
+                <div class="confidence-chart-container">
+                    <canvas id="confidenceChart" style="max-height: 200px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anomaly Detail Modal -->
+    <div id="anomalyDetailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Anomaly Details</h2>
+                <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="detailModalBody"></div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="closeDetailModal()">Close</button>
+                <button class="btn-primary" id="modalResolveBtn" onclick="resolveFromModal()">Mark as Resolved</button>
+                <button class="btn-outline" id="modalFalseBtn" onclick="falsePositiveFromModal()">False Positive</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock anomaly data
+        let anomalies = [
+            { id: 1, title: "Suspicious Grade Changes", description: "Teacher Juan Dela Cruz modified 5 grades in 3 minutes for Grade 10 Science", type: "grade", priority: "critical", status: "pending", timestamp: "2026-04-15 09:45:22", confidence: 96, user: "Juan Dela Cruz", role: "Teacher", ip: "192.168.1.45", details: "Multiple grade changes detected within 3 minutes. Off-hour access pattern detected. Historical baseline shows 1-2 changes per day." },
+            { id: 2, title: "Off-Hour Login Attempt", description: "Login at 2:30 AM from unfamiliar IP address", type: "login", priority: "high", status: "pending", timestamp: "2026-04-15 02:30:15", confidence: 89, user: "Maria Rivera", role: "Registrar", ip: "203.177.45.89", details: "Login occurred outside normal working hours (6AM-6PM). IP geolocation shows Manila, while school is in Davao." },
+            { id: 3, title: "Bulk Data Export", description: "Large export of student records from Registrar account", type: "data", priority: "high", status: "pending", timestamp: "2026-04-14 16:20:33", confidence: 92, user: "Maria Rivera", role: "Registrar", ip: "192.168.1.20", details: "5,234 student records exported in single operation. Unusual for routine work." },
+            { id: 4, title: "Unusual Access Pattern", description: "Teacher accessed grade records for sections they don't handle", type: "access", priority: "medium", status: "pending", timestamp: "2026-04-14 11:05:00", confidence: 78, user: "Ana Reyes", role: "Teacher", ip: "192.168.1.67", details: "Teacher accessed Grade 11 records but only assigned to Grade 7-8." },
+            { id: 5, title: "Failed Login Attempts", description: "5 consecutive failed login attempts on School Head account", type: "login", priority: "medium", status: "resolved", timestamp: "2026-04-13 08:15:22", confidence: 85, user: "Maria Santos", role: "School Head", ip: "45.67.89.123", details: "Multiple failed attempts from unknown IP. Account was temporarily locked." },
+            { id: 6, title: "Grade Change Pattern Anomaly", description: "Unusual grade distribution pattern detected", type: "grade", priority: "low", status: "pending", timestamp: "2026-04-13 14:30:00", confidence: 65, user: "Roberto Gomez", role: "Teacher", ip: "192.168.1.100", details: "Grade distribution shows unusually high number of 95-100 scores compared to historical average." },
+            { id: 7, title: "Weekend System Access", description: "Multiple users accessed system on Sunday", type: "access", priority: "low", status: "false_positive", timestamp: "2026-04-12 10:00:00", confidence: 55, user: "Multiple", role: "Various", ip: "Various", details: "Weekend access is permitted by school policy. Marked as false positive." },
+            { id: 8, title: "Unauthorized Form Access", description: "Teacher accessed SF10 forms without permission", type: "access", priority: "critical", status: "pending", timestamp: "2026-04-15 08:20:10", confidence: 94, user: "Paul Villanueva", role: "Teacher", ip: "192.168.1.89", details: "Teacher accessed permanent records (SF10) which requires special permission." }
+        ];
+
+        let currentPage = 1;
+        let rowsPerPage = 10;
+        let currentDetailAnomaly = null;
+
+        function updateStats() {
+            const active = anomalies.filter(a => a.status === 'pending').length;
+            const resolved = anomalies.filter(a => a.status === 'resolved').length;
+            const falsePos = anomalies.filter(a => a.status === 'false_positive').length;
+            document.getElementById('activeCount').innerText = active;
+            document.getElementById('resolvedCount').innerText = resolved;
+            document.getElementById('falseCount').innerText = falsePos;
+        }
+
+        function getFilteredAnomalies() {
+            const priority = document.getElementById('priorityFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            const type = document.getElementById('typeFilter').value;
+            return anomalies.filter(a => {
+                if (priority !== 'all' && a.priority !== priority) return false;
+                if (status !== 'all' && a.status !== status) return false;
+                if (type !== 'all' && a.type !== type) return false;
+                return true;
+            });
+        }
+
+        function renderAnomalies() {
+            const filtered = getFilteredAnomalies();
+            const totalFiltered = filtered.length;
+            const totalPages = Math.ceil(totalFiltered / rowsPerPage);
+            if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
+            const start = (currentPage - 1) * rowsPerPage;
+            const paginated = filtered.slice(start, start + rowsPerPage);
+            document.getElementById('anomalyCount').innerHTML = `${filtered.length} anomalies found`;
+            
+            const container = document.getElementById('anomalyList');
+            if (paginated.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:2rem;">No anomalies found.</div>';
+                document.getElementById('paginationControls').innerHTML = '';
+                return;
+            }
+            
+            container.innerHTML = paginated.map(a => {
+                let priorityClass = a.priority === 'critical' ? 'priority-critical' : (a.priority === 'high' ? 'priority-high' : (a.priority === 'medium' ? 'priority-medium' : 'priority-low'));
+                let statusClass = a.status === 'pending' ? 'status-pending' : (a.status === 'resolved' ? 'status-resolved' : 'status-false');
+                let statusText = a.status === 'pending' ? 'Pending Review' : (a.status === 'resolved' ? 'Resolved' : 'False Positive');
+                let cardClass = a.priority === 'critical' ? 'critical' : (a.priority === 'high' ? 'high' : (a.priority === 'medium' ? 'medium' : 'low'));
+                if (a.status !== 'pending') cardClass = 'resolved';
+                return `
+                    <div class="anomaly-card ${cardClass}">
+                        <div class="anomaly-header">
+                            <span class="anomaly-title">${a.title}</span>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <span class="priority-badge ${priorityClass}">${a.priority.toUpperCase()}</span>
+                                <span class="status-badge ${statusClass}">${statusText}</span>
+                            </div>
+                        </div>
+                        <div class="anomaly-details">
+                            ${a.description} • ${a.timestamp}
+                        </div>
+                        <div class="anomaly-meta">
+                            <div class="confidence-score">
+                                <i class="fas fa-robot"></i> AI Confidence: ${a.confidence}%
+                            </div>
+                            <div class="action-buttons">
+                                <button class="action-btn resolve" onclick="viewAnomalyDetail(${a.id})">View Details</button>
+                                ${a.status === 'pending' ? `<button class="action-btn resolve" onclick="resolveAnomaly(${a.id})">Mark Resolved</button>
+                                <button class="action-btn false" onclick="markFalsePositive(${a.id})">False Positive</button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Pagination
+            let pagHtml = `<button class="page-btn" onclick="goToPage(1)" ${currentPage===1?'disabled':''}>First</button>
+                           <button class="page-btn" onclick="goToPage(${currentPage-1})" ${currentPage===1?'disabled':''}>Prev</button>`;
+            for (let i = Math.max(1, currentPage-2); i <= Math.min(totalPages, currentPage+2); i++) {
+                pagHtml += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goToPage(${i})">${i}</button>`;
+            }
+            pagHtml += `<button class="page-btn" onclick="goToPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>Next</button>
+                        <button class="page-btn" onclick="goToPage(${totalPages})" ${currentPage===totalPages?'disabled':''}>Last</button>
+                        <span style="font-size:0.7rem;">Page ${currentPage} of ${totalPages}</span>`;
+            document.getElementById('paginationControls').innerHTML = pagHtml;
+        }
+
+        function goToPage(page) { currentPage = page; renderAnomalies(); }
+        function filterAnomalies() { currentPage = 1; renderAnomalies(); }
+
+        function viewAnomalyDetail(id) {
+            currentDetailAnomaly = anomalies.find(a => a.id === id);
+            if (!currentDetailAnomaly) return;
+            const modalBody = document.getElementById('detailModalBody');
+            modalBody.innerHTML = `
+                <div class="detail-row"><div class="detail-label">Anomaly ID</div><div class="detail-value">#${currentDetailAnomaly.id}</div></div>
+                <div class="detail-row"><div class="detail-label">Title</div><div class="detail-value">${currentDetailAnomaly.title}</div></div>
+                <div class="detail-row"><div class="detail-label">Type</div><div class="detail-value">${currentDetailAnomaly.type}</div></div>
+                <div class="detail-row"><div class="detail-label">Priority</div><div class="detail-value">${currentDetailAnomaly.priority.toUpperCase()}</div></div>
+                <div class="detail-row"><div class="detail-label">Timestamp</div><div class="detail-value">${currentDetailAnomaly.timestamp}</div></div>
+                <div class="detail-row"><div class="detail-label">User</div><div class="detail-value">${currentDetailAnomaly.user} (${currentDetailAnomaly.role})</div></div>
+                <div class="detail-row"><div class="detail-label">IP Address</div><div class="detail-value">${currentDetailAnomaly.ip}</div></div>
+                <div class="detail-row"><div class="detail-label">AI Confidence</div><div class="detail-value">${currentDetailAnomaly.confidence}%</div></div>
+                <div class="detail-row"><div class="detail-label">Description</div><div class="detail-value">${currentDetailAnomaly.description}</div></div>
+                <div class="detail-row"><div class="detail-label">Full Details</div><div class="detail-value">${currentDetailAnomaly.details}</div></div>
+                <div class="detail-row"><div class="detail-label">Status</div><div class="detail-value">${currentDetailAnomaly.status}</div></div>
+            `;
+            const modal = document.getElementById('anomalyDetailModal');
+            const resolveBtn = document.getElementById('modalResolveBtn');
+            const falseBtn = document.getElementById('modalFalseBtn');
+            if (currentDetailAnomaly.status !== 'pending') {
+                resolveBtn.style.display = 'none';
+                falseBtn.style.display = 'none';
+            } else {
+                resolveBtn.style.display = 'inline-block';
+                falseBtn.style.display = 'inline-block';
+            }
+            modal.classList.add('active');
+        }
+
+        function closeDetailModal() { document.getElementById('anomalyDetailModal').classList.remove('active'); currentDetailAnomaly = null; }
+        function resolveFromModal() { if (currentDetailAnomaly) resolveAnomaly(currentDetailAnomaly.id); closeDetailModal(); }
+        function falsePositiveFromModal() { if (currentDetailAnomaly) markFalsePositive(currentDetailAnomaly.id); closeDetailModal(); }
+
+        function resolveAnomaly(id) {
+            const index = anomalies.findIndex(a => a.id === id);
+            if (index !== -1 && anomalies[index].status === 'pending') {
+                anomalies[index].status = 'resolved';
+                updateStats();
+                renderAnomalies();
+                alert(`Anomaly #${id} marked as resolved. AI model will learn from this feedback.`);
+            }
+        }
+
+        function markFalsePositive(id) {
+            const index = anomalies.findIndex(a => a.id === id);
+            if (index !== -1 && anomalies[index].status === 'pending') {
+                anomalies[index].status = 'false_positive';
+                updateStats();
+                renderAnomalies();
+                alert(`Anomaly #${id} marked as false positive. AI model will recalibrate.`);
+            }
+        }
+
+        function exportAnomalies() {
+            let csv = "ID,Title,Type,Priority,Status,Timestamp,User,IP,Confidence\n";
+            anomalies.forEach(a => {
+                csv += `${a.id},"${a.title}",${a.type},${a.priority},${a.status},${a.timestamp},${a.user},${a.ip},${a.confidence}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `anomaly_export_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        }
+
+        // Confidence Trend Chart
+        let confidenceChart;
+        function initConfidenceChart() {
+            const ctx = document.getElementById('confidenceChart').getContext('2d');
+            confidenceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Apr 9', 'Apr 10', 'Apr 11', 'Apr 12', 'Apr 13', 'Apr 14', 'Today'],
+                    datasets: [{
+                        label: 'AI Detection Confidence (%)',
+                        data: [88, 91, 93, 90, 94, 95, 94],
+                        borderColor: '#5EA173',
+                        backgroundColor: 'rgba(94,161,115,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#5EA173',
+                        pointRadius: 5
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: true, scales: { y: { min: 70, max: 100 } } }
+            });
+        }
+
+        function refreshData() {
+            alert('Refreshing AI detection data...');
+            if (confidenceChart) confidenceChart.data.datasets[0].data = [88, 92, 94, 91, 95, 96, 94];
+            confidenceChart.update();
+        }
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+        function updateDateTime() { document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }); }
+
+        document.getElementById('priorityFilter').addEventListener('change', filterAnomalies);
+        document.getElementById('statusFilter').addEventListener('change', filterAnomalies);
+        document.getElementById('typeFilter').addEventListener('change', filterAnomalies);
+
+        updateStats();
+        renderAnomalies();
+        initConfidenceChart();
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+    </script>
+</body>
+</html>

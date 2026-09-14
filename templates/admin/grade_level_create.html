@@ -1,0 +1,416 @@
+{% extends 'admin/base.html' %}
+{% load static %}
+
+{% block title %}Grade Levels{% endblock %}
+{% block page_title %}Grade Levels{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ========== TOOLBAR ========== */
+    .toolbar-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .btn-create {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.6rem 1.3rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.78rem;
+        font-weight: 600;
+        background: var(--primary-gradient);
+        color: white;
+        text-decoration: none;
+        transition: var(--transition);
+        box-shadow: 0 4px 15px rgba(18,52,153,0.25);
+    }
+    .btn-create:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 22px rgba(18,52,153,0.4);
+        color: white;
+    }
+
+    .filter-select {
+        padding: 0.6rem 2rem 0.6rem 0.75rem;
+        border: 2px solid var(--gray-300);
+        border-radius: var(--radius-sm);
+        font-size: 0.8rem;
+        font-family: inherit;
+        background: var(--gray-50);
+        color: var(--gray-700);
+        cursor: pointer;
+        transition: var(--transition);
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236c757d' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.7rem center;
+        min-width: 200px;
+    }
+    .filter-select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(18,52,153,0.08);
+        background-color: white;
+    }
+
+    /* ========== TABLE CARD ========== */
+    .table-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+    }
+    .table-wrapper { overflow-x: auto; }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.78rem;
+    }
+    .data-table thead th {
+        text-align: left;
+        padding: 0.75rem 1rem;
+        border-bottom: 2px solid var(--gray-200);
+        color: var(--gray-500);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.65rem;
+        letter-spacing: 0.6px;
+        background: var(--gray-50);
+        white-space: nowrap;
+    }
+    .data-table tbody td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--gray-100);
+        color: var(--gray-700);
+        vertical-align: middle;
+    }
+    .data-table tbody tr {
+        transition: var(--transition);
+    }
+    .data-table tbody tr:hover {
+        background: var(--primary-light);
+    }
+    .data-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .grade-code {
+        font-weight: 700;
+        color: var(--primary);
+        font-size: 0.82rem;
+    }
+    .grade-name {
+        font-weight: 600;
+        color: var(--gray-700);
+    }
+    .grade-number-cell {
+        text-align: center;
+    }
+    .grade-number-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        font-weight: 700;
+        font-size: 0.78rem;
+        background: var(--gray-100);
+        color: var(--gray-700);
+    }
+
+    .category-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.68rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .category-badge.shs-badge {
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        color: #1565C0;
+    }
+    .category-badge.jhs-badge {
+        background: linear-gradient(135deg, #e8eeff, #c5cae9);
+        color: #123499;
+    }
+    .category-badge.elem-badge {
+        background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+        color: #6A1B9A;
+    }
+
+    .shs-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.68rem;
+        font-weight: 600;
+    }
+    .shs-badge.yes-badge { background: var(--info-light); color: var(--info); }
+    .shs-badge.no-badge { background: #f5f5f5; color: #9e9e9e; }
+
+    .school-link {
+        color: var(--gray-700);
+        font-weight: 500;
+        text-decoration: none;
+        transition: var(--transition);
+    }
+    .school-link:hover { color: var(--primary); text-decoration: underline; }
+    .no-school { color: #adb5bd; font-style: italic; }
+
+    .date-cell {
+        font-size: 0.72rem;
+        color: var(--gray-500);
+        white-space: nowrap;
+    }
+
+    /* ========== EMPTY STATE ========== */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1.5rem;
+    }
+    .empty-state-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: var(--gray-100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.25rem;
+        font-size: 2rem;
+        color: #bdbdbd;
+    }
+    .empty-state h5 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin-bottom: 0.5rem;
+    }
+    .empty-state p {
+        font-size: 0.82rem;
+        color: var(--gray-500);
+        margin-bottom: 1.25rem;
+    }
+
+    /* ========== PAGINATION ========== */
+    .pagination-wrapper {
+        display: flex;
+        justify-content: center;
+        margin-top: 1.5rem;
+    }
+    .pagination-list {
+        display: flex;
+        gap: 0.35rem;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .pagination-list li { display: inline; }
+    .page-link-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 38px;
+        height: 38px;
+        padding: 0 0.6rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-decoration: none;
+        border: 2px solid var(--gray-300);
+        background: white;
+        color: var(--gray-700);
+        transition: var(--transition);
+    }
+    .page-link-btn:hover {
+        border-color: var(--primary);
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+    .page-link-btn.active-page {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+        pointer-events: none;
+    }
+    .page-link-btn.disabled-page {
+        opacity: 0.4;
+        pointer-events: none;
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 640px) {
+        .toolbar-row { flex-direction: column; align-items: stretch; }
+        .filter-select { width: 100%; }
+        .btn-create { justify-content: center; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- TOOLBAR -->
+<div class="toolbar-row">
+    <a href="{% url 'admin_panel:grade_level_create' %}" class="btn-create">
+        <i class="fas fa-plus"></i> Add Grade Levels
+    </a>
+    <form method="GET">
+        <select name="school" class="filter-select" onchange="this.form.submit()">
+            <option value="">🏫 All Schools</option>
+            {% for s in schools %}
+            <option value="{{ s.id }}" {% if selected_school|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>
+                {{ s.school_name }}
+            </option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+<!-- GRADE LEVELS TABLE -->
+<div class="table-card">
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Grade Name</th>
+                    <th>Number</th>
+                    <th>Category</th>
+                    <th>SHS</th>
+                    <th>School</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for gl in grade_levels %}
+                <tr>
+                    <td><span class="grade-code">{{ gl.grade_code }}</span></td>
+                    <td><span class="grade-name">{{ gl.grade_name }}</span></td>
+                    <td class="grade-number-cell">
+                        <span class="grade-number-badge">{{ gl.grade_number }}</span>
+                    </td>
+                    <td>
+                        {% if gl.level_category == 'SHS' %}
+                            <span class="category-badge shs-badge">
+                                <i class="fas fa-graduation-cap"></i> {{ gl.get_level_category_display }}
+                            </span>
+                        {% elif gl.level_category == 'JHS' %}
+                            <span class="category-badge jhs-badge">
+                                <i class="fas fa-school"></i> {{ gl.get_level_category_display }}
+                            </span>
+                        {% else %}
+                            <span class="category-badge elem-badge">
+                                <i class="fas fa-child"></i> {{ gl.get_level_category_display }}
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if gl.is_senior_high %}
+                            <span class="shs-badge yes-badge">
+                                <i class="fas fa-check-circle"></i> Yes
+                            </span>
+                        {% else %}
+                            <span class="shs-badge no-badge">
+                                <i class="fas fa-circle"></i> No
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if gl.school %}
+                            <a href="{% url 'admin_panel:school_detail' gl.school.id %}" class="school-link">
+                                {{ gl.school.school_name }}
+                            </a>
+                        {% else %}
+                            <span class="no-school">—</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="date-cell">{{ gl.created_at|date:"M d, Y" }}</span></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">
+                                <i class="fas fa-layer-group"></i>
+                            </div>
+                            <h5>No Grade Levels Found</h5>
+                            <p>Add grade levels to start organizing students by grade.</p>
+                            <a href="{% url 'admin_panel:grade_level_create' %}" class="btn-create">
+                                <i class="fas fa-plus"></i> Add Grade Levels
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- PAGINATION -->
+{% if grade_levels.has_other_pages %}
+<div class="pagination-wrapper">
+    <ul class="pagination-list">
+        {% if grade_levels.has_previous %}
+            <li>
+                <a href="?page=1{% if selected_school %}&school={{ selected_school }}{% endif %}" class="page-link-btn" title="First">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li>
+                <a href="?page={{ grade_levels.previous_page_number }}{% if selected_school %}&school={{ selected_school }}{% endif %}" class="page-link-btn" title="Previous">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% else %}
+            <li><span class="page-link-btn disabled-page"><i class="fas fa-angle-double-left"></i></span></li>
+            <li><span class="page-link-btn disabled-page"><i class="fas fa-angle-left"></i></span></li>
+        {% endif %}
+
+        {% for num in grade_levels.paginator.page_range %}
+            {% if num == grade_levels.number %}
+                <li><span class="page-link-btn active-page">{{ num }}</span></li>
+            {% elif num > grade_levels.number|add:"-3" and num < grade_levels.number|add:"3" %}
+                <li>
+                    <a href="?page={{ num }}{% if selected_school %}&school={{ selected_school }}{% endif %}" class="page-link-btn">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if grade_levels.has_next %}
+            <li>
+                <a href="?page={{ grade_levels.next_page_number }}{% if selected_school %}&school={{ selected_school }}{% endif %}" class="page-link-btn" title="Next">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li>
+                <a href="?page={{ grade_levels.paginator.num_pages }}{% if selected_school %}&school={{ selected_school }}{% endif %}" class="page-link-btn" title="Last">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% else %}
+            <li><span class="page-link-btn disabled-page"><i class="fas fa-angle-right"></i></span></li>
+            <li><span class="page-link-btn disabled-page"><i class="fas fa-angle-double-right"></i></span></li>
+        {% endif %}
+    </ul>
+</div>
+{% endif %}
+
+{% endblock %}

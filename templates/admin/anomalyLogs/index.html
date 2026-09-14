@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Anomaly Logs - Formify Admin Portal</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'AvantGarde', 'Century Gothic', sans-serif;
+        }
+
+        :root {
+            --rich-black: #00072D;
+            --dark-blue: #051650;
+            --secondary-green: #5EA173;
+            --gray-bg: #f5f7fb;
+            --border-color: #e9ecef;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --sidebar-width: 280px;
+            --danger-red: #dc3545;
+            --warning-orange: #f39c12;
+            --success-green: #28a745;
+            --anomaly-critical: #dc3545;
+            --anomaly-high: #f39c12;
+            --anomaly-medium: #ffc107;
+            --anomaly-low: #28a745;
+        }
+
+        body {
+            background: var(--gray-bg);
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar-header i { font-size: 2rem; color: var(--secondary-green); }
+        .sidebar-header h2 { font-size: 1.1rem; font-weight: 600; }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin: 0 1rem 1.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+        }
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: var(--secondary-green);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--rich-black);
+        }
+        .user-details h4 { font-size: 0.9rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+
+        .nav-menu { list-style: none; padding: 0 0.75rem; }
+        .nav-item { margin-bottom: 0.25rem; }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+        .nav-link i { width: 22px; }
+
+        .nav-footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .welcome h1 { font-size: 1.3rem; color: var(--rich-black); }
+        .welcome p { color: var(--text-secondary); font-size: 0.8rem; }
+        .top-bar-actions { display: flex; align-items: center; gap: 1rem; }
+        .date-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            background: var(--gray-bg);
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+        .stat-icon.red { background: rgba(220,53,69,0.1); color: var(--danger-red); }
+        .stat-icon.orange { background: rgba(243,156,18,0.1); color: var(--warning-orange); }
+        .stat-icon.yellow { background: rgba(255,193,7,0.1); color: #ffc107; }
+        .stat-icon.green { background: rgba(40,167,69,0.1); color: var(--success-green); }
+        .stat-info h3 { font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); }
+        .stat-info .value { font-size: 1.5rem; font-weight: 700; color: var(--rich-black); }
+        .stat-info .sub { font-size: 0.65rem; color: var(--text-secondary); }
+
+        /* Filter Bar */
+        .filter-bar {
+            background: white;
+            border-radius: 16px;
+            padding: 0.8rem 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .filter-group { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+        .filter-group label { font-size: 0.8rem; color: var(--text-secondary); }
+        select, input {
+            padding: 0.4rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+            font-size: 0.8rem;
+        }
+        .search-input { width: 220px; }
+        .btn-primary {
+            background: var(--secondary-green);
+            color: white;
+            border: none;
+            padding: 0.4rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            padding: 0.4rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        /* Table Container */
+        .table-container {
+            background: white;
+            border-radius: 20px;
+            padding: 1.2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            overflow-x: auto;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .section-header h2 {
+            font-size: 1rem;
+            color: var(--rich-black);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .section-header h2 i { color: var(--secondary-green); }
+
+        .anomaly-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .anomaly-table th, .anomaly-table td {
+            text-align: left;
+            padding: 0.8rem 0.5rem;
+            font-size: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .anomaly-table th {
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+        }
+        .anomaly-table th:hover { color: var(--secondary-green); }
+        .anomaly-table tbody tr { transition: background 0.2s; cursor: pointer; }
+        .anomaly-table tbody tr:hover { background: rgba(94,161,115,0.05); }
+
+        .priority-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .priority-critical { background: #f8d7da; color: #721c24; }
+        .priority-high { background: #fff3cd; color: #856404; }
+        .priority-medium { background: #fff3cd; color: #856404; }
+        .priority-low { background: #d4edda; color: #155724; }
+
+        .status-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .status-pending { background: #cfe2ff; color: #084298; }
+        .status-resolved { background: #d4edda; color: #155724; }
+        .status-false { background: #e9ecef; color: #6c757d; }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .pagination-controls { display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; }
+        .page-btn {
+            background: var(--gray-bg);
+            border: 1px solid var(--border-color);
+            padding: 0.3rem 0.7rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .page-btn.active { background: var(--secondary-green); color: white; border-color: var(--secondary-green); }
+        .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .rows-select { padding: 0.3rem; border: 2px solid var(--border-color); border-radius: 6px; }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: modalSlideIn 0.3s ease;
+        }
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: white;
+        }
+        .modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; }
+        .modal-body { padding: 1.5rem; }
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+        .detail-row { display: flex; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); }
+        .detail-label { width: 130px; font-weight: 600; font-size: 0.8rem; color: var(--rich-black); }
+        .detail-value { flex: 1; font-size: 0.8rem; }
+
+        .menu-toggle {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: var(--secondary-green);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 1200px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .menu-toggle { display: block; }
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .filter-bar { flex-direction: column; align-items: stretch; }
+            .anomaly-table { min-width: 800px; }
+        }
+    </style>
+</head>
+<body>
+    <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-shield-alt"></i>
+                <h2>Formify <br><span>Admin Portal</span></h2>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar">SA</div>
+                <div class="user-details">
+                    <h4>System Admin</h4>
+                    <p>Super Administrator</p>
+                </div>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="../dashboard/index.html" class="nav-link"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li class="nav-item"><a href="../detection/index.html" class="nav-link"><i class="fas fa-robot"></i> AI Anomaly Detection</a></li>
+                <li class="nav-item"><a href="../anomalyLogs/index.html" class="nav-link active"><i class="fas fa-exclamation-triangle"></i> Anomaly Logs</a></li>
+                <li class="nav-item"><a href="../modelTraining/index.html" class="nav-link"><i class="fas fa-brain"></i> AI Model Training</a></li>
+                <li class="nav-item"><a href="../monitoring/index.html" class="nav-link"><i class="fas fa-chart-line"></i> System Monitoring</a></li>
+                <li class="nav-item"><a href="../auditTrail/index.html" class="nav-link"><i class="fas fa-history"></i> Audit Trail</a></li>
+                <li class="nav-item"><a href="../security/index.html" class="nav-link"><i class="fas fa-shield-alt"></i> Security</a></li>
+                <li class="nav-item"><a href="../settings/index.html" class="nav-link"><i class="fas fa-cog"></i> Settings</a></li>
+            </ul>
+            <ul class="nav-menu nav-footer">
+                <li class="nav-item"><a href="../logout/index.html" class="nav-link"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="top-bar">
+                <div class="welcome">
+                    <h1>Anomaly Logs</h1>
+                    <p>Complete historical record of all AI-detected anomalies</p>
+                </div>
+                <div class="top-bar-actions">
+                    <div class="date-display"><i class="fas fa-calendar"></i><span id="currentDate"></span></div>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-icon red"><i class="fas fa-exclamation-triangle"></i></div><div class="stat-info"><h3>Total Anomalies</h3><div class="value" id="totalCount">0</div><div class="sub">All time</div></div></div>
+                <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-clock"></i></div><div class="stat-info"><h3>Pending</h3><div class="value" id="pendingCount">0</div><div class="sub">Awaiting review</div></div></div>
+                <div class="stat-card"><div class="stat-icon yellow"><i class="fas fa-check-circle"></i></div><div class="stat-info"><h3>Resolved</h3><div class="value" id="resolvedCount">0</div><div class="sub">This month</div></div></div>
+                <div class="stat-card"><div class="stat-icon green"><i class="fas fa-chart-line"></i></div><div class="stat-info"><h3>False Positive Rate</h3><div class="value" id="falseRate">5.2%</div><div class="sub">Last 30 days</div></div></div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label>Priority:</label>
+                    <select id="priorityFilter">
+                        <option value="all">All Priorities</option>
+                        <option value="critical">Critical</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Status:</label>
+                    <select id="statusFilter">
+                        <option value="all">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="false_positive">False Positive</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Type:</label>
+                    <select id="typeFilter">
+                        <option value="all">All Types</option>
+                        <option value="grade">Grade Change</option>
+                        <option value="login">Login Anomaly</option>
+                        <option value="access">Access Pattern</option>
+                        <option value="data">Data Export</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <input type="text" class="search-input" id="searchInput" placeholder="Search by user, description..." onkeyup="filterAndPaginate()">
+                </div>
+                <div class="filter-group">
+                    <label>Date Range:</label>
+                    <input type="date" id="dateFrom"> to <input type="date" id="dateTo">
+                </div>
+                <div class="filter-group">
+                    <button class="btn-primary" onclick="filterAndPaginate()">Apply</button>
+                    <button class="btn-outline" onclick="exportLogs()"><i class="fas fa-download"></i> Export CSV</button>
+                    <button class="btn-outline" onclick="clearFilters()">Clear</button>
+                </div>
+            </div>
+
+            <!-- Anomaly Logs Table -->
+            <div class="table-container">
+                <div class="section-header">
+                    <h2><i class="fas fa-list-alt"></i> Anomaly Logs</h2>
+                    <span class="view-all" id="logCount">0 records</span>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="anomaly-table" id="anomalyTable">
+                        <thead>
+                            <tr>
+                                <th onclick="sortBy('id')">ID <i class="fas fa-sort"></i></th>
+                                <th onclick="sortBy('timestamp')">Timestamp <i class="fas fa-sort"></i></th>
+                                <th>Title / Description</th>
+                                <th>Type</th>
+                                <th onclick="sortBy('priority')">Priority <i class="fas fa-sort"></i></th>
+                                <th>User</th>
+                                <th onclick="sortBy('status')">Status <i class="fas fa-sort"></i></th>
+                                <th>Confidence</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="anomalyTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="paginationControls" class="pagination"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anomaly Detail Modal -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Anomaly Details</h2>
+                <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="detailModalBody"></div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="closeDetailModal()">Close</button>
+                <button class="btn-primary" id="modalResolveBtn" onclick="resolveFromModal()">Mark Resolved</button>
+                <button class="btn-outline" id="modalFalseBtn" onclick="falsePositiveFromModal()">False Positive</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Complete anomaly dataset (historical logs)
+        let anomalyLogs = [
+            { id: 1001, title: "Suspicious Grade Changes", description: "Teacher Juan Dela Cruz modified 5 grades in 3 minutes for Grade 10 Science", type: "grade", priority: "critical", status: "pending", timestamp: "2026-04-15 09:45:22", resolvedAt: null, resolvedBy: null, confidence: 96, user: "Juan Dela Cruz", role: "Teacher", ip: "192.168.1.45", details: "Multiple grade changes detected within 3 minutes. Off-hour access pattern detected. Historical baseline shows 1-2 changes per day." },
+            { id: 1002, title: "Off-Hour Login Attempt", description: "Login at 2:30 AM from unfamiliar IP address", type: "login", priority: "high", status: "pending", timestamp: "2026-04-15 02:30:15", resolvedAt: null, resolvedBy: null, confidence: 89, user: "Maria Rivera", role: "Registrar", ip: "203.177.45.89", details: "Login occurred outside normal working hours (6AM-6PM). IP geolocation shows Manila, while school is in Davao." },
+            { id: 1003, title: "Bulk Data Export", description: "Large export of student records from Registrar account", type: "data", priority: "high", status: "resolved", timestamp: "2026-04-14 16:20:33", resolvedAt: "2026-04-15 08:00:00", resolvedBy: "System Admin", confidence: 92, user: "Maria Rivera", role: "Registrar", ip: "192.168.1.20", details: "5,234 student records exported in single operation. Verified as legitimate school report." },
+            { id: 1004, title: "Unusual Access Pattern", description: "Teacher accessed grade records for sections they don't handle", type: "access", priority: "medium", status: "pending", timestamp: "2026-04-14 11:05:00", resolvedAt: null, resolvedBy: null, confidence: 78, user: "Ana Reyes", role: "Teacher", ip: "192.168.1.67", details: "Teacher accessed Grade 11 records but only assigned to Grade 7-8." },
+            { id: 1005, title: "Failed Login Attempts", description: "5 consecutive failed login attempts on School Head account", type: "login", priority: "medium", status: "resolved", timestamp: "2026-04-13 08:15:22", resolvedAt: "2026-04-13 10:30:00", resolvedBy: "System Admin", confidence: 85, user: "Maria Santos", role: "School Head", ip: "45.67.89.123", details: "Multiple failed attempts from unknown IP. Account was temporarily locked. User confirmed it was their mistake." },
+            { id: 1006, title: "Grade Change Pattern Anomaly", description: "Unusual grade distribution pattern detected", type: "grade", priority: "low", status: "false_positive", timestamp: "2026-04-13 14:30:00", resolvedAt: "2026-04-14 09:00:00", resolvedBy: "AI Auto-learn", confidence: 65, user: "Roberto Gomez", role: "Teacher", ip: "192.168.1.100", details: "Grade distribution shows unusually high number of 95-100 scores. Investigation showed class has advanced students." },
+            { id: 1007, title: "Weekend System Access", description: "Multiple users accessed system on Sunday", type: "access", priority: "low", status: "false_positive", timestamp: "2026-04-12 10:00:00", resolvedAt: "2026-04-12 14:00:00", resolvedBy: "AI Auto-learn", confidence: 55, user: "Multiple", role: "Various", ip: "Various", details: "Weekend access is permitted by school policy. Marked as false positive." },
+            { id: 1008, title: "Unauthorized Form Access", description: "Teacher accessed SF10 forms without permission", type: "access", priority: "critical", status: "pending", timestamp: "2026-04-15 08:20:10", resolvedAt: null, resolvedBy: null, confidence: 94, user: "Paul Villanueva", role: "Teacher", ip: "192.168.1.89", details: "Teacher accessed permanent records (SF10) which requires special permission." },
+            { id: 1009, title: "Rapid Grade Changes", description: "Teacher modified 12 grades in under 10 minutes", type: "grade", priority: "high", status: "pending", timestamp: "2026-04-15 07:30:00", resolvedAt: null, resolvedBy: null, confidence: 91, user: "Maricel Torres", role: "Teacher", ip: "192.168.1.77", details: "Unusually high frequency of grade modifications during morning prep time." },
+            { id: 1010, title: "Suspicious API Calls", description: "Unusual pattern of API requests from unknown source", type: "access", priority: "critical", status: "resolved", timestamp: "2026-04-14 22:15:00", resolvedAt: "2026-04-15 01:00:00", resolvedBy: "Auto-block", confidence: 98, user: "Unknown", role: "External", ip: "103.225.198.42", details: "Potential automated attack. Source IP has been blocked." },
+            { id: 1011, title: "Password Reset Anomaly", description: "Password reset requested 3 times in 1 hour", type: "login", priority: "medium", status: "pending", timestamp: "2026-04-15 10:00:00", resolvedAt: null, resolvedBy: null, confidence: 82, user: "Ana Reyes", role: "Teacher", ip: "192.168.1.67", details: "Multiple password reset requests may indicate account compromise." },
+            { id: 1012, title: "Data Export Anomaly", description: "Unusually large data export from School Head account", type: "data", priority: "low", status: "resolved", timestamp: "2026-04-11 13:20:00", resolvedAt: "2026-04-11 16:00:00", resolvedBy: "System Admin", confidence: 70, user: "Maria Santos", role: "School Head", ip: "192.168.1.10", details: "Export of division-wide reports - legitimate for district meeting." }
+        ];
+
+        let currentPage = 1;
+        let rowsPerPage = 15;
+        let currentSort = { column: 'timestamp', direction: 'desc' };
+        let currentDetailAnomaly = null;
+
+        function updateStats() {
+            const total = anomalyLogs.length;
+            const pending = anomalyLogs.filter(a => a.status === 'pending').length;
+            const resolved = anomalyLogs.filter(a => a.status === 'resolved').length;
+            const falsePositive = anomalyLogs.filter(a => a.status === 'false_positive').length;
+            const falseRate = ((falsePositive / total) * 100).toFixed(1);
+            document.getElementById('totalCount').innerText = total;
+            document.getElementById('pendingCount').innerText = pending;
+            document.getElementById('resolvedCount').innerText = resolved;
+            document.getElementById('falseRate').innerText = `${falseRate}%`;
+        }
+
+        function getFilteredLogs() {
+            let filtered = [...anomalyLogs];
+            const priority = document.getElementById('priorityFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            const type = document.getElementById('typeFilter').value;
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            
+            if (priority !== 'all') filtered = filtered.filter(a => a.priority === priority);
+            if (status !== 'all') filtered = filtered.filter(a => a.status === status);
+            if (type !== 'all') filtered = filtered.filter(a => a.type === type);
+            if (searchTerm) {
+                filtered = filtered.filter(a => a.title.toLowerCase().includes(searchTerm) || 
+                    a.description.toLowerCase().includes(searchTerm) || 
+                    a.user.toLowerCase().includes(searchTerm));
+            }
+            if (dateFrom) filtered = filtered.filter(a => a.timestamp >= dateFrom);
+            if (dateTo) filtered = filtered.filter(a => a.timestamp <= dateTo + ' 23:59:59');
+            
+            // Sort
+            filtered.sort((a, b) => {
+                let aVal = a[currentSort.column];
+                let bVal = b[currentSort.column];
+                if (currentSort.column === 'timestamp') {
+                    aVal = new Date(aVal);
+                    bVal = new Date(bVal);
+                }
+                if (aVal < bVal) return currentSort.direction === 'asc' ? -1 : 1;
+                if (aVal > bVal) return currentSort.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+            return filtered;
+        }
+
+        function renderTable() {
+            const filtered = getFilteredLogs();
+            const totalFiltered = filtered.length;
+            const totalPages = Math.ceil(totalFiltered / rowsPerPage);
+            if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
+            const start = (currentPage - 1) * rowsPerPage;
+            const paginated = filtered.slice(start, start + rowsPerPage);
+            document.getElementById('logCount').innerHTML = `${totalFiltered} records (${totalFiltered} total)`;
+            
+            const tbody = document.getElementById('anomalyTableBody');
+            if (paginated.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:2rem;">No anomaly logs found</td></tr>';
+            } else {
+                tbody.innerHTML = paginated.map(a => {
+                    let priorityClass = a.priority === 'critical' ? 'priority-critical' : (a.priority === 'high' ? 'priority-high' : (a.priority === 'medium' ? 'priority-medium' : 'priority-low'));
+                    let statusClass = a.status === 'pending' ? 'status-pending' : (a.status === 'resolved' ? 'status-resolved' : 'status-false');
+                    let statusText = a.status === 'pending' ? 'Pending' : (a.status === 'resolved' ? 'Resolved' : 'False Positive');
+                    return `<tr onclick="viewAnomalyDetail(${a.id})">
+                        <td>${a.id}</td>
+                        <td>${a.timestamp}</td>
+                        <td><strong>${a.title}</strong><br><span style="font-size:0.65rem; color:var(--text-secondary);">${a.description.substring(0, 60)}${a.description.length > 60 ? '...' : ''}</span></td>
+                        <td>${a.type}</td>
+                        <td><span class="priority-badge ${priorityClass}">${a.priority.toUpperCase()}</span></td>
+                        <td>${a.user}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td><td style="text-align:center;">${a.confidence}%</td>
+                        <td><button class="btn-outline" style="padding:0.2rem 0.5rem;" onclick="event.stopPropagation(); viewAnomalyDetail(${a.id})">View</button></td>
+                    </tr>`;
+                }).join('');
+            }
+            renderPagination(totalFiltered);
+        }
+
+        function renderPagination(totalFiltered) {
+            const totalPages = Math.ceil(totalFiltered / rowsPerPage);
+            const container = document.getElementById('paginationControls');
+            if (totalPages <= 1 && totalFiltered <= rowsPerPage) { container.innerHTML = ''; return; }
+            let html = `<div><select class="rows-select" id="rowsSelect" onchange="changeRowsPerPage()">
+                            <option value="10" ${rowsPerPage===10?'selected':''}>10 rows</option>
+                            <option value="15" ${rowsPerPage===15?'selected':''}>15 rows</option>
+                            <option value="25" ${rowsPerPage===25?'selected':''}>25 rows</option>
+                            <option value="50" ${rowsPerPage===50?'selected':''}>50 rows</option>
+                        </select></div>
+                        <div class="pagination-controls">
+                            <button class="page-btn" onclick="goToPage(1)" ${currentPage===1?'disabled':''}>First</button>
+                            <button class="page-btn" onclick="goToPage(${currentPage-1})" ${currentPage===1?'disabled':''}>Prev</button>`;
+            for (let i = Math.max(1, currentPage-2); i <= Math.min(totalPages, currentPage+2); i++) {
+                html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goToPage(${i})">${i}</button>`;
+            }
+            html += `<button class="page-btn" onclick="goToPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>Next</button>
+                        <button class="page-btn" onclick="goToPage(${totalPages})" ${currentPage===totalPages?'disabled':''}>Last</button>
+                        <span style="font-size:0.7rem;">Page ${currentPage} of ${totalPages}</span>
+                    </div>`;
+            container.innerHTML = html;
+        }
+
+        function changeRowsPerPage() { rowsPerPage = parseInt(document.getElementById('rowsSelect').value); currentPage = 1; renderTable(); }
+        function goToPage(page) { currentPage = page; renderTable(); }
+        function filterAndPaginate() { currentPage = 1; renderTable(); }
+        function clearFilters() {
+            document.getElementById('priorityFilter').value = 'all';
+            document.getElementById('statusFilter').value = 'all';
+            document.getElementById('typeFilter').value = 'all';
+            document.getElementById('searchInput').value = '';
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            filterAndPaginate();
+        }
+
+        function sortBy(column) {
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'desc';
+            }
+            renderTable();
+        }
+
+        function viewAnomalyDetail(id) {
+            currentDetailAnomaly = anomalyLogs.find(a => a.id === id);
+            if (!currentDetailAnomaly) return;
+            const modalBody = document.getElementById('detailModalBody');
+            modalBody.innerHTML = `
+                <div class="detail-row"><div class="detail-label">Anomaly ID</div><div class="detail-value">#${currentDetailAnomaly.id}</div></div>
+                <div class="detail-row"><div class="detail-label">Title</div><div class="detail-value">${currentDetailAnomaly.title}</div></div>
+                <div class="detail-row"><div class="detail-label">Type</div><div class="detail-value">${currentDetailAnomaly.type}</div></div>
+                <div class="detail-row"><div class="detail-label">Priority</div><div class="detail-value">${currentDetailAnomaly.priority.toUpperCase()}</div></div>
+                <div class="detail-row"><div class="detail-label">Timestamp</div><div class="detail-value">${currentDetailAnomaly.timestamp}</div></div>
+                ${currentDetailAnomaly.resolvedAt ? `<div class="detail-row"><div class="detail-label">Resolved At</div><div class="detail-value">${currentDetailAnomaly.resolvedAt}</div></div>` : ''}
+                ${currentDetailAnomaly.resolvedBy ? `<div class="detail-row"><div class="detail-label">Resolved By</div><div class="detail-value">${currentDetailAnomaly.resolvedBy}</div></div>` : ''}
+                <div class="detail-row"><div class="detail-label">User</div><div class="detail-value">${currentDetailAnomaly.user} (${currentDetailAnomaly.role})</div></div>
+                <div class="detail-row"><div class="detail-label">IP Address</div><div class="detail-value">${currentDetailAnomaly.ip}</div></div>
+                <div class="detail-row"><div class="detail-label">AI Confidence</div><div class="detail-value">${currentDetailAnomaly.confidence}%</div></div>
+                <div class="detail-row"><div class="detail-label">Description</div><div class="detail-value">${currentDetailAnomaly.description}</div></div>
+                <div class="detail-row"><div class="detail-label">Full Details</div><div class="detail-value">${currentDetailAnomaly.details}</div></div>
+                <div class="detail-row"><div class="detail-label">Status</div><div class="detail-value">${currentDetailAnomaly.status === 'pending' ? 'Pending Review' : (currentDetailAnomaly.status === 'resolved' ? 'Resolved' : 'False Positive')}</div></div>
+            `;
+            const modal = document.getElementById('detailModal');
+            const resolveBtn = document.getElementById('modalResolveBtn');
+            const falseBtn = document.getElementById('modalFalseBtn');
+            if (currentDetailAnomaly.status !== 'pending') {
+                resolveBtn.style.display = 'none';
+                falseBtn.style.display = 'none';
+            } else {
+                resolveBtn.style.display = 'inline-block';
+                falseBtn.style.display = 'inline-block';
+            }
+            modal.classList.add('active');
+        }
+
+        function closeDetailModal() { document.getElementById('detailModal').classList.remove('active'); currentDetailAnomaly = null; }
+        function resolveFromModal() { if (currentDetailAnomaly) resolveAnomaly(currentDetailAnomaly.id); closeDetailModal(); }
+        function falsePositiveFromModal() { if (currentDetailAnomaly) markFalsePositive(currentDetailAnomaly.id); closeDetailModal(); }
+
+        function resolveAnomaly(id) {
+            const index = anomalyLogs.findIndex(a => a.id === id);
+            if (index !== -1 && anomalyLogs[index].status === 'pending') {
+                anomalyLogs[index].status = 'resolved';
+                anomalyLogs[index].resolvedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+                anomalyLogs[index].resolvedBy = 'System Admin';
+                updateStats();
+                renderTable();
+                alert(`Anomaly #${id} marked as resolved.`);
+            }
+        }
+
+        function markFalsePositive(id) {
+            const index = anomalyLogs.findIndex(a => a.id === id);
+            if (index !== -1 && anomalyLogs[index].status === 'pending') {
+                anomalyLogs[index].status = 'false_positive';
+                anomalyLogs[index].resolvedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+                anomalyLogs[index].resolvedBy = 'System Admin';
+                updateStats();
+                renderTable();
+                alert(`Anomaly #${id} marked as false positive. AI model will recalibrate.`);
+            }
+        }
+
+        function exportLogs() {
+            const filtered = getFilteredLogs();
+            let csv = "ID,Title,Type,Priority,Status,Timestamp,User,Role,IP,Confidence,Description,Details\n";
+            filtered.forEach(a => {
+                csv += `${a.id},"${a.title}",${a.type},${a.priority},${a.status},${a.timestamp},${a.user},${a.role},${a.ip},${a.confidence},"${a.description.replace(/"/g, '""')}","${a.details.replace(/"/g, '""')}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `anomaly_logs_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        }
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+        function updateDateTime() { document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }); }
+
+        document.getElementById('priorityFilter').addEventListener('change', filterAndPaginate);
+        document.getElementById('statusFilter').addEventListener('change', filterAndPaginate);
+        document.getElementById('typeFilter').addEventListener('change', filterAndPaginate);
+
+        updateStats();
+        renderTable();
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+    </script>
+</body>
+</html>

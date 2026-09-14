@@ -1,0 +1,847 @@
+{% extends 'teachers/base.html' %}
+{% load static %}
+
+{% block title %}Teacher Dashboard{% endblock %}
+{% block subtitle %}Teacher Portal — {{ school.school_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary: #123499;
+        --primary-light: #e8eeff;
+        --success: #2E7D32;
+        --success-light: #e8f5e9;
+        --info: #1565C0;
+        --info-light: #e3f2fd;
+        --warning: #E65100;
+        --warning-light: #fff3e0;
+        --danger: #C62828;
+        --danger-light: #ffebee;
+        --purple: #6A1B9A;
+        --purple-light: #f3e5f5;
+        --orange: #f39c12;
+        --orange-light: #fff8e1;
+        --gray-50: #f8f9fa;
+        --gray-100: #f0f4f8;
+        --gray-200: #e8ecf1;
+        --gray-300: #e0e5ea;
+        --gray-400: #adb5bd;
+        --gray-500: #6c757d;
+        --gray-700: #1a1a2e;
+        --radius-sm: 10px;
+        --radius-md: 16px;
+        --radius-lg: 20px;
+        --shadow-sm: 0 2px 10px rgba(0,0,0,0.04);
+        --shadow-md: 0 2px 12px rgba(0,0,0,0.06);
+        --shadow-lg: 0 6px 20px rgba(0,0,0,0.1);
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ========== DASHBOARD LAYOUT ========== */
+    .dashboard-layout {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    @media (max-width: 1024px) { .dashboard-layout { grid-template-columns: 1fr; } }
+    @media (min-width: 1025px) { .dashboard-layout { align-items: flex-start; } }
+
+    /* ========== STAT CARDS (TOP ROW) ========== */
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+    @media (max-width: 1024px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .stat-grid { grid-template-columns: 1fr; } }
+
+    .stat-card {
+        border-radius: var(--radius-md);
+        padding: 1.5rem 1.25rem;
+        color: white;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        transition: var(--transition);
+        cursor: pointer;
+        box-shadow: var(--shadow-md);
+    }
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+    }
+    .stat-card::after {
+        content: '';
+        position: absolute;
+        top: -30px;
+        right: -30px;
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.1);
+        transition: var(--transition);
+    }
+    .stat-card:hover::after {
+        width: 130px;
+        height: 130px;
+        top: -40px;
+        right: -40px;
+    }
+    .stat-card.blue { background: linear-gradient(135deg, #123499, #667eea); }
+    .stat-card.green { background: linear-gradient(135deg, #2E7D32, #43a047); }
+    .stat-card.purple { background: linear-gradient(135deg, #667eea, #764ba2); }
+    .stat-card.orange { background: linear-gradient(135deg, #E65100, #f57c00); }
+
+    .stat-card .stat-icon {
+        font-size: 1.8rem;
+        margin-bottom: 0.4rem;
+        opacity: 0.85;
+        position: relative;
+        z-index: 1;
+    }
+    .stat-card .stat-value {
+        font-size: 2.2rem;
+        font-weight: 800;
+        line-height: 1.2;
+        margin-bottom: 0.15rem;
+        position: relative;
+        z-index: 1;
+    }
+    .stat-card .stat-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        font-weight: 600;
+        opacity: 0.9;
+        position: relative;
+        z-index: 1;
+    }
+    .stat-card .stat-sub {
+        font-size: 0.65rem;
+        opacity: 0.75;
+        margin-top: 0.3rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* ========== INSIGHT CARD ========== */
+    .insight-card {
+        background: linear-gradient(135deg, #f0f4ff, #e8eeff);
+        border-radius: var(--radius-md);
+        padding: 1.2rem 1.5rem;
+        border: 1px solid rgba(18,52,153,0.15);
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        transition: var(--transition);
+    }
+    .insight-card:hover {
+        box-shadow: var(--shadow-md);
+    }
+    .insight-icon-wrap {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #2E7D32, #43a047);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+        box-shadow: 0 4px 15px rgba(46,125,50,0.3);
+        animation: insightPulse 2.5s ease-in-out infinite;
+    }
+    @keyframes insightPulse {
+        0%, 100% { box-shadow: 0 4px 15px rgba(46,125,50,0.3); }
+        50% { box-shadow: 0 8px 25px rgba(46,125,50,0.5); }
+    }
+    .insight-content {
+        flex: 1;
+        min-width: 0;
+    }
+    .insight-title {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--primary);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-bottom: 0.35rem;
+    }
+    .insight-text {
+        font-size: 0.82rem;
+        color: var(--gray-700);
+        line-height: 1.65;
+        margin: 0;
+    }
+
+    /* ========== SIDEBAR CARDS ========== */
+    .sidebar-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: 1.4rem;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--gray-200);
+        height: fit-content;
+    }
+    .sidebar-card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 1.2rem;
+        padding-bottom: 0.9rem;
+        border-bottom: 2px solid var(--gray-100);
+    }
+    .sidebar-card-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+    .sidebar-card-icon.green { background: linear-gradient(135deg, #2E7D32, #43a047); }
+    .sidebar-card-icon.blue { background: linear-gradient(135deg, #123499, #1a4dcc); }
+    .sidebar-card-icon.purple { background: linear-gradient(135deg, #667eea, #764ba2); }
+
+    .sidebar-card-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--gray-700);
+    }
+
+    /* Profile Avatar */
+    .profile-avatar {
+        width: 72px;
+        height: 72px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.6rem;
+        font-weight: 700;
+        box-shadow: 0 4px 15px rgba(118,75,162,0.3);
+        margin-bottom: 0.6rem;
+    }
+    .profile-name {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--gray-700);
+    }
+    .profile-role {
+        font-size: 0.7rem;
+        color: var(--gray-500);
+        margin-bottom: 1rem;
+    }
+
+    /* Info List Items */
+    .info-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.5rem 0.6rem;
+        background: var(--gray-50);
+        border-radius: var(--radius-sm);
+        font-size: 0.73rem;
+        transition: var(--transition);
+    }
+    .info-item:hover {
+        background: var(--primary-light);
+    }
+    .info-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+    .info-dot.active { background: var(--success); box-shadow: 0 0 8px rgba(46,125,50,0.3); }
+    .info-dot.warning { background: var(--orange); box-shadow: 0 0 8px rgba(243,156,18,0.3); }
+    .info-dot.neutral { background: var(--gray-400); }
+    .info-label {
+        font-weight: 600;
+        color: var(--gray-700);
+        white-space: nowrap;
+    }
+    .info-value {
+        color: var(--gray-500);
+        margin-left: auto;
+        text-align: right;
+    }
+
+    /* Subject Breakdown */
+    .subject-item {
+        padding: 0.7rem 0.6rem;
+        border-radius: var(--radius-sm);
+        margin-bottom: 0.5rem;
+        transition: var(--transition);
+        cursor: pointer;
+    }
+    .subject-item:hover {
+        background: var(--gray-50);
+    }
+    .subject-item:last-child { margin-bottom: 0; }
+    .subject-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.3rem;
+    }
+    .subject-code {
+        font-size: 0.73rem;
+        font-weight: 700;
+        color: var(--gray-700);
+    }
+    .subject-sections {
+        font-size: 0.65rem;
+        color: var(--gray-500);
+        background: var(--gray-100);
+        padding: 0.15rem 0.5rem;
+        border-radius: 12px;
+    }
+    .subject-students {
+        font-size: 0.62rem;
+        color: var(--gray-400);
+        margin-top: 0.2rem;
+    }
+
+    .progress-bar-wrap {
+        background: var(--gray-200);
+        border-radius: 10px;
+        height: 7px;
+        overflow: hidden;
+        margin-top: 0.4rem;
+    }
+    .progress-bar-fill {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .progress-bar-fill.high { background: linear-gradient(90deg, #2E7D32, #43a047); }
+    .progress-bar-fill.medium { background: linear-gradient(90deg, #f39c12, #f57c00); }
+    .progress-bar-fill.low { background: linear-gradient(90deg, #C62828, #e53935); }
+
+    /* ========== CHART CARDS ========== */
+    .charts-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    @media (max-width: 1024px) { .charts-row { grid-template-columns: 1fr; } }
+
+    .chart-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--gray-200);
+        transition: var(--transition);
+    }
+    .chart-card:hover {
+        box-shadow: var(--shadow-lg);
+    }
+    .chart-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .chart-title i { color: var(--primary); font-size: 0.95rem; }
+    .chart-container {
+        position: relative;
+        width: 100%;
+    }
+    .chart-container canvas {
+        max-height: 280px;
+        width: 100% !important;
+    }
+
+    /* ========== CLASS ASSIGNMENT CARDS ========== */
+    .class-cards-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.9rem;
+    }
+    @media (max-width: 768px) { .class-cards-grid { grid-template-columns: 1fr; } }
+
+    .class-card {
+        background: white;
+        border-radius: var(--radius-md);
+        padding: 1.2rem;
+        border: 2px solid var(--gray-200);
+        transition: var(--transition);
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+    .class-card:hover {
+        border-color: var(--primary);
+        box-shadow: 0 6px 25px rgba(18,52,153,0.1);
+        transform: translateY(-3px);
+    }
+    .class-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        background: var(--gray-300);
+        transition: var(--transition);
+    }
+    .class-card:hover::before {
+        background: var(--primary);
+        width: 5px;
+    }
+    .class-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.5rem;
+    }
+    .class-card-name {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--gray-700);
+    }
+    .class-card-subject {
+        font-size: 0.7rem;
+        color: var(--gray-500);
+        margin-top: 0.15rem;
+    }
+    .class-card-stats {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.68rem;
+        color: var(--gray-500);
+        margin-bottom: 0.5rem;
+    }
+    .class-card-stats span {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    .class-card-stats i {
+        color: var(--primary);
+        font-size: 0.7rem;
+    }
+
+    /* ========== BADGES ========== */
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.3rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .badge-success {
+        background: var(--success-light);
+        color: var(--success);
+    }
+    .badge-warning {
+        background: var(--warning-light);
+        color: var(--warning);
+    }
+    .badge-info {
+        background: var(--info-light);
+        color: var(--info);
+    }
+    .badge-danger {
+        background: var(--danger-light);
+        color: var(--danger);
+    }
+
+    /* ========== BUTTONS ========== */
+    .btn-outline {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.6rem 1.2rem;
+        border: 2px solid var(--gray-300);
+        border-radius: 25px;
+        background: white;
+        color: var(--gray-700);
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        font-family: inherit;
+        text-decoration: none;
+    }
+    .btn-outline:hover {
+        border-color: var(--primary);
+        background: var(--primary-light);
+        color: var(--primary);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(18,52,153,0.1);
+    }
+    .btn-outline i { font-size: 0.85rem; }
+    .btn-sm { padding: 0.45rem 0.9rem; font-size: 0.7rem; }
+
+    /* ========== EMPTY STATE ========== */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1.5rem;
+        color: var(--gray-500);
+    }
+    .empty-state i {
+        font-size: 3rem;
+        display: block;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+    .empty-state h5 {
+        font-size: 0.9rem;
+        font-weight: 700;
+        margin-bottom: 0.3rem;
+    }
+    .empty-state p {
+        font-size: 0.78rem;
+        margin: 0;
+    }
+
+    /* ========== SUBTLE PULSE ========== */
+    @keyframes cardPulse {
+        0%, 100% { box-shadow: var(--shadow-md); }
+        50% { box-shadow: 0 4px 20px rgba(18,52,153,0.1); }
+    }
+    .stat-card { animation: cardPulse 3s ease-in-out infinite; }
+    .stat-card:nth-child(1) { animation-delay: 0s; }
+    .stat-card:nth-child(2) { animation-delay: 0.4s; }
+    .stat-card:nth-child(3) { animation-delay: 0.8s; }
+    .stat-card:nth-child(4) { animation-delay: 1.2s; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ========== STATS ROW ========== -->
+<div class="stat-grid">
+    <div class="stat-card blue">
+        <div class="stat-icon"><i class="fi fi-rr-chalkboard-user"></i></div>
+        <div class="stat-value">{{ total_assignments }}</div>
+        <div class="stat-label">Class Assignments</div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-icon"><i class="fi fi-rr-users"></i></div>
+        <div class="stat-value">{{ total_students }}</div>
+        <div class="stat-label">Total Students</div>
+    </div>
+    <div class="stat-card purple">
+        <div class="stat-icon"><i class="fi fi-rr-apps"></i></div>
+        <div class="stat-value">{{ total_sections }}</div>
+        <div class="stat-label">Sections Handled</div>
+    </div>
+    <div class="stat-card orange">
+        <div class="stat-icon"><i class="fi fi-rr-calendar"></i></div>
+        <div class="stat-value">{{ current_quarter.quarter_label|default:"N/A" }}</div>
+        <div class="stat-label">Current Quarter</div>
+        {% if current_quarter.date_start and current_quarter.date_end %}
+        <div class="stat-sub">{{ current_quarter.date_start|date:"M d" }} - {{ current_quarter.date_end|date:"M d" }}</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ========== INSIGHT CARD ========== -->
+<div class="insight-card">
+    <div class="insight-icon-wrap">
+        <i class="fi fi-rr-bulb"></i>
+    </div>
+    <div class="insight-content">
+        <div class="insight-title">Quick Overview</div>
+        <p class="insight-text">
+            You are handling <strong>{{ total_assignments }} class(es)</strong> across <strong>{{ total_sections }} section(s)</strong> 
+            with <strong>{{ total_students }} students</strong> for {{ current_sy.year_label|default:"this school year" }}. 
+            {% if grade_completion > 0 %}Grade completion is at <strong>{{ grade_completion }}%</strong>.{% endif %}
+            {% if pending_grades > 0 %}<strong>{{ pending_grades }} grades</strong> are pending submission.{% endif %}
+        </p>
+    </div>
+</div>
+
+<!-- ========== DASHBOARD LAYOUT ========== -->
+<div class="dashboard-layout">
+
+    <!-- ===== LEFT SIDEBAR ===== -->
+    <div style="display:flex;flex-direction:column;gap:1.5rem;position:sticky;top:1rem;">
+
+        <!-- Profile Card -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header">
+                <div class="sidebar-card-icon purple">
+                    <i class="fi fi-rr-user"></i>
+                </div>
+                <div class="sidebar-card-title">My Profile</div>
+            </div>
+            <div style="text-align:center;margin-bottom:1.2rem;">
+                <div class="profile-avatar">
+                    {{ teacher.user.first_name|first|upper }}{{ teacher.user.last_name|first|upper }}
+                </div>
+                <div class="profile-name">{{ teacher.full_name }}</div>
+                <div class="profile-role">{{ teacher.get_role_display }}</div>
+            </div>
+            <div class="info-list">
+                <div class="info-item">
+                    <span class="info-dot active"></span>
+                    <span class="info-label">School</span>
+                    <span class="info-value">{{ school.school_name|truncatechars:18 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-dot active"></span>
+                    <span class="info-label">Teaching Area</span>
+                    <span class="info-value">{{ teacher.teaching_area|default:"General" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-dot neutral"></span>
+                    <span class="info-label">Designation</span>
+                    <span class="info-value">{{ teacher.designation|default:"Teacher" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-dot {% if teacher.employment_status == 'Regular_Permanent' %}active{% else %}warning{% endif %}"></span>
+                    <span class="info-label">Status</span>
+                    <span class="info-value">{{ teacher.get_employment_status_display|default:"Active" }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subjects Breakdown Card -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header">
+                <div class="sidebar-card-icon blue">
+                    <i class="fi fi-rr-book"></i>
+                </div>
+                <div class="sidebar-card-title">Subjects Taught</div>
+            </div>
+            {% for subj in subject_breakdown %}
+            <div class="subject-item">
+                <div class="subject-header">
+                    <span class="subject-code">{{ subj.subject_code }}</span>
+                    <span class="subject-sections">{{ subj.section_count }} section{{ subj.section_count|pluralize }}</span>
+                </div>
+                <div class="subject-students">{{ subj.students }} student{{ subj.students|pluralize }}</div>
+                <div class="progress-bar-wrap">
+                    <div class="progress-bar-fill {% if subj.completion >= 80 %}high{% elif subj.completion >= 50 %}medium{% else %}low{% endif %}" 
+                         style="width:{{ subj.completion }}%;"></div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state" style="padding:1.5rem 0.5rem;">
+                <i class="fi fi-rr-book" style="font-size:2rem;"></i>
+                <p style="font-size:0.73rem;">No subjects assigned yet.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ===== RIGHT CONTENT ===== -->
+    <div style="display:flex;flex-direction:column;gap:1.5rem;">
+
+        <!-- Charts Row -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <div class="chart-title">
+                    <i class="fi fi-rr-chart-pie-alt"></i> Student Distribution by Section
+                </div>
+                <div class="chart-container">
+                    <canvas id="sectionDistChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">
+                    <i class="fi fi-rr-chart-bar"></i> Grade Completion Progress
+                </div>
+                <div class="chart-container">
+                    <canvas id="completionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Class Assignments Card -->
+        <div class="chart-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.5rem;">
+                <div class="chart-title" style="margin-bottom:0;">
+                    <i class="fi fi-rr-chalkboard"></i> My Class Assignments
+                </div>
+                <span class="badge badge-info">SY {{ current_sy.year_label|default:"N/A" }}</span>
+            </div>
+
+            {% if assignments %}
+            <div class="class-cards-grid">
+                {% for item in assignments %}
+                <div class="class-card" onclick="location.href='#'" title="Click to view section details">
+                    <div class="class-card-header">
+                        <div>
+                            <div class="class-card-name">{{ item.section.section_name }}</div>
+                            <div class="class-card-subject">{{ item.subject.subject_name }} ({{ item.subject.subject_code }})</div>
+                        </div>
+                        <span class="badge {% if item.completion_pct >= 80 %}badge-success{% elif item.completion_pct >= 50 %}badge-warning{% else %}badge-danger{% endif %}">
+                            <i class="fi fi-rr-check-circle"></i> {{ item.completion_pct }}%
+                        </span>
+                    </div>
+                    <div class="class-card-stats">
+                        <span><i class="fi fi-rr-users"></i> {{ item.student_count }} students</span>
+                        <span><i class="fi fi-rr-graduation-cap"></i> {{ item.section.grade_level.grade_name }}</span>
+                    </div>
+                    <div class="progress-bar-wrap">
+                        <div class="progress-bar-fill {% if item.completion_pct >= 80 %}high{% elif item.completion_pct >= 50 %}medium{% else %}low{% endif %}" 
+                             style="width:{{ item.completion_pct }}%;"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fi fi-rr-chalkboard"></i>
+                <h5>No Class Assignments</h5>
+                <p>Contact your registrar to be assigned to sections.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Quick Actions Card -->
+        <div class="chart-card">
+            <div class="chart-title">
+                <i class="fi fi-rr-bolt"></i> Quick Actions
+            </div>
+            <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
+                {% for item in assignments|slice:":4" %}
+                <button class="btn-outline btn-sm" onclick="location.href='#'">
+                    <i class="fi fi-rr-edit"></i> Grade {{ item.section.section_name }}
+                </button>
+                {% endfor %}
+                <button class="btn-outline btn-sm">
+                    <i class="fi fi-rr-calendar-check"></i> Take Attendance
+                </button>
+                <button class="btn-outline btn-sm">
+                    <i class="fi fi-rr-file-export"></i> Export Grades
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Student Distribution Doughnut Chart
+    var sdc = document.getElementById('sectionDistChart');
+    if (sdc) {
+        new Chart(sdc.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: [{% for item in assignments %}'{{ item.section.section_name|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    data: [{% for item in assignments %}{{ item.student_count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: [
+                        '#123499', '#2E7D32', '#f39c12', '#667eea',
+                        '#E65100', '#764ba2', '#17a2b8', '#C62828'
+                    ],
+                    borderColor: '#fff',
+                    borderWidth: 3,
+                    hoverBorderWidth: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '58%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyleWidth: 10,
+                            font: { size: 10 },
+                            generateLabels: function(chart) {
+                                var data = chart.data;
+                                return data.labels.map(function(label, i) {
+                                    return {
+                                        text: label + ' (' + data.datasets[0].data[i] + ')',
+                                        fillStyle: data.datasets[0].backgroundColor[i],
+                                        strokeStyle: data.datasets[0].backgroundColor[i],
+                                        pointStyle: 'circle',
+                                        index: i
+                                    };
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Grade Completion Bar Chart
+    var cc = document.getElementById('completionChart');
+    if (cc) {
+        new Chart(cc.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: [{% for item in assignments %}'{{ item.section.section_name|escapejs|truncatechars:12 }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Grade Completion %',
+                    data: [{% for item in assignments %}{{ item.completion_pct }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: [{% for item in assignments %}{% if item.completion_pct >= 80 %}'rgba(46,125,50,0.75)'{% elif item.completion_pct >= 50 %}'rgba(243,156,18,0.75)'{% else %}'rgba(198,40,40,0.75)'{% endif %}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    borderColor: [{% for item in assignments %}{% if item.completion_pct >= 80 %}'#2E7D32'{% elif item.completion_pct >= 50 %}'#f39c12'{% else %}'#C62828'{% endif %}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(v) { return v + '%'; },
+                            font: { size: 10 }
+                        },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: {
+                        ticks: { font: { size: 9 } },
+                        grid: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return 'Completion: ' + ctx.raw + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

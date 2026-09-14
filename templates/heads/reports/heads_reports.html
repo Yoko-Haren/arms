@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Reports & Analytics - Formify School Head Portal</title>
+    
+    <!-- Flaticon UIcons -->
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    
+    <!-- html2pdf for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'AvantGarde', 'Century Gothic', sans-serif;
+        }
+
+        :root {
+            --rich-black: #00072D;
+            --dark-blue: #051650;
+            --bangladesh-blue: #0A2472;
+            --caribbean-blue: #123499;
+            --secondary-green: #5EA173;
+            --gray-bg: #f5f7fb;
+            --border-color: #e9ecef;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --warning-bg: #fff3cd;
+            --warning-text: #856404;
+            --success-bg: #d4edda;
+            --success-text: #155724;
+            --danger-bg: #f8d7da;
+            --sidebar-width: 280px;
+            --sidebar-collapsed-width: 80px;
+        }
+
+        body {
+            background: var(--gray-bg);
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ========== FOLDABLE SIDEBAR ========== */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            transition: width 0.3s ease;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+
+        .sidebar.collapsed .sidebar-header h2,
+        .sidebar.collapsed .user-details,
+        .sidebar.collapsed .nav-link span,
+        .sidebar.collapsed .logo-area span {
+            display: none;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            justify-content: center;
+            padding: 1.5rem 0.5rem;
+        }
+
+        .sidebar.collapsed .sidebar-header .logo-area {
+            justify-content: center;
+            display: none;
+        }
+
+        .sidebar.collapsed .user-info {
+            justify-content: center;
+            padding: 0.8rem;
+            margin: 0 0.5rem 1.5rem 0.5rem;
+        }
+
+        .sidebar.collapsed .nav-link {
+            justify-content: center;
+            padding: 0.85rem 0;
+            gap: 0;
+        }
+
+        .sidebar.collapsed .nav-link i {
+            margin: 0;
+            width: auto;
+            font-size: 1.3rem;
+        }
+
+        .sidebar.collapsed .user-avatar {
+            margin: 0;
+        }
+
+        .sidebar.collapsed .nav-footer .nav-link {
+            justify-content: center;
+        }
+
+        .sidebar.collapsed .fold-btn {
+            margin: 0 auto;
+        }
+
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-header .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .sidebar-header i.fi {
+            font-size: 2rem;
+            color: var(--secondary-green);
+            flex-shrink: 0;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            line-height: 1.3;
+            transition: opacity 0.2s ease;
+        }
+
+        .sidebar-header h2 span {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            display: block;
+        }
+
+        .fold-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            font-size: 1rem;
+        }
+
+        .fold-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.05);
+        }
+
+        .fold-btn i {
+            transition: transform 0.3s ease;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin: 0 1rem 1.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: var(--secondary-green);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--rich-black);
+            flex-shrink: 0;
+        }
+
+        .user-details h4 { font-size: 0.9rem; margin-bottom: 0.2rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0 0.75rem;
+            flex: 1;
+        }
+
+        .nav-item { margin-bottom: 0.25rem; }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+        .nav-link i.fi { width: 22px; font-size: 1.1rem; text-align: center; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+
+        .nav-footer {
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 1rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem;
+            transition: margin-left 0.3s ease;
+            min-height: 100vh;
+        }
+
+        .sidebar.collapsed ~ .main-content {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .welcome h1 { font-size: 1.3rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
+        .welcome p { color: var(--text-secondary); font-size: 0.8rem; }
+
+        .top-bar-actions { display: flex; align-items: center; gap: 1rem; position: relative; }
+        .date-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            background: var(--gray-bg);
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+        }
+
+        /* Notification Dropdown */
+        .notification-dropdown { position: relative; }
+
+        .notification-badge {
+            position: relative;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0.3rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .notification-badge i.fi { font-size: 1.3rem; color: var(--text-primary); transition: color 0.2s; }
+        .notification-badge:hover i.fi { color: var(--secondary-green); }
+
+        .badge-count {
+            position: absolute;
+            top: -5px;
+            right: -8px;
+            background: #dc3545;
+            color: white;
+            font-size: 0.6rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 10px;
+            min-width: 16px;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 45px;
+            right: 0;
+            width: 340px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            z-index: 200;
+            display: none;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .dropdown-menu.show {
+            display: block;
+            animation: fadeInDown 0.25s ease;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .dropdown-header {
+            padding: 0.9rem 1.2rem;
+            background: var(--gray-bg);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--rich-black);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notification-list { max-height: 380px; overflow-y: auto; }
+
+        .notification-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+            padding: 0.9rem 1.2rem;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .notification-item:hover { background: var(--gray-bg); }
+        .notification-item.unread { background: rgba(94, 161, 115, 0.06); border-left: 3px solid var(--secondary-green); }
+
+        .notification-icon {
+            width: 36px;
+            height: 36px;
+            background: rgba(94, 161, 115, 0.12);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--secondary-green);
+            flex-shrink: 0;
+            font-size: 0.85rem;
+        }
+
+        .notification-content { flex: 1; min-width: 0; }
+        .notification-title { font-size: 0.8rem; font-weight: 600; color: var(--rich-black); margin-bottom: 0.15rem; }
+        .notification-message { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; }
+        .notification-time { font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.3rem; }
+
+        .dropdown-footer {
+            padding: 0.7rem;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            background: var(--gray-bg);
+        }
+
+        .dropdown-footer a {
+            color: var(--secondary-green);
+            text-decoration: none;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .dropdown-footer a:hover { text-decoration: underline; }
+
+        /* Poro Greeting Banner */
+        .poro-greeting {
+            background: linear-gradient(135deg, #f0f9f0 0%, #e8f5e9 100%);
+            border-radius: 20px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid rgba(94, 161, 115, 0.3);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .poro-greeting-content { display: flex; align-items: center; gap: 1rem; }
+
+        .character-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--secondary-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(94, 161, 115, 0.3);
+            animation: bounce 2s ease infinite;
+            overflow: hidden;
+        }
+
+        .character-icon img { width: 100%; height: 100%; object-fit: cover; }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+
+        .poro-message h3 { font-size: 1rem; color: var(--rich-black); margin-bottom: 0.2rem; }
+        .poro-message p { font-size: 0.75rem; color: var(--text-secondary); }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+
+        .stat-card:hover { transform: translateY(-3px); }
+
+        .stat-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+
+        .stat-icon.blue { background: rgba(18,52,153,0.1); color: var(--caribbean-blue); }
+        .stat-icon.green { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .stat-icon.orange { background: rgba(243,156,18,0.1); color: #f39c12; }
+        .stat-icon.purple { background: rgba(128,0,128,0.1); color: #9b59b6; }
+
+        .stat-info h3 { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; }
+        .stat-info .value { font-size: 1.5rem; font-weight: 700; color: var(--rich-black); }
+        .stat-info .sub { font-size: 0.65rem; color: var(--text-secondary); }
+
+        /* Filter Bar */
+        .filter-bar {
+            background: white;
+            border-radius: 16px;
+            padding: 0.8rem 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .filter-group { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+        .filter-group label { font-size: 0.8rem; color: var(--text-secondary); }
+
+        select, input {
+            padding: 0.4rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--secondary-green);
+            color: white;
+            border: none;
+            padding: 0.4rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            padding: 0.4rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        /* Report Tabs */
+        .report-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 0.5rem;
+            border-radius: 16px;
+            flex-wrap: wrap;
+        }
+
+        .report-tab {
+            background: transparent;
+            border: none;
+            padding: 0.5rem 1.2rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .report-tab.active { background: var(--secondary-green); color: white; }
+
+        /* Chart Cards */
+        .chart-card {
+            background: white;
+            border-radius: 20px;
+            padding: 1.2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .section-header h2 { font-size: 1rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
+        .section-header h2 i { color: var(--secondary-green); }
+
+        .view-all { color: var(--secondary-green); text-decoration: none; font-size: 0.75rem; cursor: pointer; }
+
+        .chart-container { position: relative; height: 280px; }
+        canvas { max-height: 250px; width: 100% !important; }
+
+        /* Data Tables */
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+        .data-table th, .data-table td { text-align: left; padding: 0.6rem 0.5rem; font-size: 0.75rem; border-bottom: 1px solid var(--border-color); }
+        .data-table th { color: var(--text-secondary); font-weight: 600; }
+
+        /* Two Column Layout */
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+
+        /* Status Badge */
+        .status-badge { padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.65rem; font-weight: 600; }
+        .status-up { background: var(--success-bg); color: var(--success-text); }
+        .status-down { background: var(--danger-bg); color: var(--danger-text); }
+        .status-stable { background: var(--warning-bg); color: var(--warning-text); }
+
+        /* Toast Notification */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 0.5rem; }
+        .toast {
+            background: white; border-radius: 12px; padding: 1rem 1.5rem; box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            display: flex; align-items: center; gap: 0.8rem; min-width: 300px; animation: slideInRight 0.3s ease;
+            border-left: 4px solid var(--secondary-green);
+        }
+        .toast.success { border-left-color: var(--secondary-green); }
+        .toast i { color: var(--secondary-green); }
+        .toast-content { flex: 1; }
+        .toast-content h4 { font-size: 0.85rem; color: var(--rich-black); margin-bottom: 0.1rem; }
+        .toast-content p { font-size: 0.7rem; color: var(--text-secondary); }
+        .toast-close { background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 0.9rem; }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Mobile Overlay */
+        .mobile-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
+        .mobile-overlay.show { display: block; }
+
+        @media (max-width: 1200px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .two-col { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; width: var(--sidebar-width) !important; }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .sidebar.collapsed { width: var(--sidebar-width) !important; }
+            .main-content { margin-left: 0 !important; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .filter-bar { flex-direction: column; align-items: stretch; }
+            .report-tabs { overflow-x: auto; flex-wrap: nowrap; }
+            .dropdown-menu { width: 290px; right: -20px; }
+            .toast-container { left: 10px; right: 10px; }
+            .toast { min-width: auto; }
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-area">
+                    <i class="fi fi-rr-graduation-cap"></i>
+                    <h2>Formify <span>School Head Portal</span></h2>
+                </div>
+                <button class="fold-btn" id="foldBtn" title="Toggle sidebar">
+                    <i class="fi fi-rr-angle-left"></i>
+                </button>
+            </div>
+            <br>
+            <div class="user-info">
+                <div class="user-avatar">MS</div>
+                <div class="user-details">
+                    <h4>Dr. Maria R. Santos</h4>
+                    <p>School Principal IV</p>
+                </div>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="../dashboard/index.html" class="nav-link"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+                <li class="nav-item"><a href="../performance/school_performance.html" class="nav-link"><i class="fi fi-rr-chart-histogram"></i><span>School Performance</span></a></li>
+                <li class="nav-item"><a href="../compliance/forms_compliance.html" class="nav-link"><i class="fi fi-rr-document"></i><span>Forms Compliance</span></a></li>
+                <li class="nav-item"><a href="../evaluation/teacher_evaluation.html" class="nav-link"><i class="fi fi-rr-presentation"></i><span>Teacher Evaluation</span></a></li>
+                <li class="nav-item"><a href="../reports/heads_reports.html" class="nav-link active"><i class="fi fi-rr-chart-line-up"></i><span>Reports & Analytics</span></a></li>
+                <li class="nav-item"><a href="../announcements/announcements.html" class="nav-link"><i class="fi fi-rr-megaphone"></i><span>Announcements</span></a></li>
+                <li class="nav-item"><a href="../messages/messages.html" class="nav-link"><i class="fi fi-rr-envelope"></i><span>Messages</span></a></li>
+                <li class="nav-item"><a href="../management/user_management.html" class="nav-link"><i class="fi fi-rr-users-gear"></i><span>User Management</span></a></li>
+                <li class="nav-item"><a href="../settings/heads_settings.html" class="nav-link"><i class="fi fi-rr-settings"></i><span>Settings</span></a></li>
+            </ul>
+
+            <ul class="nav-menu nav-footer">
+                <li class="nav-item"><a href="../accounts/signin.html" class="nav-link"><i class="fi fi-rr-sign-out"></i><span>Logout</span></a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content" id="mainContent">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="welcome">
+                    <h1 id="greetingText">Reports & Analytics</h1>
+                    <p>Data-driven insights for institutional decision-making</p>
+                </div>
+                <div class="top-bar-actions">
+                    <div class="date-display"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
+                    <div class="notification-dropdown">
+                        <button class="notification-badge" id="notificationBtn">
+                            <i class="fi fi-rr-bell"></i>
+                            <span class="badge-count" id="notifCount">2</span>
+                        </button>
+                        <div class="dropdown-menu" id="notificationDropdown">
+                            <div class="dropdown-header"><span>Notifications</span><span style="font-size:0.7rem; opacity:0.7;">2 unread</span></div>
+                            <div class="notification-list" id="notificationList"></div>
+                            <div class="dropdown-footer"><a id="markAllRead">Mark all as read</a></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Poro Greeting Banner -->
+            <div class="poro-greeting">
+                <div class="poro-greeting-content">
+                    <div class="character-icon">
+                        <img src="../../shared/poro/Poro.png" alt="Poro" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'fi fi-rr-smile\' style=\'font-size:1.8rem; color:white;\'></i>';">
+                    </div>
+                    <div class="poro-message">
+                        <h3>Reports & Analytics Center</h3>
+                        <p id="poroMessage">Enrollment at 1,284 (+5.2%). Graduation rate at 96.2%. Forms compliance at 82%.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card" onclick="showToast('Enrollment Details','Total enrollment: 1,284 students. Up 5.2% from SY 2024-25.')"><div class="stat-icon blue"><i class="fi fi-rr-school"></i></div><div class="stat-info"><h3>Total Enrollment</h3><div class="value">1,284</div><div class="sub">+5.2% vs SY 2024-25</div></div></div>
+                <div class="stat-card" onclick="showToast('Academic Score','Average academic score: 87.4%. Up 1.2% from Q2.')"><div class="stat-icon green"><i class="fi fi-rr-chart-line-up"></i></div><div class="stat-info"><h3>Avg Academic Score</h3><div class="value">87.4</div><div class="sub">+1.2% from Q2</div></div></div>
+                <div class="stat-card" onclick="showToast('Graduation Rate','Graduation rate: 96.2%. Up 2.1% from target.')"><div class="stat-icon orange"><i class="fi fi-rr-trophy"></i></div><div class="stat-info"><h3>Graduation Rate</h3><div class="value">96.2%</div><div class="sub">+2.1% target</div></div></div>
+                <div class="stat-card" onclick="showToast('Forms Compliance','Overall forms compliance: 82%. Up 5% from Q2.')"><div class="stat-icon purple"><i class="fi fi-rr-document"></i></div><div class="stat-info"><h3>Forms Compliance</h3><div class="value">82%</div><div class="sub">Up 5% from Q2</div></div></div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <div class="filter-group"><label>School Year:</label><select id="schoolYearFilter"><option value="2025-2026" selected>2025-2026</option><option value="2024-2025">2024-2025</option><option value="2023-2024">2023-2024</option></select></div>
+                <div class="filter-group"><label>Semester/Quarter:</label><select id="quarterFilter"><option value="Q1">Quarter 1</option><option value="Q2">Quarter 2</option><option value="Q3" selected>Quarter 3</option><option value="Q4">Quarter 4</option><option value="EoSY">End of School Year</option></select></div>
+                <div class="filter-group"><label>Report Type:</label><select id="reportTypeFilter"><option value="enrollment">Enrollment Report</option><option value="academic">Academic Performance</option><option value="teacher">Teacher Effectiveness</option><option value="compliance">Compliance Report</option></select></div>
+                <div class="filter-group">
+                    <button class="btn-primary" onclick="refreshReports()"><i class="fi fi-rr-filter"></i> Generate Report</button>
+                    <button class="btn-outline" onclick="exportToExcel()"><i class="fi fi-rr-file-spreadsheet"></i> Excel</button>
+                    <button class="btn-outline" onclick="exportToPDF()"><i class="fi fi-rr-file-pdf"></i> PDF</button>
+                </div>
+            </div>
+
+            <!-- Report Tabs -->
+            <div class="report-tabs">
+                <button class="report-tab active" data-tab="enrollment">Enrollment Analytics</button>
+                <button class="report-tab" data-tab="academic">Academic Performance</button>
+                <button class="report-tab" data-tab="teacher">Teacher Effectiveness</button>
+                <button class="report-tab" data-tab="compliance">Compliance Dashboard</button>
+                <button class="report-tab" data-tab="demographic">Demographic Profile</button>
+            </div>
+
+            <!-- Enrollment Analytics Tab -->
+            <div id="tab-enrollment" class="tab-content active">
+                <div class="two-col">
+                    <div class="chart-card">
+                        <div class="section-header"><h2><i class="fi fi-rr-chart-line-up"></i> Enrollment Trend (5-Year)</h2><button class="view-all" onclick="exportChartAsImage('enrollmentTrendChart')">Export Chart</button></div>
+                        <div class="chart-container"><canvas id="enrollmentTrendChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="section-header"><h2><i class="fi fi-rr-chart-pie"></i> Enrollment by Grade Level</h2><button class="view-all" onclick="exportChartAsImage('enrollmentPieChart')">Export Chart</button></div>
+                        <div class="chart-container"><canvas id="enrollmentPieChart"></canvas></div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="section-header"><h2><i class="fi fi-rr-chart-histogram"></i> Section-wise Enrollment Breakdown</h2><button class="view-all" onclick="exportTableToExcel('sectionTable')">Export Table</button></div>
+                    <div style="overflow-x: auto;">
+                        <table class="data-table" id="sectionTable">
+                            <thead><tr><th>Grade Level</th><th>Section</th><th>Adviser</th><th>Boys</th><th>Girls</th><th>Total</th></tr></thead>
+                            <tbody id="sectionTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Academic Performance Tab -->
+            <div id="tab-academic" class="tab-content" style="display: none;">
+                <div class="two-col">
+                    <div class="chart-card"><div class="section-header"><h2><i class="fi fi-rr-chart-histogram"></i> Subject Performance (Average)</h2></div><div class="chart-container"><canvas id="subjectPerformanceChart"></canvas></div></div>
+                    <div class="chart-card"><div class="section-header"><h2><i class="fi fi-rr-chart-line-up"></i> Grade Level Comparison</h2></div><div class="chart-container"><canvas id="gradeComparisonChart"></canvas></div></div>
+                </div>
+                <div class="chart-card">
+                    <div class="section-header"><h2><i class="fi fi-rr-graduation-cap"></i> Honor Roll Distribution</h2></div>
+                    <table class="data-table"><thead><tr><th>Grade Level</th><th>With Highest Honors</th><th>With High Honors</th><th>With Honors</th><th>Honor Rate</th></tr></thead><tbody id="honorTableBody"></tbody></table>
+                </div>
+            </div>
+
+            <!-- Teacher Effectiveness Tab -->
+            <div id="tab-teacher" class="tab-content" style="display: none;">
+                <div class="two-col">
+                    <div class="chart-card"><div class="section-header"><h2><i class="fi fi-rr-chart-histogram"></i> Teacher Performance Rating</h2></div><div class="chart-container"><canvas id="teacherPerformanceChart"></canvas></div></div>
+                    <div class="chart-card"><div class="section-header"><h2><i class="fi fi-rr-chart-line-up"></i> COT Rating Trend</h2></div><div class="chart-container"><canvas id="cotTrendChart"></canvas></div></div>
+                </div>
+                <div class="chart-card">
+                    <div class="section-header"><h2><i class="fi fi-rr-users"></i> Top Performing Teachers</h2></div>
+                    <table class="data-table"><thead><tr><th>Teacher</th><th>Department</th><th>IPCRF Rating</th><th>COT Rating</th><th>Overall</th></tr></thead><tbody id="topTeachersBody"></tbody></table>
+                </div>
+            </div>
+
+            <!-- Compliance Dashboard Tab -->
+            <div id="tab-compliance" class="tab-content" style="display: none;">
+                <div class="two-col">
+                    <div class="chart-card"><div class="section-header"><h2><i class="fi fi-rr-chart-pie"></i> Form Completion Rate</h2></div><div class="chart-container"><canvas id="complianceChart"></canvas></div></div>
+                    <div class="chart-card"><div class="section-header"><h2><i class="fi fi-rr-chart-line-up"></i> Compliance Trend</h2></div><div class="chart-container"><canvas id="complianceTrendChart"></canvas></div></div>
+                </div>
+                <div class="chart-card">
+                    <div class="section-header"><h2><i class="fi fi-rr-document"></i> Forms Submission Status</h2></div>
+                    <table class="data-table"><thead><tr><th>Form</th><th>Total Required</th><th>Submitted</th><th>Pending</th><th>Missing</th><th>Completion %</th></tr></thead><tbody id="complianceTableBody"></tbody></table>
+                </div>
+            </div>
+
+            <!-- Demographic Profile Tab -->
+            <div id="tab-demographic" class="tab-content" style="display: none;">
+                <div class="two-col">
+                    <div class="chart-card"><div class="section-header"><h2><i class="fi fi-rr-chart-pie"></i> Gender Distribution</h2></div><div class="chart-container"><canvas id="genderChart"></canvas></div></div>
+                    <div class="chart-card"><div class="section-header"><h2><i class="fi fi-rr-calendar"></i> Age Distribution</h2></div><div class="chart-container"><canvas id="ageChart"></canvas></div></div>
+                </div>
+                <div class="chart-card">
+                    <div class="section-header"><h2><i class="fi fi-rr-marker"></i> Geographic Distribution</h2></div>
+                    <table class="data-table"><thead><tr><th>Barangay</th><th>Number of Students</th><th>Percentage</th></tr></thead><tbody id="geoTableBody"></tbody></table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ========== SIDEBAR FOLD FUNCTIONALITY ==========
+            const sidebar = document.getElementById('sidebar');
+            const foldBtn = document.getElementById('foldBtn');
+            const mainContent = document.getElementById('mainContent');
+            const mobileOverlay = document.getElementById('mobileOverlay');
+            let sidebarCollapsed = false;
+
+            function updateSidebarState() {
+                const isMobile = window.innerWidth <= 768;
+                if (isMobile) {
+                    sidebar.classList.remove('collapsed'); sidebarCollapsed = false;
+                    foldBtn.querySelector('i').className = 'fi fi-rr-angle-left';
+                    if (!sidebar.classList.contains('mobile-open')) mobileOverlay.classList.remove('show');
+                } else {
+                    sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('show');
+                    if (sidebarCollapsed) { sidebar.classList.add('collapsed'); foldBtn.querySelector('i').className = 'fi fi-rr-angle-right'; }
+                    else { sidebar.classList.remove('collapsed'); foldBtn.querySelector('i').className = 'fi fi-rr-angle-left'; }
+                }
+                adjustMainMargin();
+            }
+
+            function adjustMainMargin() {
+                if (window.innerWidth <= 768) mainContent.style.marginLeft = '0';
+                else mainContent.style.marginLeft = sidebar.classList.contains('collapsed') ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)';
+            }
+
+            function toggleSidebar() {
+                if (window.innerWidth <= 768) {
+                    const isOpen = sidebar.classList.toggle('mobile-open');
+                    if (isOpen) mobileOverlay.classList.add('show'); else mobileOverlay.classList.remove('show');
+                } else {
+                    sidebarCollapsed = !sidebarCollapsed;
+                    if (sidebarCollapsed) { sidebar.classList.add('collapsed'); foldBtn.querySelector('i').className = 'fi fi-rr-angle-right'; }
+                    else { sidebar.classList.remove('collapsed'); foldBtn.querySelector('i').className = 'fi fi-rr-angle-left'; }
+                    adjustMainMargin();
+                }
+            }
+
+            foldBtn.addEventListener('click', toggleSidebar);
+            mobileOverlay.addEventListener('click', () => { sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('show'); });
+            window.addEventListener('resize', updateSidebarState);
+
+            // ========== NOTIFICATIONS ==========
+            const notifications = [
+                { id: 1, title: "Report Ready", message: "Enrollment analytics report for Q3 has been generated and is ready for download.", time: "1 hour ago", unread: true, type: "report" },
+                { id: 2, title: "Data Updated", message: "Academic performance data refreshed with latest Q3 submissions.", time: "3 hours ago", unread: true, type: "update" }
+            ];
+
+            function renderNotifications() {
+                const container = document.getElementById('notificationList');
+                document.getElementById('notifCount').textContent = notifications.filter(n => n.unread).length;
+                container.innerHTML = notifications.map(n => `
+                    <div class="notification-item ${n.unread ? 'unread' : ''}" data-id="${n.id}">
+                        <div class="notification-icon"><i class="fi fi-rr-${n.type==='report'?'document':'check-circle'}"></i></div>
+                        <div class="notification-content"><div class="notification-title">${n.title}</div><div class="notification-message">${n.message}</div><div class="notification-time">${n.time}</div></div>
+                    </div>
+                `).join('');
+                document.querySelectorAll('.notification-item').forEach(item => {
+                    item.addEventListener('click', function(e) { e.stopPropagation(); const id = parseInt(this.dataset.id); const notif = notifications.find(n => n.id === id); if (notif && notif.unread) { notif.unread = false; renderNotifications(); } });
+                });
+            }
+
+            document.getElementById('notificationBtn').addEventListener('click', e => { e.stopPropagation(); document.getElementById('notificationDropdown').classList.toggle('show'); });
+            document.getElementById('markAllRead').addEventListener('click', e => { e.preventDefault(); notifications.forEach(n => n.unread = false); renderNotifications(); });
+            document.addEventListener('click', e => { if (!e.target.closest('.notification-dropdown')) document.getElementById('notificationDropdown').classList.remove('show'); });
+
+            // ========== NAVIGATION ==========
+            window.navigateTo = function(url) { window.location.href = url; };
+
+            // ========== DYNAMIC GREETING ==========
+            function updateGreeting() {
+                const hour = new Date().getHours();
+                let greeting = 'Good morning';
+                if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
+                if (hour >= 17 || hour < 5) greeting = 'Good evening';
+                document.getElementById('greetingText').innerHTML = `${greeting}, Dr. Santos!`;
+            }
+
+            function updateDateTime() { document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }); }
+
+            // ========== TOAST NOTIFICATION ==========
+            window.showToast = function(title, message) {
+                const container = document.getElementById('toastContainer');
+                const toast = document.createElement('div');
+                toast.className = 'toast success';
+                toast.innerHTML = `<i class="fi fi-rr-check-circle"></i><div class="toast-content"><h4>${title}</h4><p>${message}</p></div><button class="toast-close" onclick="this.parentElement.remove()">&times;</button>`;
+                container.appendChild(toast);
+                setTimeout(() => { if (toast.parentElement) toast.remove(); }, 4000);
+            };
+
+            // ========== DATA ==========
+            const gradeLevels = ['G7','G8','G9','G10','G11','G12'];
+            const enrollmentData = [245,231,218,198,245,147];
+            const sectionData = [
+                { grade:'Grade 7',section:'STEM A',adviser:'Dela Cruz, J.',boys:22,girls:20,total:42 },
+                { grade:'Grade 7',section:'STEM B',adviser:'Santos, M.',boys:20,girls:18,total:38 },
+                { grade:'Grade 8',section:'Lily',adviser:'Gomez, R.',boys:21,girls:17,total:38 },
+                { grade:'Grade 9',section:'Sampaguita',adviser:'Reyes, A.',boys:18,girls:17,total:35 }
+            ];
+            const subjectData = ['Mathematics','Science','English','Filipino','AP','MAPEH'];
+            const subjectScores = [84.3,86.7,88.2,85.9,87.1,90.2];
+            const honorData = [
+                { grade:'Grade 7',highest:8,high:22,with:31,total:245 },
+                { grade:'Grade 8',highest:7,high:19,with:28,total:231 },
+                { grade:'Grade 9',highest:9,high:21,with:26,total:218 },
+                { grade:'Grade 10',highest:6,high:18,with:24,total:198 },
+                { grade:'Grade 11',highest:10,high:25,with:32,total:245 },
+                { grade:'Grade 12',highest:5,high:14,with:19,total:147 }
+            ];
+            const teacherPerformance = [
+                { name:'Bautista, L.',dept:'Filipino',ipcrf:4.9,cot:5.0,overall:5.0 },
+                { name:'Santos, M.',dept:'Science',ipcrf:4.8,cot:4.9,overall:4.9 },
+                { name:'Torres, M.',dept:'Science',ipcrf:4.6,cot:4.7,overall:4.7 },
+                { name:'Dela Cruz, J.',dept:'Math',ipcrf:4.5,cot:4.2,overall:4.4 }
+            ];
+            const complianceForms = [
+                { form:'SF1',total:24,submitted:22,pending:2,missing:0,percent:92 },
+                { form:'SF2',total:48,submitted:40,pending:5,missing:3,percent:83 },
+                { form:'SF3',total:24,submitted:20,pending:2,missing:2,percent:83 },
+                { form:'SF5',total:24,submitted:18,pending:4,missing:2,percent:75 },
+                { form:'SF9',total:48,submitted:35,pending:8,missing:5,percent:73 },
+                { form:'SF10',total:24,submitted:19,pending:3,missing:2,percent:79 }
+            ];
+            const geoData = [
+                { barangay:'Poblacion',students:345,percent:26.9 },
+                { barangay:'San Jose',students:278,percent:21.7 },
+                { barangay:'Sto. Nino',students:234,percent:18.2 },
+                { barangay:'Quezon',students:198,percent:15.4 },
+                { barangay:'Datu Abdul',students:229,percent:17.8 }
+            ];
+
+            let charts = {};
+
+            function initCharts() {
+                charts.enrollmentTrend = new Chart(document.getElementById('enrollmentTrendChart'), { type:'line', data:{ labels:['2021-22','2022-23','2023-24','2024-25','2025-26'], datasets:[{ label:'Enrollment', data:[985,1042,1120,1195,1284], borderColor:'#5EA173', fill:true, tension:0.3 }] }, options:{ responsive:true, maintainAspectRatio:true, plugins:{ legend:{ display:false } } } });
+                charts.enrollmentPie = new Chart(document.getElementById('enrollmentPieChart'), { type:'pie', data:{ labels:gradeLevels, datasets:[{ data:enrollmentData, backgroundColor:['#5EA173','#123499','#0A2472','#f39c12','#9b59b6','#dc3545'] }] }, options:{ responsive:true, maintainAspectRatio:true } });
+                charts.subject = new Chart(document.getElementById('subjectPerformanceChart'), { type:'bar', data:{ labels:subjectData, datasets:[{ label:'Average Score', data:subjectScores, backgroundColor:'#5EA173', borderRadius:6 }] }, options:{ responsive:true, maintainAspectRatio:true, scales:{ y:{ min:70, max:100 } } } });
+                charts.grade = new Chart(document.getElementById('gradeComparisonChart'), { type:'bar', data:{ labels:gradeLevels, datasets:[{ label:'Average Grade', data:[87.2,86.8,87.5,88.1,86.9,87.8], backgroundColor:'#123499' }] }, options:{ responsive:true, maintainAspectRatio:true, scales:{ y:{ min:80, max:95 } } } });
+                charts.teacher = new Chart(document.getElementById('teacherPerformanceChart'), { type:'bar', data:{ labels:['Beginning','Proficient','Highly Proficient','Distinguished'], datasets:[{ label:'Number of Teachers', data:[8,28,10,2], backgroundColor:'#5EA173' }] }, options:{ responsive:true, maintainAspectRatio:true } });
+                charts.cot = new Chart(document.getElementById('cotTrendChart'), { type:'line', data:{ labels:['Q1','Q2','Q3'], datasets:[{ label:'Avg COT Rating', data:[4.1,4.3,4.5], borderColor:'#f39c12', fill:true }] }, options:{ responsive:true, maintainAspectRatio:true, scales:{ y:{ min:3, max:5 } } } });
+                charts.compliance = new Chart(document.getElementById('complianceChart'), { type:'doughnut', data:{ labels:['Submitted','Pending','Missing'], datasets:[{ data:[154,24,14], backgroundColor:['#5EA173','#f39c12','#dc3545'] }] }, options:{ responsive:true, maintainAspectRatio:true } });
+                charts.complianceTrend = new Chart(document.getElementById('complianceTrendChart'), { type:'line', data:{ labels:['Q1','Q2','Q3'], datasets:[{ label:'Compliance %', data:[75,79,82], borderColor:'#5EA173', fill:true }] }, options:{ responsive:true, maintainAspectRatio:true, scales:{ y:{ min:60, max:100 } } } });
+                charts.gender = new Chart(document.getElementById('genderChart'), { type:'doughnut', data:{ labels:['Male','Female'], datasets:[{ data:[612,672], backgroundColor:['#123499','#5EA173'] }] }, options:{ responsive:true, maintainAspectRatio:true } });
+                charts.age = new Chart(document.getElementById('ageChart'), { type:'bar', data:{ labels:['12-14','15-16','17-18','19+'], datasets:[{ label:'Students', data:[214,541,412,117], backgroundColor:'#f39c12' }] }, options:{ responsive:true, maintainAspectRatio:true } });
+            }
+
+            function populateTables() {
+                document.getElementById('sectionTableBody').innerHTML = sectionData.map(s => `<tr><td>${s.grade}</td><td>${s.section}</td><td>${s.adviser}</td><td>${s.boys}</td><td>${s.girls}</td><td>${s.total}</td></tr>`).join('');
+                document.getElementById('honorTableBody').innerHTML = honorData.map(h => `<tr><td>${h.grade}</td><td>${h.highest}</td><td>${h.high}</td><td>${h.with}</td><td>${((h.highest+h.high+h.with)/h.total*100).toFixed(1)}%</td></tr>`).join('');
+                document.getElementById('topTeachersBody').innerHTML = teacherPerformance.map(t => `<tr><td><strong>${t.name}</strong></td><td>${t.dept}</td><td>${t.ipcrf}</td><td>${t.cot}</td><td>${t.overall}</td></tr>`).join('');
+                document.getElementById('complianceTableBody').innerHTML = complianceForms.map(f => `<tr><td>${f.form}</td><td>${f.total}</td><td>${f.submitted}</td><td>${f.pending}</td><td>${f.missing}</td><td>${f.percent}%</td></tr>`).join('');
+                document.getElementById('geoTableBody').innerHTML = geoData.map(g => `<tr><td>${g.barangay}</td><td>${g.students}</td><td>${g.percent}%</td></tr>`).join('');
+            }
+
+            window.refreshReports = function() { showToast('Report Generated', 'Report data refreshed based on selected filters.'); };
+            window.exportChartAsImage = function(chartId) { const canvas = document.getElementById(chartId); if(canvas){ const link=document.createElement('a'); link.download=`${chartId}.png`; link.href=canvas.toDataURL(); link.click(); showToast('Chart Exported', 'Chart saved as PNG image.'); } };
+            window.exportTableToExcel = function(tableId) { const table=document.getElementById(tableId); const ws=XLSX.utils.table_to_sheet(table); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Report'); XLSX.writeFile(wb, `${tableId}_export.xlsx`); showToast('Table Exported', 'Table data exported as Excel file.'); };
+            window.exportToExcel = function() { showToast('Export Complete', 'Report data exported as Excel file.'); };
+            window.exportToPDF = function() { const element=document.querySelector('.main-content'); html2pdf().set({ margin:[0.5,0.5,0.5,0.5], filename:'school_report.pdf', image:{ type:'jpeg', quality:0.98 }, html2canvas:{ scale:2 }, jsPDF:{ unit:'in', format:'a4', orientation:'landscape' } }).from(element).save(); };
+
+            document.querySelectorAll('.report-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+                    document.getElementById(`tab-${tab.dataset.tab}`).style.display = 'block';
+                    setTimeout(() => { Object.values(charts).forEach(chart => chart?.resize?.()); }, 100);
+                });
+            });
+
+            updateSidebarState();
+            updateGreeting();
+            updateDateTime();
+            renderNotifications();
+            initCharts();
+            populateTables();
+            setInterval(updateDateTime, 1000);
+            setInterval(updateGreeting, 60000);
+        })();
+    </script>
+</body>
+</html>

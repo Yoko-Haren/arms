@@ -1,0 +1,570 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Records — Formify LIS Registrar</title>
+    
+    <!-- Flaticon UIcons Regular Rounded -->
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    
+    <style>
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
+        :root{
+            --rich-black:#00072D;--dark-blue:#051650;--caribbean-blue:#123499;
+            --secondary-green:#5EA173;--green-light:#7dbb8f;--green-bg:rgba(94,161,115,0.08);
+            --warning-orange:#f39c12;--danger-red:#dc3545;--gray-bg:#f5f7fb;
+            --border-color:#e9ecef;--text-primary:#2d3748;--text-secondary:#718096;
+            --text-light:#a0aec0;--sidebar-width:280px;--sidebar-collapsed-width:80px;
+            --radius-sm:8px;--radius-md:14px;--radius-lg:20px;--radius-xl:28px;
+            --shadow-sm:0 2px 10px rgba(0,0,0,.05);--shadow-md:0 8px 25px rgba(0,0,0,.1);
+            --shadow-lg:0 12px 32px rgba(0,0,0,.18);--transition:all 0.25s cubic-bezier(.4,0,.2,1)
+        }
+        body{background:var(--gray-bg);min-height:100vh;color:var(--text-primary)}
+        
+        /* ═══════════════ LAYOUT ═══════════════ */
+        .dashboard{display:flex;min-height:100vh}
+        
+        /* ═══════════════ SIDEBAR ═══════════════ */
+        .sidebar{width:var(--sidebar-width);background:linear-gradient(180deg,var(--rich-black),var(--dark-blue));color:#fff;position:fixed;height:100vh;overflow-y:auto;overflow-x:hidden;transition:width .3s;z-index:100;display:flex;flex-direction:column}
+        .sidebar.collapsed{width:var(--sidebar-collapsed-width)}
+        .sidebar.collapsed .sb-logo-text,.sidebar.collapsed .user-details,.sidebar.collapsed .nav-link span{display:none}
+        .sidebar.collapsed .sb-header{justify-content:center;padding:1.5rem .5rem}
+        .sidebar.collapsed .sb-logo{display:none}
+        .sidebar.collapsed .user-info{justify-content:center;padding:.8rem;margin:0 .5rem 1.5rem}
+        .sidebar.collapsed .nav-link{justify-content:center;padding:.85rem 0;gap:0}
+        .sidebar.collapsed .nav-link i{font-size:1.2rem;margin:0}
+        .sidebar.collapsed .fold-btn{margin:0 auto}
+        .sidebar::-webkit-scrollbar{width:4px}
+        .sidebar::-webkit-scrollbar-thumb{background:var(--secondary-green);border-radius:4px}
+        .sb-header{display:flex;align-items:center;justify-content:space-between;padding:1.5rem;border-bottom:1px solid rgba(255,255,255,.1)}
+        .sb-logo{display:flex;align-items:center;gap:.8rem;overflow:hidden}
+        .sb-logo i{font-size:1.8rem;color:var(--secondary-green);flex-shrink:0}
+        .sb-logo-text h2{font-size:1rem;font-weight:700;line-height:1.3}
+        .sb-logo-text span{font-size:.65rem;opacity:.6;display:block}
+        .fold-btn{background:rgba(255,255,255,.1);border:none;color:#fff;cursor:pointer;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:background .2s;flex-shrink:0}
+        .fold-btn:hover{background:rgba(255,255,255,.25)}
+        .user-info{display:flex;align-items:center;gap:.8rem;padding:.9rem;margin:1rem 1rem 1.5rem;background:rgba(255,255,255,.1);border-radius:12px;overflow:hidden;white-space:nowrap}
+        .user-avatar{width:42px;height:42px;background:var(--secondary-green);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:var(--rich-black);flex-shrink:0}
+        .user-details h4{font-size:.85rem;font-weight:600}
+        .user-details p{font-size:.65rem;opacity:.65}
+        .nav-menu{list-style:none;padding:0 .75rem;flex:1}
+        .nav-item{margin-bottom:.2rem}
+        .nav-link{display:flex;align-items:center;gap:.9rem;padding:.7rem 1rem;color:rgba(255,255,255,.8);text-decoration:none;border-radius:10px;font-size:.875rem;transition:var(--transition);white-space:nowrap;overflow:hidden}
+        .nav-link:hover{background:rgba(94,161,115,.2);color:#fff}
+        .nav-link.active{background:var(--secondary-green);color:var(--rich-black);font-weight:600}
+        .nav-link i{width:20px;font-size:1rem;text-align:center;flex-shrink:0}
+        .nav-footer{margin-top:auto;padding:1rem .75rem;border-top:1px solid rgba(255,255,255,.1)}
+        
+        /* ═══════════════ MAIN CONTENT ═══════════════ */
+        .main-content{flex:1;margin-left:var(--sidebar-width);padding:1.5rem;transition:margin-left .3s;min-height:100vh}
+        .sidebar.collapsed~.main-content{margin-left:var(--sidebar-collapsed-width)}
+        
+        /* ═══════════════ TOP BAR ═══════════════ */
+        .top-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;background:#fff;padding:1rem 1.5rem;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);margin-bottom:1.5rem}
+        .page-title h1{font-size:1.25rem;color:var(--rich-black);font-weight:700;display:flex;align-items:center;gap:.5rem}
+        .page-title h1 i{color:var(--secondary-green)}
+        .page-title p{font-size:.78rem;color:var(--text-secondary);margin-top:.2rem;display:flex;align-items:center;gap:.5rem}
+        .top-actions{display:flex;align-items:center;gap:.8rem}
+        .date-chip{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--text-secondary);background:var(--gray-bg);padding:.35rem .75rem;border-radius:8px}
+        .notif-wrap{position:relative}
+        .notif-btn{background:none;border:none;padding:.35rem;cursor:pointer;display:flex;align-items:center;border-radius:8px;transition:background .2s}
+        .notif-btn:hover{background:var(--gray-bg)}
+        .notif-btn i{font-size:1.2rem;color:var(--text-primary)}
+        .notif-count{position:absolute;top:-4px;right:-6px;background:#dc3545;color:#fff;font-size:.55rem;padding:.1rem .35rem;border-radius:10px;min-width:16px;text-align:center;font-weight:700}
+        .notif-count.zero{background:#adb5bd}
+        .notif-dropdown{position:absolute;top:44px;right:0;width:340px;background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);z-index:300;display:none;overflow:hidden;border:1px solid var(--border-color)}
+        .notif-dropdown.open{display:block;animation:fadeDown .2s ease}
+        @keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+        .notif-head{padding:.8rem 1.2rem;background:var(--gray-bg);border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.82rem;color:var(--rich-black)}
+        .notif-list{max-height:340px;overflow-y:auto}
+        .notif-item{display:flex;gap:.7rem;padding:.8rem 1.2rem;border-bottom:1px solid var(--border-color);cursor:pointer;transition:background .2s}
+        .notif-item:hover{background:var(--gray-bg)}
+        .notif-item.unread{background:rgba(94,161,115,.05);border-left:3px solid var(--secondary-green)}
+        .notif-icon{width:32px;height:32px;background:var(--green-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--secondary-green);font-size:.8rem}
+        .notif-body .notif-title{font-size:.78rem;font-weight:600;color:var(--rich-black)}
+        .notif-body .notif-msg{font-size:.7rem;color:var(--text-secondary);line-height:1.4}
+        .notif-body .notif-time{font-size:.62rem;color:var(--text-light);margin-top:.2rem}
+        .notif-foot{padding:.6rem;text-align:center;border-top:1px solid var(--border-color);background:var(--gray-bg)}
+        .notif-foot a{color:var(--secondary-green);font-size:.72rem;font-weight:600;cursor:pointer}
+        
+        /* ═══════════════ PORO BANNER ═══════════════ */
+        .poro-banner{background:linear-gradient(135deg,#f0f9f0,#e8f5e9);border:1px solid rgba(94,161,115,.3);border-radius:var(--radius-xl);padding:1rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+        .poro-left{display:flex;align-items:center;gap:1rem}
+        .poro-icon{width:50px;height:50px;background:var(--secondary-green);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;box-shadow:0 4px 12px rgba(94,161,115,.3);animation:bounce 2s ease infinite}
+        .poro-icon img{width:100%;height:100%;object-fit:cover}
+        @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+        .poro-msg h3{font-size:1rem;color:var(--rich-black);font-weight:700;margin-bottom:.2rem}
+        .poro-msg p{font-size:.75rem;color:var(--text-secondary)}
+        
+        /* ═══════════════ STATS MINI ═══════════════ */
+        .stats-mini{display:flex;gap:.8rem;margin-bottom:1.5rem;flex-wrap:wrap}
+        .stat-chip{display:flex;align-items:center;gap:.5rem;background:#fff;padding:.5rem 1.2rem;border-radius:30px;box-shadow:var(--shadow-sm);font-size:.78rem;color:var(--text-secondary);border:1.5px solid var(--border-color)}
+        .stat-chip i{color:var(--secondary-green);font-size:.85rem}
+        .stat-chip strong{color:var(--rich-black);margin:0 .2rem}
+        
+        /* ═══════════════ BUTTONS ═══════════════ */
+        .btn{display:inline-flex;align-items:center;gap:.45rem;padding:.55rem 1.2rem;border-radius:var(--radius-sm);font-size:.82rem;font-weight:600;cursor:pointer;border:none;transition:var(--transition);white-space:nowrap;text-decoration:none}
+        .btn-green{background:var(--secondary-green);color:#fff}
+        .btn-green:hover{background:#4a8a5e;transform:translateY(-1px)}
+        .btn-outline{background:transparent;border:2px solid var(--border-color);color:var(--text-primary)}
+        .btn-outline:hover{border-color:var(--secondary-green);color:var(--secondary-green);background:var(--green-bg)}
+        .btn-blue{background:var(--caribbean-blue);color:#fff}
+        .btn-blue:hover{background:var(--dark-blue);transform:translateY(-1px)}
+        .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+        
+        /* ═══════════════ FILTER BAR ═══════════════ */
+        .filter-bar{background:#fff;padding:.9rem 1.5rem;border-radius:var(--radius-lg);margin-bottom:1.5rem;box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem}
+        .search-box{display:flex;align-items:center;background:var(--gray-bg);padding:.4rem .8rem;border-radius:var(--radius-sm);min-width:280px;border:1.5px solid var(--border-color);transition:border-color .2s}
+        .search-box:focus-within{border-color:var(--secondary-green)}
+        .search-box i{color:var(--text-light);margin-right:.5rem;font-size:.85rem}
+        .search-box input{border:none;background:transparent;padding:.45rem 0;width:100%;outline:none;font-size:.85rem;color:var(--text-primary)}
+        .filter-group{display:flex;gap:.7rem;flex-wrap:wrap;align-items:center}
+        .filter-select{padding:.45rem 2rem .45rem .7rem;border:1.5px solid var(--border-color);border-radius:8px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right .5rem center;appearance:none;font-size:.8rem;color:var(--text-primary);cursor:pointer;outline:none;transition:border-color .2s}
+        .filter-select:focus{border-color:var(--secondary-green)}
+        
+        /* ═══════════════ BULK ACTIONS ═══════════════ */
+        .bulk-actions{padding:.75rem 1.5rem;background:var(--gray-bg);border-bottom:1px solid var(--border-color);display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+        .bulk-actions label{display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--text-primary);cursor:pointer}
+        .bulk-actions input[type="checkbox"]{width:17px;height:17px;cursor:pointer;accent-color:var(--secondary-green)}
+        .bulk-btn{background:#fff;border:1.5px solid var(--border-color);padding:.4rem .85rem;border-radius:8px;font-size:.73rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:.35rem;color:var(--text-primary);transition:var(--transition);white-space:nowrap}
+        .bulk-btn:hover{background:var(--secondary-green);color:#fff;border-color:var(--secondary-green)}
+        .bulk-btn i{font-size:.8rem}
+        .bulk-divider{width:1px;height:22px;background:var(--border-color);margin:0 .3rem}
+        
+        /* ═══════════════ STATUS DROPDOWN ═══════════════ */
+        .status-dropdown-wrap{position:relative;display:inline-block}
+        .status-dropdown-menu{position:absolute;top:100%;left:0;background:#fff;border:1px solid var(--border-color);border-radius:var(--radius-md);box-shadow:var(--shadow-lg);z-index:300;display:none;min-width:170px;margin-top:4px;overflow:hidden}
+        .status-dropdown-menu.open{display:block;animation:fadeDown .2s ease}
+        .status-dropdown-item{padding:.55rem 1rem;cursor:pointer;font-size:.75rem;color:var(--text-primary);transition:background .2s;display:flex;align-items:center;gap:.5rem}
+        .status-dropdown-item:hover{background:var(--gray-bg)}
+        
+        /* ═══════════════ TABLE ═══════════════ */
+        .table-wrap{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);overflow:hidden}
+        table{width:100%;border-collapse:collapse}
+        th{text-align:left;padding:.75rem 1.2rem;background:var(--gray-bg);color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--border-color)}
+        td{padding:.75rem 1.2rem;border-bottom:1px solid var(--border-color);font-size:.82rem;color:var(--text-primary)}
+        tbody tr{cursor:pointer;transition:background .2s}
+        tbody tr:hover td{background:var(--gray-bg)}
+        tr:last-child td{border-bottom:none}
+        .student-name{font-weight:600;color:var(--rich-black)}
+        .student-lrn{font-size:.73rem;color:var(--text-secondary)}
+        
+        /* ═══════════════ PILLS ═══════════════ */
+        .pill{padding:.22rem .65rem;border-radius:20px;font-size:.65rem;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+        .pill-grade{background:var(--caribbean-blue);color:#fff}
+        .pill-enrolled{background:#d4edda;color:#155724}
+        .pill-transferred{background:#fff3cd;color:#856404}
+        .pill-graduated{background:#cce5ff;color:#004085}
+        .pill-dropped{background:#f8d7da;color:#721c24}
+        .pill-inactive{background:#f5f5f5;color:var(--text-secondary)}
+        
+        /* ═══════════════ PAGINATION ═══════════════ */
+        .pagination{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.2rem;border-top:1px solid var(--border-color)}
+        .page-info{font-size:.78rem;color:var(--text-secondary)}
+        .page-controls{display:flex;gap:.4rem}
+        .page-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border-color);border-radius:8px;background:#fff;color:var(--text-primary);cursor:pointer;transition:var(--transition);font-size:.78rem;font-weight:600;text-decoration:none}
+        .page-btn:hover{background:var(--secondary-green);color:#fff;border-color:var(--secondary-green)}
+        .page-btn.active{background:var(--secondary-green);color:#fff;border-color:var(--secondary-green)}
+        
+        /* ═══════════════ EMPTY STATE ═══════════════ */
+        .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 2rem;text-align:center}
+        .empty-state i{font-size:2.5rem;color:var(--text-light);margin-bottom:.8rem;opacity:.5}
+        .empty-state h4{font-size:.9rem;font-weight:600;color:var(--text-secondary);margin-bottom:.3rem}
+        .empty-state p{font-size:.75rem;color:var(--text-light);max-width:300px;line-height:1.5}
+        
+        /* ═══════════════ MODAL ═══════════════ */
+        .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem}
+        .modal-overlay.open{display:flex}
+        .modal{background:#fff;border-radius:var(--radius-xl);width:100%;max-width:620px;box-shadow:0 24px 60px rgba(0,0,0,.22);animation:modalIn .28s cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column;max-height:90vh}
+        .modal-lg{max-width:720px}
+        @keyframes modalIn{from{opacity:0;transform:translateY(-16px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+        .modal-header{padding:1.2rem 1.5rem 1rem;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+        .modal-header h2{font-size:1.05rem;font-weight:700;color:var(--rich-black);display:flex;align-items:center;gap:.5rem}
+        .modal-header h2 i{color:var(--secondary-green)}
+        .modal-close{background:none;border:none;cursor:pointer;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-light);font-size:1.1rem;transition:var(--transition)}
+        .modal-close:hover{background:var(--gray-bg);color:var(--danger-red)}
+        .modal-body{padding:1.3rem 1.5rem;overflow-y:auto;flex:1}
+        .modal-footer{padding:.9rem 1.5rem 1.2rem;border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;gap:.7rem;flex-shrink:0;flex-wrap:wrap}
+        .detail-row{display:flex;padding:.6rem 0;border-bottom:1px solid var(--border-color)}
+        .detail-label{width:135px;font-weight:600;color:var(--rich-black);font-size:.82rem;flex-shrink:0}
+        .detail-value{flex:1;color:var(--text-primary);font-size:.82rem}
+        .form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+        .form-group{margin-bottom:1rem}
+        .form-group label{display:block;font-size:.75rem;font-weight:700;color:var(--text-primary);margin-bottom:.35rem}
+        .form-group input,.form-group select{width:100%;padding:.65rem .85rem;border:2px solid var(--border-color);border-radius:var(--radius-sm);font-size:.85rem;font-family:inherit;outline:none;transition:border-color .2s}
+        .form-group input:focus,.form-group select:focus{border-color:var(--secondary-green)}
+        .info-banner{padding:1rem;background:var(--gray-bg);border-radius:var(--radius-md);font-size:.78rem;color:var(--text-secondary);display:flex;align-items:flex-start;gap:.6rem;margin-top:1rem}
+        .info-banner i{color:var(--secondary-green);flex-shrink:0;margin-top:1px}
+        
+        /* ═══════════════ TOAST ═══════════════ */
+        .toast-container{position:fixed;top:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem}
+        .toast{padding:.75rem 1.2rem;border-radius:var(--radius-sm);color:#fff;font-size:.8rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.2);animation:toastIn .3s ease;max-width:380px;display:flex;align-items:center;gap:.6rem;cursor:pointer}
+        .toast.success{background:#28a745}
+        .toast.error{background:#dc3545}
+        .toast.warning{background:#f39c12;color:#000}
+        .toast.info{background:var(--caribbean-blue)}
+        @keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+        
+        /* ═══════════════ MOBILE ═══════════════ */
+        .mobile-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;display:none}
+        .mobile-overlay.show{display:block}
+        @media(max-width:1200px){.filter-bar{flex-direction:column;align-items:stretch}.search-box{width:100%;min-width:auto}}
+        @media(max-width:768px){
+            .sidebar{transform:translateX(-100%);width:var(--sidebar-width)!important;transition:transform .3s}
+            .sidebar.mobile-open{transform:translateX(0)}
+            .main-content{margin-left:0!important;padding:1rem}
+            .stats-mini{flex-direction:column}
+            .form-row{grid-template-columns:1fr}
+            .modal{max-width:100%;border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+            .modal-overlay{align-items:flex-end}
+            .notif-dropdown{width:290px;right:-10px}
+            .bulk-actions{gap:.4rem}
+        }
+    </style>
+</head>
+<body>
+<div class="mobile-overlay" id="mobileOverlay"></div>
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="dashboard">
+    <!-- ═══════════════ SIDEBAR ═══════════════ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sb-header">
+            <div class="sb-logo"><i class="fi fi-rr-graduation-cap"></i><div class="sb-logo-text"><h2>Formify</h2><span>Registrar Portal</span></div></div>
+            <button class="fold-btn" id="foldBtn"><i class="fi fi-rr-angle-small-left" id="foldIcon"></i></button>
+        </div>
+        <div class="user-info">
+            <div class="user-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+            <div class="user-details"><h4>{{ request.user.get_full_name }}</h4><p>School Registrar</p></div>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="{% url 'registrars:dashboard' %}" class="nav-link"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:student-records' %}" class="nav-link active"><i class="fi fi-rr-user"></i><span>Student Records</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:enrollment-management' %}" class="nav-link"><i class="fi fi-rr-file-invoice"></i><span>Enrollment</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:grade-validation' %}" class="nav-link"><i class="fi fi-rr-check-double"></i><span>Grade Validation</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:forms' %}" class="nav-link"><i class="fi fi-rr-folder-open"></i><span>School Forms</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:transfer-management' %}" class="nav-link"><i class="fi fi-rr-exchange-alt"></i><span>Transfer Requests</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:reports-analytics' %}" class="nav-link"><i class="fi fi-rr-chart-line-up"></i><span>Reports</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:section-schedule-management' %}" class="nav-link"><i class="fi fi-rr-calendar"></i><span>Sections & Schedule</span></a></li>
+        </ul>
+        <ul class="nav-menu nav-footer">
+            <li class="nav-item">
+                <form method="POST" action="{% url 'signout' %}" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-link" style="width:100%;background:none;border:none;cursor:pointer;"><i class="fi fi-rr-sign-out-alt"></i><span>Logout</span></button>
+                </form>
+            </li>
+        </ul>
+    </aside>
+
+    <!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+    <div class="main-content" id="mainContent">
+        <!-- TOP BAR -->
+        <div class="top-bar">
+            <div class="page-title">
+                <h1><i class="fi fi-rr-database"></i>Student Records Masterlist</h1>
+                <p><i class="fi fi-rr-calendar"></i> Permanent record repository · School Year {{ current_sy_label }}</p>
+            </div>
+            <div class="top-actions">
+                <div class="date-chip"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
+                <div class="notif-wrap">
+                    <button class="notif-btn" id="notifBtn"><i class="fi fi-rr-bell"></i><span class="notif-count zero" id="notifCount">0</span></button>
+                    <div class="notif-dropdown" id="notifDropdown">
+                        <div class="notif-head"><span>Notifications</span><span style="font-size:.7rem;opacity:.65;">0 unread</span></div>
+                        <div class="notif-list" id="notifList">
+                            <div class="empty-state" style="min-height:120px;padding:1.5rem;"><i class="fi fi-rr-bell" style="font-size:1.8rem;"></i><p style="margin:0;">No notifications yet</p></div>
+                        </div>
+                        <div class="notif-foot"><a onclick="markAllRead()">Mark all as read</a></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PORO BANNER -->
+        <div class="poro-banner">
+            <div class="poro-left">
+                <div class="poro-icon"><img src="{% static 'shared/poro/Poro.png' %}" alt="Poro" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fi fi-rr-smile\' style=\'font-size:1.6rem;color:#fff;\'></i>';"></div>
+                <div class="poro-msg"><h3>Student Records Center</h3><p>Managing <strong>{{ total_students }}</strong> student records. Click any row to view complete details.</p></div>
+            </div>
+        </div>
+
+        <!-- FILTER BAR -->
+        <form method="GET" action="{% url 'registrars:student-records' %}" class="filter-bar">
+            <div class="search-box"><i class="fi fi-rr-search"></i><input type="text" name="search" placeholder="Search by name, LRN..." value="{{ search_query }}"></div>
+            <div class="filter-group">
+                <select name="grade_level" class="filter-select" onchange="this.form.submit()">
+                    <option value="">All Grade Levels</option>
+                    {% for grade in grade_levels %}<option value="{{ grade.id }}" {% if selected_grade == grade.id|stringformat:"s" %}selected{% endif %}>{{ grade.grade_name }}</option>{% endfor %}
+                </select>
+                <select name="section" class="filter-select" onchange="this.form.submit()">
+                    <option value="">All Sections</option>
+                    {% for sec in sections %}<option value="{{ sec.id }}" {% if selected_section == sec.id|stringformat:"s" %}selected{% endif %}>{{ sec.section_name }} (Gr. {{ sec.grade_level.grade_number }})</option>{% endfor %}
+                </select>
+                <select name="status" class="filter-select" onchange="this.form.submit()">
+                    <option value="">All Status</option>
+                    <option value="Enrolled" {% if selected_status == 'Enrolled' %}selected{% endif %}>Enrolled</option>
+                    <option value="Transferred" {% if selected_status == 'Transferred' %}selected{% endif %}>Transferred</option>
+                    <option value="Graduated" {% if selected_status == 'Graduated' %}selected{% endif %}>Graduated</option>
+                    <option value="Dropped" {% if selected_status == 'Dropped' %}selected{% endif %}>Dropped</option>
+                </select>
+                <button type="submit" class="btn btn-green"><i class="fi fi-rr-filter"></i> Apply</button>
+                <a href="{% url 'registrars:student-records' %}" class="btn btn-outline"><i class="fi fi-rr-undo-alt"></i> Reset</a>
+            </div>
+        </form>
+
+        <!-- STATS CHIPS -->
+        <div class="stats-mini">
+            <div class="stat-chip"><i class="fi fi-rr-users"></i> Total Records: <strong>{{ total_students }}</strong></div>
+            <div class="stat-chip"><i class="fi fi-rr-check-circle"></i> Active: <strong>{{ total_active }}</strong></div>
+            <div class="stat-chip"><i class="fi fi-rr-venus-mars"></i> Male: <strong>{{ total_male }}</strong> · Female: <strong>{{ total_female }}</strong></div>
+            <div class="stat-chip"><i class="fi fi-rr-shield-exclamation"></i> Unverified: <strong>{{ unverified_count }}</strong></div>
+        </div>
+
+        <!-- BULK ACTIONS -->
+        <div class="bulk-actions">
+            <label><input type="checkbox" id="selectAll"> Select All ({{ students|length }})</label>
+            <button class="bulk-btn" onclick="batchGenerateSF10()"><i class="fi fi-rr-file-pdf"></i> SF10 Batch</button>
+            <button class="bulk-btn" onclick="batchGenerateSF9()"><i class="fi fi-rr-id-card"></i> SF9 Batch</button>
+            <div class="status-dropdown-wrap">
+                <button class="bulk-btn" onclick="toggleStatusDropdown(event)"><i class="fi fi-rr-tags"></i> Update Status <i class="fi fi-rr-angle-small-down" style="font-size:.65rem;"></i></button>
+                <div class="status-dropdown-menu" id="statusDropdown">
+                    <div class="status-dropdown-item" onclick="batchUpdateStatusDropdown('Enrolled')"><span class="pill pill-enrolled">Enrolled</span></div>
+                    <div class="status-dropdown-item" onclick="batchUpdateStatusDropdown('Transferred')"><span class="pill pill-transferred">Transferred</span></div>
+                    <div class="status-dropdown-item" onclick="batchUpdateStatusDropdown('Graduated')"><span class="pill pill-graduated">Graduated</span></div>
+                    <div class="status-dropdown-item" onclick="batchUpdateStatusDropdown('Dropped')"><span class="pill pill-dropped">Dropped</span></div>
+                </div>
+            </div>
+            <button class="bulk-btn" onclick="batchArchive()"><i class="fi fi-rr-archive"></i> Archive</button>
+            <span class="bulk-divider"></span>
+            <a href="{% url 'registrars:export-masterlist' %}" class="bulk-btn"><i class="fi fi-rr-download"></i> Export</a>
+            <button class="bulk-btn" onclick="printSF1()"><i class="fi fi-rr-print"></i> Print SF1</button>
+        </div>
+
+        <!-- TABLE -->
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th style="width:30px;"><input type="checkbox" id="headerCheckbox"></th><th>LRN</th><th>Student Name</th><th>Grade</th><th>Section</th><th>Status</th><th>Last Updated</th></tr></thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr onclick="viewStudentDetails({{ student.id }})">
+                        <td onclick="event.stopPropagation()"><input type="checkbox" class="student-checkbox" data-id="{{ student.id }}"></td>
+                        <td><span class="student-lrn">{{ student.lrn|default:"—" }}</span></td>
+                        <td><span class="student-name">{{ student.name }}</span></td>
+                        <td><span class="pill pill-grade">{{ student.grade_level }}</span></td>
+                        <td>{{ student.section }}</td>
+                        <td>
+                            {% if student.status == 'Enrolled' %}<span class="pill pill-enrolled">Enrolled</span>
+                            {% elif student.status == 'Transferred' %}<span class="pill pill-transferred">Transferred</span>
+                            {% elif student.status == 'Graduated' %}<span class="pill pill-graduated">Graduated</span>
+                            {% else %}<span class="pill pill-inactive">{{ student.status }}</span>{% endif %}
+                        </td>
+                        <td>{{ student.updated_at|date:"M d, Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7"><div class="empty-state"><i class="fi fi-rr-user-graduate"></i><h4>No Students Found</h4><p>Try adjusting your filters or enroll new students.</p></div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% if students %}
+            <div class="pagination">
+                <div class="page-info">Showing {{ page_start }}–{{ page_end }} of {{ total_students }} records</div>
+                <div class="page-controls">
+                    {% if current_page > 1 %}
+                    <a href="?page=1{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-btn"><i class="fi fi-rr-angle-double-small-left"></i></a>
+                    <a href="?page={{ current_page|add:"-1" }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-btn"><i class="fi fi-rr-angle-small-left"></i></a>
+                    {% endif %}
+                    <span class="page-btn active">{{ current_page }}</span>
+                    {% if current_page < total_pages %}
+                    <a href="?page={{ current_page|add:"1" }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-btn"><i class="fi fi-rr-angle-small-right"></i></a>
+                    <a href="?page={{ total_pages }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-btn"><i class="fi fi-rr-angle-double-small-right"></i></a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ VIEW STUDENT MODAL ═══════════════ -->
+<div class="modal-overlay" id="viewModal">
+    <div class="modal modal-lg">
+        <div class="modal-header"><h2><i class="fi fi-rr-user-graduate"></i> Student Profile</h2><button class="modal-close" onclick="closeModal('viewModal')"><i class="fi fi-rr-cross-small"></i></button></div>
+        <div class="modal-body" id="viewModalBody"></div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('viewModal')">Close</button>
+            <button class="btn btn-blue" onclick="editFromView()"><i class="fi fi-rr-edit"></i> Edit</button>
+            <button class="btn btn-green" onclick="generateSF10FromView()" style="background:var(--danger-red);"><i class="fi fi-rr-file-pdf"></i> Generate SF10</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ EDIT STUDENT MODAL ═══════════════ -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal modal-lg">
+        <div class="modal-header"><h2><i class="fi fi-rr-edit"></i> Edit Student Record</h2><button class="modal-close" onclick="closeModal('editModal')"><i class="fi fi-rr-cross-small"></i></button></div>
+        <form id="editForm" method="POST">{% csrf_token %}
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group"><label>Last Name</label><input type="text" name="last_name" id="edit_last_name" required></div>
+                    <div class="form-group"><label>First Name</label><input type="text" name="first_name" id="edit_first_name" required></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Middle Name</label><input type="text" name="middle_name" id="edit_middle_name"></div>
+                    <div class="form-group"><label>LRN</label><input type="text" name="lrn" id="edit_lrn"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Sex</label><select name="sex" id="edit_sex"><option value="M">Male</option><option value="F">Female</option></select></div>
+                    <div class="form-group"><label>Birth Date</label><input type="date" name="birth_date" id="edit_birth_date"></div>
+                </div>
+                <div class="form-group"><label>Birth Place</label><input type="text" name="birth_place" id="edit_birth_place"></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Mother Tongue</label><input type="text" name="mother_tongue" id="edit_mother_tongue"></div>
+                    <div class="form-group"><label>Religion</label><input type="text" name="religion" id="edit_religion"></div>
+                </div>
+                <div class="form-group"><label><input type="checkbox" name="is_4ps" id="edit_is_4ps" style="width:auto;margin-right:.5rem;"> 4Ps Beneficiary</label></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('editModal')">Cancel</button>
+                <button type="submit" class="btn btn-green"><i class="fi fi-rr-check-circle"></i> Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ═══════════════ SF10 GENERATION MODAL ═══════════════ -->
+<div class="modal-overlay" id="sf10Modal">
+    <div class="modal">
+        <div class="modal-header"><h2><i class="fi fi-rr-file-pdf"></i> Generate SF10 (Form 137)</h2><button class="modal-close" onclick="closeModal('sf10Modal')"><i class="fi fi-rr-cross-small"></i></button></div>
+        <div class="modal-body" id="sf10ModalBody"></div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('sf10Modal')">Cancel</button>
+            <button class="btn btn-green" id="confirmGenerateBtn" onclick="confirmGenerateSF10()"><i class="fi fi-rr-download"></i> Generate SF10</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ SF9 PRINT MODAL ═══════════════ -->
+<div class="modal-overlay" id="sf9Modal">
+    <div class="modal" style="max-width:480px;">
+        <div class="modal-header"><h2><i class="fi fi-rr-print"></i> Print SF9 Report Card</h2><button class="modal-close" onclick="closeModal('sf9Modal')"><i class="fi fi-rr-cross-small"></i></button></div>
+        <div class="modal-body" id="sf9ModalBody"></div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('sf9Modal')">Cancel</button>
+            <button class="btn btn-green" id="confirmPrintBtn" onclick="confirmPrintSF9()"><i class="fi fi-rr-print"></i> Print</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){'use strict';
+
+// ═══════════════ SIDEBAR ═══════════════
+const sidebar=document.getElementById('sidebar'),foldBtn=document.getElementById('foldBtn'),foldIcon=document.getElementById('foldIcon'),mainContent=document.getElementById('mainContent'),mobileOverlay=document.getElementById('mobileOverlay');
+let collapsed=false;
+function adjustMargin(){mainContent.style.marginLeft=window.innerWidth>768?(collapsed?'var(--sidebar-collapsed-width)':'var(--sidebar-width)'):'0'}
+foldBtn.addEventListener('click',()=>{if(window.innerWidth<=768){const o=sidebar.classList.toggle('mobile-open');mobileOverlay.classList.toggle('show',o)}else{collapsed=!collapsed;sidebar.classList.toggle('collapsed',collapsed);foldIcon.className=collapsed?'fi fi-rr-angle-small-right':'fi fi-rr-angle-small-left';adjustMargin()}});
+mobileOverlay.addEventListener('click',()=>{sidebar.classList.remove('mobile-open');mobileOverlay.classList.remove('show')});
+window.addEventListener('resize',adjustMargin);adjustMargin();
+
+// ═══════════════ NOTIFICATIONS ═══════════════
+const notifBtn=document.getElementById('notifBtn'),notifDropdown=document.getElementById('notifDropdown');
+notifBtn.addEventListener('click',e=>{e.stopPropagation();notifDropdown.classList.toggle('open')});
+document.addEventListener('click',e=>{if(!e.target.closest('.notif-wrap'))notifDropdown.classList.remove('open')});
+
+// ═══════════════ MODALS ═══════════════
+function openModal(id){const e=document.getElementById(id);if(e){e.classList.add('open');document.body.style.overflow='hidden'}}
+function closeModal(id){const e=document.getElementById(id);if(e){e.classList.remove('open');document.body.style.overflow=''}}
+document.querySelectorAll('.modal-overlay').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov)closeModal(ov.id)}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>closeModal(m.id))});
+
+// ═══════════════ TOAST ═══════════════
+function showToast(msg,type='success'){const c=document.getElementById('toastContainer');if(!c)return;const t=document.createElement('div');t.className='toast '+type;const icons={success:'fi-rr-check-circle',error:'fi-rr-exclamation-circle',warning:'fi-rr-exclamation-triangle',info:'fi-rr-info-circle'};t.innerHTML='<i class="fi '+(icons[type]||icons.info)+'"></i> '+msg;c.appendChild(t);setTimeout(()=>{if(t.parentNode)t.remove()},4500);t.addEventListener('click',()=>t.remove())}
+
+// ═══════════════ CSRF ═══════════════
+function getCSRF(){const i=document.querySelector('input[name="csrfmiddlewaretoken"]');return i?i.value:''}
+function getCookie(n){let v=null;document.cookie.split(';').forEach(c=>{c=c.trim();if(c.substring(0,n.length+1)===(n+'='))v=decodeURIComponent(c.substring(n.length+1))});return v}
+
+// ═══════════════ STUDENT DETAILS ═══════════════
+let currentStudentId=null;
+
+window.viewStudentDetails=function(id){currentStudentId=id;fetch('/registrars/students/'+id+'/detail-data/').then(r=>r.json()).then(data=>{if(data.success){const s=data.data;document.getElementById('viewModalBody').innerHTML=
+    '<div class="detail-row"><div class="detail-label">LRN</div><div class="detail-value">'+(s.lrn||'—')+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">Full Name</div><div class="detail-value"><strong>'+esc(s.last_name)+', '+esc(s.first_name)+' '+(s.middle_name||'')+'</strong></div></div>'+
+    '<div class="detail-row"><div class="detail-label">Sex</div><div class="detail-value">'+(s.sex||'—')+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">Birth Date</div><div class="detail-value">'+(s.birth_date||'—')+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">Birth Place</div><div class="detail-value">'+(s.birth_place||'—')+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">Mother Tongue</div><div class="detail-value">'+(s.mother_tongue||'—')+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">Religion</div><div class="detail-value">'+(s.religion||'—')+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">4Ps Member</div><div class="detail-value">'+(s.is_4ps?'Yes':'No')+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">Status</div><div class="detail-value">'+esc(s.status||'—')+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">Grade Level</div><div class="detail-value">'+esc(s.grade_level||'—')+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">Section</div><div class="detail-value">'+esc(s.section||'—')+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">Guardian</div><div class="detail-value">'+(s.guardian||'Not recorded')+'</div></div>';
+    openModal('viewModal')}}).catch(()=>showToast('Error loading student details','error'))};
+
+window.editFromView=function(){const id=currentStudentId;closeModal('viewModal');if(id)editStudent(id)};
+window.generateSF10FromView=function(){const id=currentStudentId;closeModal('viewModal');if(id)generateSF10(id)};
+
+function editStudent(id){currentStudentId=id;fetch('/registrars/students/'+id+'/detail-data/').then(r=>r.json()).then(data=>{if(data.success){const s=data.data;document.getElementById('edit_last_name').value=s.last_name||'';document.getElementById('edit_first_name').value=s.first_name||'';document.getElementById('edit_middle_name').value=s.middle_name||'';document.getElementById('edit_lrn').value=s.lrn||'';document.getElementById('edit_sex').value=s.sex||'M';document.getElementById('edit_birth_date').value=s.birth_date||'';document.getElementById('edit_birth_place').value=s.birth_place||'';document.getElementById('edit_mother_tongue').value=s.mother_tongue||'';document.getElementById('edit_religion').value=s.religion||'';document.getElementById('edit_is_4ps').checked=s.is_4ps||false;document.getElementById('editForm').action='/registrars/students/'+id+'/edit/';openModal('editModal')}}).catch(()=>showToast('Error loading student data','error'))}
+
+window.generateSF10=function(id){currentStudentId=id;fetch('/registrars/students/'+id+'/detail-data/').then(r=>r.json()).then(data=>{if(data.success){const s=data.data;document.getElementById('sf10ModalBody').innerHTML=
+    '<div class="detail-row"><div class="detail-label">Student</div><div class="detail-value"><strong>'+esc(s.last_name)+', '+esc(s.first_name)+'</strong></div></div>'+
+    '<div class="detail-row"><div class="detail-label">LRN</div><div class="detail-value">'+(s.lrn||'—')+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">Grade Level</div><div class="detail-value">'+esc(s.grade_level||'—')+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">Section</div><div class="detail-value">'+esc(s.section||'—')+'</div></div>'+
+    '<div class="info-banner"><i class="fi fi-rr-info-circle"></i><span>SF10 (Form 137) is the learner\'s permanent academic record. This will generate a PDF copy for download.</span></div>';
+    openModal('sf10Modal')}})};
+
+window.confirmGenerateSF10=function(){if(!currentStudentId)return;const btn=document.getElementById('confirmGenerateBtn'),orig=btn.innerHTML;btn.disabled=true;btn.innerHTML='<i class="fi fi-rr-spinner"></i> Generating...';
+fetch('/registrars/students/'+currentStudentId+'/generate-sf10/',{method:'POST',headers:{'X-CSRFToken':getCSRF()}}).then(r=>{const ct=r.headers.get('content-type');
+if(ct&&ct.includes('application/json'))return r.json().then(d=>{closeModal('sf10Modal');showToast(d.success?(d.message||'SF10 generated!'):(d.error||'Error'),d.success?'success':'error')});
+if(ct&&ct.includes('application/pdf'))return r.blob().then(blob=>{const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='SF10_Student_'+currentStudentId+'.pdf';document.body.appendChild(a);a.click();URL.revokeObjectURL(url);a.remove();closeModal('sf10Modal');showToast('SF10 downloaded!')});
+closeModal('sf10Modal');showToast('SF10 record created!')}).catch(()=>{closeModal('sf10Modal');showToast('Error','error')}).finally(()=>{btn.disabled=false;btn.innerHTML=orig})};
+
+window.printSF9=function(id){currentStudentId=id;fetch('/registrars/students/'+id+'/detail-data/').then(r=>r.json()).then(data=>{if(data.success){const s=data.data;document.getElementById('sf9ModalBody').innerHTML=
+    '<div class="detail-row"><div class="detail-label">Student</div><div class="detail-value"><strong>'+esc(s.last_name)+', '+esc(s.first_name)+'</strong></div></div>'+
+    '<div class="detail-row"><div class="detail-label">Grade Level</div><div class="detail-value">'+esc(s.grade_level||'—')+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">Section</div><div class="detail-value">'+esc(s.section||'—')+'</div></div>'+
+    '<div class="info-banner"><i class="fi fi-rr-info-circle"></i><span>SF9 is the Learner\'s Progress Report Card.</span></div>';
+    openModal('sf9Modal')}})};
+window.confirmPrintSF9=function(){if(currentStudentId){window.open('/registrars/students/'+currentStudentId+'/sf9/','_blank');closeModal('sf9Modal')}};
+
+// ═══════════════ BULK ACTIONS ═══════════════
+function getSelected(){return Array.from(document.querySelectorAll('.student-checkbox:checked')).map(cb=>cb.dataset.id)}
+
+window.batchGenerateSF10=function(){const s=getSelected();if(!s.length){showToast('Select at least one student','warning');return}if(confirm('Generate SF10 for '+s.length+' student(s)?')){fetch("{% url 'registrars:batch-sf10' %}",{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCSRF()},body:JSON.stringify({student_ids:s})}).then(r=>r.json()).then(d=>showToast(d.success?'SF10 generated for '+s.length+' students':(d.error||'Error'),d.success?'success':'error')).catch(()=>showToast('Error','error'))}};
+
+window.batchGenerateSF9=function(){const s=getSelected();if(!s.length){showToast('Select at least one student','warning');return}if(confirm('Print SF9 for '+s.length+' student(s)?')){s.forEach(id=>window.open('/registrars/students/'+id+'/sf9/','_blank'));showToast('Opening SF9 for '+s.length+' students')}};
+
+window.toggleStatusDropdown=function(e){e.stopPropagation();document.getElementById('statusDropdown').classList.toggle('open')};
+document.addEventListener('click',()=>document.getElementById('statusDropdown').classList.remove('open'));
+
+window.batchUpdateStatusDropdown=function(status){document.getElementById('statusDropdown').classList.remove('open');const s=getSelected();if(!s.length){showToast('Select at least one student','warning');return}if(confirm('Update status to "'+status+'" for '+s.length+' student(s)?')){fetch("{% url 'registrars:batch-update-status' %}",{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCSRF()},body:JSON.stringify({student_ids:s,status:status})}).then(r=>r.json()).then(d=>{showToast(d.success?'Status updated!':(d.error||'Error'),d.success?'success':'error');if(d.success)setTimeout(()=>location.reload(),1000)}).catch(()=>showToast('Error','error'))}};
+
+window.batchArchive=function(){const s=getSelected();if(!s.length){showToast('Select at least one student','warning');return}if(confirm('Archive '+s.length+' student(s)?')){fetch("{% url 'registrars:batch-archive' %}",{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCSRF()},body:JSON.stringify({student_ids:s})}).then(r=>r.json()).then(d=>{showToast(d.success?'Archived!':(d.error||'Error'),d.success?'success':'error');if(d.success)setTimeout(()=>location.reload(),1000)}).catch(()=>showToast('Error','error'))}};
+
+window.printSF1=function(){let url="{% url 'registrars:print-sf1' %}?";new URLSearchParams(window.location.search).forEach((v,k)=>{url+=k+'='+encodeURIComponent(v)+'&'});window.open(url,'_blank')};
+
+// ═══════════════ SELECT ALL ═══════════════
+document.getElementById('selectAll').addEventListener('change',function(){document.querySelectorAll('.student-checkbox').forEach(cb=>cb.checked=this.checked);document.getElementById('headerCheckbox').checked=this.checked});
+document.getElementById('headerCheckbox').addEventListener('change',function(){document.querySelectorAll('.student-checkbox').forEach(cb=>cb.checked=this.checked);document.getElementById('selectAll').checked=this.checked});
+
+// ═══════════════ EDIT FORM SUBMIT ═══════════════
+document.getElementById('editForm').addEventListener('submit',function(e){e.preventDefault();fetch(this.action,{method:'POST',body:new FormData(this),headers:{'X-CSRFToken':getCSRF(),'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.json()).then(d=>{if(d.success){showToast('Record updated!');closeModal('editModal');setTimeout(()=>location.reload(),1000)}else showToast(d.error||'Error','error')}).catch(()=>showToast('Network error','error'))});
+
+// ═══════════════ MARK ALL READ ═══════════════
+window.markAllRead=function(){fetch("{% url 'registrars:mark-notifications-read' %}",{method:'POST',headers:{'X-CSRFToken':getCSRF()}}).then(()=>location.reload())};
+
+// ═══════════════ HELPERS ═══════════════
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+// ═══════════════ DATE & GREETING ═══════════════
+function updateDate(){const e=document.getElementById('currentDate');if(e)e.textContent=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}
+updateDate();setInterval(updateDate,60000);
+
+})();
+</script>
+</body>
+</html>

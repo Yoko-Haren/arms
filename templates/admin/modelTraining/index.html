@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>AI Model Training - Formify Admin Portal</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'AvantGarde', 'Century Gothic', sans-serif;
+        }
+
+        :root {
+            --rich-black: #00072D;
+            --dark-blue: #051650;
+            --secondary-green: #5EA173;
+            --gray-bg: #f5f7fb;
+            --border-color: #e9ecef;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --sidebar-width: 280px;
+            --danger-red: #dc3545;
+            --warning-orange: #f39c12;
+            --success-green: #28a745;
+            --info-blue: #17a2b8;
+        }
+
+        body {
+            background: var(--gray-bg);
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar-header i { font-size: 2rem; color: var(--secondary-green); }
+        .sidebar-header h2 { font-size: 1.1rem; font-weight: 600; }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin: 0 1rem 1.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+        }
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: var(--secondary-green);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--rich-black);
+        }
+        .user-details h4 { font-size: 0.9rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+
+        .nav-menu { list-style: none; padding: 0 0.75rem; }
+        .nav-item { margin-bottom: 0.25rem; }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+        .nav-link.i { width: 22px; }
+
+        .nav-footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .welcome h1 { font-size: 1.3rem; color: var(--rich-black); }
+        .welcome p { color: var(--text-secondary); font-size: 0.8rem; }
+        .top-bar-actions { display: flex; align-items: center; gap: 1rem; }
+        .date-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            background: var(--gray-bg);
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+        .stat-icon.blue { background: rgba(18,52,153,0.1); color: #123499; }
+        .stat-icon.green { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .stat-icon.orange { background: rgba(243,156,18,0.1); color: var(--warning-orange); }
+        .stat-icon.purple { background: rgba(128,0,128,0.1); color: #9b59b6; }
+        .stat-info h3 { font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); }
+        .stat-info .value { font-size: 1.5rem; font-weight: 700; color: var(--rich-black); }
+        .stat-info .sub { font-size: 0.65rem; color: var(--text-secondary); }
+
+        /* Two Column Layout */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 1.2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .section-header h2 {
+            font-size: 1rem;
+            color: var(--rich-black);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .section-header h2 i { color: var(--secondary-green); }
+
+        /* Form Controls */
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--rich-black); margin-bottom: 0.3rem; }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.6rem;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.85rem;
+        }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .btn-primary {
+            background: var(--secondary-green);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            padding: 0.6rem 1.2rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .btn-train {
+            background: linear-gradient(135deg, var(--secondary-green) 0%, var(--info-blue) 100%);
+            color: white;
+            width: 100%;
+            padding: 0.8rem;
+            font-size: 1rem;
+        }
+        .btn-train:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* Training History Table */
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .history-table th, .history-table td {
+            text-align: left;
+            padding: 0.6rem 0.3rem;
+            font-size: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .history-table th { color: var(--text-secondary); font-weight: 600; }
+
+        .status-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-running { background: #cfe2ff; color: #084298; }
+        .status-failed { background: #f8d7da; color: #721c24; }
+
+        /* Progress Bar */
+        .progress-bar {
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--secondary-green);
+            border-radius: 4px;
+            width: 0%;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 500px;
+            animation: modalSlideIn 0.3s ease;
+        }
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+        }
+        .modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; }
+        .modal-body { padding: 1.5rem; }
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        .menu-toggle {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: var(--secondary-green);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 1200px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .two-col { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .menu-toggle { display: block; }
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-shield-alt"></i>
+                <h2>Formify <br><span>Admin Portal</span></h2>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar">SA</div>
+                <div class="user-details">
+                    <h4>System Admin</h4>
+                    <p>Super Administrator</p>
+                </div>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="../dashboard/index.html" class="nav-link"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li class="nav-item"><a href="../detection/index.html" class="nav-link"><i class="fas fa-robot"></i> AI Anomaly Detection</a></li>
+                <li class="nav-item"><a href="../anomalyLogs/index.html" class="nav-link"><i class="fas fa-exclamation-triangle"></i> Anomaly Logs</a></li>
+                <li class="nav-item"><a href="../modelTraining/index.html" class="nav-link active"><i class="fas fa-brain"></i> AI Model Training</a></li>
+                <li class="nav-item"><a href="../monitoring/index.html" class="nav-link"><i class="fas fa-chart-line"></i> System Monitoring</a></li>
+                <li class="nav-item"><a href="../auditTrail/index.html" class="nav-link"><i class="fas fa-history"></i> Audit Trail</a></li>
+                <li class="nav-item"><a href="../security/index.html" class="nav-link"><i class="fas fa-shield-alt"></i> Security</a></li>
+                <li class="nav-item"><a href="../settings/index.html" class="nav-link"><i class="fas fa-cog"></i> Settings</a></li>
+            </ul>
+            <ul class="nav-menu nav-footer">
+                <li class="nav-item"><a href="#" class="nav-link"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="top-bar">
+                <div class="welcome">
+                    <h1>AI Model Training</h1>
+                    <p>Configure, train, and manage Poro AI anomaly detection models</p>
+                </div>
+                <div class="top-bar-actions">
+                    <div class="date-display"><i class="fas fa-calendar"></i><span id="currentDate"></span></div>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-chart-line"></i></div><div class="stat-info"><h3>Current Accuracy</h3><div class="value">94.2%</div><div class="sub">+2.1% vs last model</div></div></div>
+                <div class="stat-card"><div class="stat-icon green"><i class="fas fa-database"></i></div><div class="stat-info"><h3>Training Samples</h3><div class="value">12,847</div><div class="sub">Labeled anomalies</div></div></div>
+                <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-clock"></i></div><div class="stat-info"><h3>Last Training</h3><div class="value">Apr 10, 2026</div><div class="sub">3 days ago</div></div></div>
+                <div class="stat-card"><div class="stat-icon purple"><i class="fas fa-flag-checkered"></i></div><div class="stat-info"><h3>F1 Score</h3><div class="value">0.91</div><div class="sub">Precision + Recall</div></div></div>
+            </div>
+
+            <!-- Two Column: Training Configuration + Model Metrics -->
+            <div class="two-col">
+                <div class="card">
+                    <div class="section-header">
+                        <h2><i class="fas fa-sliders-h"></i> Training Configuration</h2>
+                        <span class="view-all">Poro AI v2.4.1</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Model Version</label>
+                        <select id="modelVersion">
+                            <option value="v2.4.1" selected>Poro AI v2.4.1 (Current - 94.2% accuracy)</option>
+                            <option value="v2.5.0">Poro AI v2.5.0 (Beta - 95.1% accuracy)</option>
+                            <option value="v2.3.0">Poro AI v2.3.0 (Archived - 92.8% accuracy)</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Training Epochs</label>
+                            <input type="number" id="epochs" value="50" min="10" max="500" step="10">
+                        </div>
+                        <div class="form-group">
+                            <label>Batch Size</label>
+                            <select id="batchSize">
+                                <option value="32">32</option>
+                                <option value="64" selected>64</option>
+                                <option value="128">128</option>
+                                <option value="256">256</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Learning Rate</label>
+                            <select id="learningRate">
+                                <option value="0.001">0.001</option>
+                                <option value="0.0005" selected>0.0005</option>
+                                <option value="0.0001">0.0001</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Validation Split</label>
+                            <select id="validationSplit">
+                                <option value="0.1">10%</option>
+                                <option value="0.15" selected>15%</option>
+                                <option value="0.2">20%</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-check-square"></i> Detection Features</label>
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem;">
+                            <label><input type="checkbox" id="featureGrade" checked> Grade Changes</label>
+                            <label><input type="checkbox" id="featureLogin" checked> Login Anomalies</label>
+                            <label><input type="checkbox" id="featureAccess" checked> Access Patterns</label>
+                            <label><input type="checkbox" id="featureData" checked> Data Exports</label>
+                        </div>
+                    </div>
+                    <button class="btn-primary btn-train" id="trainBtn" onclick="startTraining()">
+                        <i class="fas fa-play"></i> Start Training
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="section-header">
+                        <h2><i class="fas fa-chart-line"></i> Model Performance Metrics</h2>
+                        <span class="view-all">Last 7 training runs</span>
+                    </div>
+                    <canvas id="performanceChart" style="max-height: 180px;"></canvas>
+                    <div class="progress-bar" style="margin-top: 0.5rem;"><div class="progress-fill" style="width: 0%;" id="trainingProgress"></div></div>
+                    <div id="trainingStatus" style="text-align: center; margin-top: 0.5rem; font-size: 0.7rem; color: var(--text-secondary);">Ready</div>
+                </div>
+            </div>
+
+            <!-- Dataset Management -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="section-header">
+                    <h2><i class="fas fa-database"></i> Dataset Management</h2>
+                    <div>
+                        <button class="btn-outline" onclick="uploadDataset()" style="margin-right: 0.5rem;"><i class="fas fa-upload"></i> Upload Labels</button>
+                        <button class="btn-outline" onclick="exportDataset()"><i class="fas fa-download"></i> Export Dataset</button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Training Samples</label><input type="text" value="12,847 labeled anomalies" readonly style="background: var(--gray-bg);"></div>
+                    <div class="form-group"><label>Validation Samples</label><input type="text" value="2,267 labeled anomalies" readonly style="background: var(--gray-bg);"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Class Distribution</label><input type="text" value="Grade:42% | Login:28% | Access:18% | Data:12%" readonly style="background: var(--gray-bg);"></div>
+                    <div class="form-group"><label>False Positive Rate</label><input type="text" value="5.2% (Last 30 days)" readonly style="background: var(--gray-bg);"></div>
+                </div>
+            </div>
+
+            <!-- Training History -->
+            <div class="card">
+                <div class="section-header">
+                    <h2><i class="fas fa-history"></i> Training History</h2>
+                    <button class="btn-outline" onclick="refreshHistory()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="history-table">
+                        <thead>
+                            <tr><th>Date</th><th>Model Version</th><th>Dataset Size</th><th>Accuracy</th><th>F1 Score</th><th>Status</th><th>Duration</th></tr>
+                        </thead>
+                        <tbody id="historyTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Training Progress Modal -->
+    <div id="progressModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Training in Progress</h2>
+                <button class="modal-close" onclick="closeProgressModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Model:</strong> <span id="trainingModelName">Poro AI v2.4.1</span></p>
+                <p><strong>Epoch:</strong> <span id="currentEpoch">0</span> / <span id="totalEpochs">50</span></p>
+                <div class="progress-bar"><div class="progress-fill" id="modalProgress" style="width: 0%;"></div></div>
+                <p style="margin-top: 0.5rem; font-size: 0.7rem;" id="trainingMessage">Initializing training...</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="cancelTraining()">Cancel Training</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let performanceChart;
+        let trainingInterval = null;
+        let isTraining = false;
+
+        // Training history data
+        let trainingHistory = [
+            { date: "2026-04-10 14:30:22", version: "v2.4.1", datasetSize: "12,847", accuracy: "94.2", f1: "0.91", status: "completed", duration: "2h 15m" },
+            { date: "2026-04-03 09:15:00", version: "v2.4.0", datasetSize: "11,234", accuracy: "92.8", f1: "0.89", status: "completed", duration: "2h 08m" },
+            { date: "2026-03-25 16:45:30", version: "v2.3.0", datasetSize: "9,876", accuracy: "91.5", f1: "0.87", status: "completed", duration: "1h 55m" },
+            { date: "2026-03-15 10:00:00", version: "v2.2.0", datasetSize: "8,432", accuracy: "89.7", f1: "0.85", status: "completed", duration: "1h 48m" },
+            { date: "2026-03-05 13:20:00", version: "v2.1.0", datasetSize: "7,125", accuracy: "87.2", f1: "0.82", status: "completed", duration: "1h 42m" }
+        ];
+
+        function renderHistory() {
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = trainingHistory.map(h => {
+                let statusClass = h.status === 'completed' ? 'status-completed' : (h.status === 'running' ? 'status-running' : 'status-failed');
+                return `<tr>
+                    <td>${h.date}</td>
+                    <td><strong>${h.version}</strong></td>
+                    <td>${h.datasetSize}</td>
+                    <td>${h.accuracy}%</td>
+                    <td>${h.f1}</td>
+                    <td><span class="status-badge ${statusClass}">${h.status}</span></td>
+                    <td>${h.duration}</td>
+                 </tr>`;
+            }).join('');
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Run 1', 'Run 2', 'Run 3', 'Run 4', 'Run 5'],
+                    datasets: [
+                        { label: 'Accuracy (%)', data: [87.2, 89.7, 91.5, 92.8, 94.2], borderColor: '#5EA173', backgroundColor: 'rgba(94,161,115,0.1)', fill: true, tension: 0.3 },
+                        { label: 'F1 Score', data: [0.82, 0.85, 0.87, 0.89, 0.91], borderColor: '#17a2b8', backgroundColor: 'transparent', tension: 0.3 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top', labels: { font: { size: 10 } } } } }
+            });
+        }
+
+        function startTraining() {
+            if (isTraining) {
+                alert('Training already in progress. Please wait.');
+                return;
+            }
+            
+            const modelVersion = document.getElementById('modelVersion').value;
+            const epochs = parseInt(document.getElementById('epochs').value);
+            const batchSize = document.getElementById('batchSize').value;
+            const learningRate = document.getElementById('learningRate').value;
+            
+            document.getElementById('trainingModelName').innerText = modelVersion;
+            document.getElementById('totalEpochs').innerText = epochs;
+            document.getElementById('modalProgress').style.width = '0%';
+            document.getElementById('currentEpoch').innerText = '0';
+            document.getElementById('trainingMessage').innerHTML = 'Starting training session...';
+            document.getElementById('progressModal').classList.add('active');
+            
+            isTraining = true;
+            document.getElementById('trainBtn').disabled = true;
+            document.getElementById('trainBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Training...';
+            
+            let currentEpoch = 0;
+            const totalEpochs = epochs;
+            
+            trainingInterval = setInterval(() => {
+                if (currentEpoch >= totalEpochs) {
+                    clearInterval(trainingInterval);
+                    finishTraining();
+                    return;
+                }
+                currentEpoch++;
+                const progress = (currentEpoch / totalEpochs) * 100;
+                document.getElementById('currentEpoch').innerText = currentEpoch;
+                document.getElementById('modalProgress').style.width = `${progress}%`;
+                document.getElementById('trainingProgress').style.width = `${progress}%`;
+                document.getElementById('trainingMessage').innerHTML = `Training epoch ${currentEpoch}/${totalEpochs} - Loss: ${(0.25 - (currentEpoch/totalEpochs) * 0.2).toFixed(4)} - Accuracy: ${(85 + (currentEpoch/totalEpochs) * 10).toFixed(1)}%`;
+            }, 200);
+        }
+
+        function finishTraining() {
+            isTraining = false;
+            document.getElementById('trainBtn').disabled = false;
+            document.getElementById('trainBtn').innerHTML = '<i class="fas fa-play"></i> Start Training';
+            document.getElementById('trainingStatus').innerHTML = '✅ Training completed successfully! New model ready for deployment.';
+            document.getElementById('trainingMessage').innerHTML = '✅ Training completed! Model accuracy improved to 95.1%.';
+            
+            // Add to history
+            const newHistory = {
+                date: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                version: document.getElementById('modelVersion').value,
+                datasetSize: "13,845",
+                accuracy: "95.1",
+                f1: "0.93",
+                status: "completed",
+                duration: parseInt(document.getElementById('epochs').value) > 50 ? "2h 45m" : "1h 58m"
+            };
+            trainingHistory.unshift(newHistory);
+            renderHistory();
+            
+            // Update chart
+            performanceChart.data.datasets[0].data.push(95.1);
+            performanceChart.data.datasets[0].data.shift();
+            performanceChart.data.datasets[1].data.push(0.93);
+            performanceChart.data.datasets[1].data.shift();
+            performanceChart.update();
+            
+            // Update stats
+            document.querySelector('.stat-card:first-child .value').innerText = '95.1%';
+            document.querySelector('.stat-card:nth-child(2) .value').innerText = '13,845';
+            document.querySelector('.stat-card:nth-child(3) .value').innerText = new Date().toLocaleDateString();
+            
+            setTimeout(() => { closeProgressModal(); }, 1500);
+        }
+
+        function cancelTraining() {
+            if (trainingInterval) {
+                clearInterval(trainingInterval);
+                trainingInterval = null;
+            }
+            isTraining = false;
+            document.getElementById('trainBtn').disabled = false;
+            document.getElementById('trainBtn').innerHTML = '<i class="fas fa-play"></i> Start Training';
+            document.getElementById('trainingStatus').innerHTML = 'Training cancelled by user.';
+            closeProgressModal();
+            alert('Training cancelled.');
+        }
+
+        function closeProgressModal() {
+            document.getElementById('progressModal').classList.remove('active');
+        }
+
+        function uploadDataset() {
+            alert('📤 Upload labeled anomaly dataset (CSV/JSON format).\n\nAccepted formats: CSV, JSON, JSONL\nMax size: 500MB');
+        }
+
+        function exportDataset() {
+            alert('📥 Exporting training dataset...\n\nThis may take a few moments. The file will be downloaded automatically.');
+        }
+
+        function refreshHistory() {
+            renderHistory();
+            alert('Training history refreshed.');
+        }
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+        function updateDateTime() { document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }); }
+
+        // Initialize
+        renderHistory();
+        initChart();
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+    </script>
+</body>
+</html>

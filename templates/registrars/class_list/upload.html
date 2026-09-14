@@ -1,0 +1,81 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Class List - Registrar</title>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: #f5f7fb; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+        .container { max-width: 650px; width: 100%; }
+        .card { background: white; border-radius: 20px; padding: 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h2 { color: #1a1a2e; margin-bottom: 0.5rem; }
+        .upload-zone {
+            border: 3px dashed #e0e5ea; border-radius: 16px; padding: 3rem 2rem;
+            text-align: center; cursor: pointer; transition: all 0.3s; background: #fafbfc; margin: 1.5rem 0;
+        }
+        .upload-zone:hover { border-color: #123499; background: #f0f4ff; }
+        .btn { padding: 0.8rem 1.5rem; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; width: 100%; font-size: 0.9rem; }
+        .btn-primary { background: #123499; color: white; }
+        .btn-outline { background: transparent; border: 2px solid #e0e5ea; }
+        .format-box { background: #f0f7ff; border-left: 4px solid #123499; padding: 1rem; border-radius: 8px; margin: 1rem 0; font-size: 0.8rem; line-height: 1.6; }
+        code { background: #e8ecf1; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.8rem; }
+        .back-link { color: #6c757d; text-decoration: none; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{% url 'registrars:dashboard' %}" class="back-link">← Back to Dashboard</a>
+        
+        <div class="card">
+            <h2>📋 Upload Class List (CSV)</h2>
+            <p style="color:#6c757d;font-size:0.85rem;">SY {{ current_sy.year_label|default:"N/A" }}</p>
+            
+            <div class="format-box">
+                <strong>Your CSV should have this format:</strong><br>
+                Row 1: <code>LIST OF STUDENTS,2nd Semester, S.Y. 2025-2026,,,</code><br>
+                Row 2: <code>Program,BSIT,Subject Code,CC105,,</code><br>
+                Row 3: <code>Time and Days,03:30PM-05:00PM W/F,No. of Hours/Week,2,,</code><br>
+                Row 4: <code>Year,Second,Section,BSIT 2-A,</code><br>
+                Row 5: <code>Subject Title,Accounting,Instructor,Gertrude Grace M Tampus,,</code><br>
+                Row 6: <code>,,,,</code> (blank)<br>
+                Row 7: <code>Student No.,Name,,,</code> (header)<br>
+                Rows 8+: <code>2024-00179,"ADANA, ALYSSA VELILA",,</code>
+            </div>
+            
+            {% if messages %}
+            {% for m in messages %}
+            <div style="padding:0.8rem;margin:1rem 0;border-radius:10px;background:{% if m.tags == 'success' %}#d4edda{% else %}#f8d7da{% endif %};color:{% if m.tags == 'success' %}#155724{% else %}#721c24{% endif %};font-size:0.85rem;">
+                {{ m }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div class="upload-zone" onclick="document.getElementById('csvFile').click()">
+                    <div style="font-size:3rem;margin-bottom:0.5rem;">📁</div>
+                    <strong>Click to Select CSV File</strong>
+                    <p style="color:#6c757d;font-size:0.8rem;">or drag and drop</p>
+                    <input type="file" name="csv_file" id="csvFile" accept=".csv" style="display:none;" onchange="this.form.submit()" required>
+                    <div id="fileName" style="color:#5EA173;font-weight:600;margin-top:0.5rem;"></div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fi fi-rr-upload"></i> Upload & Process Class List
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+    document.getElementById('csvFile').addEventListener('change', function() {
+        var f = this.files[0];
+        document.getElementById('fileName').textContent = f ? '✅ ' + f.name : '';
+    });
+    </script>
+</body>
+</html>

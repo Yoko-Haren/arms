@@ -1,0 +1,532 @@
+{% extends 'admin/base.html' %}
+{% load static %}
+
+{% block title %}Principals{% endblock %}
+{% block page_title %}Principal Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ========== FILTER CARD ========== */
+    .filter-card {
+        background: white;
+        border-radius: var(--radius-md);
+        padding: 1.2rem 1.5rem;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--gray-200);
+        margin-bottom: 1.5rem;
+    }
+    .filter-row {
+        display: grid;
+        grid-template-columns: 2fr 1.5fr 1fr 1fr 50px;
+        gap: 0.75rem;
+        align-items: end;
+    }
+    @media (max-width: 1200px) { .filter-row { grid-template-columns: 1fr 1fr 1fr; } }
+    @media (max-width: 768px) { .filter-row { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 480px) { .filter-row { grid-template-columns: 1fr; } }
+
+    .filter-group { display: flex; flex-direction: column; gap: 0.3rem; }
+    .filter-group label {
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .filter-input,
+    .filter-select {
+        width: 100%;
+        padding: 0.6rem 0.75rem;
+        border: 2px solid var(--gray-300);
+        border-radius: var(--radius-sm);
+        font-size: 0.8rem;
+        font-family: inherit;
+        background: var(--gray-50);
+        color: var(--gray-700);
+        transition: var(--transition);
+        cursor: pointer;
+    }
+    .filter-input:focus,
+    .filter-select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(18,52,153,0.08);
+        background: white;
+    }
+    .filter-input::placeholder { color: #adb5bd; }
+
+    .btn-search {
+        width: 100%;
+        padding: 0.6rem;
+        border: none;
+        border-radius: var(--radius-sm);
+        background: var(--primary-gradient);
+        color: white;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .btn-search:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(18,52,153,0.35);
+    }
+
+    /* ========== TOOLBAR ========== */
+    .toolbar-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+    }
+    .stats-summary {
+        font-size: 0.78rem;
+        color: var(--gray-500);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    .stats-summary-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.3rem 0.7rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.7rem;
+    }
+    .stats-summary-pill.active-pill { background: var(--success-light); color: var(--success); }
+    .stats-summary-pill.inactive-pill { background: #f5f5f5; color: #9e9e9e; }
+    .stats-summary-pill.total-pill { background: var(--primary-light); color: var(--primary); }
+
+    .btn-create {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.6rem 1.3rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.78rem;
+        font-weight: 600;
+        background: var(--primary-gradient);
+        color: white;
+        text-decoration: none;
+        transition: var(--transition);
+        box-shadow: 0 4px 15px rgba(18,52,153,0.25);
+    }
+    .btn-create:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 22px rgba(18,52,153,0.4);
+        color: white;
+    }
+
+    /* ========== TABLE CARD ========== */
+    .table-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+    }
+    .table-wrapper { overflow-x: auto; }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.78rem;
+    }
+    .data-table thead th {
+        text-align: left;
+        padding: 0.75rem 1rem;
+        border-bottom: 2px solid var(--gray-200);
+        color: var(--gray-500);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.65rem;
+        letter-spacing: 0.6px;
+        background: var(--gray-50);
+        white-space: nowrap;
+    }
+    .data-table tbody td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--gray-100);
+        color: var(--gray-700);
+        vertical-align: middle;
+    }
+    .data-table tbody tr {
+        transition: var(--transition);
+    }
+    .data-table tbody tr:hover {
+        background: var(--primary-light);
+    }
+    .data-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .user-cell { display: flex; flex-direction: column; gap: 0.1rem; }
+    .user-name { font-weight: 600; color: var(--gray-700); }
+    .user-email { font-size: 0.7rem; color: var(--gray-500); }
+
+    .school-link {
+        color: var(--primary);
+        font-weight: 500;
+        text-decoration: none;
+        transition: var(--transition);
+    }
+    .school-link:hover { color: var(--primary-dark); text-decoration: underline; }
+    .no-school { color: #adb5bd; font-style: italic; }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.3rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.68rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .status-badge.active-badge { background: var(--success-light); color: var(--success); }
+    .status-badge.inactive-badge { background: #f5f5f5; color: #9e9e9e; }
+    .status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .status-dot.dot-active { background: var(--success); }
+    .status-dot.dot-inactive { background: #bdbdbd; }
+
+    .count-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 28px;
+        height: 28px;
+        padding: 0 0.5rem;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        background: var(--info-light);
+        color: var(--info);
+    }
+
+    .date-cell { font-size: 0.72rem; color: var(--gray-500); white-space: nowrap; }
+
+    /* Action Buttons */
+    .action-btns {
+        display: flex;
+        gap: 0.35rem;
+    }
+    .btn-icon-action {
+        width: 34px;
+        height: 34px;
+        border-radius: var(--radius-xs);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        text-decoration: none;
+        transition: var(--transition);
+        border: 1.5px solid var(--gray-300);
+        background: white;
+        color: var(--gray-500);
+        cursor: pointer;
+    }
+    .btn-icon-action:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-sm);
+    }
+    .btn-icon-action.view-btn:hover {
+        border-color: var(--primary);
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+    .btn-icon-action.edit-btn:hover {
+        border-color: var(--info);
+        background: var(--info-light);
+        color: var(--info);
+    }
+    .btn-icon-action.toggle-btn:hover {
+        border-color: var(--warning);
+        background: var(--warning-light);
+        color: var(--warning);
+    }
+
+    /* ========== EMPTY STATE ========== */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1.5rem;
+    }
+    .empty-state-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: var(--gray-100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.25rem;
+        font-size: 2rem;
+        color: #bdbdbd;
+    }
+    .empty-state h5 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin-bottom: 0.5rem;
+    }
+    .empty-state p {
+        font-size: 0.82rem;
+        color: var(--gray-500);
+        margin-bottom: 1.25rem;
+    }
+
+    /* ========== PAGINATION ========== */
+    .pagination-wrapper {
+        display: flex;
+        justify-content: center;
+        margin-top: 1.5rem;
+    }
+    .pagination-list {
+        display: flex;
+        gap: 0.35rem;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .pagination-list li { display: inline; }
+    .page-link-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 38px;
+        height: 38px;
+        padding: 0 0.6rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-decoration: none;
+        border: 2px solid var(--gray-300);
+        background: white;
+        color: var(--gray-700);
+        transition: var(--transition);
+    }
+    .page-link-btn:hover {
+        border-color: var(--primary);
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+    .page-link-btn.active-page {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+        pointer-events: none;
+    }
+    .page-link-btn.disabled-page {
+        opacity: 0.4;
+        pointer-events: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- FILTER CARD -->
+<div class="filter-card">
+    <form method="GET">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label><i class="fas fa-search"></i> Search</label>
+                <input type="text" name="search" class="filter-input" placeholder="Search by name, email or school..." value="{{ search }}">
+            </div>
+            <div class="filter-group">
+                <label><i class="fas fa-building"></i> School</label>
+                <select name="school" class="filter-select">
+                    <option value="">All Schools</option>
+                    {% for school in schools %}
+                    <option value="{{ school.id }}" {% if school_filter|stringformat:"s" == school.id|stringformat:"s" %}selected{% endif %}>{{ school.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label><i class="fas fa-toggle-on"></i> Status</label>
+                <select name="status" class="filter-select">
+                    <option value="active" {% if status == 'active' %}selected{% endif %}>Active Only</option>
+                    <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive Only</option>
+                    <option value="all" {% if status == 'all' %}selected{% endif %}>All Principals</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label><i class="fas fa-sort"></i> Sort By</label>
+                <select name="sort" class="filter-select">
+                    <option value="-created_at" {% if sort == '-created_at' %}selected{% endif %}>Newest First</option>
+                    <option value="user__last_name" {% if sort == 'user__last_name' %}selected{% endif %}>Name (A-Z)</option>
+                    <option value="school__name" {% if sort == 'school__name' %}selected{% endif %}>School (A-Z)</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-search" title="Search">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- TOOLBAR: Stats + Create Button -->
+<div class="toolbar-row">
+    <div class="stats-summary">
+        <span>Showing <strong>{{ principals|length }}</strong> of</span>
+        <span class="stats-summary-pill total-pill">
+            <i class="fas fa-users"></i> {{ active_count|add:inactive_count }} total
+        </span>
+        <span class="stats-summary-pill active-pill">
+            <span class="status-dot dot-active"></span> {{ active_count }} active
+        </span>
+        <span class="stats-summary-pill inactive-pill">
+            <span class="status-dot dot-inactive"></span> {{ inactive_count }} inactive
+        </span>
+    </div>
+    <a href="{% url 'admin_panel:principal_create' %}" class="btn-create">
+        <i class="fas fa-plus"></i> New Principal
+    </a>
+</div>
+
+<!-- PRINCIPALS TABLE -->
+<div class="table-card">
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>School</th>
+                    <th>Employee ID</th>
+                    <th>Registrars</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for principal in principals %}
+                <tr>
+                    <td>
+                        <div class="user-cell">
+                            <span class="user-name">{{ principal.user.get_full_name|default:principal.user.username }}</span>
+                            <span class="user-email">{{ principal.user.email }}</span>
+                        </div>
+                    </td>
+                    <td><span style="font-weight:500;">{{ principal.user.username }}</span></td>
+                    <td>
+                        {% if principal.school %}
+                            <a href="{% url 'admin_panel:school_detail' principal.school.id %}" class="school-link">
+                                {{ principal.school.school_name }}
+                            </a>
+                        {% else %}
+                            <span class="no-school">No school assigned</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ principal.employee_number|default:"Not set" }}
+                    </td>
+                    <td>
+                        <span class="count-badge">{{ principal.registrar_count|default:0 }}</span>
+                    </td>
+                    <td>
+                        {% if principal.is_active %}
+                            <span class="status-badge active-badge">
+                                <span class="status-dot dot-active"></span> Active
+                            </span>
+                        {% else %}
+                            <span class="status-badge inactive-badge">
+                                <span class="status-dot dot-inactive"></span> Inactive
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td><span class="date-cell">{{ principal.created_at|date:"M d, Y" }}</span></td>
+                    <td>
+                        <div class="action-btns">
+                            <a href="{% url 'admin_panel:principal_detail' principal.id %}" class="btn-icon-action view-btn" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'admin_panel:principal_edit' principal.id %}" class="btn-icon-action edit-btn" title="Edit Principal">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{% url 'admin_panel:principal_toggle' principal.id %}" 
+                               class="btn-icon-action toggle-btn" 
+                               title="Toggle Status"
+                               onclick="return confirm('Toggle principal status for {{ principal.user.get_full_name|default:principal.user.username|escapejs }}?')">
+                                <i class="fas fa-power-off"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                            <h5>No Principals Found</h5>
+                            <p>Get started by creating your first principal account.</p>
+                            <a href="{% url 'admin_panel:principal_create' %}" class="btn-create">
+                                <i class="fas fa-plus"></i> Create Principal
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- PAGINATION -->
+{% if principals.has_other_pages %}
+<div class="pagination-wrapper">
+    <ul class="pagination-list">
+        {% if principals.has_previous %}
+            <li>
+                <a href="?page=1&search={{ search }}&school={{ school_filter }}&status={{ status }}&sort={{ sort }}" class="page-link-btn" title="First">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li>
+                <a href="?page={{ principals.previous_page_number }}&search={{ search }}&school={{ school_filter }}&status={{ status }}&sort={{ sort }}" class="page-link-btn" title="Previous">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% else %}
+            <li><span class="page-link-btn disabled-page"><i class="fas fa-angle-double-left"></i></span></li>
+            <li><span class="page-link-btn disabled-page"><i class="fas fa-angle-left"></i></span></li>
+        {% endif %}
+        
+        <li><span class="page-link-btn active-page">Page {{ principals.number }} of {{ principals.paginator.num_pages }}</span></li>
+        
+        {% if principals.has_next %}
+            <li>
+                <a href="?page={{ principals.next_page_number }}&search={{ search }}&school={{ school_filter }}&status={{ status }}&sort={{ sort }}" class="page-link-btn" title="Next">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li>
+                <a href="?page={{ principals.paginator.num_pages }}&search={{ search }}&school={{ school_filter }}&status={{ status }}&sort={{ sort }}" class="page-link-btn" title="Last">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% else %}
+            <li><span class="page-link-btn disabled-page"><i class="fas fa-angle-right"></i></span></li>
+            <li><span class="page-link-btn disabled-page"><i class="fas fa-angle-double-right"></i></span></li>
+        {% endif %}
+    </ul>
+</div>
+{% endif %}
+
+{% endblock %}

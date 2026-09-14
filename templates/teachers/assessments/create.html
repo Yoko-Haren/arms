@@ -1,0 +1,773 @@
+{% extends 'teachers/base.html' %}
+{% load static %}
+
+{% block title %}Create Assessment{% endblock %}
+{% block subtitle %}Create New Quiz or Assessment{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary: #123499;
+        --primary-light: #e8eeff;
+        --success: #2E7D32;
+        --success-light: #e8f5e9;
+        --warning: #E65100;
+        --warning-light: #fff3e0;
+        --danger: #C62828;
+        --danger-light: #ffebee;
+        --gray-50: #f8f9fa;
+        --gray-100: #f0f4f8;
+        --gray-200: #e8ecf1;
+        --gray-300: #e0e5ea;
+        --gray-400: #adb5bd;
+        --gray-500: #6c757d;
+        --gray-700: #1a1a2e;
+        --radius-sm: 10px;
+        --radius-md: 16px;
+        --radius-lg: 20px;
+        --shadow-sm: 0 2px 10px rgba(0,0,0,0.04);
+        --shadow-md: 0 2px 12px rgba(0,0,0,0.06);
+        --shadow-lg: 0 6px 20px rgba(0,0,0,0.1);
+        --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ========== FORM LAYOUT ========== */
+    .form-wrapper {
+        max-width: 960px;
+        margin: 0 auto;
+    }
+
+    /* ========== SECTION CARD ========== */
+    .section-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--gray-200);
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+    .section-card-header {
+        padding: 1.2rem 1.5rem;
+        border-bottom: 2px solid var(--gray-100);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        background: var(--gray-50);
+    }
+    .section-card-header h2 {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    .section-card-header h2 i {
+        color: var(--primary);
+        font-size: 1rem;
+    }
+    .section-card-header .section-badge {
+        font-size: 0.65rem;
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-weight: 600;
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+    .section-card-body {
+        padding: 1.5rem;
+    }
+
+    /* ========== FORM ELEMENTS ========== */
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+    @media (max-width: 640px) { .form-row { grid-template-columns: 1fr; } }
+    .form-row-4 {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    @media (max-width: 1024px) { .form-row-4 { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .form-row-4 { grid-template-columns: 1fr; } }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+    .form-group label {
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    .form-group label .required-star {
+        color: var(--danger);
+        font-size: 0.75rem;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 0.6rem 0.85rem;
+        border: 2px solid var(--gray-300);
+        border-radius: var(--radius-sm);
+        font-size: 0.82rem;
+        font-family: inherit;
+        color: var(--gray-700);
+        background: white;
+        transition: var(--transition);
+        box-sizing: border-box;
+    }
+    .form-group input:hover,
+    .form-group select:hover,
+    .form-group textarea:hover {
+        border-color: #c5cdd8;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(18,52,153,0.08);
+        background: var(--gray-50);
+    }
+    .form-group input::placeholder,
+    .form-group textarea::placeholder {
+        color: var(--gray-400);
+    }
+    .form-group textarea {
+        resize: vertical;
+        min-height: 60px;
+    }
+    .form-group select {
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236c757d' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.8rem center;
+        padding-right: 2.2rem;
+    }
+
+    /* ========== QUESTION CARDS ========== */
+    .question-card {
+        background: white;
+        border-radius: var(--radius-md);
+        padding: 1.3rem;
+        margin-bottom: 0.9rem;
+        border: 2px solid var(--gray-200);
+        transition: var(--transition);
+        position: relative;
+    }
+    .question-card:hover {
+        border-color: var(--primary);
+        box-shadow: var(--shadow-md);
+    }
+    .question-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        background: var(--gray-300);
+        transition: var(--transition);
+    }
+    .question-card:hover::before {
+        background: var(--primary);
+        width: 5px;
+    }
+    .question-card:last-child {
+        margin-bottom: 0;
+    }
+
+    .question-header {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        margin-bottom: 0.9rem;
+        flex-wrap: wrap;
+    }
+    .question-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        background: linear-gradient(135deg, #123499, #1a4dcc);
+        color: white;
+        border-radius: 10px;
+        font-weight: 800;
+        font-size: 0.8rem;
+        flex-shrink: 0;
+        box-shadow: 0 3px 10px rgba(18,52,153,0.25);
+    }
+    .question-text-input {
+        flex: 1;
+        min-width: 200px;
+        padding: 0.55rem 0.85rem;
+        border: 2px solid var(--gray-300);
+        border-radius: var(--radius-sm);
+        font-size: 0.82rem;
+        font-family: inherit;
+        color: var(--gray-700);
+        transition: var(--transition);
+        background: white;
+    }
+    .question-text-input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(18,52,153,0.06);
+    }
+    .question-text-input::placeholder {
+        color: var(--gray-400);
+    }
+
+    .choices-select {
+        padding: 0.55rem 2rem 0.55rem 0.7rem;
+        border: 2px solid var(--gray-300);
+        border-radius: var(--radius-sm);
+        font-size: 0.73rem;
+        font-family: inherit;
+        color: var(--gray-700);
+        background: white;
+        cursor: pointer;
+        transition: var(--transition);
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236c757d' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.5rem center;
+    }
+    .choices-select:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+
+    /* ========== CHOICES ========== */
+    .choices-container {
+        padding-left: 0.4rem;
+    }
+    .choice-row {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.45rem 0.6rem;
+        border-radius: var(--radius-sm);
+        transition: var(--transition);
+        margin-bottom: 0.3rem;
+    }
+    .choice-row:hover {
+        background: var(--gray-50);
+    }
+    .choice-row:last-child {
+        margin-bottom: 0;
+    }
+
+    .choice-radio {
+        width: 22px;
+        height: 22px;
+        cursor: pointer;
+        accent-color: var(--success);
+        flex-shrink: 0;
+    }
+    .choice-letter {
+        font-weight: 700;
+        width: 24px;
+        text-align: center;
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        flex-shrink: 0;
+    }
+    .choice-input {
+        flex: 1;
+        padding: 0.45rem 0.7rem;
+        border: 2px solid var(--gray-300);
+        border-radius: 8px;
+        font-size: 0.78rem;
+        font-family: inherit;
+        color: var(--gray-700);
+        transition: var(--transition);
+        background: white;
+    }
+    .choice-input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(18,52,153,0.06);
+    }
+    .choice-input::placeholder {
+        color: var(--gray-400);
+    }
+
+    .choice-correct-indicator {
+        display: none;
+        font-size: 0.6rem;
+        font-weight: 600;
+        padding: 0.2rem 0.5rem;
+        border-radius: 12px;
+        background: var(--success-light);
+        color: var(--success);
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .choice-row input[type="radio"]:checked ~ .choice-correct-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+    }
+
+    /* ========== BUTTONS ========== */
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 1.5rem;
+        flex-wrap: wrap;
+    }
+    @media (max-width: 480px) {
+        .form-actions { flex-direction: column-reverse; }
+        .form-actions .btn-primary,
+        .form-actions .btn-outline { width: 100%; text-align: center; justify-content: center; }
+    }
+
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.7rem 2rem;
+        background: linear-gradient(135deg, #123499, #1a4dcc);
+        color: white;
+        border: none;
+        border-radius: 25px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: var(--transition);
+        font-family: inherit;
+        text-decoration: none;
+        box-shadow: 0 4px 15px rgba(18,52,153,0.3);
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(18,52,153,0.4);
+    }
+    .btn-primary:active {
+        transform: translateY(0);
+    }
+
+    .btn-outline {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.7rem 1.8rem;
+        border: 2px solid var(--gray-300);
+        border-radius: 25px;
+        background: white;
+        color: var(--gray-700);
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        font-family: inherit;
+        text-decoration: none;
+    }
+    .btn-outline:hover {
+        border-color: var(--danger);
+        color: var(--danger);
+        background: var(--danger-light);
+    }
+
+    /* ========== TOAST NOTIFICATION ========== */
+    .toast-container {
+        position: fixed;
+        top: 1.5rem;
+        right: 1.5rem;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .toast {
+        padding: 0.9rem 1.3rem;
+        border-radius: var(--radius-md);
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: white;
+        box-shadow: var(--shadow-lg);
+        animation: toastIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        max-width: 400px;
+    }
+    .toast.success { background: linear-gradient(135deg, #2E7D32, #43a047); }
+    .toast.warning { background: linear-gradient(135deg, #E65100, #f57c00); }
+    .toast.error { background: linear-gradient(135deg, #C62828, #e53935); }
+    @keyframes toastIn {
+        from { opacity: 0; transform: translateX(60px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes toastOut {
+        from { opacity: 1; transform: translateX(0); }
+        to { opacity: 0; transform: translateX(60px); }
+    }
+
+    /* ========== SPINNER ========== */
+    .btn-primary.loading {
+        pointer-events: none;
+        opacity: 0.8;
+    }
+    .btn-primary.loading i {
+        animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* ========== EMPTY/PLACEHOLDER ========== */
+    .questions-empty {
+        text-align: center;
+        padding: 3rem 1.5rem;
+        color: var(--gray-500);
+    }
+    .questions-empty i {
+        font-size: 2.5rem;
+        display: block;
+        margin-bottom: 0.8rem;
+        opacity: 0.3;
+    }
+    .questions-empty p {
+        font-size: 0.8rem;
+        margin: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="form-wrapper">
+
+    <form id="assessmentForm" novalidate>
+        {% csrf_token %}
+
+        <!-- ========== ASSESSMENT DETAILS CARD ========== -->
+        <div class="section-card">
+            <div class="section-card-header">
+                <h2><i class="fi fi-rr-info"></i> Assessment Details</h2>
+                <span class="section-badge">Step 1 of 2</span>
+            </div>
+            <div class="section-card-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Title <span class="required-star">*</span></label>
+                        <input type="text" name="title" id="title" placeholder="e.g., First Quarter Exam" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Subject <span class="required-star">*</span></label>
+                        <select name="subject_id" id="subject_id" required>
+                            <option value="">— Select Subject —</option>
+                            {% for s in subjects %}
+                            <option value="{{ s.id }}">{{ s.subject_code }} — {{ s.subject_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Description</label>
+                        <textarea name="description" id="description" rows="2" placeholder="Optional instructions or notes for students..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Section <span class="required-star">*</span></label>
+                        <select name="section_id" id="section_id" required>
+                            <option value="">— Select Section —</option>
+                            {% for s in sections %}
+                            <option value="{{ s.id }}">{{ s.section_name }} ({{ s.grade_level.grade_name }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>School Year <span class="required-star">*</span></label>
+                        <select name="school_year_id" id="school_year_id" required>
+                            <option value="">— Select School Year —</option>
+                            {% for sy in school_years %}
+                            <option value="{{ sy.id }}">{{ sy.year_label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Quarter</label>
+                        <select name="quarter_id" id="quarter_id">
+                            <option value="">— Select Quarter —</option>
+                            {% for q in quarters %}
+                            <option value="{{ q.id }}">{{ q.quarter_label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row-4">
+                    <div class="form-group">
+                        <label>Number of Items <span class="required-star">*</span></label>
+                        <input type="number" name="total_items" id="total_items" min="1" max="100" value="5" required onchange="generateQuestions()">
+                    </div>
+                    <div class="form-group">
+                        <label>Points per Item</label>
+                        <input type="number" name="points_per_item" id="points_per_item" value="1" step="0.5" min="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label>Passing Score (%)</label>
+                        <input type="number" name="passing_score" id="passing_score" value="60" min="0" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label>Time Limit (min)</label>
+                        <input type="number" name="time_limit" id="time_limit" placeholder="No limit" min="1">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== QUESTIONS CARD ========== -->
+        <div class="section-card">
+            <div class="section-card-header">
+                <h2><i class="fi fi-rr-question-square"></i> Questions</h2>
+                <div style="display:flex;align-items:center;gap:0.8rem;">
+                    <span class="section-badge" style="background:var(--warning-light);color:var(--warning);">
+                        <i class="fi fi-rr-shuffle"></i> Randomized
+                    </span>
+                    <span class="section-badge">Step 2 of 2</span>
+                </div>
+            </div>
+            <div class="section-card-body">
+                <div id="questionsContainer">
+                    <!-- Generated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== FORM ACTIONS ========== -->
+        <div class="form-actions">
+            <a href="{% url 'assessments:list' %}" class="btn-outline">
+                <i class="fi fi-rr-cross-circle"></i> Cancel
+            </a>
+            <button type="submit" class="btn-primary" id="submitBtn">
+                <i class="fi fi-rr-save"></i> Create Assessment
+            </button>
+        </div>
+    </form>
+
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+var QUESTIONS = [];
+
+// ========== TOAST SYSTEM ==========
+function showToast(message, type) {
+    var container = document.getElementById('toastContainer');
+    var icons = { success: 'fi-rr-check-circle', warning: 'fi-rr-exclamation-triangle', error: 'fi-rr-cross-circle' };
+    var toast = document.createElement('div');
+    toast.className = 'toast ' + type;
+    toast.innerHTML = '<i class="fi ' + (icons[type] || icons.info) + '"></i> ' + message;
+    container.appendChild(toast);
+    
+    setTimeout(function() {
+        toast.style.animation = 'toastOut 0.3s ease forwards';
+        setTimeout(function() { toast.remove(); }, 300);
+    }, 3500);
+}
+
+// ========== QUESTION GENERATION ==========
+function generateQuestions() {
+    var count = parseInt(document.getElementById('total_items').value) || 5;
+    if (count < 1) count = 1;
+    if (count > 100) count = 100;
+    document.getElementById('total_items').value = count;
+    
+    var container = document.getElementById('questionsContainer');
+    container.innerHTML = '';
+    QUESTIONS = [];
+    
+    if (count === 0) {
+        container.innerHTML = '<div class="questions-empty"><i class="fi fi-rr-question-square"></i><p>Set the number of items above to generate questions.</p></div>';
+        return;
+    }
+    
+    for (var i = 0; i < count; i++) {
+        var qNum = i + 1;
+        var html = '' +
+            '<div class="question-card" id="q_' + i + '">' +
+                '<div class="question-header">' +
+                    '<span class="question-number">' + qNum + '</span>' +
+                    '<input type="text" class="question-text-input" data-q="' + i + '" ' +
+                           'placeholder="Enter question ' + qNum + '..." ' +
+                           'style="flex:1;">' +
+                    '<select class="choices-select" data-q="' + i + '" onchange="updateChoices(' + i + ')">' +
+                        '<option value="2">2 choices</option>' +
+                        '<option value="3">3 choices</option>' +
+                        '<option value="4" selected>4 choices</option>' +
+                        '<option value="5">5 choices</option>' +
+                        '<option value="6">6 choices</option>' +
+                    '</select>' +
+                '</div>' +
+                '<div class="choices-container" id="choices_' + i + '">' +
+                    '<!-- Choices generated here -->' +
+                '</div>' +
+            '</div>';
+        container.innerHTML += html;
+        updateChoices(i);
+    }
+}
+
+function updateChoices(qIndex) {
+    var selectEl = document.querySelector('.choices-select[data-q="' + qIndex + '"]');
+    var numChoices = parseInt(selectEl ? selectEl.value : 4) || 4;
+    var container = document.getElementById('choices_' + qIndex);
+    var labels = ['A', 'B', 'C', 'D', 'E', 'F'];
+    var html = '';
+    
+    for (var c = 0; c < numChoices; c++) {
+        html += '' +
+            '<div class="choice-row">' +
+                '<input type="radio" name="correct_' + qIndex + '" value="' + c + '" class="choice-radio" ' +
+                       'title="Mark as correct answer" ' + (c === 0 ? 'checked' : '') + '>' +
+                '<span class="choice-letter">' + labels[c] + '</span>' +
+                '<input type="text" class="choice-input" data-q="' + qIndex + '" data-c="' + c + '" ' +
+                       'placeholder="Choice ' + labels[c] + '...">' +
+                '<span class="choice-correct-indicator">' +
+                    '<i class="fi fi-rr-check"></i> Correct' +
+                '</span>' +
+            '</div>';
+    }
+    container.innerHTML = html;
+}
+
+// ========== FORM SUBMISSION ==========
+document.getElementById('assessmentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    var submitBtn = document.getElementById('submitBtn');
+    var totalItems = parseInt(document.getElementById('total_items').value);
+    var questions = [];
+    
+    // Validate required fields
+    var title = document.getElementById('title').value.trim();
+    var subjectId = document.getElementById('subject_id').value;
+    var sectionId = document.getElementById('section_id').value;
+    var syId = document.getElementById('school_year_id').value;
+    
+    if (!title) { showToast('Please enter an assessment title.', 'warning'); document.getElementById('title').focus(); return; }
+    if (!subjectId) { showToast('Please select a subject.', 'warning'); return; }
+    if (!sectionId) { showToast('Please select a section.', 'warning'); return; }
+    if (!syId) { showToast('Please select a school year.', 'warning'); return; }
+    
+    // Collect questions
+    for (var i = 0; i < totalItems; i++) {
+        var qTextEl = document.querySelector('.question-text-input[data-q="' + i + '"]');
+        if (!qTextEl) continue;
+        var qText = qTextEl.value.trim();
+        
+        if (!qText) {
+            showToast('Please fill in question ' + (i + 1) + '.', 'warning');
+            qTextEl.focus();
+            return;
+        }
+        
+        var choices = [];
+        var choiceInputs = document.querySelectorAll('.choice-input[data-q="' + i + '"]');
+        var allChoicesFilled = true;
+        
+        choiceInputs.forEach(function(input, c) {
+            var val = input.value.trim();
+            if (!val) {
+                val = 'Option ' + (c + 1);
+                allChoicesFilled = false;
+            }
+            choices.push({ text: val, order: c });
+        });
+        
+        if (!allChoicesFilled) {
+            showToast('Question ' + (i + 1) + ' has empty choices. Default values applied.', 'warning');
+        }
+        
+        var correctRadio = document.querySelector('input[name="correct_' + i + '"]:checked');
+        var correctIndex = correctRadio ? parseInt(correctRadio.value) : 0;
+        
+        questions.push({
+            question_text: qText,
+            choices: choices,
+            correct_index: correctIndex
+        });
+    }
+    
+    var data = {
+        title: title,
+        description: document.getElementById('description').value.trim(),
+        subject_id: subjectId,
+        section_id: sectionId,
+        school_year_id: syId,
+        quarter_id: document.getElementById('quarter_id').value || null,
+        total_items: totalItems,
+        points_per_item: parseFloat(document.getElementById('points_per_item').value) || 1,
+        passing_score: parseInt(document.getElementById('passing_score').value) || 60,
+        time_limit_minutes: document.getElementById('time_limit').value ? parseInt(document.getElementById('time_limit').value) : null,
+        questions: questions
+    };
+    
+    // Show loading state
+    submitBtn.classList.add('loading');
+    submitBtn.innerHTML = '<i class="fi fi-rr-spinner"></i> Creating...';
+    
+    // Submit via AJAX
+    fetch('{% url "assessments:create_api" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(data)
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(resp) {
+        if (resp.success) {
+            showToast('Assessment created successfully! Access Code: ' + resp.access_code, 'success');
+            setTimeout(function() {
+                window.location.href = '{% url "assessments:list" %}';
+            }, 2000);
+        } else {
+            showToast('Error: ' + (resp.error || 'Something went wrong.'), 'error');
+            submitBtn.classList.remove('loading');
+            submitBtn.innerHTML = '<i class="fi fi-rr-save"></i> Create Assessment';
+        }
+    })
+    .catch(function(err) {
+        showToast('Network error. Please check your connection and try again.', 'error');
+        submitBtn.classList.remove('loading');
+        submitBtn.innerHTML = '<i class="fi fi-rr-save"></i> Create Assessment';
+    });
+});
+
+// ========== HELPER: GET CSRF COOKIE ==========
+function getCookie(name) {
+    var value = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+    return value ? value[2] : null;
+}
+
+// ========== INITIALIZE ==========
+generateQuestions();
+</script>
+{% endblock %}

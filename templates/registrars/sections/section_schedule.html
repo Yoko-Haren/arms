@@ -1,0 +1,777 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Section & Schedule Management — Formify LIS Registrar</title>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI','Century Gothic',sans-serif}
+        :root{--rich-black:#00072D;--dark-blue:#051650;--caribbean-blue:#123499;--secondary-green:#5EA173;--green-dark:#4a8a5e;--gray-bg:#f5f7fb;--border-color:#e9ecef;--text-primary:#2d3748;--text-secondary:#718096;--text-light:#a0aec0;--warning-orange:#f39c12;--danger-red:#dc3545;--google-blue:#4285F4;--sidebar-width:280px;--sidebar-collapsed-width:80px;--radius-sm:8px;--radius-md:14px;--radius-lg:20px;--shadow-sm:0 2px 10px rgba(0,0,0,.05);--shadow-md:0 8px 25px rgba(0,0,0,.1)}
+        body{background:var(--gray-bg);min-height:100vh}
+        .layout{display:flex;min-height:100vh}
+        
+        /* SIDEBAR */
+        .sidebar{width:var(--sidebar-width);background:linear-gradient(180deg,var(--rich-black),var(--dark-blue));color:#fff;position:fixed;height:100vh;overflow-y:auto;overflow-x:hidden;transition:width .3s;z-index:100;display:flex;flex-direction:column}
+        .sidebar.collapsed{width:var(--sidebar-collapsed-width)}
+        .sidebar.collapsed .sb-logo-text,.sidebar.collapsed .user-details,.sidebar.collapsed .nav-link span{display:none}
+        .sidebar.collapsed .sb-header{justify-content:center;padding:1.5rem .5rem}
+        .sidebar.collapsed .sb-logo{display:none}
+        .sidebar.collapsed .user-info{justify-content:center;padding:.8rem;margin:0 .5rem 1.5rem}
+        .sidebar.collapsed .nav-link{justify-content:center;padding:.85rem 0;gap:0}
+        .sidebar.collapsed .fold-btn{margin:0 auto}
+        .sidebar::-webkit-scrollbar{width:4px}
+        .sidebar::-webkit-scrollbar-thumb{background:var(--secondary-green);border-radius:4px}
+        .sb-header{display:flex;align-items:center;justify-content:space-between;padding:1.5rem;border-bottom:1px solid rgba(255,255,255,.1)}
+        .sb-logo{display:flex;align-items:center;gap:.8rem}
+        .sb-logo i{font-size:1.8rem;color:var(--secondary-green)}
+        .sb-logo-text h2{font-size:1rem;font-weight:700}
+        .sb-logo-text span{font-size:.65rem;opacity:.6;display:block}
+        .fold-btn{background:rgba(255,255,255,.1);border:none;color:#fff;cursor:pointer;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:background .2s;flex-shrink:0}
+        .fold-btn:hover{background:rgba(255,255,255,.25)}
+        .user-info{display:flex;align-items:center;gap:.8rem;padding:.9rem;margin:1rem 1rem 1.5rem;background:rgba(255,255,255,.1);border-radius:12px;overflow:hidden;white-space:nowrap}
+        .user-avatar{width:42px;height:42px;background:var(--secondary-green);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:var(--rich-black);flex-shrink:0}
+        .user-details h4{font-size:.85rem;font-weight:600}
+        .user-details p{font-size:.65rem;opacity:.65}
+        .nav-menu{list-style:none;padding:0 .75rem;flex:1}
+        .nav-item{margin-bottom:.2rem}
+        .nav-link{display:flex;align-items:center;gap:.9rem;padding:.7rem 1rem;color:rgba(255,255,255,.8);text-decoration:none;border-radius:10px;font-size:.875rem;transition:all .25s;white-space:nowrap;overflow:hidden}
+        .nav-link:hover{background:rgba(94,161,115,.2);color:#fff}
+        .nav-link.active{background:var(--secondary-green);color:var(--rich-black);font-weight:600}
+        .nav-link i{width:20px;font-size:1rem;text-align:center;flex-shrink:0}
+        .nav-footer{margin-top:auto;padding:1rem .75rem;border-top:1px solid rgba(255,255,255,.1)}
+        
+        /* MAIN */
+        .main{flex:1;margin-left:var(--sidebar-width);padding:1.5rem;transition:margin-left .3s;min-height:100vh}
+        .sidebar.collapsed~.main{margin-left:var(--sidebar-collapsed-width)}
+        
+        /* TOP BAR */
+        .top-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;background:#fff;padding:1rem 1.5rem;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);margin-bottom:1.5rem}
+        .page-title h1{font-size:1.25rem;color:var(--rich-black);font-weight:700}
+        .page-title p{font-size:.78rem;color:var(--text-secondary);display:flex;align-items:center;gap:.4rem;margin-top:.2rem}
+        .top-actions{display:flex;align-items:center;gap:.8rem}
+        .date-chip{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--text-secondary);background:var(--gray-bg);padding:.35rem .75rem;border-radius:8px}
+        .notif-wrap{position:relative}
+        .notif-btn{background:none;border:none;padding:.35rem;cursor:pointer;display:flex;align-items:center;border-radius:8px}
+        .notif-btn:hover{background:var(--gray-bg)}
+        .notif-btn i{font-size:1.2rem;color:var(--text-primary)}
+        .notif-count{position:absolute;top:-4px;right:-6px;background:#dc3545;color:#fff;font-size:.55rem;padding:.1rem .35rem;border-radius:10px;min-width:16px;text-align:center;font-weight:700}
+        .notif-count.zero{background:#adb5bd}
+        .notif-dropdown{position:absolute;top:44px;right:0;width:340px;background:#fff;border-radius:var(--radius-lg);box-shadow:0 12px 32px rgba(0,0,0,.18);z-index:300;display:none;overflow:hidden;border:1px solid var(--border-color)}
+        .notif-dropdown.open{display:block;animation:fadeDown .2s ease}
+        @keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+        .notif-head{padding:.8rem 1.2rem;background:var(--gray-bg);border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.82rem}
+        .notif-list{max-height:340px;overflow-y:auto}
+        .notif-item{display:flex;gap:.7rem;padding:.8rem 1.2rem;border-bottom:1px solid var(--border-color);cursor:pointer}
+        .notif-item:hover{background:var(--gray-bg)}
+        .notif-item.unread{background:rgba(94,161,115,.05);border-left:3px solid var(--secondary-green)}
+        .notif-icon{width:32px;height:32px;background:rgba(94,161,115,.12);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--secondary-green);font-size:.8rem}
+        .notif-body .notif-title{font-size:.78rem;font-weight:600;color:var(--rich-black)}
+        .notif-body .notif-msg{font-size:.7rem;color:var(--text-secondary)}
+        .notif-body .notif-time{font-size:.62rem;color:var(--text-light);margin-top:.2rem}
+        .notif-foot{padding:.6rem;text-align:center;border-top:1px solid var(--border-color);background:var(--gray-bg)}
+        .notif-foot a{color:var(--secondary-green);font-size:.72rem;font-weight:600;cursor:pointer}
+        
+        /* PORO */
+        .poro-banner{background:linear-gradient(135deg,#f0f9f0,#e8f5e9);border:1px solid rgba(94,161,115,.3);border-radius:var(--radius-lg);padding:1rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+        .poro-left{display:flex;align-items:center;gap:1rem}
+        .poro-icon{width:50px;height:50px;background:var(--secondary-green);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;box-shadow:0 4px 12px rgba(94,161,115,.3);animation:bounce 2s ease infinite}
+        .poro-icon img{width:100%;height:100%;object-fit:cover}
+        @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+        .poro-msg h3{font-size:1rem;color:var(--rich-black);font-weight:700;margin-bottom:.2rem}
+        .poro-msg p{font-size:.75rem;color:var(--text-secondary)}
+        
+        /* BUTTONS */
+        .btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1rem;border-radius:var(--radius-sm);font-size:.8rem;font-weight:600;cursor:pointer;border:none;transition:all .2s;white-space:nowrap;text-decoration:none}
+        .btn-green{background:var(--secondary-green);color:#fff}
+        .btn-green:hover{background:var(--green-dark);transform:translateY(-1px)}
+        .btn-blue{background:var(--caribbean-blue);color:#fff}
+        .btn-blue:hover{background:#0e2a7a}
+        .btn-outline{background:transparent;border:2px solid var(--border-color);color:var(--text-primary)}
+        .btn-outline:hover{border-color:var(--secondary-green);color:var(--secondary-green)}
+        .btn-sm{padding:.35rem .8rem;font-size:.75rem}
+        .btn-xs{padding:.2rem .5rem;font-size:.68rem;border-radius:6px}
+        .btn-danger{background:var(--danger-red);color:#fff}
+        .btn-danger:hover{background:#c82333}
+        .btn-warning{background:var(--warning-orange);color:#000}
+        .btn:disabled{opacity:.5;cursor:not-allowed}
+        
+        /* TABS */
+        .main-tabs{display:flex;gap:.3rem;background:#fff;border-radius:var(--radius-md);padding:.4rem;margin-bottom:1.5rem;box-shadow:var(--shadow-sm)}
+        .main-tab{flex:1;padding:.6rem 1rem;border:none;border-radius:10px;cursor:pointer;font-size:.82rem;font-weight:600;background:transparent;color:var(--text-secondary);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.4rem}
+        .main-tab:hover{color:var(--secondary-green)}
+        .main-tab.active{background:var(--secondary-green);color:#fff}
+        .main-tab i{font-size:.9rem}
+        .tab-panel{display:none}
+        .tab-panel.active{display:block}
+        
+        /* FILTER BAR */
+        .filter-bar{background:#fff;border-radius:var(--radius-md);padding:.8rem 1.2rem;margin-bottom:1.2rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem;box-shadow:var(--shadow-sm)}
+        .filter-group{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+        .filter-group label{font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--text-secondary)}
+        .filter-group select,.filter-group input{padding:.4rem .8rem;border:2px solid var(--border-color);border-radius:8px;font-size:.8rem;outline:none}
+        .filter-group select:focus,.filter-group input:focus{border-color:var(--secondary-green)}
+        .search-input{width:220px}
+        
+        /* CARDS */
+        .card{background:#fff;border-radius:var(--radius-lg);padding:1.3rem 1.5rem;box-shadow:var(--shadow-sm);margin-bottom:1.5rem}
+        .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem}
+        .card-header h2{font-size:1rem;font-weight:700;color:var(--rich-black);display:flex;align-items:center;gap:.4rem}
+        .card-header h2 i{color:var(--secondary-green)}
+        
+        /* STATS */
+        .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+        .stat-card{background:#fff;padding:1rem;border-radius:var(--radius-md);display:flex;align-items:center;gap:.8rem;box-shadow:var(--shadow-sm);cursor:pointer;transition:all .2s}
+        .stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+        .stat-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+        .stat-icon.blue{background:rgba(18,52,153,.1);color:var(--caribbean-blue)}
+        .stat-icon.green{background:rgba(94,161,115,.1);color:var(--secondary-green)}
+        .stat-icon.orange{background:rgba(243,156,18,.1);color:var(--warning-orange)}
+        .stat-icon.purple{background:rgba(66,133,244,.1);color:var(--google-blue)}
+        .stat-info h3{font-size:.68rem;text-transform:uppercase;color:var(--text-secondary);letter-spacing:.03em}
+        .stat-info .value{font-size:1.4rem;font-weight:700;color:var(--rich-black);line-height:1.2}
+        .stat-info .sub{font-size:.65rem;color:var(--text-secondary)}
+        
+        /* TABLES */
+        table{width:100%;border-collapse:collapse}
+        th{text-align:left;padding:.65rem .5rem;color:var(--text-secondary);font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--border-color);white-space:nowrap}
+        td{padding:.6rem .5rem;border-bottom:1px solid var(--border-color);font-size:.78rem;color:var(--text-primary)}
+        tr:last-child td{border-bottom:none}
+        tr:hover td{background:var(--gray-bg)}
+        .pill{padding:.2rem .55rem;border-radius:20px;font-size:.62rem;font-weight:700;white-space:nowrap}
+        .pill-green{background:#d4edda;color:#155724}
+        .pill-blue{background:#cce5ff;color:#004085}
+        .pill-orange{background:#fff3cd;color:#856404}
+        .pill-red{background:#f8d7da;color:#721c24}
+        .pill-gray{background:#f5f5f5;color:var(--text-secondary)}
+        
+        /* SCHEDULE GRID */
+        .schedule-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border-color);border-radius:var(--radius-md);overflow:hidden}
+        .schedule-day{background:#fff;padding:.5rem}
+        .schedule-day-header{background:var(--secondary-green);color:#fff;padding:.6rem;text-align:center;font-weight:700;font-size:.78rem}
+        .schedule-slot{background:var(--gray-bg);padding:.4rem .5rem;margin:.3rem 0;border-radius:6px;font-size:.7rem;cursor:pointer;transition:all .2s;border-left:3px solid var(--secondary-green)}
+        .schedule-slot:hover{background:#e8f5e9;transform:translateX(2px)}
+        .schedule-slot .slot-time{font-size:.62rem;color:var(--text-secondary)}
+        .schedule-slot .slot-subject{font-weight:600;color:var(--rich-black)}
+        .schedule-slot .slot-room{font-size:.62rem;color:var(--text-light)}
+        
+        /* MODAL */
+        .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(4px);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem}
+        .modal-overlay.open{display:flex}
+        .modal{background:#fff;border-radius:var(--radius-lg);width:100%;max-width:580px;box-shadow:0 24px 60px rgba(0,0,0,.22);animation:modalIn .28s ease;max-height:90vh;display:flex;flex-direction:column}
+        .modal.modal-lg{max-width:900px}
+        @keyframes modalIn{from{opacity:0;transform:translateY(-16px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+        .modal-header{padding:1.2rem 1.5rem 1rem;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+        .modal-header h2{font-size:1.05rem;font-weight:700;color:var(--rich-black);display:flex;align-items:center;gap:.5rem}
+        .modal-close{background:none;border:none;cursor:pointer;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-light);font-size:1rem;transition:all .2s}
+        .modal-close:hover{background:var(--gray-bg);color:var(--text-primary)}
+        .modal-body{padding:1.3rem 1.5rem;overflow-y:auto;flex:1}
+        .modal-footer{padding:.9rem 1.5rem 1.2rem;border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;gap:.7rem;flex-shrink:0}
+        .form-row{margin-bottom:1rem}
+        .form-row label{display:block;font-size:.75rem;font-weight:700;color:var(--text-primary);margin-bottom:.35rem}
+        .form-row input,.form-row select,.form-row textarea{width:100%;padding:.6rem .8rem;border:2px solid var(--border-color);border-radius:var(--radius-sm);font-size:.82rem;outline:none;transition:border-color .2s}
+        .form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--secondary-green)}
+        .form-row textarea{min-height:70px;resize:vertical}
+        .form-row-inline{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+        @media(max-width:500px){.form-row-inline{grid-template-columns:1fr}}
+        
+        /* EMPTY */
+        .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 1.5rem;text-align:center}
+        .empty i{font-size:2.5rem;color:var(--text-light);margin-bottom:.6rem;opacity:.5}
+        .empty h3{font-size:.9rem;font-weight:600;color:var(--text-secondary);margin-bottom:.3rem}
+        .empty p{font-size:.75rem;color:var(--text-light);max-width:300px;line-height:1.5}
+        
+        /* TOAST */
+        .toast-container{position:fixed;top:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem}
+        .toast{padding:.75rem 1.2rem;border-radius:var(--radius-sm);color:#fff;font-size:.8rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.2);animation:toastIn .3s ease;max-width:380px;display:flex;align-items:center;gap:.6rem}
+        .toast.success{background:#28a745}
+        .toast.error{background:#dc3545}
+        .toast.info{background:var(--caribbean-blue)}
+        @keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+        
+        .mobile-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;display:none}
+        .mobile-overlay.show{display:block}
+        
+        @media(max-width:1200px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+        @media(max-width:768px){
+            .sidebar{transform:translateX(-100%);transition:transform .3s;width:var(--sidebar-width)!important}
+            .sidebar.mobile-open{transform:translateX(0)}
+            .main{margin-left:0!important;padding:1rem}
+            .stats-grid{grid-template-columns:1fr}
+            .main-tabs{flex-wrap:wrap}
+            .main-tab{flex:auto;font-size:.75rem}
+            .schedule-grid{grid-template-columns:1fr}
+            .filter-bar{flex-direction:column;align-items:stretch}
+            .search-input{width:100%}
+        }
+    </style>
+</head>
+<body>
+<div class="toast-container" id="toastContainer"></div>
+<div class="mobile-overlay" id="mobileOverlay"></div>
+<div class="layout">
+
+<!-- ========== SIDEBAR ========== -->
+<aside class="sidebar" id="sidebar">
+    <div class="sb-header">
+        <div class="sb-logo"><i class="fi fi-rr-graduation-cap"></i><div class="sb-logo-text"><h2>Formify</h2><span>Registrar Portal</span></div></div>
+        <button class="fold-btn" id="foldBtn"><i class="fi fi-rr-angle-small-left" id="foldIcon"></i></button>
+    </div>
+    <div class="user-info">
+        <div class="user-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+        <div class="user-details"><h4>{{ request.user.get_full_name }}</h4><p>School Registrar</p></div>
+    </div>
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="{% url 'registrars:dashboard' %}" class="nav-link"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:student-records' %}" class="nav-link"><i class="fi fi-rr-user"></i><span>Student Records</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:enrollment-management' %}" class="nav-link"><i class="fi fi-rr-file-invoice"></i><span>Enrollment</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:grade-validation' %}" class="nav-link"><i class="fi fi-rr-check-double"></i><span>Grade Validation</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:forms' %}" class="nav-link"><i class="fi fi-rr-folder-open"></i><span>School Forms</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:transfer-management' %}" class="nav-link"><i class="fi fi-rr-exchange-alt"></i><span>Transfer Requests</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:reports-analytics' %}" class="nav-link"><i class="fi fi-rr-chart-line-up"></i><span>Reports</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:section-schedule-management' %}" class="nav-link active"><i class="fi fi-rr-calendar"></i><span>Sections & Schedule</span></a></li>
+        </ul>
+    <ul class="nav-menu nav-footer">
+        <li class="nav-item">
+            <form method="POST" action="{% url 'signout' %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="nav-link" style="width:100%;background:none;border:none;cursor:pointer;"><i class="fas fa-sign-out-alt"></i><span>Logout</span></button>
+            </form>
+        </li>
+    </ul>
+</aside>
+
+<!-- ========== MAIN CONTENT ========== -->
+<div class="main" id="mainContent">
+    <div class="top-bar">
+        <div class="page-title"><h1>Section & Schedule Management</h1><p><i class="fi fi-rr-calendar"></i> {{ current_sy_label }} · Manage sections, teacher assignments, and class schedules</p></div>
+        <div class="top-actions">
+            <div class="date-chip"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
+            <div class="notif-wrap">
+                <button class="notif-btn"><i class="fi fi-rr-bell"></i><span class="notif-count zero">0</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PORO BANNER -->
+    <div class="poro-banner">
+        <div class="poro-left">
+            <div class="poro-icon"><img src="{% static 'shared/poro/Poro.png' %}" alt="Poro" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fi fi-rr-smile\' style=\'font-size:1.6rem;color:#fff;\'></i>';"></div>
+            <div class="poro-msg"><h3>Section & Schedule Center</h3><p id="poroMessage">{{ total_sections }} sections · {{ total_assignments }} teacher assignments · {{ total_schedules }} schedule entries</p></div>
+        </div>
+        <div style="display:flex;gap:.5rem;">
+            <button class="btn btn-green" onclick="openSectionModal()"><i class="fi fi-rr-add"></i> Create Section</button>
+            <button class="btn btn-outline" onclick="openBatchSectionModal()"><i class="fi fi-rr-layers"></i> Batch Create</button>
+        </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-grid">
+        <div class="stat-card" onclick="switchTab('sections')"><div class="stat-icon blue"><i class="fi fi-rr-door-open"></i></div><div class="stat-info"><h3>Total Sections</h3><div class="value" id="statSections">{{ total_sections|default:0 }}</div><div class="sub">Active sections</div></div></div>
+        <div class="stat-card" onclick="switchTab('assignments')"><div class="stat-icon green"><i class="fi fi-rr-presentation"></i></div><div class="stat-info"><h3>Teacher Assignments</h3><div class="value" id="statAssignments">{{ total_assignments|default:0 }}</div><div class="sub">Class assignments</div></div></div>
+        <div class="stat-card" onclick="switchTab('schedules')"><div class="stat-icon orange"><i class="fi fi-rr-time-fast"></i></div><div class="stat-info"><h3>Schedule Entries</h3><div class="value" id="statSchedules">{{ total_schedules|default:0 }}</div><div class="sub">Weekly meetings</div></div></div>
+        <div class="stat-card"><div class="stat-icon purple"><i class="fi fi-rr-users"></i></div><div class="stat-info"><h3>Unassigned Teachers</h3><div class="value" id="statUnassigned">{{ unassigned_teachers|default:0 }}</div><div class="sub">Need sections</div></div></div>
+    </div>
+
+    <!-- MAIN TABS -->
+    <div class="main-tabs" id="mainTabs">
+        <button class="main-tab active" data-tab="sections" onclick="switchTab('sections')"><i class="fi fi-rr-door-open"></i> Sections</button>
+        <button class="main-tab" data-tab="assignments" onclick="switchTab('assignments')"><i class="fi fi-rr-presentation"></i> Teacher Assignments</button>
+        <button class="main-tab" data-tab="schedules" onclick="switchTab('schedules')"><i class="fi fi-rr-time-fast"></i> Class Schedules</button>
+    </div>
+
+    <!-- ═══════════ SECTION MANAGEMENT TAB ═══════════ -->
+    <div class="tab-panel active" id="panel-sections">
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Grade Level</label>
+                <select id="sectionGradeFilter" onchange="loadSections()">
+                    <option value="">All Grade Levels</option>
+                    {% for gl in grade_levels %}
+                    <option value="{{ gl.id }}">{{ gl.grade_name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" class="search-input" id="sectionSearch" placeholder="Search sections..." onkeyup="loadSections()">
+            </div>
+            <div class="filter-group">
+                <button class="btn btn-green btn-sm" onclick="openSectionModal()"><i class="fi fi-rr-add"></i> Add Section</button>
+                <button class="btn btn-outline btn-sm" onclick="openBatchSectionModal()"><i class="fi fi-rr-layers"></i> Batch</button>
+                <button class="btn btn-outline btn-sm" onclick="exportSections()"><i class="fi fi-rr-download"></i> Export</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h2><i class="fi fi-rr-list"></i> Section List</h2><span id="sectionCount" style="font-size:.78rem;color:var(--text-secondary);"></span></div>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead><tr><th>Section</th><th>Grade Level</th><th>Adviser</th><th>Students</th><th>Capacity</th><th>Subjects</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody id="sectionsTableBody"><tr><td colspan="8"><div class="empty"><p>Loading sections...</p></div></td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ TEACHER ASSIGNMENTS TAB ═══════════ -->
+    <div class="tab-panel" id="panel-assignments">
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Grade Level</label>
+                <select id="assignGradeFilter" onchange="loadAssignments()">
+                    <option value="">All</option>
+                    {% for gl in grade_levels %}
+                    <option value="{{ gl.id }}">{{ gl.grade_name }}</option>
+                    {% endfor %}
+                </select>
+                <label>Teacher</label>
+                <select id="assignTeacherFilter" onchange="loadAssignments()">
+                    <option value="">All Teachers</option>
+                    {% for t in teachers %}
+                    <option value="{{ t.user.id }}">{{ t.user.get_full_name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" class="search-input" id="assignSearch" placeholder="Search..." onkeyup="loadAssignments()">
+            </div>
+            <div class="filter-group">
+                <button class="btn btn-green btn-sm" onclick="openAssignmentModal()"><i class="fi fi-rr-add"></i> Assign Teacher</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h2><i class="fi fi-rr-presentation"></i> Teacher Assignments</h2><span id="assignmentCount" style="font-size:.78rem;color:var(--text-secondary);"></span></div>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead><tr><th>Teacher</th><th>Section</th><th>Subject</th><th>Grade Level</th><th>Meetings/Week</th><th>Advisory</th><th>Actions</th></tr></thead>
+                    <tbody id="assignmentsTableBody"><tr><td colspan="7"><div class="empty"><p>Loading assignments...</p></div></td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ SCHEDULE MANAGEMENT TAB ═══════════ -->
+    <div class="tab-panel" id="panel-schedules">
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Section</label>
+                <select id="scheduleSectionFilter" onchange="loadSchedules()">
+                    <option value="">All Sections</option>
+                    {% for s in sections %}
+                    <option value="{{ s.id }}">{{ s.section_name }} ({{ s.grade_level.grade_name }})</option>
+                    {% endfor %}
+                </select>
+                <label>Teacher</label>
+                <select id="scheduleTeacherFilter" onchange="loadSchedules()">
+                    <option value="">All Teachers</option>
+                    {% for t in teachers %}
+                    <option value="{{ t.user.id }}">{{ t.user.get_full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <button class="btn btn-green btn-sm" onclick="openScheduleModal()"><i class="fi fi-rr-add"></i> Add Schedule</button>
+                <button class="btn btn-outline btn-sm" onclick="viewScheduleGrid()"><i class="fi fi-rr-grid"></i> Grid View</button>
+            </div>
+        </div>
+
+        <div class="card" id="scheduleTableView">
+            <div class="card-header"><h2><i class="fi fi-rr-time-fast"></i> Class Schedule List</h2><span id="scheduleCount" style="font-size:.78rem;color:var(--text-secondary);"></span></div>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead><tr><th>Day</th><th>Time</th><th>Subject</th><th>Section</th><th>Teacher</th><th>Room</th><th>Type</th><th>Actions</th></tr></thead>
+                    <tbody id="schedulesTableBody"><tr><td colspan="8"><div class="empty"><p>Loading schedules...</p></div></td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- SCHEDULE GRID VIEW -->
+        <div class="card" id="scheduleGridView" style="display:none;">
+            <div class="card-header">
+                <h2><i class="fi fi-rr-grid"></i> Weekly Schedule Grid</h2>
+                <button class="btn btn-outline btn-sm" onclick="toggleScheduleView()"><i class="fi fi-rr-list"></i> List View</button>
+            </div>
+            <div class="schedule-grid" id="scheduleGrid">
+                {% for day in days_of_week %}
+                <div class="schedule-day">
+                    <div class="schedule-day-header">{{ day }}</div>
+                    <div id="schedule-{{ day|lower }}" style="min-height:100px;">
+                        <div class="empty" style="padding:1rem;"><p style="font-size:.7rem;">Loading...</p></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- ═══════════ SECTION MODAL ═══════════ -->
+<div class="modal-overlay" id="sectionModal">
+    <div class="modal">
+        <div class="modal-header"><h2 id="sectionModalTitle"><i class="fi fi-rr-door-open"></i> Create Section</h2><button class="modal-close" onclick="closeModal('sectionModal')">&times;</button></div>
+        <div class="modal-body">
+            <input type="hidden" id="editSectionId">
+            <div class="form-row"><label>Grade Level *</label><select id="sectionGrade"><option value="">Select Grade Level</option>{% for gl in grade_levels %}<option value="{{ gl.id }}">{{ gl.grade_name }}</option>{% endfor %}</select></div>
+            <div class="form-row"><label>Section Name *</label><input type="text" id="sectionName" placeholder="e.g., Grade 7 - A"></div>
+            <div class="form-row-inline">
+                <div class="form-row"><label>Capacity</label><input type="number" id="sectionCapacity" value="50" min="1" max="100"></div>
+                <div class="form-row"><label>Room Number</label><input type="text" id="sectionRoom" placeholder="e.g., Room 101"></div>
+            </div>
+            <div class="form-row"><label>Status</label><select id="sectionStatus"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('sectionModal')">Cancel</button>
+            <button class="btn btn-green" onclick="saveSection()"><i class="fi fi-rr-disk"></i> Save Section</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ BATCH SECTION MODAL ═══════════ -->
+<div class="modal-overlay" id="batchSectionModal">
+    <div class="modal">
+        <div class="modal-header"><h2><i class="fi fi-rr-layers"></i> Batch Create Sections</h2><button class="modal-close" onclick="closeModal('batchSectionModal')">&times;</button></div>
+        <div class="modal-body">
+            <div class="form-row"><label>Grade Level *</label><select id="batchGrade"><option value="">Select Grade Level</option>{% for gl in grade_levels %}<option value="{{ gl.id }}">{{ gl.grade_name }}</option>{% endfor %}</select></div>
+            <div class="form-row"><label>Number of Sections *</label><input type="number" id="batchCount" value="2" min="1" max="20"></div>
+            <div class="form-row"><label>Naming Pattern</label><select id="batchNaming"><option value="alphabet">A, B, C...</option><option value="numeric">1, 2, 3...</option></select></div>
+            <div class="form-row"><label>Capacity per Section</label><input type="number" id="batchCapacity" value="50" min="1" max="100"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('batchSectionModal')">Cancel</button>
+            <button class="btn btn-green" onclick="batchCreateSections()"><i class="fi fi-rr-cog"></i> Create Sections</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ ASSIGNMENT MODAL ═══════════ -->
+<div class="modal-overlay" id="assignmentModal">
+    <div class="modal">
+        <div class="modal-header"><h2 id="assignmentModalTitle"><i class="fi fi-rr-presentation"></i> Assign Teacher</h2><button class="modal-close" onclick="closeModal('assignmentModal')">&times;</button></div>
+        <div class="modal-body">
+            <input type="hidden" id="editAssignmentId">
+            <div class="form-row"><label>Teacher *</label><select id="assignTeacher">{% for t in teachers %}<option value="{{ t.user.id }}">{{ t.user.get_full_name }}</option>{% endfor %}</select></div>
+            <div class="form-row"><label>Section *</label><select id="assignSection">{% for s in sections %}<option value="{{ s.id }}">{{ s.section_name }} ({{ s.grade_level.grade_name }})</option>{% endfor %}</select></div>
+            <div class="form-row"><label>Subject *</label><select id="assignSubject">{% for sub in subjects %}<option value="{{ sub.id }}">{{ sub.subject_code }} — {{ sub.subject_name }}</option>{% endfor %}</select></div>
+            <div class="form-row-inline">
+                <div class="form-row"><label>Meetings/Week</label><input type="number" id="assignMeetings" value="5" min="1" max="10"></div>
+                <div class="form-row"><label>Min/Meeting</label><input type="number" id="assignMinutes" value="60" min="30" max="120" step="5"></div>
+            </div>
+            <div class="form-row"><label><input type="checkbox" id="assignAdvisory" style="width:auto;margin-right:.5rem;"> Advisory Class (Homeroom)</label></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('assignmentModal')">Cancel</button>
+            <button class="btn btn-green" onclick="saveAssignment()"><i class="fi fi-rr-disk"></i> Save Assignment</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ SCHEDULE MODAL ═══════════ -->
+<div class="modal-overlay" id="scheduleModal">
+    <div class="modal">
+        <div class="modal-header"><h2 id="scheduleModalTitle"><i class="fi fi-rr-time-fast"></i> Add Schedule Entry</h2><button class="modal-close" onclick="closeModal('scheduleModal')">&times;</button></div>
+        <div class="modal-body">
+            <input type="hidden" id="editScheduleId">
+            <div class="form-row"><label>Class Assignment *</label><select id="scheduleAssignment">{% for ca in class_assignments %}<option value="{{ ca.id }}">{{ ca.teacher_name }} — {{ ca.subject_code }} — {{ ca.section_name }}</option>{% endfor %}</select></div>
+            <div class="form-row-inline">
+                <div class="form-row"><label>Day *</label><select id="scheduleDay"><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option></select></div>
+                <div class="form-row"><label>Schedule Type</label><select id="scheduleType"><option>Regular</option><option>Makeup</option><option>Special</option><option>Club</option></select></div>
+            </div>
+            <div class="form-row-inline">
+                <div class="form-row"><label>Start Time *</label><input type="time" id="scheduleStart" value="07:00"></div>
+                <div class="form-row"><label>End Time *</label><input type="time" id="scheduleEnd" value="08:00"></div>
+            </div>
+            <div class="form-row"><label>Room</label><select id="scheduleRoom"><option value="">Use default room</option>{% for r in rooms %}<option value="{{ r.id }}">{{ r.room_number }}</option>{% endfor %}</select></div>
+            <div class="form-row"><label>Notes</label><input type="text" id="scheduleNotes" placeholder="Optional notes"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('scheduleModal')">Cancel</button>
+            <button class="btn btn-green" onclick="saveSchedule()"><i class="fi fi-rr-disk"></i> Save Schedule</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+// ═══════════════════ UTILITIES ═══════════════════
+const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || '';
+function showToast(m,t='info'){const c=document.getElementById('toastContainer');if(!c)return;const e=document.createElement('div');e.className='toast '+t;const i={success:'✅',error:'❌',info:'ℹ️'};e.innerHTML=`<span>${i[t]||'ℹ️'}</span> ${m}`;c.appendChild(e);setTimeout(()=>{if(e.parentNode)e.remove()},4000)}
+
+// ═══════════════════ SIDEBAR ═══════════════════
+const sidebar=document.getElementById('sidebar'),foldBtn=document.getElementById('foldBtn'),foldIcon=document.getElementById('foldIcon'),main=document.getElementById('mainContent'),mobileOv=document.getElementById('mobileOverlay');
+let collapsed=false;
+function adjustMargin(){main.style.marginLeft=window.innerWidth>768?(collapsed?'var(--sidebar-collapsed-width)':'var(--sidebar-width)'):'0'}
+foldBtn.addEventListener('click',()=>{if(window.innerWidth<=768){const o=sidebar.classList.toggle('mobile-open');mobileOv.classList.toggle('show',o)}else{collapsed=!collapsed;sidebar.classList.toggle('collapsed',collapsed);foldIcon.className=collapsed?'fi fi-rr-angle-small-right':'fi fi-rr-angle-small-left';adjustMargin()}});
+mobileOv.addEventListener('click',()=>{sidebar.classList.remove('mobile-open');mobileOv.classList.remove('show')});
+window.addEventListener('resize',adjustMargin);adjustMargin();
+document.getElementById('currentDate').textContent=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+
+// ═══════════════════ MODAL ═══════════════════
+function openModal(id){const e=document.getElementById(id);if(e){e.classList.add('open');document.body.style.overflow='hidden'}}
+function closeModal(id){const e=document.getElementById(id);if(e){e.classList.remove('open');document.body.style.overflow=''}}
+window.openModal=openModal;window.closeModal=closeModal;
+document.querySelectorAll('.modal-overlay').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov)closeModal(ov.id)}));
+
+// ═══════════════════ TAB SWITCHING ═══════════════════
+window.switchTab=function(tab){
+    document.querySelectorAll('.main-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    const btn=document.querySelector(`.main-tab[data-tab="${tab}"]`);
+    const panel=document.getElementById(`panel-${tab}`);
+    if(btn)btn.classList.add('active');
+    if(panel)panel.classList.add('active');
+    if(tab==='sections')loadSections();
+    if(tab==='assignments')loadAssignments();
+    if(tab==='schedules')loadSchedules();
+};
+
+// ═══════════════════ SECTIONS ═══════════════════
+window.openSectionModal=function(id){
+    document.getElementById('editSectionId').value='';
+    document.getElementById('sectionModalTitle').innerHTML='<i class="fi fi-rr-door-open"></i> Create Section';
+    document.getElementById('sectionGrade').value='';
+    document.getElementById('sectionName').value='';
+    document.getElementById('sectionCapacity').value='50';
+    document.getElementById('sectionRoom').value='';
+    document.getElementById('sectionStatus').value='active';
+    if(id){
+        fetch(`/registrars/sections/${id}/detail/`).then(r=>r.json()).then(d=>{
+            if(d.success){
+                document.getElementById('editSectionId').value=d.section.id;
+                document.getElementById('sectionModalTitle').innerHTML='<i class="fi fi-rr-pencil"></i> Edit Section';
+                document.getElementById('sectionGrade').value=d.section.grade_level_id;
+                document.getElementById('sectionName').value=d.section.section_name;
+                document.getElementById('sectionCapacity').value=d.section.capacity;
+                document.getElementById('sectionRoom').value=d.section.room_number||'';
+                document.getElementById('sectionStatus').value=d.section.is_active?'active':'inactive';
+            }
+        });
+    }
+    openModal('sectionModal');
+};
+
+window.saveSection=function(){
+    const id=document.getElementById('editSectionId').value;
+    const data={
+        grade_level_id:document.getElementById('sectionGrade').value,
+        section_name:document.getElementById('sectionName').value.trim(),
+        capacity:parseInt(document.getElementById('sectionCapacity').value)||50,
+        room_number:document.getElementById('sectionRoom').value.trim(),
+        is_active:document.getElementById('sectionStatus').value==='active',
+    };
+    if(!data.grade_level_id||!data.section_name){showToast('Grade Level and Section Name are required','error');return}
+    const url=id?`/registrars/sections/${id}/update/`:'/registrars/sections/create/';
+    fetch(url,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},body:JSON.stringify(data)})
+    .then(r=>r.json()).then(res=>{if(res.success){showToast(res.message,'success');closeModal('sectionModal');loadSections()}else{showToast(res.error,'error')}})
+    .catch(()=>showToast('Error saving section','error'));
+};
+
+function loadSections(){
+    const grade=document.getElementById('sectionGradeFilter')?.value||'';
+    const search=document.getElementById('sectionSearch')?.value||'';
+    fetch(`/registrars/sections/data/?grade=${grade}&search=${encodeURIComponent(search)}`)
+    .then(r=>r.json()).then(d=>{
+        if(d.success){
+            document.getElementById('sectionCount').textContent=`${d.sections.length} sections`;
+            document.getElementById('statSections').textContent=d.stats?.total||0;
+            const tbody=document.getElementById('sectionsTableBody');
+            if(!d.sections.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty"><i class="fi fi-rr-folder-open"></i><h3>No Sections Found</h3><p>Create sections to get started.</p></div></td></tr>';return}
+            tbody.innerHTML=d.sections.map(s=>`<tr>
+                <td><strong>${s.section_name}</strong></td>
+                <td>${s.grade_name}</td>
+                <td>${s.adviser||'<span style="color:var(--text-light);">Unassigned</span>'}</td>
+                <td>${s.enrolled_count}/${s.capacity||'—'}</td>
+                <td>
+                    <div style="background:var(--gray-bg);border-radius:8px;height:6px;width:80px;">
+                        <div style="background:${(s.enrolled_count/(s.capacity||50))>.9?'var(--warning-orange)':'var(--secondary-green)'};height:100%;border-radius:8px;width:${Math.min(100,(s.enrolled_count/(s.capacity||50))*100)}%;"></div>
+                    </div>
+                </td>                
+                <td>${s.subject_count||0}</td>
+                <td><span class="pill ${s.is_active?'pill-green':'pill-red'}">${s.is_active?'Active':'Inactive'}</span></td>
+                <td style="display:flex;gap:.3rem;">
+                    <button class="btn btn-outline btn-xs" onclick="openSectionModal(${s.id})"><i class="fi fi-rr-pencil"></i></button>
+                    <button class="btn btn-xs ${s.is_active?'btn-warning':'btn-green'}" onclick="toggleSection(${s.id})">${s.is_active?'Deactivate':'Activate'}</button>
+                </td>
+            </tr>`).join('');
+        }
+    });
+}
+
+window.toggleSection=function(id){
+    fetch(`/registrars/sections/${id}/toggle/`,{method:'POST',headers:{'X-CSRFToken':csrfToken}})
+    .then(r=>r.json()).then(res=>{if(res.success){showToast(res.message,'success');loadSections()}else{showToast(res.error,'error')}});
+};
+
+window.openBatchSectionModal=function(){openModal('batchSectionModal')};
+window.batchCreateSections=function(){
+    const data={
+        grade_level_id:document.getElementById('batchGrade').value,
+        number_of_sections:parseInt(document.getElementById('batchCount').value)||1,
+        capacity:parseInt(document.getElementById('batchCapacity').value)||50,
+        naming_pattern:document.getElementById('batchNaming').value,
+    };
+    if(!data.grade_level_id){showToast('Please select a grade level','error');return}
+    fetch('/registrars/sections/batch-create/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},body:JSON.stringify(data)})
+    .then(r=>r.json()).then(res=>{if(res.success){showToast(res.message,'success');closeModal('batchSectionModal');loadSections()}else{showToast(res.error,'error')}});
+};
+
+window.exportSections=function(){window.open('/registrars/sections/export/','_blank');showToast('Exporting sections...','info')};
+
+// ═══════════════════ TEACHER ASSIGNMENTS ═══════════════════
+window.openAssignmentModal=function(id){
+    document.getElementById('editAssignmentId').value='';
+    document.getElementById('assignmentModalTitle').innerHTML='<i class="fi fi-rr-presentation"></i> Assign Teacher';
+    document.getElementById('assignTeacher').value='';
+    document.getElementById('assignSection').value='';
+    document.getElementById('assignSubject').value='';
+    document.getElementById('assignMeetings').value='5';
+    document.getElementById('assignMinutes').value='60';
+    document.getElementById('assignAdvisory').checked=false;
+    openModal('assignmentModal');
+};
+
+window.saveAssignment=function(){
+    const data={
+        teacher_id:document.getElementById('assignTeacher').value,
+        section_id:document.getElementById('assignSection').value,
+        subject_id:document.getElementById('assignSubject').value,
+        meetings_per_week:parseInt(document.getElementById('assignMeetings').value)||5,
+        minutes_per_meeting:parseInt(document.getElementById('assignMinutes').value)||60,
+        is_advisory:document.getElementById('assignAdvisory').checked,
+    };
+    if(!data.teacher_id||!data.section_id||!data.subject_id){showToast('All fields are required','error');return}
+    fetch('/registrars/assignments/create/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},body:JSON.stringify(data)})
+    .then(r=>r.json()).then(res=>{if(res.success){showToast(res.message,'success');closeModal('assignmentModal');loadAssignments()}else{showToast(res.error,'error')}});
+};
+
+function loadAssignments(){
+    const grade=document.getElementById('assignGradeFilter')?.value||'';
+    const teacher=document.getElementById('assignTeacherFilter')?.value||'';
+    const search=document.getElementById('assignSearch')?.value||'';
+    fetch(`/registrars/assignments/data/?grade=${grade}&teacher=${teacher}&search=${encodeURIComponent(search)}`)
+    .then(r=>r.json()).then(d=>{
+        if(d.success){
+            document.getElementById('assignmentCount').textContent=`${d.assignments.length} assignments`;
+            document.getElementById('statAssignments').textContent=d.stats?.total||0;
+            const tbody=document.getElementById('assignmentsTableBody');
+            if(!d.assignments.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty"><i class="fi fi-rr-presentation"></i><h3>No Assignments</h3><p>Assign teachers to sections and subjects.</p></div></td></tr>';return}
+            tbody.innerHTML=d.assignments.map(a=>`<tr>
+                <td><strong>${a.teacher_name}</strong></td>
+                <td>${a.section_name}</td>
+                <td>${a.subject_code} — ${a.subject_name}</td>
+                <td>${a.grade_name}</td>
+                <td>${a.meetings_per_week}x/week · ${a.minutes_per_meeting}min</td>
+                <td>${a.is_advisory?'<span class="pill pill-green">Adviser</span>':'<span class="pill pill-gray">—</span>'}</td>
+                <td>
+                    <button class="btn btn-outline btn-xs" onclick="editAssignment(${a.id})"><i class="fi fi-rr-pencil"></i></button>
+                    <button class="btn btn-danger btn-xs" onclick="deleteAssignment(${a.id})"><i class="fi fi-rr-trash"></i></button>
+                </td>
+            </tr>`).join('');
+        }
+    });
+}
+
+window.deleteAssignment=function(id){
+    if(!confirm('Remove this teacher assignment?'))return;
+    fetch(`/registrars/assignments/${id}/delete/`,{method:'POST',headers:{'X-CSRFToken':csrfToken}})
+    .then(r=>r.json()).then(res=>{if(res.success){showToast(res.message,'success');loadAssignments()}else{showToast(res.error,'error')}});
+};
+
+// ═══════════════════ SCHEDULES ═══════════════════
+window.openScheduleModal=function(id){
+    document.getElementById('editScheduleId').value='';
+    document.getElementById('scheduleModalTitle').innerHTML='<i class="fi fi-rr-time-fast"></i> Add Schedule';
+    document.getElementById('scheduleAssignment').value='';
+    document.getElementById('scheduleDay').value='Monday';
+    document.getElementById('scheduleType').value='Regular';
+    document.getElementById('scheduleStart').value='07:00';
+    document.getElementById('scheduleEnd').value='08:00';
+    document.getElementById('scheduleRoom').value='';
+    document.getElementById('scheduleNotes').value='';
+    openModal('scheduleModal');
+};
+
+window.saveSchedule=function(){
+    const data={
+        class_assignment_id:document.getElementById('scheduleAssignment').value,
+        day_of_week:document.getElementById('scheduleDay').value,
+        schedule_type:document.getElementById('scheduleType').value,
+        time_start:document.getElementById('scheduleStart').value,
+        time_end:document.getElementById('scheduleEnd').value,
+        room_id:document.getElementById('scheduleRoom').value||null,
+        notes:document.getElementById('scheduleNotes').value,
+    };
+    if(!data.class_assignment_id||!data.time_start||!data.time_end){showToast('Assignment and time are required','error');return}
+    fetch('/registrars/schedules/create/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},body:JSON.stringify(data)})
+    .then(r=>r.json()).then(res=>{if(res.success){showToast(res.message,'success');closeModal('scheduleModal');loadSchedules()}else{showToast(res.error,'error')}});
+};
+
+function loadSchedules(){
+    const section=document.getElementById('scheduleSectionFilter')?.value||'';
+    const teacher=document.getElementById('scheduleTeacherFilter')?.value||'';
+    fetch(`/registrars/schedules/data/?section=${section}&teacher=${teacher}`)
+    .then(r=>r.json()).then(d=>{
+        if(d.success){
+            document.getElementById('scheduleCount').textContent=`${d.schedules.length} entries`;
+            document.getElementById('statSchedules').textContent=d.stats?.total||0;
+            const tbody=document.getElementById('schedulesTableBody');
+            if(!d.schedules.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty"><i class="fi fi-rr-time-fast"></i><h3>No Schedules</h3><p>Add class schedule entries.</p></div></td></tr>';return}
+            tbody.innerHTML=d.schedules.map(s=>`<tr>
+                <td>${s.day_of_week}</td>
+                <td>${s.time_start} — ${s.time_end}</td>
+                <td><strong>${s.subject_code}</strong></td>
+                <td>${s.section_name}</td>
+                <td>${s.teacher_name}</td>
+                <td>${s.room||'Default'}</td>
+                <td><span class="pill ${s.schedule_type==='Regular'?'pill-green':'pill-blue'}">${s.schedule_type}</span></td>
+                <td>
+                    <button class="btn btn-outline btn-xs" onclick="editSchedule(${s.id})"><i class="fi fi-rr-pencil"></i></button>
+                    <button class="btn btn-danger btn-xs" onclick="deleteSchedule(${s.id})"><i class="fi fi-rr-trash"></i></button>
+                </td>
+            </tr>`).join('');
+            // Also update grid view
+            if(d.grid_data)updateScheduleGrid(d.grid_data);
+        }
+    });
+}
+
+function updateScheduleGrid(gridData){
+    ['monday','tuesday','wednesday','thursday','friday'].forEach(day=>{
+        const container=document.getElementById(`schedule-${day}`);
+        const slots=gridData[day]||[];
+        if(!slots.length){container.innerHTML='<div class="empty" style="padding:.5rem;"><p style="font-size:.65rem;">No classes</p></div>';return}
+        container.innerHTML=slots.sort((a,b)=>a.time_start.localeCompare(b.time_start)).map(s=>`
+            <div class="schedule-slot">
+                <div class="slot-time">${s.time_start}-${s.time_end}</div>
+                <div class="slot-subject">${s.subject_code}</div>
+                <div>${s.section_name}</div>
+                <div class="slot-room">${s.teacher_name} · ${s.room||'TBA'}</div>
+            </div>
+        `).join('');
+    });
+}
+
+window.deleteSchedule=function(id){
+    if(!confirm('Delete this schedule entry?'))return;
+    fetch(`/registrars/schedules/${id}/delete/`,{method:'POST',headers:{'X-CSRFToken':csrfToken}})
+    .then(r=>r.json()).then(res=>{if(res.success){showToast(res.message,'success');loadSchedules()}else{showToast(res.error,'error')}});
+};
+
+window.viewScheduleGrid=function(){
+    document.getElementById('scheduleTableView').style.display='none';
+    document.getElementById('scheduleGridView').style.display='block';
+};
+
+window.toggleScheduleView=function(){
+    const tv=document.getElementById('scheduleTableView');
+    const gv=document.getElementById('scheduleGridView');
+    if(gv.style.display==='none'){gv.style.display='block';tv.style.display='none'}
+    else{gv.style.display='none';tv.style.display='block'}
+};
+
+// ═══════════════════ INIT ═══════════════════
+loadSections();
+})();
+</script>
+</body>
+</html>

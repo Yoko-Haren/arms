@@ -1,0 +1,472 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Dashboard — Formify LIS</title>
+
+    <!-- Flaticon UIcons Regular Rounded -->
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
+        :root{
+            --rich-black:#00072D;--dark-blue:#051650;--caribbean-blue:#123499;
+            --secondary-green:#5EA173;--green-dark:#4a8a5e;--green-bg:rgba(94,161,115,0.08);
+            --warning-orange:#f39c12;--danger-red:#dc3545;--gray-bg:#f5f7fb;
+            --border-color:#e9ecef;--text-primary:#2d3748;--text-secondary:#718096;
+            --text-light:#a0aec0;--sidebar-width:280px;--sidebar-collapsed-width:80px;
+            --radius-sm:8px;--radius-md:14px;--radius-lg:20px;--radius-xl:28px;
+            --shadow-sm:0 2px 10px rgba(0,0,0,.05);--shadow-md:0 8px 25px rgba(0,0,0,.1);
+            --shadow-lg:0 12px 32px rgba(0,0,0,.18);--transition:all 0.25s cubic-bezier(.4,0,.2,1)
+        }
+        body{background:var(--gray-bg);min-height:100vh;color:var(--text-primary)}
+
+        /* ═══════════════ LAYOUT ═══════════════ */
+        .dashboard{display:flex;min-height:100vh}
+
+        /* ═══════════════ SIDEBAR ═══════════════ */
+        .sidebar{width:var(--sidebar-width);background:linear-gradient(180deg,var(--rich-black),var(--dark-blue));color:#fff;position:fixed;height:100vh;overflow-y:auto;overflow-x:hidden;transition:width .3s;z-index:100;display:flex;flex-direction:column}
+        .sidebar.collapsed{width:var(--sidebar-collapsed-width)}
+        .sidebar.collapsed .sb-logo-text,.sidebar.collapsed .user-details,.sidebar.collapsed .nav-link span{display:none}
+        .sidebar.collapsed .sb-header{justify-content:center;padding:1.5rem .5rem}
+        .sidebar.collapsed .sb-logo{display:none}
+        .sidebar.collapsed .user-info{justify-content:center;padding:.8rem;margin:0 .5rem 1.5rem}
+        .sidebar.collapsed .nav-link{justify-content:center;padding:.85rem 0;gap:0}
+        .sidebar.collapsed .nav-link i{font-size:1.2rem}
+        .sidebar.collapsed .fold-btn{margin:0 auto}
+        .sidebar::-webkit-scrollbar{width:4px}
+        .sidebar::-webkit-scrollbar-thumb{background:var(--secondary-green);border-radius:4px}
+        .sb-header{display:flex;align-items:center;justify-content:space-between;padding:1.5rem;border-bottom:1px solid rgba(255,255,255,.1)}
+        .sb-logo{display:flex;align-items:center;gap:.8rem;overflow:hidden}
+        .sb-logo i{font-size:1.8rem;color:var(--secondary-green);flex-shrink:0}
+        .sb-logo-text h2{font-size:1rem;font-weight:700;line-height:1.3}
+        .sb-logo-text span{font-size:.65rem;opacity:.6;display:block}
+        .fold-btn{background:rgba(255,255,255,.1);border:none;color:#fff;cursor:pointer;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:background .2s;flex-shrink:0}
+        .fold-btn:hover{background:rgba(255,255,255,.25)}
+        .user-info{display:flex;align-items:center;gap:.8rem;padding:.9rem;margin:1rem 1rem 1.5rem;background:rgba(255,255,255,.1);border-radius:12px;overflow:hidden;white-space:nowrap}
+        .user-avatar{width:42px;height:42px;background:var(--secondary-green);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:var(--rich-black);flex-shrink:0}
+        .user-details h4{font-size:.85rem;font-weight:600}
+        .user-details p{font-size:.65rem;opacity:.65}
+        .nav-menu{list-style:none;padding:0 .75rem;flex:1}
+        .nav-item{margin-bottom:.2rem}
+        .nav-link{display:flex;align-items:center;gap:.9rem;padding:.7rem 1rem;color:rgba(255,255,255,.8);text-decoration:none;border-radius:10px;font-size:.875rem;transition:var(--transition);white-space:nowrap;overflow:hidden}
+        .nav-link:hover{background:rgba(94,161,115,.2);color:#fff}
+        .nav-link.active{background:var(--secondary-green);color:var(--rich-black);font-weight:600}
+        .nav-link i{width:20px;font-size:1rem;text-align:center;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center}
+        .nav-footer{margin-top:auto;padding:1rem .75rem;border-top:1px solid rgba(255,255,255,.1)}
+        .nav-footer .nav-link{background:none;border:none;cursor:pointer;width:100%}
+
+        /* ═══════════════ MAIN CONTENT ═══════════════ */
+        .main-content{flex:1;margin-left:var(--sidebar-width);padding:1.5rem;transition:margin-left .3s;min-height:100vh}
+        .sidebar.collapsed~.main-content{margin-left:var(--sidebar-collapsed-width)}
+
+        /* ═══════════════ TOP BAR ═══════════════ */
+        .top-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;background:#fff;padding:1rem 1.5rem;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);margin-bottom:1.5rem}
+        .welcome h1{font-size:1.25rem;color:var(--rich-black);font-weight:700}
+        .welcome p{font-size:.78rem;color:var(--text-secondary);margin-top:.2rem;display:flex;align-items:center;gap:.4rem}
+        .top-bar-actions{display:flex;align-items:center;gap:.8rem}
+        .date-chip{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--text-secondary);background:var(--gray-bg);padding:.35rem .75rem;border-radius:8px}
+        .notif-wrap{position:relative}
+        .notif-btn{background:none;border:none;padding:.35rem;cursor:pointer;display:flex;align-items:center;border-radius:8px;transition:background .2s}
+        .notif-btn:hover{background:var(--gray-bg)}
+        .notif-btn i{font-size:1.2rem;color:var(--text-primary)}
+        .notif-count{position:absolute;top:-4px;right:-6px;background:#dc3545;color:#fff;font-size:.55rem;padding:.1rem .35rem;border-radius:10px;min-width:16px;text-align:center;font-weight:700}
+        .notif-count.zero{background:#adb5bd}
+        .notif-dropdown{position:absolute;top:44px;right:0;width:340px;background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);z-index:300;display:none;overflow:hidden;border:1px solid var(--border-color)}
+        .notif-dropdown.open{display:block;animation:fadeDown .2s ease}
+        @keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+        .notif-head{padding:.8rem 1.2rem;background:var(--gray-bg);border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.82rem;color:var(--rich-black)}
+        .notif-list{max-height:340px;overflow-y:auto}
+        .notif-item{display:flex;gap:.7rem;padding:.8rem 1.2rem;border-bottom:1px solid var(--border-color);cursor:pointer;transition:background .2s}
+        .notif-item:hover{background:var(--gray-bg)}
+        .notif-item.unread{background:rgba(94,161,115,.05);border-left:3px solid var(--secondary-green)}
+        .notif-icon{width:32px;height:32px;background:var(--green-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--secondary-green);font-size:.8rem}
+        .notif-body .notif-title{font-size:.78rem;font-weight:600;color:var(--rich-black)}
+        .notif-body .notif-msg{font-size:.7rem;color:var(--text-secondary);line-height:1.4}
+        .notif-body .notif-time{font-size:.62rem;color:var(--text-light);margin-top:.2rem}
+        .notif-foot{padding:.6rem;text-align:center;border-top:1px solid var(--border-color);background:var(--gray-bg)}
+        .notif-foot a{color:var(--secondary-green);font-size:.72rem;font-weight:600;cursor:pointer}
+
+        /* ═══════════════ PORO BANNER ═══════════════ */
+        .poro-banner{background:linear-gradient(135deg,#f0f9f0,#e8f5e9);border:1px solid rgba(94,161,115,.3);border-radius:var(--radius-xl);padding:1rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+        .poro-left{display:flex;align-items:center;gap:1rem}
+        .poro-icon{width:50px;height:50px;background:var(--secondary-green);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;box-shadow:0 4px 12px rgba(94,161,115,.3);animation:bounce 2s ease infinite}
+        .poro-icon img{width:100%;height:100%;object-fit:cover}
+        @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+        .poro-msg h3{font-size:1rem;color:var(--rich-black);font-weight:700;margin-bottom:.2rem}
+        .poro-msg p{font-size:.75rem;color:var(--text-secondary)}
+
+        /* ═══════════════ STATS GRID ═══════════════ */
+        .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+        .stat-card{background:#fff;padding:1.1rem;border-radius:var(--radius-lg);display:flex;align-items:center;gap:.9rem;box-shadow:var(--shadow-sm);border:2px solid transparent;transition:var(--transition);cursor:pointer}
+        .stat-card:hover{border-color:var(--secondary-green);transform:translateY(-2px);box-shadow:var(--shadow-md)}
+        .stat-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+        .stat-icon.blue{background:rgba(18,52,153,.1);color:var(--caribbean-blue)}
+        .stat-icon.green{background:var(--green-bg);color:var(--secondary-green)}
+        .stat-icon.orange{background:rgba(243,156,18,.1);color:var(--warning-orange)}
+        .stat-icon.purple{background:rgba(128,0,128,.1);color:#9b59b6}
+        .stat-info h3{font-size:.68rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.15rem}
+        .stat-info .value{font-size:1.5rem;font-weight:800;color:var(--rich-black);line-height:1.2}
+        .stat-info .sub{font-size:.63rem;color:var(--text-secondary);margin-top:.1rem}
+
+        /* ═══════════════ BUTTONS ═══════════════ */
+        .quick-actions{display:flex;gap:.8rem;margin-bottom:1.5rem;flex-wrap:wrap}
+        .btn{display:inline-flex;align-items:center;gap:.45rem;padding:.55rem 1.2rem;border-radius:var(--radius-sm);font-size:.82rem;font-weight:600;cursor:pointer;border:none;transition:var(--transition);white-space:nowrap;text-decoration:none}
+        .btn-primary{background:var(--secondary-green);color:#fff}
+        .btn-primary:hover{background:var(--green-dark);transform:translateY(-1px)}
+        .btn-outline{background:transparent;border:2px solid var(--border-color);color:var(--text-primary)}
+        .btn-outline:hover{border-color:var(--secondary-green);color:var(--secondary-green);background:var(--green-bg)}
+        .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+
+        /* ═══════════════ TWO COLUMN ═══════════════ */
+        .two-col{display:grid;grid-template-columns:1.2fr 0.8fr;gap:1.5rem;margin-bottom:1.5rem}
+        .card{background:#fff;border-radius:var(--radius-lg);padding:1.3rem 1.5rem;box-shadow:var(--shadow-sm);display:flex;flex-direction:column}
+        .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-shrink:0}
+        .card-header h2{font-size:1rem;font-weight:700;color:var(--rich-black);display:flex;align-items:center;gap:.4rem}
+        .card-header h2 i{color:var(--secondary-green)}
+        .view-all{color:var(--secondary-green);font-size:.75rem;font-weight:600;cursor:pointer;text-decoration:none;transition:opacity .2s}
+        .view-all:hover{opacity:.8}
+
+        /* ═══════════════ SCROLLABLE ═══════════════ */
+        .scrollable{max-height:280px;overflow-y:auto;flex:1}
+        .scrollable::-webkit-scrollbar{width:4px}
+        .scrollable::-webkit-scrollbar-thumb{background:var(--border-color);border-radius:4px}
+
+        /* ═══════════════ VALIDATION ITEMS ═══════════════ */
+        .validation-item{display:flex;align-items:center;justify-content:space-between;padding:.8rem 0;border-bottom:1px solid var(--border-color)}
+        .validation-item:last-child{border-bottom:none}
+        .validation-info h4{font-size:.85rem;color:var(--rich-black);font-weight:600}
+        .validation-info p{font-size:.7rem;color:var(--text-secondary)}
+
+        /* ═══════════════ PILLS ═══════════════ */
+        .pill{padding:.22rem .65rem;border-radius:20px;font-size:.65rem;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+        .pill-warning{background:#fff3cd;color:#856404}
+        .pill-danger{background:#f8d7da;color:#721c24}
+        .pill-success{background:#d4edda;color:#155724}
+
+        /* ═══════════════ ENROLLMENT BREAKDOWN ═══════════════ */
+        .enrollment-breakdown{display:flex;justify-content:space-around;margin:1rem 0;flex-wrap:wrap;gap:.5rem}
+        .grade-stat{text-align:center;cursor:pointer;padding:.5rem .8rem;border-radius:var(--radius-sm);transition:background .2s}
+        .grade-stat:hover{background:var(--gray-bg)}
+        .grade-stat .grade-level{font-weight:700;color:var(--rich-black);font-size:.8rem}
+        .grade-stat .count{font-size:1.3rem;font-weight:700;color:var(--caribbean-blue)}
+
+        /* ═══════════════ COMPLIANCE GRID ═══════════════ */
+        .compliance-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem}
+        .compliance-item{background:var(--gray-bg);padding:.75rem;border-radius:10px;display:flex;align-items:center;gap:.5rem;cursor:pointer;transition:var(--transition);border:1.5px solid transparent}
+        .compliance-item:hover{background:var(--green-bg);border-color:rgba(94,161,115,.3)}
+        .compliance-item i{font-size:1rem;flex-shrink:0}
+        .compliance-info h4{font-size:.75rem;color:var(--rich-black);font-weight:600}
+        .compliance-info p{font-size:.65rem;color:var(--text-secondary)}
+
+        /* ═══════════════ EMPTY STATE ═══════════════ */
+        .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 2rem;text-align:center}
+        .empty-icon{font-size:2.5rem;color:var(--text-light);margin-bottom:.8rem;opacity:.5}
+        .empty-title{font-size:.9rem;font-weight:600;color:var(--text-secondary);margin-bottom:.3rem}
+        .empty-message{font-size:.75rem;color:var(--text-light);max-width:280px;line-height:1.5}
+
+        .coming-soon-badge{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:.2rem .6rem;border-radius:20px;font-size:.6rem;font-weight:600;margin-left:.5rem}
+
+        /* ═══════════════ MODAL ═══════════════ */
+        .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem}
+        .modal-overlay.open{display:flex}
+        .modal{background:#fff;border-radius:var(--radius-xl);width:100%;max-width:560px;box-shadow:0 24px 60px rgba(0,0,0,.22);animation:modalIn .28s cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column;max-height:90vh}
+        @keyframes modalIn{from{opacity:0;transform:translateY(-16px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+        .modal-header{padding:1.2rem 1.5rem 1rem;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+        .modal-header h2{font-size:1.05rem;font-weight:700;color:var(--rich-black);display:flex;align-items:center;gap:.5rem}
+        .modal-header h2 i{color:var(--secondary-green)}
+        .modal-close{background:none;border:none;cursor:pointer;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-light);font-size:1.1rem;transition:var(--transition)}
+        .modal-close:hover{background:var(--gray-bg);color:var(--danger-red)}
+        .modal-body{padding:1.3rem 1.5rem;overflow-y:auto;flex:1}
+        .modal-footer{padding:.9rem 1.5rem 1.2rem;border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;gap:.7rem;flex-shrink:0}
+        .detail-row{display:flex;padding:.6rem 0;border-bottom:1px solid var(--border-color)}
+        .detail-label{width:140px;font-weight:600;color:var(--rich-black);font-size:.82rem;flex-shrink:0}
+        .detail-value{flex:1;color:var(--text-primary);font-size:.82rem}
+
+        /* ═══════════════ TOAST ═══════════════ */
+        .toast-container{position:fixed;top:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem}
+        .toast{padding:.75rem 1.2rem;border-radius:var(--radius-sm);color:#fff;font-size:.8rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.2);animation:toastIn .3s ease;max-width:380px;display:flex;align-items:center;gap:.6rem;cursor:pointer}
+        .toast.success{background:#28a745}
+        .toast.error{background:#dc3545}
+        .toast.warning{background:#f39c12;color:#000}
+        @keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+
+        /* ═══════════════ MOBILE ═══════════════ */
+        .mobile-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;display:none}
+        .mobile-overlay.show{display:block}
+        @media(max-width:1200px){.stats-grid{grid-template-columns:repeat(2,1fr)}.two-col{grid-template-columns:1fr}}
+        @media(max-width:768px){
+            .sidebar{transform:translateX(-100%);width:var(--sidebar-width)!important;transition:transform .3s}
+            .sidebar.mobile-open{transform:translateX(0)}
+            .main-content{margin-left:0!important;padding:1rem}
+            .stats-grid{grid-template-columns:1fr}
+            .modal{max-width:100%;border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+            .modal-overlay{align-items:flex-end}
+            .notif-dropdown{width:290px;right:-10px}
+        }
+    </style>
+</head>
+<body>
+<div class="mobile-overlay" id="mobileOverlay"></div>
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="dashboard">
+    <!-- ═══════════════ SIDEBAR ═══════════════ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sb-header">
+            <div class="sb-logo"><i class="fi fi-rr-graduation-cap"></i><div class="sb-logo-text"><h2>Formify</h2><span>Registrar Portal</span></div></div>
+            <button class="fold-btn" id="foldBtn"><i class="fi fi-rr-angle-small-left" id="foldIcon"></i></button>
+        </div>
+        <div class="user-info">
+            <div class="user-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+            <div class="user-details"><h4>{{ request.user.get_full_name }}</h4><p>School Registrar</p></div>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="{% url 'registrars:dashboard' %}" class="nav-link active"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:student-records' %}" class="nav-link"><i class="fi fi-rr-user"></i><span>Student Records</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:enrollment-management' %}" class="nav-link"><i class="fi fi-rr-file-invoice"></i><span>Enrollment</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:grade-validation' %}" class="nav-link"><i class="fi fi-rr-check-double"></i><span>Grade Validation</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:forms' %}" class="nav-link"><i class="fi fi-rr-folder-open"></i><span>School Forms</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:transfer-management' %}" class="nav-link"><i class="fi fi-rr-exchange-alt"></i><span>Transfer Requests</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:reports-analytics' %}" class="nav-link"><i class="fi fi-rr-chart-line-up"></i><span>Reports</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:section-schedule-management' %}" class="nav-link"><i class="fi fi-rr-calendar"></i><span>Sections & Schedule</span></a></li>
+        </ul>
+        <ul class="nav-menu nav-footer">
+            <li class="nav-item">
+                <form method="POST" action="{% url 'signout' %}" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-link"><i class="fi fi-rr-sign-out-alt"></i><span>Logout</span></button>
+                </form>
+            </li>
+        </ul>
+    </aside>
+
+    <!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+    <div class="main-content" id="mainContent">
+        <!-- TOP BAR -->
+        <div class="top-bar">
+            <div class="welcome">
+                <h1 id="greetingText">Hello, {{ request.user.first_name }}!</h1>
+                <p><i class="fi fi-rr-calendar"></i> School Year {{ current_sy_label }} · Registrar Portal</p>
+            </div>
+            <div class="top-bar-actions">
+                <div class="date-chip"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
+                <div class="notif-wrap">
+                    <button class="notif-btn" id="notifBtn"><i class="fi fi-rr-bell"></i><span class="notif-count zero" id="notifCount">0</span></button>
+                    <div class="notif-dropdown" id="notifDropdown">
+                        <div class="notif-head"><span>Notifications</span><span class="coming-soon-badge">Coming Soon</span></div>
+                        <div class="notif-list">
+                            <div class="empty-state" style="min-height:120px;padding:1.5rem;">
+                                <i class="fi fi-rr-bell empty-icon"></i>
+                                <p class="empty-message" style="margin:0;">Notification center will be available soon.</p>
+                            </div>
+                        </div>
+                        <div class="notif-foot"><a id="markAllRead">Coming Soon</a></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PORO BANNER -->
+        <div class="poro-banner">
+            <div class="poro-left">
+                <div class="poro-icon"><img src="{% static 'shared/poro/Poro.png' %}" alt="Poro" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fi fi-rr-smile\' style=\'font-size:1.6rem;color:#fff;\'></i>';"></div>
+                <div class="poro-msg">
+                    <h3>Welcome back, {{ request.user.first_name }}!</h3>
+                    <p>{% if has_data %}You have <strong>{{ pending_validations }}</strong> grade submissions ready for validation. {{ transfer_count }} transfer requests pending.{% else %}Your dashboard is ready. Begin by enrolling students for the current school year.{% endif %}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- STATS GRID -->
+        <div class="stats-grid">
+            <div class="stat-card" onclick="showDetail('Total Enrollment','Current enrollment across all grade levels for SY {{ current_sy_label }}.','{{ total_enrollment }} students enrolled','JHS: {{ jhs_count }} | SHS: {{ shs_count }}')">
+                <div class="stat-icon blue"><i class="fi fi-rr-users"></i></div>
+                <div class="stat-info"><h3>Total Enrollment</h3><div class="value">{{ total_enrollment }}</div><div class="sub">JHS: {{ jhs_count }} | SHS: {{ shs_count }}</div></div>
+            </div>
+            <div class="stat-card" onclick="showDetail('Pending Validation','Grades and forms awaiting your review.','{{ pending_validations }} items pending','Includes grade submissions, SF5 reports, and SF10 requests.')">
+                <div class="stat-icon orange"><i class="fi fi-rr-hourglass"></i></div>
+                <div class="stat-info"><h3>Pending Validation</h3><div class="value">{{ pending_validations }}</div><div class="sub">Grades / SF5 / SF10</div></div>
+            </div>
+            <div class="stat-card" onclick="showDetail('Transfer Requests','Student transfer requests requiring processing.','{{ transfer_count }} active requests','Incoming: {{ incoming_count }} | Outgoing: {{ outgoing_count }}')">
+                <div class="stat-icon purple"><i class="fi fi-rr-exchange-alt"></i></div>
+                <div class="stat-info"><h3>Transfer Requests</h3><div class="value">{{ transfer_count }}</div><div class="sub">In: {{ incoming_count }} | Out: {{ outgoing_count }}</div></div>
+            </div>
+            <div class="stat-card" onclick="showDetail('Forms Compliance','DepEd school forms tracking for SY {{ current_sy_label }}.','{{ forms_completed|default:"0" }}/10 forms tracked','SF1 through SF10 compliance monitoring.')">
+                <div class="stat-icon green"><i class="fi fi-rr-document"></i></div>
+                <div class="stat-info"><h3>Forms Compliance</h3><div class="value">{{ forms_completed|default:"0" }}/10</div><div class="sub">SF1-SF10 tracking</div></div>
+            </div>
+        </div>
+
+        <!-- QUICK ACTIONS -->
+        <div class="quick-actions">
+            {% if has_data %}
+                <a href="/registrars/grades/" class="btn btn-primary"><i class="fi fi-rr-check-circle"></i> Validate Grades ({{ pending_validations }})</a>
+                <a href="/registrars/enrollment/" class="btn btn-outline"><i class="fi fi-rr-user-add"></i> New Enrollment</a>
+                <a href="/registrars/forms/" class="btn btn-outline"><i class="fi fi-rr-print"></i> Generate SF10</a>
+            {% else %}
+                <button class="btn btn-primary" disabled><i class="fi fi-rr-check-circle"></i> Validate Grades</button>
+                <button class="btn btn-outline" disabled><i class="fi fi-rr-user-add"></i> New Enrollment</button>
+                <button class="btn btn-outline" disabled><i class="fi fi-rr-print"></i> Generate SF10</button>
+            {% endif %}
+        </div>
+
+        <!-- TWO COLUMN -->
+        <div class="two-col">
+            <!-- PENDING VALIDATIONS -->
+            <div class="card">
+                <div class="card-header"><h2><i class="fi fi-rr-document"></i> Pending Grade & Form Validation</h2><a href="/registrars/grades/" class="view-all">View All</a></div>
+                {% if pending_validation_items %}
+                <div class="scrollable">
+                    {% for item in pending_validation_items %}
+                    <div class="validation-item">
+                        <div class="validation-info"><h4>{{ item.section }} — {{ item.subject }}</h4><p>{{ item.teacher }} · {{ item.student_count }} Students</p></div>
+                        <span class="pill {{ item.status_class }}">{{ item.status_text }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state"><i class="fi fi-rr-check-circle empty-icon"></i><div class="empty-title">All Caught Up</div><div class="empty-message">No pending grade or form validations at this time.</div></div>
+                {% endif %}
+            </div>
+
+            <!-- SCHOOL FORM STATUS -->
+            <div class="card">
+                <div class="card-header"><h2><i class="fi fi-rr-shield-check"></i> School Form Status</h2><span class="view-all">SY {{ current_sy_label }}</span></div>
+                {% if forms_compliance %}
+                <div class="scrollable">
+                    <div class="compliance-grid">
+                        {% for form in forms_compliance %}
+                        <div class="compliance-item" onclick="showDetail('{{ form.form_code }} — {{ form.form_name }}','Form compliance status for {{ form.form_name }}.','{{ form.pct }}% Complete','Tracks {{ form.form_name|lower }} across all grade levels.')">
+                            <i class="fi fi-rr-{% if form.pct >= 90 %}check-circle{% elif form.pct >= 50 %}clock-three{% else %}document{% endif %}" style="color:{% if form.pct >= 90 %}var(--secondary-green){% elif form.pct >= 50 %}var(--warning-orange){% else %}var(--text-secondary){% endif %};"></i>
+                            <div class="compliance-info"><h4>{{ form.form_code }} — {{ form.form_name }}</h4><p>{{ form.pct }}% complete</p></div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-state"><i class="fi fi-rr-folder-open empty-icon"></i><div class="empty-title">No Form Data</div><div class="empty-message">Form compliance tracking will appear once data is available.</div></div>
+                {% endif %}
+
+                <!-- ENROLLMENT BY GRADE -->
+                <div style="margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border-color);flex-shrink:0;">
+                    <div class="card-header"><h2><i class="fi fi-rr-chart-pie-alt"></i> Enrollment by Grade Level</h2></div>
+                    {% if enrollment_by_grade %}
+                    <div class="enrollment-breakdown">
+                        {% for grade in enrollment_by_grade %}
+                        <div class="grade-stat" onclick="showDetail('{{ grade.grade_name }}','Enrollment details for {{ grade.grade_name }}.','{{ grade.count }} Students','View the complete enrollment breakdown.')">
+                            <span class="grade-level">{{ grade.grade_name }}</span>
+                            <div class="count">{{ grade.count }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty-state" style="min-height:60px;padding:.5rem;"><div class="empty-message">No enrollment data yet.</div></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- TRANSFERS & ENROLLMENT -->
+        <div class="two-col">
+            <div class="card">
+                <div class="card-header"><h2><i class="fi fi-rr-time-past"></i> Recent Transfers</h2><a href="/registrars/transfers/" class="view-all">Process</a></div>
+                {% if transfer_items %}
+                <div class="scrollable" style="max-height:220px;">
+                    {% for t in transfer_items %}
+                    <div class="validation-item">
+                        <div class="validation-info"><h4>{{ t.transfer_type }}: {{ t.student_name }}</h4><p>{{ t.from_school }}{% if t.to_school %} → {{ t.to_school }}{% endif %} · Grade {{ t.grade_level }}</p></div>
+                        <span class="pill {{ t.status_class }}">{{ t.status_text }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state"><i class="fi fi-rr-exchange-alt empty-icon"></i><div class="empty-title">No Transfer Requests</div><div class="empty-message">Student transfer requests will appear here for processing.</div></div>
+                {% endif %}
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h2><i class="fi fi-rr-address-card"></i> Quick Enrollment</h2><span class="coming-soon-badge">Ready</span></div>
+                <div class="empty-state" style="min-height:150px;">
+                    <i class="fi fi-rr-user-add empty-icon"></i>
+                    <div class="empty-title">Enrollment Module</div>
+                    <div class="empty-message">Register new students, process batch enrollments, and manage section assignments efficiently.</div>
+                    <a href="/registrars/enrollment/" class="btn btn-primary" style="margin-top:1rem;"><i class="fi fi-rr-arrow-right"></i> Go to Enrollment</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- RECENT ACTIVITY -->
+        <div class="card" style="margin-top:0;">
+            <div class="card-header"><h2><i class="fi fi-rr-clock-three"></i> Recent Activity</h2><span class="coming-soon-badge">Coming Soon</span></div>
+            <div class="empty-state" style="min-height:100px;padding:1rem;">
+                <i class="fi fi-rr-chart-histogram empty-icon" style="font-size:1.8rem;"></i>
+                <div class="empty-message">Activity feed will display recent submissions, validations, and transfers.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ DETAIL MODAL ═══════════════ -->
+<div class="modal-overlay" id="detailModal">
+    <div class="modal">
+        <div class="modal-header"><h2 id="detailModalTitle"><i class="fi fi-rr-info-circle"></i> Details</h2><button class="modal-close" onclick="closeDetailModal()"><i class="fi fi-rr-cross-small"></i></button></div>
+        <div class="modal-body">
+            <div class="detail-row"><div class="detail-label">Description</div><div class="detail-value" id="detailDescription">—</div></div>
+            <div class="detail-row"><div class="detail-label">Summary</div><div class="detail-value" id="detailSummary">—</div></div>
+            <div class="detail-row"><div class="detail-label">Additional Info</div><div class="detail-value" id="detailInfo">—</div></div>
+            <div style="margin-top:1rem;padding:1rem;background:var(--gray-bg);border-radius:12px;">
+                <p style="font-size:.8rem;color:var(--text-secondary);"><i class="fi fi-rr-info-circle" style="color:var(--secondary-green);margin-right:.4rem;"></i>Click "Close" to return to the dashboard.</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeDetailModal()">Close</button>
+            <button class="btn btn-primary" onclick="closeDetailModal()"><i class="fi fi-rr-check"></i> OK</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){'use strict';
+
+// ═══════════════ SIDEBAR ═══════════════
+const sidebar=document.getElementById('sidebar'),foldBtn=document.getElementById('foldBtn'),foldIcon=document.getElementById('foldIcon'),mainContent=document.getElementById('mainContent'),mobileOverlay=document.getElementById('mobileOverlay');
+let collapsed=false;
+function adjustMargin(){mainContent.style.marginLeft=window.innerWidth>768?(collapsed?'var(--sidebar-collapsed-width)':'var(--sidebar-width)'):'0'}
+foldBtn.addEventListener('click',()=>{if(window.innerWidth<=768){const o=sidebar.classList.toggle('mobile-open');mobileOverlay.classList.toggle('show',o)}else{collapsed=!collapsed;sidebar.classList.toggle('collapsed',collapsed);foldIcon.className=collapsed?'fi fi-rr-angle-small-right':'fi fi-rr-angle-small-left';adjustMargin()}});
+mobileOverlay.addEventListener('click',()=>{sidebar.classList.remove('mobile-open');mobileOverlay.classList.remove('show')});
+window.addEventListener('resize',adjustMargin);adjustMargin();
+
+// ═══════════════ NOTIFICATIONS ═══════════════
+const notifBtn=document.getElementById('notifBtn'),notifDropdown=document.getElementById('notifDropdown');
+notifBtn.addEventListener('click',e=>{e.stopPropagation();notifDropdown.classList.toggle('open')});
+document.addEventListener('click',e=>{if(!e.target.closest('.notif-wrap'))notifDropdown.classList.remove('open')});
+
+// ═══════════════ MODAL ═══════════════
+window.showDetail=function(title,desc,summary,info){
+    document.getElementById('detailModalTitle').innerHTML='<i class="fi fi-rr-info-circle"></i> '+title;
+    document.getElementById('detailDescription').textContent=desc;
+    document.getElementById('detailSummary').textContent=summary;
+    document.getElementById('detailInfo').textContent=info;
+    document.getElementById('detailModal').classList.add('open');
+    document.body.style.overflow='hidden';
+};
+window.closeDetailModal=function(){
+    document.getElementById('detailModal').classList.remove('open');
+    document.body.style.overflow='';
+};
+document.querySelectorAll('.modal-overlay').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov)closeDetailModal()}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDetailModal()});
+
+// ═══════════════ DATE & GREETING ═══════════════
+function updateGreeting(){const h=new Date().getHours();const g=h<12?'Good morning':h<17?'Good afternoon':'Good evening';const el=document.getElementById('greetingText');if(el)el.textContent=g+', {{ request.user.first_name|escapejs }}!'}
+function updateDate(){const el=document.getElementById('currentDate');if(el)el.textContent=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}
+updateGreeting();updateDate();setInterval(updateDate,60000);setInterval(updateGreeting,60000);
+
+})();
+</script>
+</body>
+</html>

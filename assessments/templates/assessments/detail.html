@@ -1,0 +1,129 @@
+{% extends 'teachers/base.html' %}
+{% load static %}
+
+{% block title %}{{ assessment.title }} - Results{% endblock %}
+{% block subtitle %}Assessment Results{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{% url 'assessments:list' %}" class="btn-outline btn-sm">
+            <i class="fi fi-rr-arrow-left"></i> Back to Assessments
+        </a>
+    </div>
+    <button class="btn-outline btn-sm" onclick="copyLink('{{ assessment.get_share_url }}')">
+        <i class="fi fi-rr-link"></i> Copy Quiz Link
+    </button>
+</div>
+
+<!-- Assessment Info -->
+<div class="card mb-4">
+    <div class="section-header">
+        <h2><i class="fi fi-rr-quiz"></i> {{ assessment.title }}</h2>
+        <span class="badge badge-info">{{ assessment.access_code }}</span>
+    </div>
+    <div class="row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;">
+        <div>
+            <small style="color:#6c757d;">Subject</small>
+            <div style="font-weight:600;">{{ assessment.subject.subject_name }}</div>
+        </div>
+        <div>
+            <small style="color:#6c757d;">Section</small>
+            <div style="font-weight:600;">{{ assessment.section.section_name }}</div>
+        </div>
+        <div>
+            <small style="color:#6c757d;">Items</small>
+            <div style="font-weight:600;">{{ assessment.total_items }} ({{ assessment.points_per_item }} pt each)</div>
+        </div>
+        <div>
+            <small style="color:#6c757d;">Passing Score</small>
+            <div style="font-weight:600;">{{ assessment.passing_score }}%</div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="four-col mb-4">
+    <div class="stat-card blue">
+        <h3>{{ total_responses }}</h3>
+        <small>Total Responses</small>
+    </div>
+    <div class="stat-card green">
+        <h3>{{ passed_count }}</h3>
+        <small>Passed</small>
+    </div>
+    <div class="stat-card orange">
+        <h3>{{ failed_count|default:0 }}</h3>
+        <small>Failed</small>
+    </div>
+    <div class="stat-card purple">
+        <h3>{{ passing_rate|default:0 }}%</h3>
+        <small>Passing Rate</small>
+    </div>
+</div>
+
+<!-- Student Responses -->
+<div class="card">
+    <div class="section-header">
+        <h2><i class="fi fi-rr-users"></i> Student Responses</h2>
+    </div>
+    
+    {% if responses %}
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Score</th>
+                    <th>Percentage</th>
+                    <th>Status</th>
+                    <th>Submitted</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in responses %}
+                <tr>
+                    <td>
+                        <strong>{{ r.student_name|default:"Anonymous" }}</strong>
+                        {% if r.student_email %}
+                        <br><small style="color:#6c757d;">{{ r.student_email }}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ r.score }}/{{ r.total_points }}</td>
+                    <td>
+                        {% if r.total_points > 0 %}
+                        {{ r.score|floatformat:0 }}/{{ r.total_points|floatformat:0 }}%
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge {% if r.passed %}badge-success{% else %}badge-danger{% endif %}">
+                            {% if r.passed %}Passed{% else %}Failed{% endif %}
+                        </span>
+                    </td>
+                    <td><small>{{ r.submitted_at|date:"M d, Y h:i A" }}</small></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:3rem;">
+        <i class="fi fi-rr-users" style="font-size:3rem;color:#a0aec0;opacity:0.4;"></i>
+        <h5 style="color:#6c757d;margin-top:1rem;">No Responses Yet</h5>
+        <p style="color:#a0aec0;">Share the quiz link with your students.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function copyLink(url) {
+    var fullUrl = window.location.origin + url;
+    navigator.clipboard.writeText(fullUrl).then(function() {
+        showToast('Quiz link copied! 📋', 'success');
+    });
+}
+</script>
+{% endblock %}

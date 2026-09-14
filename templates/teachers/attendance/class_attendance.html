@@ -1,0 +1,2189 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Attendance - Formify LIS</title>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Century Gothic', sans-serif;
+        }
+
+        :root {
+            --rich-black: #00072D;
+            --dark-blue: #051650;
+            --caribbean-blue: #123499;
+            --secondary-green: #5EA173;
+            --gray-bg: #f5f7fa;
+            --border-color: #e9ecef;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --warning-bg: #fff3cd;
+            --warning-text: #856404;
+            --success-bg: #d4edda;
+            --success-text: #155724;
+            --danger-bg: #f8d7da;
+            --danger-text: #721c24;
+            --present-color: #5EA173;
+            --absent-color: #dc3545;
+            --late-color: #f39c12;
+            --sidebar-width: 280px;
+            --sidebar-collapsed-width: 80px;
+        }
+
+        body {
+            background: var(--gray-bg);
+            min-height: 100vh;
+        }
+
+        /* Dashboard Layout */
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            transition: width 0.3s;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+
+        .sidebar.collapsed .sidebar-header h2,
+        .sidebar.collapsed .user-details,
+        .sidebar.collapsed .nav-link span {
+            display: none;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            justify-content: center;
+            padding: 1.5rem 0.5rem;
+        }
+
+        .sidebar.collapsed .user-info {
+            justify-content: center;
+            padding: 0.8rem;
+            margin: 0 0.5rem 1.5rem;
+        }
+
+        .sidebar.collapsed .nav-link {
+            justify-content: center;
+            padding: 0.85rem 0;
+            gap: 0;
+        }
+
+        .sidebar.collapsed .nav-link i {
+            margin: 0;
+        }
+
+        .sidebar.collapsed .user-avatar {
+            margin: 0;
+        }
+
+        .sidebar.collapsed .fold-btn {
+            margin: 0 auto;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--secondary-green);
+            border-radius: 5px;
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            overflow: hidden;
+        }
+
+        .sidebar-header i.fi {
+            font-size: 2rem;
+            color: var(--secondary-green);
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+
+        .sidebar-header h2 span {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            display: block;
+        }
+
+        .fold-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .fold-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin: 1rem 1rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: var(--secondary-green);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--rich-black);
+            flex-shrink: 0;
+        }
+
+        .user-details h4 {
+            font-size: 0.9rem;
+        }
+
+        .user-details p {
+            font-size: 0.7rem;
+            opacity: 0.7;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0 0.75rem;
+            flex: 1;
+        }
+
+        .nav-item {
+            margin-bottom: 0.25rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .nav-link:hover {
+            background: rgba(94, 161, 115, 0.2);
+            color: white;
+        }
+
+        .nav-link.active {
+            background: var(--secondary-green);
+            color: var(--rich-black);
+            font-weight: 600;
+        }
+
+        .nav-link i.fi {
+            width: 22px;
+            font-size: 1.1rem;
+            text-align: center;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-footer {
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 1rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem;
+            transition: margin-left 0.3s;
+            min-height: 100vh;
+        }
+
+        .sidebar.collapsed~.main-content {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .page-title h1 {
+            font-size: 1.3rem;
+            color: var(--rich-black);
+        }
+
+        .page-title p {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .top-bar-actions {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            position: relative;
+        }
+
+        .date-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .notification-dropdown {
+            position: relative;
+        }
+
+        .notification-badge {
+            position: relative;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0.3rem;
+        }
+
+        .notification-badge i.fi {
+            font-size: 1.3rem;
+            color: var(--text-primary);
+            transition: color 0.2s;
+        }
+
+        .notification-badge:hover i.fi {
+            color: var(--secondary-green);
+        }
+
+        .badge-count {
+            position: absolute;
+            top: -5px;
+            right: -8px;
+            background: #dc3545;
+            color: white;
+            font-size: 0.6rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 10px;
+            min-width: 16px;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .badge-count.zero {
+            background: #adb5bd;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 45px;
+            right: 0;
+            width: 340px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            z-index: 200;
+            display: none;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .dropdown-menu.show {
+            display: block;
+            animation: fadeInDown 0.25s ease;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dropdown-header {
+            padding: 0.9rem 1.2rem;
+            background: var(--gray-bg);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--rich-black);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .notification-list {
+            max-height: 380px;
+            overflow-y: auto;
+        }
+
+        .notification-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+            padding: 0.9rem 1.2rem;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .notification-item:hover {
+            background: var(--gray-bg);
+        }
+
+        .notification-item.unread {
+            background: rgba(94, 161, 115, 0.06);
+            border-left: 3px solid var(--secondary-green);
+        }
+
+        .notification-icon {
+            width: 36px;
+            height: 36px;
+            background: rgba(94, 161, 115, 0.12);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--secondary-green);
+            flex-shrink: 0;
+            font-size: 0.85rem;
+        }
+
+        .notification-content .notification-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--rich-black);
+        }
+
+        .notification-content .notification-message {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .notification-content .notification-time {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            margin-top: 0.3rem;
+        }
+
+        .dropdown-footer {
+            padding: 0.7rem;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            background: var(--gray-bg);
+        }
+
+        .dropdown-footer a {
+            color: var(--secondary-green);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Poro Greeting */
+        .poro-greeting {
+            background: linear-gradient(135deg, #f0f9f0, #e8f5e9);
+            border-radius: 20px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid rgba(94, 161, 115, 0.3);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .poro-greeting-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .character-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--secondary-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(94, 161, 115, 0.3);
+            animation: bounce 2s ease infinite;
+            overflow: hidden;
+        }
+
+        .character-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-4px);
+            }
+        }
+
+        .poro-message h3 {
+            font-size: 1rem;
+            color: var(--rich-black);
+        }
+
+        .poro-message p {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .detected-section-card {
+            background: var(--secondary-green);
+            color: white;
+            padding: 0.7rem 1.2rem;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .btn-change-section {
+            background: rgba(255, 255, 255, 0.25);
+            border: none;
+            color: white;
+            padding: 0.35rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-change-section:hover {
+            background: white;
+            color: var(--rich-black);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .stat-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .stat-icon.blue {
+            background: rgba(18, 52, 153, 0.1);
+            color: var(--caribbean-blue);
+        }
+
+        .stat-icon.green {
+            background: rgba(94, 161, 115, 0.1);
+            color: var(--present-color);
+        }
+
+        .stat-icon.red {
+            background: rgba(220, 53, 69, 0.1);
+            color: var(--absent-color);
+        }
+
+        .stat-icon.orange {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+
+        .stat-content h3 {
+            font-size: 1.3rem;
+            color: var(--rich-black);
+        }
+
+        .stat-content p {
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+        }
+
+        /* Attendance Controls */
+        .attendance-controls {
+            background: white;
+            border-radius: 16px;
+            padding: 1.2rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: flex-end;
+            gap: 1rem;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .control-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .control-item label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .control-item input[type="date"],
+        .control-item select {
+            padding: 0.5rem 2.2rem 0.5rem 0.8rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+            font-size: 0.85rem;
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+        }
+
+        .control-item input[type="date"] {
+            background-image: none;
+            padding-right: 0.8rem;
+        }
+
+        .control-item select:focus,
+        .control-item input:focus {
+            border-color: var(--secondary-green);
+        }
+
+        /* Buttons */
+        .btn-primary {
+            background: var(--secondary-green);
+            color: white;
+            padding: 0.55rem 1.3rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-primary:hover {
+            background: #4d8f62;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-outline:hover {
+            border-color: var(--secondary-green);
+            color: var(--secondary-green);
+        }
+
+        .btn-danger {
+            background: var(--absent-color);
+            color: white;
+            padding: 0.55rem 1.3rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: background 0.2s;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-loading {
+            position: relative;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .btn-loading i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .batch-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-left: auto;
+            flex-wrap: wrap;
+        }
+
+        /* Attendance Container */
+        .attendance-container {
+            background: white;
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            overflow-x: auto;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.2rem;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+        }
+
+        .section-header h2 {
+            font-size: 1rem;
+            color: var(--rich-black);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-badge {
+            background: var(--secondary-green);
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 700px;
+        }
+
+        th {
+            text-align: left;
+            padding: 0.7rem 0.6rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid var(--border-color);
+            background: var(--gray-bg);
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            padding: 0.65rem 0.6rem;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+            font-size: 0.82rem;
+        }
+
+        tr:hover td {
+            background: rgba(94, 161, 115, 0.03);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .student-info {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .student-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .student-name {
+            font-weight: 600;
+            color: var(--rich-black);
+            font-size: 0.82rem;
+        }
+
+        .lrn {
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+            font-family: monospace;
+        }
+
+        .status-toggle {
+            display: flex;
+            gap: 0.25rem;
+            background: var(--gray-bg);
+            padding: 0.2rem;
+            border-radius: 30px;
+            width: fit-content;
+        }
+
+        .status-btn {
+            padding: 0.35rem 0.8rem;
+            border: none;
+            border-radius: 30px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: transparent;
+            color: var(--text-secondary);
+        }
+
+        .status-btn.present.active {
+            background: var(--present-color);
+            color: white;
+        }
+
+        .status-btn.absent.active {
+            background: var(--absent-color);
+            color: white;
+        }
+
+        .status-btn.late.active {
+            background: var(--late-color);
+            color: white;
+        }
+
+        .status-btn:hover:not(.active) {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .notes-input {
+            width: 100px;
+            padding: 0.35rem 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.72rem;
+            transition: border-color 0.2s;
+        }
+
+        .notes-input:focus {
+            outline: none;
+            border-color: var(--secondary-green);
+        }
+
+        .sheet-footer {
+            margin-top: 1rem;
+            padding-top: 0.8rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        /* Export Dropdown */
+        .export-dropdown-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .export-dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+            min-width: 220px;
+            margin-top: 5px;
+        }
+
+        .export-dropdown-menu.show {
+            display: block;
+            animation: fadeInDown 0.2s ease;
+        }
+
+        .export-dropdown-header {
+            padding: 0.5rem 1rem;
+            background: var(--gray-bg);
+            font-weight: 600;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+            border-radius: 12px 12px 0 0;
+        }
+
+        .export-dropdown-item {
+            display: block;
+            padding: 0.5rem 1rem;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .export-dropdown-item:hover {
+            background: rgba(94, 161, 115, 0.1);
+        }
+
+        .export-dropdown-divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 0.3rem 0;
+        }
+
+        .export-dropdown-footer {
+            padding: 0.3rem 1rem;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            background: var(--gray-bg);
+            border-radius: 0 0 12px 12px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 520px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        .modal-content.large {
+            max-width: 680px;
+        }
+
+        .modal-content.confirm {
+            max-width: 450px;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 1.2rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .modal-header h2 {
+            font-size: 1rem;
+            color: var(--rich-black);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal-header h2 i {
+            font-size: 1.2rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 0.2rem;
+            border-radius: 6px;
+        }
+
+        .modal-close:hover {
+            background: var(--gray-bg);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        /* Confirmation Modal Specific Styles */
+        .confirm-icon {
+            width: 70px;
+            height: 70px;
+            background: rgba(94, 161, 115, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+        }
+
+        .confirm-icon i {
+            font-size: 2.5rem;
+            color: var(--secondary-green);
+        }
+
+        .confirm-title {
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--rich-black);
+            margin-bottom: 0.5rem;
+        }
+
+        .confirm-message {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .confirm-details {
+            background: var(--gray-bg);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .confirm-details table {
+            width: 100%;
+            min-width: auto;
+        }
+
+        .confirm-details td {
+            padding: 0.4rem 0;
+            border: none;
+        }
+
+        .confirm-details td:first-child {
+            font-weight: 600;
+            color: var(--rich-black);
+            width: 40%;
+        }
+
+        .confirm-warning {
+            background: var(--warning-bg);
+            border-radius: 8px;
+            padding: 0.6rem;
+            font-size: 0.7rem;
+            color: var(--warning-text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .confirm-warning i {
+            font-size: 0.9rem;
+        }
+
+        /* Confirmation Table */
+        .confirmation-table {
+            max-height: 280px;
+            overflow-y: auto;
+            margin: 1rem 0;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+
+        .confirmation-table table {
+            min-width: 100%;
+        }
+
+        .confirmation-table th {
+            background: var(--gray-bg);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .status-label {
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-label.present {
+            background: var(--success-bg);
+            color: var(--success-text);
+        }
+
+        .status-label.absent {
+            background: var(--danger-bg);
+            color: var(--danger-text);
+        }
+
+        .status-label.late {
+            background: var(--warning-bg);
+            color: var(--warning-text);
+        }
+
+        /* Time Info */
+        .time-info {
+            background: var(--gray-bg);
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .time-info h3 {
+            font-size: 0.85rem;
+            color: var(--rich-black);
+        }
+
+        .time-info p {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+        }
+
+        .section-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.8rem;
+            margin: 1rem 0;
+        }
+
+        .section-option {
+            border: 2px solid var(--border-color);
+            border-radius: 14px;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .section-option:hover {
+            border-color: var(--secondary-green);
+            background: rgba(94, 161, 115, 0.03);
+        }
+
+        .section-option.selected {
+            border-color: var(--secondary-green);
+            background: rgba(94, 161, 115, 0.08);
+        }
+
+        .section-option h4 {
+            font-size: 0.85rem;
+            color: var(--rich-black);
+            margin-bottom: 0.2rem;
+        }
+
+        .section-option p {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        /* Empty State */
+        .empty-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            min-height: 180px;
+        }
+
+        .empty-icon {
+            font-size: 2.5rem;
+            color: #a0aec0;
+            margin-bottom: 0.8rem;
+            opacity: 0.6;
+        }
+
+        .empty-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .empty-message {
+            font-size: 0.75rem;
+            color: #a0aec0;
+            max-width: 280px;
+            line-height: 1.5;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            min-width: 300px;
+            animation: slideInRight 0.3s ease;
+            border-left: 4px solid var(--secondary-green);
+        }
+
+        .toast i {
+            color: var(--secondary-green);
+        }
+
+        .toast-content h4 {
+            font-size: 0.85rem;
+            color: var(--rich-black);
+        }
+
+        .toast-content p {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-left: auto;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Mobile Overlay */
+        .mobile-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 99;
+            display: none;
+        }
+
+        .mobile-overlay.show {
+            display: block;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+
+            .stats-grid,
+            .section-options {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                width: var(--sidebar-width) !important;
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0 !important;
+            }
+
+            .stats-grid,
+            .section-options {
+                grid-template-columns: 1fr;
+            }
+
+            .attendance-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .batch-actions {
+                margin-left: 0;
+                flex-direction: column;
+            }
+
+            .dropdown-menu {
+                width: 290px;
+                right: -20px;
+            }
+
+            .toast-container {
+                left: 10px;
+                right: 10px;
+            }
+
+            .toast {
+                min-width: auto;
+            }
+
+            .export-dropdown-menu {
+                left: 0;
+                right: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="dashboard">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-area">
+                    <i class="fi fi-rr-graduation-cap"></i>
+                    <h2>Formify <span>Learner Information System</span></h2>
+                </div>
+                <button class="fold-btn" id="foldBtn"><i class="fi fi-rr-angle-left"></i></button>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+                <div class="user-details">
+                    <h4>{{ request.user.get_full_name }}</h4>
+                    <p>Teacher</p>
+                </div>
+            </div>
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="{% url 'teachers-dashboard' %}" class="nav-link"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-classes' %}" class="nav-link"><i class="fi fi-rr-presentation"></i><span>My Classes</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-grades' %}" class="nav-link"><i class="fi fi-rr-pencil"></i><span>Grade Encoding</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-attendance' %}" class="nav-link active"><i class="fi fi-rr-calendar-check"></i><span>Attendance</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-forms' %}" class="nav-link"><i class="fi fi-rr-document"></i><span>School Forms</span></a></li>
+            <li class="nav-item"><a href="/teachers/reports/" class="nav-link"><i class="fi fi-rr-chart-line-up"></i><span>Reports</span></a></li>
+            <li class="nav-item"><a href="/teachers/schedule/" class="nav-link"><i class="fi fi-rr-calendar"></i><span>Schedule</span></a></li>
+        </ul>
+            <ul class="nav-menu nav-footer">
+                <li class="nav-item"><a href="{% url 'signout' %}" class="nav-link"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="top-bar">
+                <div class="page-title">
+                    <h1>Attendance</h1>
+                    <p>Mark and track student attendance — {{ selected_section }}</p>
+                </div>
+                <div class="top-bar-actions">
+                    <div class="date-display"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
+                    <div class="notification-dropdown">
+                        <button class="notification-badge" id="notificationBtn"><i class="fi fi-rr-bell"></i><span class="badge-count zero">0</span></button>
+                        <div class="dropdown-menu" id="notificationDropdown">
+                            <div class="dropdown-header"><span>Notifications</span><span style="font-size:0.7rem;opacity:0.7;">0 unread</span></div>
+                            <div class="notification-list">
+                                <div class="empty-container" style="min-height:120px;padding:1.5rem;">
+                                    <i class="fi fi-rr-bell" style="font-size:2rem;color:#a0aec0;opacity:0.5;"></i>
+                                    <p style="font-size:0.75rem;color:#a0aec0;margin-top:0.5rem;">No notifications</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="poro-greeting">
+                <div class="poro-greeting-content">
+                    <div class="character-icon">
+                        <img src="{% static 'shared/poro/Poro.png' %}" alt="Poro" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fi fi-rr-smile\' style=\'font-size:1.8rem;color:white;\'></i>';">
+                    </div>
+                    <div class="poro-message">
+                        <h3>Attendance ready!</h3>
+                        <p id="poroMessage">{{ selected_section }} — {{ attendance_date|date:"F j, Y" }}</p>
+                    </div>
+                </div>
+                {% if detected_section_name and detected_section_name != selected_section_name %}
+                <div class="detected-section-card">
+                    <i class="fi fi-rr-users"></i>
+                    <span>{{ detected_section_name }}</span>
+                    <button class="btn-change-section" onclick="location.href='?class_id={{ detected_section_id }}&date={{ attendance_date|date:'Y-m-d' }}'">Switch</button>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i class="fi fi-rr-users"></i></div>
+                    <div class="stat-content">
+                        <h3 id="totalStudents">{{ total_students }}</h3>
+                        <p>Total Students</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="fi fi-rr-check-circle"></i></div>
+                    <div class="stat-content">
+                        <h3 id="presentCount">{{ present_count }}</h3>
+                        <p>Present</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon red"><i class="fi fi-rr-cross-circle"></i></div>
+                    <div class="stat-content">
+                        <h3 id="absentCount">{{ absent_count }}</h3>
+                        <p>Absent</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange"><i class="fi fi-rr-clock-three"></i></div>
+                    <div class="stat-content">
+                        <h3 id="lateCount">{{ late_count }}</h3>
+                        <p>Late</p>
+                    </div>
+                </div>
+            </div>
+
+            <form class="attendance-controls" method="GET" id="attendanceForm">
+                <div class="control-item">
+                    <label>Date</label>
+                    <input type="date" name="date" id="attendanceDate" value="{{ attendance_date|date:'Y-m-d' }}" onchange="this.form.submit()">
+                </div>
+                <div class="control-item">
+                    <label>Section</label>
+                    <select name="class_id" id="sectionSelect" onchange="this.form.submit()">
+                        {% for cls in classes_data %}
+                        <option value="{{ cls.section_id }}" {% if cls.section_id == selected_section_id %}selected{% endif %}>{{ cls.grade_name }} - {{ cls.section_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="batch-actions">
+                    <button type="button" class="btn-outline" onclick="markAllPresent()"><i class="fi fi-rr-check-circle"></i> All Present</button>
+
+                    <div class="export-dropdown-container">
+                        <button type="button" class="btn-outline" onclick="toggleExportDropdown()" style="background:var(--caribbean-blue); color:white; border-color:var(--caribbean-blue);">
+                            <i class="fi fi-rr-download"></i> Export <i class="fi fi-rr-angle-down"></i>
+                        </button>
+                        <div class="export-dropdown-menu" id="exportDropdown">
+                            <div class="export-dropdown-header">EXPORT OPTIONS</div>
+                            <a href="javascript:void(0)" class="export-dropdown-item" onclick="exportReport('daily')">📅 Daily Report ({{ attendance_date|date:"F j, Y" }})</a>
+                            <a href="javascript:void(0)" class="export-dropdown-item" onclick="exportReport('monthly')">📆 Monthly Report ({{ attendance_date|date:"F Y" }})</a>
+                            <a href="javascript:void(0)" class="export-dropdown-item" onclick="exportReport('quarterly', 'Q1')">📊 Quarter 1 Report</a>
+                            <a href="javascript:void(0)" class="export-dropdown-item" onclick="exportReport('quarterly', 'Q2')">📊 Quarter 2 Report</a>
+                            <a href="javascript:void(0)" class="export-dropdown-item" onclick="exportReport('quarterly', 'Q3')">📊 Quarter 3 Report</a>
+                            <a href="javascript:void(0)" class="export-dropdown-item" onclick="exportReport('quarterly', 'Q4')">📊 Quarter 4 Report</a>
+                            <div class="export-dropdown-divider"></div>
+                            <a href="javascript:void(0)" class="export-dropdown-item" onclick="exportReport('yearly')">📚 Full School Year Report</a>
+                            <div class="export-dropdown-footer">
+                                <i class="fi fi-rr-info-circle"></i> Includes daily details, student summary, and monthly aggregates
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn-primary" id="saveRecordBtn" onclick="showSaveConfirmation()">
+                        <i class="fi fi-rr-disk"></i> Save Record
+                    </button>
+                </div>
+            </form>
+
+            <div class="attendance-container">
+                <div class="section-header">
+                    <h2><i class="fi fi-rr-calendar-check"></i> {{ selected_section }} — Attendance <span class="section-badge">{{ attendance_date|date:"F j, Y" }}</span></h2>
+                </div>
+                <div class="table-container">
+                    <table id="attendanceTable">
+                        <thead>
+                            <tr>
+                                <th>LRN</th>
+                                <th>Student</th>
+                                <th>Status</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceBody">
+                            {% if attendance_data %}
+                                {% for student in attendance_data %}
+                                <tr data-enrollment-id="{{ student.enrollment_id }}" data-lrn="{{ student.lrn }}">
+                                    <td class="lrn">{{ student.lrn }}</td>
+                                    <td>
+                                        <div class="student-info">
+                                            <div class="student-avatar" style="background:{{ student.color }};">{{ student.initials }}</div>
+                                            <span class="student-name">{{ student.name }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-toggle">
+                                            <button type="button" class="status-btn present {% if student.status == 'Present' %}active{% endif %}" onclick="setStatus('{{ student.enrollment_id }}','Present')">Present</button>
+                                            <button type="button" class="status-btn absent {% if student.status == 'Absent' %}active{% endif %}" onclick="setStatus('{{ student.enrollment_id }}','Absent')">Absent</button>
+                                            <button type="button" class="status-btn late {% if student.status == 'Late' %}active{% endif %}" onclick="setStatus('{{ student.enrollment_id }}','Late')">Late</button>
+                                        </div>
+                                    </td>
+                                    <td><input type="text" class="notes-input" placeholder="Optional" value="{{ student.remarks|default:'' }}" data-enrollment-id="{{ student.enrollment_id }}"></td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="4">
+                                        <div class="empty-container">
+                                            <i class="fi fi-rr-users empty-icon"></i>
+                                            <div class="empty-title">No Students</div>
+                                            <div class="empty-message">Select a class to begin taking attendance.</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="sheet-footer">
+                    <span><i class="fi fi-rr-info-circle"></i> Click status buttons to mark attendance for each student (auto-saves)</span>
+                    <span><i class="fi fi-rr-star" style="color:var(--secondary-green);"></i> Poro auto-detects your current class based on schedule</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- CONFIRMATION MODAL - Save Confirmation -->
+    <!-- ============================================================ -->
+    <div id="saveConfirmModal" class="modal">
+        <div class="modal-content confirm">
+            <div class="modal-header">
+                <h2><i class="fi fi-rr-question-circle"></i> Confirm Save</h2>
+                <button class="modal-close" onclick="closeSaveConfirmModal()"><i class="fi fi-rr-cross-small"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="confirm-icon">
+                    <i class="fi fi-rr-disk"></i>
+                </div>
+                <div class="confirm-title">Save Attendance Record?</div>
+                <div class="confirm-message">Please review the summary below before saving.</div>
+
+                <div class="confirm-details">
+                    <table>
+                        <tr>
+                            <td>Section:</td>
+                            <td><strong>{{ selected_section }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Date:</td>
+                            <td><strong>{{ attendance_date|date:"F j, Y" }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Total Students:</td>
+                            <td><strong id="confirmTotalStudents">{{ total_students }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Present:</td>
+                            <td><strong id="confirmPresentCount">{{ present_count }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Absent:</td>
+                            <td><strong id="confirmAbsentCount">{{ absent_count }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Late:</td>
+                            <td><strong id="confirmLateCount">{{ late_count }}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="confirm-warning">
+                    <i class="fi fi-rr-info-circle"></i>
+                    This will overwrite any existing attendance records for this date.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="closeSaveConfirmModal()">Cancel</button>
+                <button class="btn-primary" id="confirmSaveProceedBtn" onclick="proceedSave()"><i class="fi fi-rr-check-circle"></i> Yes, Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- CONFIRMATION MODAL - Detailed Review -->
+    <!-- ============================================================ -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2><i class="fi fi-rr-check-circle"></i> Confirm Attendance</h2>
+                <button class="modal-close" onclick="closeConfirmModal()"><i class="fi fi-rr-cross-small"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="confirmation-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>LRN</th>
+                                <th>Status</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="confirmTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="closeConfirmModal()">Edit</button>
+                <button class="btn-primary" id="confirmSaveBtn" onclick="submitAttendance()"><i class="fi fi-rr-disk"></i> Confirm & Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECTION DETECTION MODAL -->
+    <!-- ============================================================ -->
+    <div id="sectionConfirmModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fi fi-rr-info-circle"></i> Poro suggests...</h2>
+                <button class="modal-close" onclick="closeSectionConfirmModal()"><i class="fi fi-rr-cross-small"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="time-info">
+                    <div class="character-icon" style="width:40px;height:40px;">
+                        <img src="{% static 'shared/poro/Poro.png' %}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                    </div>
+                    <div>
+                        <h3 id="currentTimeModal">—</h3>
+                        <p>Based on your schedule, you should be in:</p>
+                    </div>
+                </div>
+                <div class="section-options" id="sectionOptions"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="closeSectionConfirmModal()">Cancel</button>
+                <button class="btn-primary" onclick="confirmSection()"><i class="fi fi-rr-check-circle"></i> Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- JAVASCRIPT -->
+    <!-- ============================================================ -->
+    <script>
+        // Django data passed from backend
+        const DJANGO_CLASSES = [
+            {% for cls in classes_data %}
+            {id: {{ cls.section_id }}, name: '{{ cls.section_name|escapejs }}', grade: '{{ cls.grade_name|escapejs }}', students: {{ cls.student_count|default:0 }} }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+        const ATTENDANCE_DATE = '{{ attendance_date|date:"Y-m-d" }}';
+
+        // ============================================================
+        // CSRF Token Helper
+        // ============================================================
+        function getCsrfToken() {
+            const metaToken = document.querySelector('meta[name="csrf-token"]');
+            if (metaToken) {
+                const token = metaToken.getAttribute('content');
+                if (token && token !== '') {
+                    console.log('CSRF Token found in meta tag, length:', token.length);
+                    return token;
+                }
+            }
+
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.startsWith('csrftoken=')) {
+                        const token = decodeURIComponent(cookie.substring('csrftoken='.length));
+                        console.log('CSRF Token found in cookie, length:', token.length);
+                        return token;
+                    }
+                }
+            }
+
+            console.error('CSRF Token not found!');
+            showToast('Error', 'CSRF token not found. Please refresh the page.', 'error');
+            return null;
+        }
+
+        // ============================================================
+        // Loading State Management
+        // ============================================================
+        function setButtonLoading(button, isLoading, originalText = null) {
+            if (!button) return;
+            if (isLoading) {
+                button.disabled = true;
+                button.classList.add('btn-loading');
+                button.dataset.originalText = button.innerHTML;
+                button.innerHTML = '<i class="fi fi-rr-loader"></i> Saving...';
+            } else {
+                button.disabled = false;
+                button.classList.remove('btn-loading');
+                if (button.dataset.originalText) {
+                    button.innerHTML = button.dataset.originalText;
+                }
+            }
+        }
+
+        // ============================================================
+        // Show Toast Notification
+        // ============================================================
+        function showToast(title, message, type = 'success') {
+            const toastContainer = document.getElementById('toastContainer');
+            const icon = type === 'success' ? 'fi fi-rr-check-circle' : 'fi fi-rr-cross-circle';
+            const color = type === 'success' ? '#5EA173' : '#dc3545';
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.style.borderLeftColor = color;
+            toast.innerHTML = `
+                <i class="${icon}" style="color:${color}"></i>
+                <div class="toast-content">
+                    <h4>${title}</h4>
+                    <p>${message}</p>
+                </div>
+                <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+            `;
+            toastContainer.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        // ============================================================
+        // Update Statistics Counters
+        // ============================================================
+        function updateStats() {
+            let present = 0, absent = 0, late = 0;
+            document.querySelectorAll('#attendanceBody tr[data-enrollment-id]').forEach(row => {
+                const activeBtn = row.querySelector('.status-btn.active');
+                if (activeBtn) {
+                    const status = activeBtn.textContent.trim();
+                    if (status === 'Present') present++;
+                    else if (status === 'Absent') absent++;
+                    else if (status === 'Late') late++;
+                } else {
+                    present++;
+                }
+            });
+            document.getElementById('presentCount').textContent = present;
+            document.getElementById('absentCount').textContent = absent;
+            document.getElementById('lateCount').textContent = late;
+            
+            // Update confirmation modal stats if visible
+            const confirmPresent = document.getElementById('confirmPresentCount');
+            const confirmAbsent = document.getElementById('confirmAbsentCount');
+            const confirmLate = document.getElementById('confirmLateCount');
+            const confirmTotal = document.getElementById('confirmTotalStudents');
+            if (confirmPresent) confirmPresent.textContent = present;
+            if (confirmAbsent) confirmAbsent.textContent = absent;
+            if (confirmLate) confirmLate.textContent = late;
+            if (confirmTotal) confirmTotal.textContent = present + absent + late;
+        }
+
+        // ============================================================
+        // Set Status for Single Student (with Auto-Save)
+        // ============================================================
+        window.setStatus = function(enrollmentId, status) {
+            const row = document.querySelector(`tr[data-enrollment-id="${enrollmentId}"]`);
+            if (!row) return;
+
+            const toggle = row.querySelector('.status-toggle');
+            if (toggle) {
+                toggle.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
+                toggle.querySelector(`.status-btn.${status.toLowerCase()}`).classList.add('active');
+            }
+
+            const notesInput = row.querySelector('.notes-input');
+            const remarks = notesInput ? notesInput.value : '';
+            const attendanceDate = document.getElementById('attendanceDate').value;
+
+            updateStats();
+
+            const csrfToken = getCsrfToken();
+            if (!csrfToken) return;
+
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    attendance: [{
+                        enrollment_id: parseInt(enrollmentId),
+                        status: status,
+                        remarks: remarks
+                    }],
+                    section_id: {{ selected_section_id|default:'null' }},
+                    date: attendanceDate
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const statusBtn = toggle.querySelector(`.status-btn.${status.toLowerCase()}`);
+                    if (statusBtn) {
+                        statusBtn.style.transform = 'scale(0.95)';
+                        setTimeout(() => { if (statusBtn) statusBtn.style.transform = ''; }, 200);
+                    }
+                } else {
+                    showToast('Error', data.error || 'Failed to save', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error', error.message || 'Network error. Please try again.', 'error');
+            });
+        };
+
+        // ============================================================
+        // Mark All Students as Present
+        // ============================================================
+        window.markAllPresent = function() {
+            document.querySelectorAll('#attendanceBody tr[data-enrollment-id]').forEach(row => {
+                const enrollmentId = row.getAttribute('data-enrollment-id');
+                setStatus(enrollmentId, 'Present');
+            });
+        };
+
+        // ============================================================
+        // Save Confirmation Modal
+        // ============================================================
+        window.showSaveConfirmation = function() {
+            // Update stats in confirmation modal
+            const present = document.getElementById('presentCount').textContent;
+            const absent = document.getElementById('absentCount').textContent;
+            const late = document.getElementById('lateCount').textContent;
+            const total = parseInt(present) + parseInt(absent) + parseInt(late);
+            
+            document.getElementById('confirmPresentCount').textContent = present;
+            document.getElementById('confirmAbsentCount').textContent = absent;
+            document.getElementById('confirmLateCount').textContent = late;
+            document.getElementById('confirmTotalStudents').textContent = total;
+            
+            document.getElementById('saveConfirmModal').classList.add('active');
+        };
+
+        window.closeSaveConfirmModal = function() {
+            document.getElementById('saveConfirmModal').classList.remove('active');
+        };
+
+        window.proceedSave = function() {
+            closeSaveConfirmModal();
+            
+            // Show loading state on the original save button
+            const saveBtn = document.getElementById('saveRecordBtn');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fi fi-rr-loader"></i> Saving...';
+            
+            submitAttendance().finally(() => {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalText;
+            });
+        };
+
+        // ============================================================
+        // Show Detailed Confirmation Modal
+        // ============================================================
+        window.showConfirmModal = function() {
+            const tbody = document.getElementById('confirmTableBody');
+            tbody.innerHTML = '';
+            document.querySelectorAll('#attendanceBody tr[data-enrollment-id]').forEach(row => {
+                const name = row.querySelector('.student-name')?.textContent || '';
+                const lrn = row.querySelector('.lrn')?.textContent || '';
+                const active = row.querySelector('.status-btn.active');
+                const status = active ? active.textContent.trim() : 'Present';
+                const notes = row.querySelector('.notes-input')?.value || '';
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${name}</td>
+                        <td>${lrn}</td>
+                        <td><span class="status-label ${status.toLowerCase()}">${status}</span></td>
+                        <td>${notes || '—'}</td>
+                    </tr>
+                `;
+            });
+            document.getElementById('confirmModal').classList.add('active');
+        };
+
+        window.closeConfirmModal = function() {
+            document.getElementById('confirmModal').classList.remove('active');
+        };
+
+        // ============================================================
+        // Submit Attendance (Batch Save)
+        // ============================================================
+        window.submitAttendance = function() {
+            const saveBtn = document.getElementById('confirmSaveBtn');
+            if (saveBtn) setButtonLoading(saveBtn, true);
+
+            return new Promise((resolve, reject) => {
+                const attendance = [];
+                document.querySelectorAll('#attendanceBody tr[data-enrollment-id]').forEach(row => {
+                    const enrollmentId = row.getAttribute('data-enrollment-id');
+                    const active = row.querySelector('.status-btn.active');
+                    const status = active ? active.textContent.trim() : 'Present';
+                    const notes = row.querySelector('.notes-input')?.value || '';
+                    attendance.push({
+                        enrollment_id: parseInt(enrollmentId),
+                        status: status,
+                        remarks: notes
+                    });
+                });
+
+                const attendanceDate = document.getElementById('attendanceDate').value;
+                const sectionId = document.getElementById('sectionSelect').value;
+
+                const csrfToken = getCsrfToken();
+                if (!csrfToken) {
+                    if (saveBtn) setButtonLoading(saveBtn, false);
+                    showToast('Error', 'CSRF token not found. Please refresh the page.', 'error');
+                    reject('CSRF token missing');
+                    return;
+                }
+
+                fetch(window.location.href, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        attendance: attendance,
+                        section_id: parseInt(sectionId),
+                        date: attendanceDate
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (saveBtn) setButtonLoading(saveBtn, false);
+                    closeConfirmModal();
+                    if (data.success) {
+                        showToast('Success', `Saved attendance for ${data.saved_count} student(s)`);
+                        updateStats();
+                        resolve(data);
+                    } else {
+                        showToast('Error', data.error || 'Failed to save', 'error');
+                        reject(data.error);
+                    }
+                })
+                .catch(error => {
+                    if (saveBtn) setButtonLoading(saveBtn, false);
+                    closeConfirmModal();
+                    console.error('Error:', error);
+                    showToast('Error', error.message || 'Network error. Please try again.', 'error');
+                    reject(error);
+                });
+            });
+        };
+
+        // ============================================================
+        // Legacy saveAttendance function
+        // ============================================================
+        window.saveAttendance = function() {
+            showSaveConfirmation();
+        };
+
+        // ============================================================
+        // Export Functions
+        // ============================================================
+        function toggleExportDropdown() {
+            const dropdown = document.getElementById('exportDropdown');
+            if (dropdown) {
+                dropdown.classList.toggle('show');
+            }
+        }
+
+        function exportReport(type, quarter = null) {
+            const sectionId = document.getElementById('sectionSelect').value;
+            const attendanceDate = document.getElementById('attendanceDate').value;
+
+            let url = "{% url 'attendance-export' %}?class_id=" + sectionId + "&type=" + type;
+
+            if (type === 'daily') {
+                url += "&date_from=" + attendanceDate;
+            } else if (type === 'monthly') {
+                const monthDate = attendanceDate.substring(0, 7) + "-01";
+                url += "&date_from=" + monthDate;
+            } else if (type === 'quarterly' && quarter) {
+                url += "&quarter=" + quarter;
+            }
+
+            showToast('Exporting', 'Preparing your report...', 'success');
+            window.location.href = url;
+
+            const dropdown = document.getElementById('exportDropdown');
+            if (dropdown) dropdown.classList.remove('show');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('exportDropdown');
+            const btn = e.target.closest('.export-dropdown-container');
+            if (dropdown && dropdown.classList.contains('show')) {
+                if (!btn) {
+                    dropdown.classList.remove('show');
+                }
+            }
+        });
+
+        // ============================================================
+        // Section Detection Modal
+        // ============================================================
+        window.showSectionConfirmModal = function() {
+            document.getElementById('currentTimeModal').textContent = 'Current time: ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            const opts = document.getElementById('sectionOptions');
+            opts.innerHTML = DJANGO_CLASSES.map(c => `
+                <div class="section-option" onclick="selectSection(${c.id})" id="option${c.id}">
+                    <h4>${c.grade} - ${c.name}</h4>
+                    <p>${c.students} students</p>
+                </div>
+            `).join('');
+            document.getElementById('sectionConfirmModal').classList.add('active');
+        };
+
+        window.closeSectionConfirmModal = function() {
+            document.getElementById('sectionConfirmModal').classList.remove('active');
+        };
+
+        let selectedSectionId = null;
+        window.selectSection = function(id) {
+            selectedSectionId = id;
+            document.querySelectorAll('.section-option').forEach(el => el.classList.remove('selected'));
+            document.getElementById('option' + id)?.classList.add('selected');
+        };
+
+        window.confirmSection = function() {
+            if (selectedSectionId) {
+                location.href = '?class_id=' + selectedSectionId + '&date=' + ATTENDANCE_DATE;
+            }
+            closeSectionConfirmModal();
+        };
+
+        // ============================================================
+        // Sidebar and Modal Close Handlers
+        // ============================================================
+        (function() {
+            const sidebar = document.getElementById('sidebar');
+            const foldBtn = document.getElementById('foldBtn');
+            const mo = document.getElementById('mobileOverlay');
+            let collapsed = false;
+
+            function adj() {
+                const mc = document.getElementById('mainContent');
+                if (mc) mc.style.marginLeft = window.innerWidth > 768 ? (collapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)') : '0';
+            }
+
+            if (foldBtn) {
+                foldBtn.addEventListener('click', () => {
+                    if (window.innerWidth <= 768) {
+                        const o = sidebar.classList.toggle('mobile-open');
+                        if (mo) mo.classList.toggle('show', o);
+                    } else {
+                        collapsed = !collapsed;
+                        sidebar.classList.toggle('collapsed', collapsed);
+                        const icon = foldBtn.querySelector('i');
+                        if (icon) icon.className = collapsed ? 'fi fi-rr-angle-right' : 'fi fi-rr-angle-left';
+                        adj();
+                    }
+                });
+            }
+
+            if (mo) {
+                mo.addEventListener('click', () => {
+                    sidebar.classList.remove('mobile-open');
+                    mo.classList.remove('show');
+                });
+            }
+
+            window.addEventListener('resize', adj);
+            adj();
+
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            document.querySelectorAll('.modal').forEach(m => {
+                m.addEventListener('click', function(e) {
+                    if (e.target === this) this.classList.remove('active');
+                });
+            });
+        })();
+    </script>
+</body>
+</html>

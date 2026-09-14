@@ -1,0 +1,413 @@
+{% extends 'admin/base.html' %}
+{% load static %}
+
+{% block title %}{% if edit_mode %}Edit School{% else %}Create School{% endif %}{% endblock %}
+{% block page_title %}{% if edit_mode %}Edit School: {{ school.school_name }}{% else %}Create New School{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .form-section h6 {
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e9ecef;
+        color: #2c3e50;
+    }
+    .required-field::after {
+        content: '*';
+        color: #dc3545;
+        margin-left: 4px;
+    }
+    .school-id-preview {
+        font-family: monospace;
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+    .schema-info {
+        background: #f0f7ff;
+        border-left: 4px solid #4a90d9;
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-top: 8px;
+        font-size: 0.82rem;
+    }
+    .schema-info strong {
+        color: #2c3e50;
+    }
+    .schema-info .ranges {
+        margin-top: 6px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .schema-info .range-badge {
+        background: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.72rem;
+        border: 1px solid #d0dbe8;
+    }
+    .schema-count {
+        display: inline-block;
+        background: #4a90d9;
+        color: white;
+        font-size: 0.7rem;
+        padding: 1px 8px;
+        border-radius: 10px;
+        margin-left: 6px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="POST" id="schoolForm">
+    {% csrf_token %}
+
+    <!-- Basic Information -->
+    <div class="form-section">
+        <h6><i class="fas fa-info-circle"></i> Basic Information</h6>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label required-field">School ID</label>
+                <input type="text" name="school_id" id="school_id" class="form-control"
+                       value="{% if edit_mode %}{{ school.school_id }}{% endif %}" required>
+                <div class="school-id-preview" id="schoolIdPreview"></div>
+                <div id="schoolIdError" class="invalid-feedback d-none"></div>
+            </div>
+            <div class="col-md-8 mb-3">
+                <label class="form-label required-field">School Name</label>
+                <input type="text" name="school_name" class="form-control"
+                       value="{% if edit_mode %}{{ school.school_name }}{% endif %}" required>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Short Name</label>
+                <input type="text" name="short_name" class="form-control"
+                       value="{% if edit_mode %}{{ school.short_name }}{% endif %}"
+                       placeholder="e.g., MNHS">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label required-field">Grading Scale</label>
+                <select name="grading_scale" class="form-select" required>
+                    <option value="">--- Select ---</option>
+                    <option value="PERCENTAGE" {% if edit_mode and school.grading_scale == 'PERCENTAGE' %}selected{% endif %}>0-100 Percentage</option>
+                    <option value="NUMERIC_1_5" {% if edit_mode and school.grading_scale == 'NUMERIC_1_5' %}selected{% endif %}>1.0 - 5.0 (1.0 highest)</option>
+                    <option value="NUMERIC_5_1" {% if edit_mode and school.grading_scale == 'NUMERIC_5_1' %}selected{% endif %}>5.0 - 1.0 (5.0 highest)</option>
+                    <option value="GPA_4" {% if edit_mode and school.grading_scale == 'GPA_4' %}selected{% endif %}>0.0 - 4.0 GPA</option>
+                    <option value="GPA_5" {% if edit_mode and school.grading_scale == 'GPA_5' %}selected{% endif %}>0.0 - 5.0 GPA</option>
+                    <option value="LETTER" {% if edit_mode and school.grading_scale == 'LETTER' %}selected{% endif %}>A - F Letter Grades</option>
+                </select>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Period Type</label>
+                <select name="period_type" class="form-select">
+                    <option value="QUARTERLY" {% if edit_mode and school.period_type == 'QUARTERLY' %}selected{% endif %}>Quarterly</option>
+                    <option value="SEMESTRAL" {% if edit_mode and school.period_type == 'SEMESTRAL' %}selected{% endif %}>Semestral</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Passing Grade</label>
+                <input type="number" name="passing_grade" class="form-control"
+                       value="{% if edit_mode %}{{ school.passing_grade }}{% else %}75{% endif %}"
+                       step="0.01" min="0" max="100">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Quarters Count</label>
+                <input type="number" name="quarters_count" class="form-control"
+                       value="{% if edit_mode %}{{ school.quarters_count }}{% else %}4{% endif %}"
+                       min="2" max="4">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Email Domain</label>
+                <input type="text" name="email_domain" class="form-control"
+                       value="{% if edit_mode %}{{ school.email_domain }}{% endif %}"
+                       placeholder="@deped.gov.ph">
+            </div>
+        </div>
+    </div>
+
+    <!-- Grading System (Create Only) -->
+    {% if not edit_mode %}
+    <div class="form-section">
+        <h6><i class="fas fa-chart-bar"></i> Grading System</h6>
+        <p class="text-muted" style="font-size:0.85rem;">Select the default grading schema for this school. The appropriate grade ranges will be created automatically. You can add more schemas later.</p>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label required-field">Default Grading System</label>
+                <select name="grading_schema_type" id="gradingSchemaType" class="form-select" required>
+                    <option value="">--- Select Grading System ---</option>
+                    <optgroup label="── DepEd K-12 (DO 31, s. 2020) ──">
+                        <option value="DEPED_ELEMENTARY">DepEd Elementary (Quarterly, Grades 1-6)</option>
+                        <option value="DEPED_JHS">DepEd JHS Only (Quarterly, Grades 7-10)</option>
+                        <option value="DEPED_SHS">DepEd SHS Only (Semestral, Grades 11-12)</option>
+                        <option value="DEPED_INTEGRATED">DepEd Integrated School (JHS Quarterly + SHS Semestral, Grades 7-12) <span class="schema-count">2</span></option>
+                        <option value="DEPED_K12_COMPLETE">DepEd K-12 Complete (Elementary + JHS Quarterly + SHS Semestral, Grades 1-12) <span class="schema-count">3</span></option>
+                    </optgroup>
+                    <optgroup label="── Higher Education (CMO 14, s. 2019) ──">
+                        <option value="CHED_STANDARD">CHED Standard (Semestral)</option>
+                        <option value="CHED_TRIMESTER">CHED Trimester</option>
+                    </optgroup>
+                    <optgroup label="── Technical-Vocational ──">
+                        <option value="TESDA_COMPETENCY">TESDA Competency-Based (Modular)</option>
+                    </optgroup>
+                    <optgroup label="── Other ──">
+                        <option value="CUSTOM">Custom Grading System</option>
+                    </optgroup>
+                </select>
+            </div>
+        </div>
+        <!-- Schema Preview -->
+        <div id="schemaPreview" class="schema-info" style="display:none;">
+            <strong id="schemaName"></strong> — <span id="schemaPeriod"></span>
+            <div class="ranges" id="schemaRanges"></div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Contact Information -->
+    <div class="form-section">
+        <h6><i class="fas fa-map-marker-alt"></i> Contact Information</h6>
+        <div class="row">
+            <div class="col-12 mb-3">
+                <label class="form-label">Street Address</label>
+                <textarea name="address" class="form-control" rows="2">{% if edit_mode %}{{ school.address }}{% endif %}</textarea>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Contact Number</label>
+                <input type="text" name="contact_number" class="form-control"
+                       value="{% if edit_mode %}{{ school.contact_number }}{% endif %}"
+                       placeholder="(082) 300-1234">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Theme Color</label>
+                <input type="color" name="theme_color" class="form-control form-control-color"
+                       value="{% if edit_mode %}{{ school.theme_color }}{% else %}#2c3e50{% endif %}"
+                       title="Choose theme color">
+            </div>
+        </div>
+    </div>
+
+    <!-- Status -->
+    <div class="form-section">
+        <h6><i class="fas fa-toggle-on"></i> Status</h6>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="form-check mt-2">
+                    <input type="checkbox" name="is_active" class="form-check-input" id="is_active"
+                           {% if not edit_mode or school.is_active %}checked{% endif %}>
+                    <label class="form-check-label" for="is_active">School is Active</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Submit Buttons -->
+    <div class="d-flex justify-content-between">
+        <a href="{% url 'admin_panel:school_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Cancel
+        </a>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> {% if edit_mode %}Update School{% else %}Create School{% endif %}
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ===== ALL SCHEMA DATA FOR PREVIEW =====
+    var schemaData = {
+        'DEPED_ELEMENTARY': {
+            name: 'DepEd Elementary — DO 31, s. 2020',
+            period: 'Quarterly (Grades 1-6)',
+            count: 1,
+            ranges: [
+                {letter: 'A', label: 'Advanced', min: 90, max: 100, color: '#28a745'},
+                {letter: 'P', label: 'Proficient', min: 85, max: 89, color: '#17a2b8'},
+                {letter: 'AP', label: 'Approaching', min: 80, max: 84, color: '#6c757d'},
+                {letter: 'D', label: 'Developing', min: 75, max: 79, color: '#ffc107'},
+                {letter: 'B', label: 'Beginning', min: 0, max: 74, color: '#dc3545'},
+            ]
+        },
+        'DEPED_JHS': {
+            name: 'DepEd JHS — DO 31, s. 2020',
+            period: 'Quarterly (Grades 7-10)',
+            count: 1,
+            ranges: [
+                {letter: 'A', label: 'Advanced', min: 90, max: 100, color: '#28a745'},
+                {letter: 'P', label: 'Proficient', min: 85, max: 89, color: '#17a2b8'},
+                {letter: 'AP', label: 'Approaching', min: 80, max: 84, color: '#6c757d'},
+                {letter: 'D', label: 'Developing', min: 75, max: 79, color: '#ffc107'},
+                {letter: 'B', label: 'Beginning', min: 0, max: 74, color: '#dc3545'},
+            ]
+        },
+        'DEPED_SHS': {
+            name: 'DepEd SHS — DO 31, s. 2020',
+            period: 'Semestral (Grades 11-12)',
+            count: 1,
+            ranges: [
+                {letter: 'A', label: 'Advanced', min: 90, max: 100, color: '#28a745'},
+                {letter: 'P', label: 'Proficient', min: 85, max: 89, color: '#17a2b8'},
+                {letter: 'AP', label: 'Approaching', min: 80, max: 84, color: '#6c757d'},
+                {letter: 'D', label: 'Developing', min: 75, max: 79, color: '#ffc107'},
+                {letter: 'B', label: 'Beginning', min: 0, max: 74, color: '#dc3545'},
+            ]
+        },
+        'DEPED_INTEGRATED': {
+            name: 'DepEd Integrated School — DO 31, s. 2020',
+            period: 'JHS: Quarterly | SHS: Semestral (Grades 7-12)',
+            count: 2,
+            ranges: [
+                {letter: 'A', label: 'Advanced', min: 90, max: 100, color: '#28a745'},
+                {letter: 'P', label: 'Proficient', min: 85, max: 89, color: '#17a2b8'},
+                {letter: 'AP', label: 'Approaching', min: 80, max: 84, color: '#6c757d'},
+                {letter: 'D', label: 'Developing', min: 75, max: 79, color: '#ffc107'},
+                {letter: 'B', label: 'Beginning', min: 0, max: 74, color: '#dc3545'},
+            ]
+        },
+        'DEPED_K12_COMPLETE': {
+            name: 'DepEd K-12 Complete — DO 31, s. 2020',
+            period: 'Elem/JHS: Quarterly | SHS: Semestral (Grades 1-12)',
+            count: 3,
+            ranges: [
+                {letter: 'A', label: 'Advanced', min: 90, max: 100, color: '#28a745'},
+                {letter: 'P', label: 'Proficient', min: 85, max: 89, color: '#17a2b8'},
+                {letter: 'AP', label: 'Approaching', min: 80, max: 84, color: '#6c757d'},
+                {letter: 'D', label: 'Developing', min: 75, max: 79, color: '#ffc107'},
+                {letter: 'B', label: 'Beginning', min: 0, max: 74, color: '#dc3545'},
+            ]
+        },
+        'CHED_STANDARD': {
+            name: 'CHED Standard — CMO 14, s. 2019',
+            period: 'Semestral',
+            count: 1,
+            ranges: [
+                {letter: '1.00', label: 'Excellent', min: 96, max: 100, color: '#28a745'},
+                {letter: '1.25', label: 'Superior', min: 90, max: 95, color: '#20c997'},
+                {letter: '1.50', label: 'Very Good', min: 85, max: 89, color: '#17a2b8'},
+                {letter: '1.75', label: 'Good', min: 80, max: 84, color: '#6c757d'},
+                {letter: '2.00', label: 'Satisfactory', min: 75, max: 79, color: '#ffc107'},
+                {letter: '2.50', label: 'Fair', min: 70, max: 74, color: '#fd7e14'},
+                {letter: '3.00', label: 'Pass', min: 65, max: 69, color: '#dc3545'},
+                {letter: '5.00', label: 'Failed', min: 0, max: 64, color: '#6c757d'},
+            ]
+        },
+        'CHED_TRIMESTER': {
+            name: 'CHED Trimester — CMO 14, s. 2019',
+            period: 'Trimester',
+            count: 1,
+            ranges: [
+                {letter: '1.00', label: 'Excellent', min: 96, max: 100, color: '#28a745'},
+                {letter: '1.25', label: 'Superior', min: 90, max: 95, color: '#20c997'},
+                {letter: '1.50', label: 'Very Good', min: 85, max: 89, color: '#17a2b8'},
+                {letter: '1.75', label: 'Good', min: 80, max: 84, color: '#6c757d'},
+                {letter: '2.00', label: 'Satisfactory', min: 75, max: 79, color: '#ffc107'},
+                {letter: '2.50', label: 'Fair', min: 70, max: 74, color: '#fd7e14'},
+                {letter: '3.00', label: 'Pass', min: 65, max: 69, color: '#dc3545'},
+                {letter: '5.00', label: 'Failed', min: 0, max: 64, color: '#6c757d'},
+            ]
+        },
+        'TESDA_COMPETENCY': {
+            name: 'TESDA Competency-Based',
+            period: 'Modular',
+            count: 1,
+            ranges: [
+                {letter: 'COC', label: 'Certificate of Competency', min: 90, max: 100, color: '#28a745'},
+                {letter: 'NC', label: 'National Certificate', min: 80, max: 89, color: '#17a2b8'},
+                {letter: 'NC-L1', label: 'NC Level 1', min: 75, max: 79, color: '#ffc107'},
+                {letter: 'NYC', label: 'Not Yet Competent', min: 0, max: 74, color: '#dc3545'},
+            ]
+        },
+        'CUSTOM': {
+            name: 'Custom Grading System',
+            period: 'User-Defined',
+            count: 1,
+            ranges: [
+                {letter: 'A', label: 'Excellent', min: 90, max: 100, color: '#28a745'},
+                {letter: 'B', label: 'Good', min: 80, max: 89, color: '#17a2b8'},
+                {letter: 'C', label: 'Pass', min: 75, max: 79, color: '#ffc107'},
+                {letter: 'F', label: 'Fail', min: 0, max: 74, color: '#dc3545'},
+            ]
+        }
+    };
+
+    // ===== Schema Preview =====
+    var schemaSelect = document.getElementById('gradingSchemaType');
+    var previewDiv = document.getElementById('schemaPreview');
+    var schemaName = document.getElementById('schemaName');
+    var schemaPeriod = document.getElementById('schemaPeriod');
+    var schemaRanges = document.getElementById('schemaRanges');
+
+    if (schemaSelect) {
+        schemaSelect.addEventListener('change', function() {
+            var type = this.value;
+            if (type && schemaData[type]) {
+                var data = schemaData[type];
+                var countBadge = data.count > 1 ? ' <small style="color:#4a90d9;">(' + data.count + ' schemas will be created)</small>' : '';
+                schemaName.innerHTML = data.name + countBadge;
+                schemaPeriod.textContent = data.period;
+                schemaRanges.innerHTML = data.ranges.map(function(r) {
+                    return '<span class="range-badge" style="border-left:3px solid ' + r.color + '">' +
+                           '<strong>' + r.letter + '</strong> ' + r.label + ' (' + r.min + '-' + r.max + '%)</span>';
+                }).join('');
+                previewDiv.style.display = 'block';
+            } else {
+                previewDiv.style.display = 'none';
+            }
+        });
+    }
+
+    // ===== Auto-generate School ID =====
+    var nameInput = document.querySelector('input[name="school_name"]');
+    var schoolIdInput = document.getElementById('school_id');
+    var previewIdDiv = document.getElementById('schoolIdPreview');
+
+    function generateSchoolId(name) {
+        if (!name) return '';
+        return name.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 8);
+    }
+
+    if (nameInput) {
+        nameInput.addEventListener('input', function() {
+            var generatedId = generateSchoolId(this.value);
+            if (generatedId && !schoolIdInput.value) {
+                previewIdDiv.innerHTML = 'Suggested: <code>' + generatedId + '</code>';
+            } else {
+                previewIdDiv.innerHTML = '';
+            }
+        });
+    }
+
+    // ===== Check School ID (AJAX) — Create only =====
+    var isEdit = {{ edit_mode|yesno:"true,false" }};
+    if (!isEdit) {
+        schoolIdInput.addEventListener('blur', function() {
+            var schoolId = this.value;
+            if (schoolId.length < 3) return;
+
+            fetch('{% url "admin_panel:check_school_id" %}?school_id=' + encodeURIComponent(schoolId))
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    var errorDiv = document.getElementById('schoolIdError');
+                    if (data.exists) {
+                        schoolIdInput.classList.add('is-invalid');
+                        errorDiv.textContent = 'This School ID already exists.';
+                        errorDiv.classList.remove('d-none');
+                    } else {
+                        schoolIdInput.classList.remove('is-invalid');
+                        errorDiv.classList.add('d-none');
+                    }
+                });
+        });
+    }
+</script>
+{% endblock %}

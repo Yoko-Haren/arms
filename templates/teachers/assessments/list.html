@@ -1,0 +1,587 @@
+{% extends 'teachers/base.html' %}
+{% load static %}
+
+{% block title %}My Assessments{% endblock %}
+{% block subtitle %}Quiz & Assessment Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary: #123499;
+        --primary-light: #e8eeff;
+        --success: #2E7D32;
+        --success-light: #e8f5e9;
+        --info: #1565C0;
+        --info-light: #e3f2fd;
+        --warning: #E65100;
+        --warning-light: #fff3e0;
+        --danger: #C62828;
+        --danger-light: #ffebee;
+        --purple: #6A1B9A;
+        --purple-light: #f3e5f5;
+        --orange: #f39c12;
+        --gray-50: #f8f9fa;
+        --gray-100: #f0f4f8;
+        --gray-200: #e8ecf1;
+        --gray-300: #e0e5ea;
+        --gray-400: #adb5bd;
+        --gray-500: #6c757d;
+        --gray-700: #1a1a2e;
+        --radius-sm: 10px;
+        --radius-md: 16px;
+        --radius-lg: 20px;
+        --shadow-sm: 0 2px 10px rgba(0,0,0,0.04);
+        --shadow-md: 0 2px 12px rgba(0,0,0,0.06);
+        --shadow-lg: 0 6px 20px rgba(0,0,0,0.1);
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ========== PAGE HEADER ========== */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .page-title {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+    }
+    .page-title-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #123499, #667eea);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+        box-shadow: 0 4px 15px rgba(18,52,153,0.25);
+    }
+    .page-title h3 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin: 0;
+    }
+
+    /* ========== CREATE BUTTON ========== */
+    .btn-primary-lg {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.7rem 1.5rem;
+        background: linear-gradient(135deg, #123499, #1a4dcc);
+        color: white;
+        border: none;
+        border-radius: 25px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        transition: var(--transition);
+        box-shadow: 0 4px 15px rgba(18,52,153,0.25);
+        white-space: nowrap;
+        font-family: inherit;
+    }
+    .btn-primary-lg:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(18,52,153,0.35);
+        color: white;
+    }
+    .btn-primary-lg i { font-size: 0.95rem; }
+
+    /* ========== STAT CARDS (4-COLUMN) ========== */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+    @media (max-width: 1024px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .stats-grid { grid-template-columns: 1fr; } }
+
+    .stat-card {
+        border-radius: var(--radius-md);
+        padding: 1.4rem 1.2rem;
+        color: white;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        transition: var(--transition);
+        cursor: pointer;
+        box-shadow: var(--shadow-md);
+    }
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+    }
+    .stat-card::after {
+        content: '';
+        position: absolute;
+        top: -25px;
+        right: -25px;
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.1);
+        transition: var(--transition);
+    }
+    .stat-card:hover::after {
+        width: 120px;
+        height: 120px;
+        top: -35px;
+        right: -35px;
+    }
+    .stat-card.blue { background: linear-gradient(135deg, #123499, #667eea); }
+    .stat-card.green { background: linear-gradient(135deg, #2E7D32, #43a047); }
+    .stat-card.purple { background: linear-gradient(135deg, #667eea, #764ba2); }
+    .stat-card.orange { background: linear-gradient(135deg, #E65100, #f57c00); }
+
+    .stat-card .stat-icon {
+        font-size: 1.6rem;
+        margin-bottom: 0.3rem;
+        opacity: 0.85;
+        position: relative;
+        z-index: 1;
+    }
+    .stat-card .stat-value {
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1.2;
+        margin-bottom: 0.15rem;
+        position: relative;
+        z-index: 1;
+    }
+    .stat-card .stat-label {
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+        opacity: 0.9;
+        position: relative;
+        z-index: 1;
+    }
+
+    @keyframes cardPulse {
+        0%, 100% { box-shadow: var(--shadow-md); }
+        50% { box-shadow: 0 4px 20px rgba(18,52,153,0.1); }
+    }
+    .stat-card { animation: cardPulse 3s ease-in-out infinite; }
+    .stat-card:nth-child(1) { animation-delay: 0s; }
+    .stat-card:nth-child(2) { animation-delay: 0.4s; }
+    .stat-card:nth-child(3) { animation-delay: 0.8s; }
+    .stat-card:nth-child(4) { animation-delay: 1.2s; }
+
+    /* ========== MAIN TABLE CARD ========== */
+    .table-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+    }
+    .table-card-header {
+        padding: 1.2rem 1.5rem;
+        border-bottom: 2px solid var(--gray-100);
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    .table-card-header-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: var(--primary-light);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary);
+        font-size: 0.95rem;
+        flex-shrink: 0;
+    }
+    .table-card-header h2 {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin: 0;
+    }
+
+    .table-wrapper {
+        overflow-x: auto;
+    }
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.78rem;
+    }
+    .data-table thead th {
+        text-align: left;
+        padding: 0.75rem 1rem;
+        border-bottom: 2px solid var(--gray-200);
+        color: var(--gray-500);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.65rem;
+        letter-spacing: 0.6px;
+        background: var(--gray-50);
+        white-space: nowrap;
+    }
+    .data-table tbody td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--gray-100);
+        color: var(--gray-700);
+        vertical-align: middle;
+    }
+    .data-table tbody tr {
+        transition: var(--transition);
+        cursor: pointer;
+    }
+    .data-table tbody tr:hover {
+        background: var(--primary-light);
+    }
+    .data-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .table-title {
+        font-weight: 700;
+        color: var(--gray-700);
+    }
+    .table-code {
+        font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+        background: var(--gray-100);
+        padding: 0.2rem 0.5rem;
+        border-radius: 6px;
+        font-size: 0.72rem;
+        color: var(--primary);
+        font-weight: 600;
+    }
+
+    /* ========== STATUS BADGES ========== */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.3rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .status-badge.published {
+        background: var(--success-light);
+        color: var(--success);
+    }
+    .status-badge.draft {
+        background: var(--warning-light);
+        color: var(--warning);
+    }
+    .status-badge.closed,
+    .status-badge.archived {
+        background: var(--danger-light);
+        color: var(--danger);
+    }
+    .status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .status-dot.published { background: var(--success); }
+    .status-dot.draft { background: var(--warning); }
+    .status-dot.closed,
+    .status-dot.archived { background: var(--danger); }
+
+    /* ========== ACTION BUTTONS ========== */
+    .action-btns {
+        display: flex;
+        gap: 0.4rem;
+    }
+    .btn-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        border: 2px solid var(--gray-200);
+        background: white;
+        color: var(--gray-500);
+        cursor: pointer;
+        transition: var(--transition);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        text-decoration: none;
+    }
+    .btn-icon:hover {
+        border-color: var(--primary);
+        background: var(--primary-light);
+        color: var(--primary);
+        transform: translateY(-2px);
+    }
+    .btn-icon.copy-btn:hover {
+        border-color: #f39c12;
+        background: #fff8e1;
+        color: #f39c12;
+    }
+    .btn-icon.view-btn:hover {
+        border-color: #2E7D32;
+        background: var(--success-light);
+        color: #2E7D32;
+    }
+
+    /* Tooltip */
+    .btn-icon {
+        position: relative;
+    }
+    .btn-icon::after {
+        content: attr(title);
+        position: absolute;
+        bottom: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--gray-700);
+        color: white;
+        font-size: 0.65rem;
+        padding: 0.3rem 0.7rem;
+        border-radius: 6px;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+    }
+    .btn-icon:hover::after {
+        opacity: 1;
+    }
+
+    /* ========== EMPTY STATE ========== */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 1.5rem;
+        color: var(--gray-500);
+    }
+    .empty-state-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 20px;
+        background: var(--gray-100);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.2rem;
+        color: var(--gray-400);
+        margin-bottom: 1.2rem;
+    }
+    .empty-state h5 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin-bottom: 0.4rem;
+    }
+    .empty-state p {
+        font-size: 0.82rem;
+        color: var(--gray-500);
+        margin-bottom: 1.5rem;
+    }
+
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.65rem 1.4rem;
+        background: linear-gradient(135deg, #123499, #1a4dcc);
+        color: white;
+        border: none;
+        border-radius: 25px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        transition: var(--transition);
+        box-shadow: 0 4px 15px rgba(18,52,153,0.2);
+        font-family: inherit;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(18,52,153,0.3);
+        color: white;
+    }
+
+    /* ========== TOAST NOTIFICATION ========== */
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .toast {
+        background: white;
+        border-radius: 12px;
+        padding: 0.8rem 1.2rem;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+        font-size: 0.78rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        animation: slideIn 0.4s ease, fadeOut 0.4s ease 2.5s forwards;
+        border-left: 4px solid var(--success);
+    }
+    .toast.error { border-left-color: var(--danger); }
+    @keyframes slideIn {
+        from { transform: translateX(100px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; transform: translateY(-10px); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ========== PAGE HEADER ========== -->
+<div class="page-header">
+    <div class="page-title">
+        <div class="page-title-icon">
+            <i class="fi fi-rr-quiz"></i>
+        </div>
+        <h3>My Assessments</h3>
+    </div>
+    <a href="{% url 'assessments:create_page' %}" class="btn-primary-lg">
+        <i class="fi fi-rr-plus"></i> Create New Assessment
+    </a>
+</div>
+
+<!-- ========== STATS ROW ========== -->
+<div class="stats-grid">
+    <div class="stat-card blue">
+        <div class="stat-icon"><i class="fi fi-rr-document"></i></div>
+        <div class="stat-value">{{ assessments.count }}</div>
+        <div class="stat-label">Total Quizzes</div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-icon"><i class="fi fi-rr-check-circle"></i></div>
+        <div class="stat-value">{{ assessments|length }}</div>
+        <div class="stat-label">Published</div>
+    </div>
+    <div class="stat-card purple">
+        <div class="stat-icon"><i class="fi fi-rr-users-alt"></i></div>
+        <div class="stat-value">{{ total_responses|default:0 }}</div>
+        <div class="stat-label">Total Responses</div>
+    </div>
+    <div class="stat-card orange">
+        <div class="stat-icon"><i class="fi fi-rr-stars"></i></div>
+        <div class="stat-value">{{ passed_count|default:0 }}</div>
+        <div class="stat-label">Passed</div>
+    </div>
+</div>
+
+<!-- ========== ASSESSMENT TABLE ========== -->
+<div class="table-card">
+    <div class="table-card-header">
+        <div class="table-card-header-icon">
+            <i class="fi fi-rr-list"></i>
+        </div>
+        <h2>Assessment List</h2>
+    </div>
+
+    {% if assessments %}
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Subject</th>
+                    <th>Section</th>
+                    <th>Items</th>
+                    <th>Code</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in assessments %}
+                <tr onclick="location.href='{% url 'assessments:detail' a.id %}'" title="Click to view assessment details">
+                    <td><span class="table-title">{{ a.title }}</span></td>
+                    <td>{{ a.subject.subject_code }}</td>
+                    <td>{{ a.section.section_name }}</td>
+                    <td>{{ a.total_items }}</td>
+                    <td><span class="table-code">{{ a.access_code }}</span></td>
+                    <td>
+                        <span class="status-badge {{ a.status|lower }}">
+                            <span class="status-dot {{ a.status|lower }}"></span>
+                            {{ a.status|title }}
+                        </span>
+                    </td>
+                    <td>{{ a.created_at|date:"M d, Y" }}</td>
+                    <td>
+                        <div class="action-btns" onclick="event.stopPropagation();">
+                            <button class="btn-icon copy-btn" 
+                                    title="Copy Quiz Link" 
+                                    onclick="copyLink('{{ a.get_share_url }}')">
+                                <i class="fi fi-rr-link"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="fi fi-rr-quiz"></i>
+        </div>
+        <h5>No Assessments Yet</h5>
+        <p>Create your first quiz or assessment to get started.</p>
+        <a href="{% url 'assessments:create_page' %}" class="btn-primary">
+            <i class="fi fi-rr-plus"></i> Create Assessment
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyLink(url) {
+    var fullUrl = window.location.origin + url;
+    navigator.clipboard.writeText(fullUrl).then(function() {
+        showToast('Quiz link copied! 📋', 'success');
+    }).catch(function() {
+        showToast('Failed to copy link', 'error');
+    });
+}
+
+function showToast(message, type) {
+    var container = document.getElementById('toastContainer');
+    var toast = document.createElement('div');
+    toast.className = 'toast ' + (type || 'success');
+    toast.innerHTML = '<i class="fi ' + (type === 'error' ? 'fi-rr-cross-circle' : 'fi-rr-check-circle') + '"></i> ' + message;
+    container.appendChild(toast);
+    
+    // Remove after animation
+    setTimeout(function() {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 3000);
+}
+</script>
+{% endblock %}

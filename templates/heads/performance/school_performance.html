@@ -1,0 +1,1194 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>School Performance - Formify School Head Portal</title>
+    
+    <!-- Flaticon UIcons -->
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'AvantGarde', 'Century Gothic', sans-serif;
+        }
+
+        :root {
+            --rich-black: #00072D;
+            --dark-blue: #051650;
+            --bangladesh-blue: #0A2472;
+            --caribbean-blue: #123499;
+            --secondary-green: #5EA173;
+            --gray-bg: #f5f7fb;
+            --border-color: #e9ecef;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --warning-bg: #fff3cd;
+            --warning-text: #856404;
+            --success-bg: #d4edda;
+            --success-text: #155724;
+            --sidebar-width: 280px;
+            --sidebar-collapsed-width: 80px;
+        }
+
+        body {
+            background: var(--gray-bg);
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ========== FOLDABLE SIDEBAR ========== */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            transition: width 0.3s ease;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+
+        .sidebar.collapsed .sidebar-header h2,
+        .sidebar.collapsed .user-details,
+        .sidebar.collapsed .nav-link span,
+        .sidebar.collapsed .logo-area span {
+            display: none;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            justify-content: center;
+            padding: 1.5rem 0.5rem;
+        }
+
+        .sidebar.collapsed .sidebar-header .logo-area {
+            justify-content: center;
+            display: none;
+        }
+
+        .sidebar.collapsed .user-info {
+            justify-content: center;
+            padding: 0.8rem;
+            margin: 0 0.5rem 1.5rem 0.5rem;
+        }
+
+        .sidebar.collapsed .nav-link {
+            justify-content: center;
+            padding: 0.85rem 0;
+            gap: 0;
+        }
+
+        .sidebar.collapsed .nav-link i {
+            margin: 0;
+            width: auto;
+            font-size: 1.3rem;
+        }
+
+        .sidebar.collapsed .user-avatar {
+            margin: 0;
+        }
+
+        .sidebar.collapsed .nav-footer .nav-link {
+            justify-content: center;
+        }
+
+        .sidebar.collapsed .fold-btn {
+            margin: 0 auto;
+        }
+
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-header .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .sidebar-header i.fi {
+            font-size: 2rem;
+            color: var(--secondary-green);
+            flex-shrink: 0;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            line-height: 1.3;
+            transition: opacity 0.2s ease;
+        }
+
+        .sidebar-header h2 span {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            display: block;
+        }
+
+        .fold-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            font-size: 1rem;
+        }
+
+        .fold-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.05);
+        }
+
+        .fold-btn i {
+            transition: transform 0.3s ease;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin: 0 1rem 1.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: var(--secondary-green);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--rich-black);
+            flex-shrink: 0;
+        }
+
+        .user-details h4 { font-size: 0.9rem; margin-bottom: 0.2rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0 0.75rem;
+            flex: 1;
+        }
+
+        .nav-item { margin-bottom: 0.25rem; }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+        .nav-link i.fi { width: 22px; font-size: 1.1rem; text-align: center; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+
+        .nav-footer {
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 1rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem;
+            transition: margin-left 0.3s ease;
+            min-height: 100vh;
+        }
+
+        .sidebar.collapsed ~ .main-content {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .welcome h1 { font-size: 1.3rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
+        .welcome p { color: var(--text-secondary); font-size: 0.8rem; }
+
+        .top-bar-actions { display: flex; align-items: center; gap: 1rem; position: relative; }
+        .date-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            background: var(--gray-bg);
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+        }
+
+        /* Notification Dropdown */
+        .notification-dropdown { position: relative; }
+
+        .notification-badge {
+            position: relative;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0.3rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .notification-badge i.fi { font-size: 1.3rem; color: var(--text-primary); transition: color 0.2s; }
+        .notification-badge:hover i.fi { color: var(--secondary-green); }
+
+        .badge-count {
+            position: absolute;
+            top: -5px;
+            right: -8px;
+            background: #dc3545;
+            color: white;
+            font-size: 0.6rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 10px;
+            min-width: 16px;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 45px;
+            right: 0;
+            width: 340px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            z-index: 200;
+            display: none;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .dropdown-menu.show {
+            display: block;
+            animation: fadeInDown 0.25s ease;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .dropdown-header {
+            padding: 0.9rem 1.2rem;
+            background: var(--gray-bg);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--rich-black);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notification-list { max-height: 380px; overflow-y: auto; }
+
+        .notification-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+            padding: 0.9rem 1.2rem;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .notification-item:hover { background: var(--gray-bg); }
+        .notification-item.unread { background: rgba(94, 161, 115, 0.06); border-left: 3px solid var(--secondary-green); }
+
+        .notification-icon {
+            width: 36px;
+            height: 36px;
+            background: rgba(94, 161, 115, 0.12);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--secondary-green);
+            flex-shrink: 0;
+            font-size: 0.85rem;
+        }
+
+        .notification-content { flex: 1; min-width: 0; }
+        .notification-title { font-size: 0.8rem; font-weight: 600; color: var(--rich-black); margin-bottom: 0.15rem; }
+        .notification-message { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; }
+        .notification-time { font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.3rem; }
+
+        .dropdown-footer {
+            padding: 0.7rem;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            background: var(--gray-bg);
+        }
+
+        .dropdown-footer a {
+            color: var(--secondary-green);
+            text-decoration: none;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .dropdown-footer a:hover { text-decoration: underline; }
+
+        /* Poro Greeting Banner */
+        .poro-greeting {
+            background: linear-gradient(135deg, #f0f9f0 0%, #e8f5e9 100%);
+            border-radius: 20px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid rgba(94, 161, 115, 0.3);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .poro-greeting-content { display: flex; align-items: center; gap: 1rem; }
+
+        .character-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--secondary-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(94, 161, 115, 0.3);
+            animation: bounce 2s ease infinite;
+            overflow: hidden;
+        }
+
+        .character-icon img { width: 100%; height: 100%; object-fit: cover; }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+
+        .poro-message h3 { font-size: 1rem; color: var(--rich-black); margin-bottom: 0.2rem; }
+        .poro-message p { font-size: 0.75rem; color: var(--text-secondary); }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+
+        .stat-card:hover { transform: translateY(-3px); }
+
+        .stat-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+
+        .stat-icon.blue { background: rgba(18,52,153,0.1); color: var(--caribbean-blue); }
+        .stat-icon.green { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .stat-icon.orange { background: rgba(243,156,18,0.1); color: #f39c12; }
+        .stat-icon.purple { background: rgba(128,0,128,0.1); color: #9b59b6; }
+
+        .stat-info h3 { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; }
+        .stat-info .value { font-size: 1.5rem; font-weight: 700; color: var(--rich-black); }
+        .stat-info .sub { font-size: 0.65rem; color: var(--text-secondary); }
+
+        /* Filter Bar */
+        .filter-bar {
+            background: white;
+            border-radius: 16px;
+            padding: 0.8rem 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .filter-group { display: flex; gap: 0.5rem; align-items: center; }
+        .filter-group label { font-size: 0.8rem; color: var(--text-secondary); }
+
+        select {
+            padding: 0.4rem 1.5rem 0.4rem 0.8rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--secondary-green);
+        }
+
+        .btn-apply {
+            padding: 0.4rem 1.2rem;
+            background: var(--secondary-green);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .btn-apply:hover {
+            background: #4a8b5d;
+        }
+
+        /* Two Column Layout */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 1.2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .section-header h2 {
+            font-size: 1rem;
+            color: var(--rich-black);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-header h2 i { color: var(--secondary-green); }
+
+        .view-all { color: var(--secondary-green); text-decoration: none; font-size: 0.75rem; cursor: pointer; }
+        .view-all:hover { text-decoration: underline; }
+
+        /* Honor Roll Table */
+        .honor-table { width: 100%; border-collapse: collapse; }
+        .honor-table th, .honor-table td {
+            text-align: left;
+            padding: 0.6rem 0.3rem;
+            font-size: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .honor-table th { color: var(--text-secondary); font-weight: 600; }
+        .honor-table tbody tr { cursor: pointer; transition: background 0.2s; }
+        .honor-table tbody tr:hover { background: var(--gray-bg); }
+
+        /* Progress Bars */
+        .subject-item { margin-bottom: 1rem; }
+        .subject-header { display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 0.2rem; }
+        .progress-bar { height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--secondary-green); border-radius: 4px; transition: width 0.5s ease; }
+
+        .chart-legend { display: flex; justify-content: center; gap: 1rem; margin-top: 1rem; font-size: 0.7rem; }
+
+        .legend-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+
+        /* Toast Notification */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            min-width: 300px;
+            animation: slideInRight 0.3s ease;
+            border-left: 4px solid var(--secondary-green);
+        }
+
+        .toast.success { border-left-color: var(--secondary-green); }
+        .toast i { color: var(--secondary-green); }
+        .toast-content { flex: 1; }
+        .toast-content h4 { font-size: 0.85rem; color: var(--rich-black); margin-bottom: 0.1rem; }
+        .toast-content p { font-size: 0.7rem; color: var(--text-secondary); }
+        .toast-close { background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 0.9rem; }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* No Data State */
+        .no-data {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+
+        .no-data i {
+            font-size: 2.5rem;
+            color: var(--border-color);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Mobile Overlay */
+        .mobile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 99;
+            display: none;
+        }
+        .mobile-overlay.show { display: block; }
+
+        @media (max-width: 1200px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                width: var(--sidebar-width) !important;
+            }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .sidebar.collapsed { width: var(--sidebar-width) !important; }
+            .main-content { margin-left: 0 !important; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .two-col { grid-template-columns: 1fr; }
+            .filter-bar { flex-direction: column; align-items: stretch; }
+            .dropdown-menu { width: 290px; right: -20px; }
+            .toast-container { left: 10px; right: 10px; }
+            .toast { min-width: auto; }
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-area">
+                    <i class="fi fi-rr-graduation-cap"></i>
+                    <h2>Formify <span>School Head Portal</span></h2>
+                </div>
+                <button class="fold-btn" id="foldBtn" title="Toggle sidebar">
+                    <i class="fi fi-rr-angle-left"></i>
+                </button>
+            </div>
+            <br>
+            <div class="user-info">
+                <div class="user-avatar">{{ request.user.first_name.0 }}{{ request.user.last_name.0 }}</div>
+                <div class="user-details">
+                    <h4>{{ request.user.get_full_name }}</h4>
+                    <p>School Principal IV</p>
+                </div>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="{% url 'heads-dashboard' %}" class="nav-link"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+                <li class="nav-item"><a href="{% url 'heads-school-performance' %}" class="nav-link active"><i class="fi fi-rr-chart-histogram"></i><span>School Performance</span></a></li>
+                <li class="nav-item"><a href="{% url 'heads-forms-compliance' %}" class="nav-link"><i class="fi fi-rr-document"></i><span>Forms Compliance</span></a></li>
+                <li class="nav-item"><a href="{% url 'heads-teacher-evaluation' %}" class="nav-link"><i class="fi fi-rr-presentation"></i><span>Teacher Evaluation</span></a></li>
+                <li class="nav-item"><a href="{% url 'heads-reports' %}" class="nav-link"><i class="fi fi-rr-chart-line-up"></i><span>Reports & Analytics</span></a></li>
+                <li class="nav-item"><a href="{% url 'heads-announcements' %}" class="nav-link"><i class="fi fi-rr-megaphone"></i><span>Announcements</span></a></li>
+                <li class="nav-item"><a href="{% url 'heads-messages' %}" class="nav-link"><i class="fi fi-rr-envelope"></i><span>Messages</span></a></li>
+                <li class="nav-item"><a href="{% url 'heads-user-management' %}" class="nav-link"><i class="fi fi-rr-users-gear"></i><span>User Management</span></a></li>
+                <li class="nav-item"><a href="{% url 'heads-settings' %}" class="nav-link"><i class="fi fi-rr-settings"></i><span>Settings</span></a></li>
+            </ul>
+
+            <ul class="nav-menu nav-footer">
+                <li class="nav-item"><a href="{% url 'signout' %}" class="nav-link"><i class="fi fi-rr-sign-out"></i><span>Logout</span></a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content" id="mainContent">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="welcome">
+                    <h1 id="greetingText">School Performance</h1>
+                    <p>Academic indicators, enrollment trends, and student achievement</p>
+                </div>
+                <div class="top-bar-actions">
+                    <div class="date-display"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
+                    <div class="notification-dropdown">
+                        <button class="notification-badge" id="notificationBtn">
+                            <i class="fi fi-rr-bell"></i>
+                            {% if notification_count > 0 %}
+                            <span class="badge-count" id="notifCount">{{ notification_count }}</span>
+                            {% endif %}
+                        </button>
+                        <div class="dropdown-menu" id="notificationDropdown">
+                            <div class="dropdown-header">
+                                <span>Notifications</span>
+                                <span style="font-size:0.7rem; opacity:0.7;">{{ notification_count }} unread</span>
+                            </div>
+                            <div class="notification-list" id="notificationList">
+                                {% if notifications %}
+                                    {% for notification in notifications %}
+                                    <div class="notification-item {% if not notification.is_read %}unread{% endif %}" data-id="{{ notification.id }}">
+                                        <div class="notification-icon">
+                                            <i class="fi {{ notification.icon }}"></i>
+                                        </div>
+                                        <div class="notification-content">
+                                            <div class="notification-title">{{ notification.title }}</div>
+                                            <div class="notification-message">{{ notification.message }}</div>
+                                            <div class="notification-time">{{ notification.time_ago }}</div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="no-data" style="padding: 1.5rem;">
+                                        <i class="fi fi-rr-bell" style="font-size:1.5rem;"></i>
+                                        <p style="font-size:0.75rem;">No new notifications</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="dropdown-footer">
+                                <a id="markAllRead">Mark all as read</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Poro Greeting Banner -->
+            <div class="poro-greeting">
+                <div class="poro-greeting-content">
+                    <div class="character-icon">
+                        <!-- Using a simple icon fallback since static may not be configured -->
+                        <i class="fi fi-rr-smile" style="font-size:1.8rem; color:white;"></i>
+                    </div>
+                    <div class="poro-message">
+                        <h3>School Performance Overview</h3>
+                        <p id="poroMessage">{{ poro_message }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label>School Year:</label>
+                    <select id="schoolYearFilter" onchange="applyFilters()">
+                        {% for sy in available_sy %}
+                        <option value="{{ sy.id }}" {% if sy.id == current_sy_id %}selected{% endif %}>{{ sy }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Semester / Quarter:</label>
+                    <select id="semesterFilter" onchange="applyFilters()">
+                        <option value="Q1" {% if quarter_label == 'Q1' %}selected{% endif %}>Quarter 1</option>
+                        <option value="Q2" {% if quarter_label == 'Q2' %}selected{% endif %}>Quarter 2</option>
+                        <option value="Q3" {% if quarter_label == 'Q3' %}selected{% endif %}>Quarter 3</option>
+                        <option value="Q4" {% if quarter_label == 'Q4' %}selected{% endif %}>Quarter 4</option>
+                        <option value="EoSY" {% if quarter_label == 'EoSY' %}selected{% endif %}>End of School Year</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Grade Level:</label>
+                    <select id="gradeFilter" onchange="applyFilters()">
+                        <option value="all" {% if selected_grade == 'all' %}selected{% endif %}>All Levels</option>
+                        {% for gl in grade_levels %}
+                        <option value="{{ gl.id }}" {% if selected_grade == gl.id|stringformat:"s" %}selected{% endif %}>Grade {{ gl.grade_number }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button class="btn-apply" onclick="applyFilters()">Apply Filters</button>
+            </div>
+
+            {% if has_data %}
+            <!-- Stats Summary Cards -->
+            <div class="stats-grid">
+                <div class="stat-card" onclick="showToast('Average Grade', 'Overall average grade across all levels is {{ avg_grade }}%{% if avg_grade_change != 0 %}, {% if avg_grade_change > 0 %}up{% else %}down{% endif %} {{ avg_grade_change|floatformat:1 }} points from last Q{% endif %}.')">
+                    <div class="stat-icon blue"><i class="fi fi-rr-chart-line-up"></i></div>
+                    <div class="stat-info">
+                        <h3>Average Grade (All)</h3>
+                        <div class="value">{{ avg_grade }}%</div>
+                        <div class="sub">{% if avg_grade_change > 0 %}+{% endif %}{{ avg_grade_change|floatformat:1 }} vs last Q</div>
+                    </div>
+                </div>
+                <div class="stat-card" onclick="showToast('Honor Students', '{{ honor_count }} students achieved honors status across all grade levels this quarter.')">
+                    <div class="stat-icon green"><i class="fi fi-rr-trophy"></i></div>
+                    <div class="stat-info">
+                        <h3>Honor Students</h3>
+                        <div class="value">{{ honor_count }}</div>
+                        <div class="sub">Across all levels</div>
+                    </div>
+                </div>
+                <div class="stat-card" onclick="showToast('Passing Rate', '{{ passing_rate }}% of students passed this quarter{% if passing_rate_change != 0 %}, {% if passing_rate_change > 0 %}up{% else %}down{% endif %} {{ passing_rate_change|floatformat:1 }}% from Q2{% endif %}.')">
+                    <div class="stat-icon orange"><i class="fi fi-rr-presentation"></i></div>
+                    <div class="stat-info">
+                        <h3>Passing Rate</h3>
+                        <div class="value">{{ passing_rate }}%</div>
+                        <div class="sub">{% if passing_rate_change > 0 %}+{% endif %}{{ passing_rate_change|floatformat:1 }}% from Q2</div>
+                    </div>
+                </div>
+                <div class="stat-card" onclick="showToast('Attendance Rate', 'Overall attendance rate for {{ quarter_name }} is {{ attendance_rate }}%.')">
+                    <div class="stat-icon purple"><i class="fi fi-rr-calendar-check"></i></div>
+                    <div class="stat-info">
+                        <h3>Attendance Rate</h3>
+                        <div class="value">{{ attendance_rate }}%</div>
+                        <div class="sub">{{ quarter_name }} average</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Two Column Charts -->
+            <div class="two-col">
+                <div class="card">
+                    <div class="section-header">
+                        <h2><i class="fi fi-rr-chart-line-up"></i> Enrollment Trend (5-Year)</h2>
+                        <span class="view-all">SY 2021-2026</span>
+                    </div>
+                    <canvas id="enrollmentTrendChart" style="max-height: 200px;"></canvas>
+                </div>
+                <div class="card">
+                    <div class="section-header">
+                        <h2><i class="fi fi-rr-chart-histogram"></i> Promotion Rate by Grade Level</h2>
+                        <span class="view-all">{{ quarter_name }} {{ current_sy_label }}</span>
+                    </div>
+                    <canvas id="promotionRateChart" style="max-height: 200px;"></canvas>
+                </div>
+            </div>
+
+            <!-- Honor Roll Summary Table -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="section-header">
+                    <h2><i class="fi fi-rr-medal"></i> Honor Roll Summary (Current Quarter)</h2>
+                    <a class="view-all" onclick="showToast('Detailed List', 'Viewing complete honor roll for all grade levels.')">View detailed list</a>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="honor-table">
+                        <thead>
+                            <tr>
+                                <th>Grade Level</th>
+                                <th>Total Students</th>
+                                <th>With Highest Honors</th>
+                                <th>With High Honors</th>
+                                <th>With Honors</th>
+                                <th>Honor Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if honor_breakdown %}
+                                {% for h in honor_breakdown %}
+                                <tr onclick="showToast('{{ h.grade }} Details', 'Total: {{ h.total }} | Highest: {{ h.highest }} | High: {{ h.high }} | With: {{ h.with }} | Rate: {{ h.rate }}%')">
+                                    <td>{{ h.grade }}</td>
+                                    <td>{{ h.total }}</td>
+                                    <td>{{ h.highest }}</td>
+                                    <td>{{ h.high }}</td>
+                                    <td>{{ h.with }}</td>
+                                    <td>{{ h.rate }}%</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" style="text-align:center; padding:2rem; color: var(--text-secondary);">
+                                        <i class="fi fi-rr-info" style="font-size: 1.5rem;"></i>
+                                        <p>No honor roll data available for this quarter.</p>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Two Column: Subject Performance + Comparative -->
+            <div class="two-col">
+                <div class="card">
+                    <div class="section-header">
+                        <h2><i class="fi fi-rr-book-open-cover"></i> Subject Performance (Average)</h2>
+                        <span class="view-all">{{ quarter_name }} {{ current_sy_label }}</span>
+                    </div>
+                    <div id="subjectPerformance">
+                        {% if subject_averages %}
+                            {% for s in subject_averages %}
+                            <div class="subject-item">
+                                <div class="subject-header">
+                                    <span>{{ s.subject }}</span>
+                                    <span>{{ s.avg }}%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: {{ s.avg }}%; background: {% if s.avg >= 90 %}#27ae60{% elif s.avg >= 85 %}#5EA173{% elif s.avg >= 75 %}#f39c12{% else %}#e74c3c{% endif %};"></div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="no-data">
+                                <i class="fi fi-rr-book-open-cover"></i>
+                                <p>No subject performance data available.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="section-header">
+                        <h2><i class="fi fi-rr-chart-histogram"></i> Year-over-Year Comparison</h2>
+                        <span class="view-all">Key metrics</span>
+                    </div>
+                    <canvas id="yearOverYearChart" style="max-height: 200px;"></canvas>
+                    <div class="chart-legend">
+                        <span><span class="legend-dot" style="background:#5EA173;"></span> Previous Year</span>
+                        <span><span class="legend-dot" style="background:#123499;"></span> {{ current_sy_label }}</span>
+                    </div>
+                </div>
+            </div>
+
+            {% else %}
+            <!-- No Data State -->
+            <div style="text-align:center; padding: 4rem 2rem; background: white; border-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                <i class="fi fi-rr-chart-histogram" style="font-size: 4rem; color: var(--border-color);"></i>
+                <h2 style="margin-top: 1rem; color: var(--rich-black);">No School Year Data Available</h2>
+                <p style="color: var(--text-secondary); margin-top: 0.5rem;">
+                    Please set up the current school year to view performance metrics.
+                </p>
+                <a href="{% url 'heads-settings' %}" style="display: inline-block; margin-top: 1rem; padding: 0.6rem 1.5rem; background: var(--secondary-green); color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                    Go to Settings
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- CSRF Token for AJAX -->
+    {% csrf_token %}
+    <script>
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        (function() {
+            // ========== SIDEBAR FOLD FUNCTIONALITY ==========
+            const sidebar = document.getElementById('sidebar');
+            const foldBtn = document.getElementById('foldBtn');
+            const mainContent = document.getElementById('mainContent');
+            const mobileOverlay = document.getElementById('mobileOverlay');
+            let sidebarCollapsed = false;
+
+            function updateSidebarState() {
+                const isMobile = window.innerWidth <= 768;
+                if (isMobile) {
+                    sidebar.classList.remove('collapsed');
+                    sidebarCollapsed = false;
+                    foldBtn.querySelector('i').className = 'fi fi-rr-angle-left';
+                    if (!sidebar.classList.contains('mobile-open')) mobileOverlay.classList.remove('show');
+                } else {
+                    sidebar.classList.remove('mobile-open');
+                    mobileOverlay.classList.remove('show');
+                    if (sidebarCollapsed) { 
+                        sidebar.classList.add('collapsed'); 
+                        foldBtn.querySelector('i').className = 'fi fi-rr-angle-right'; 
+                    } else { 
+                        sidebar.classList.remove('collapsed'); 
+                        foldBtn.querySelector('i').className = 'fi fi-rr-angle-left'; 
+                    }
+                }
+                adjustMainMargin();
+            }
+
+            function adjustMainMargin() {
+                if (window.innerWidth <= 768) mainContent.style.marginLeft = '0';
+                else mainContent.style.marginLeft = sidebar.classList.contains('collapsed') ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)';
+            }
+
+            function toggleSidebar() {
+                if (window.innerWidth <= 768) {
+                    const isOpen = sidebar.classList.toggle('mobile-open');
+                    if (isOpen) mobileOverlay.classList.add('show'); 
+                    else mobileOverlay.classList.remove('show');
+                } else {
+                    sidebarCollapsed = !sidebarCollapsed;
+                    if (sidebarCollapsed) { 
+                        sidebar.classList.add('collapsed'); 
+                        foldBtn.querySelector('i').className = 'fi fi-rr-angle-right'; 
+                    } else { 
+                        sidebar.classList.remove('collapsed'); 
+                        foldBtn.querySelector('i').className = 'fi fi-rr-angle-left'; 
+                    }
+                    adjustMainMargin();
+                }
+            }
+
+            foldBtn.addEventListener('click', toggleSidebar);
+            mobileOverlay.addEventListener('click', () => { 
+                sidebar.classList.remove('mobile-open'); 
+                mobileOverlay.classList.remove('show'); 
+            });
+            window.addEventListener('resize', updateSidebarState);
+
+            // ========== NOTIFICATIONS ==========
+            document.getElementById('notificationBtn').addEventListener('click', e => { 
+                e.stopPropagation(); 
+                document.getElementById('notificationDropdown').classList.toggle('show'); 
+            });
+            
+            document.getElementById('markAllRead')?.addEventListener('click', e => { 
+                e.preventDefault();
+                fetch('{% url "heads-mark-notifications-read" %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/json',
+                    },
+                }).then(response => response.json())
+                  .then(data => {
+                      if (data.success) {
+                          document.querySelectorAll('.notification-item').forEach(item => {
+                              item.classList.remove('unread');
+                          });
+                          const badge = document.getElementById('notifCount');
+                          if (badge) badge.style.display = 'none';
+                          document.getElementById('notificationDropdown').querySelector('.dropdown-header span:last-child').textContent = '0 unread';
+                      }
+                  });
+            });
+            
+            document.addEventListener('click', e => { 
+                if (!e.target.closest('.notification-dropdown')) 
+                    document.getElementById('notificationDropdown').classList.remove('show'); 
+            });
+
+            // ========== DYNAMIC GREETING ==========
+            function updateGreeting() {
+                const hour = new Date().getHours();
+                let greeting = 'Good morning';
+                if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
+                if (hour >= 17 || hour < 5) greeting = 'Good evening';
+                document.getElementById('greetingText').innerHTML = `${greeting}, {{ request.user.first_name }}!`;
+            }
+
+            function updateDateTime() { 
+                document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                }); 
+            }
+
+            // ========== TOAST NOTIFICATION ==========
+            window.showToast = function(title, message) {
+                const container = document.getElementById('toastContainer');
+                const toast = document.createElement('div');
+                toast.className = 'toast success';
+                toast.innerHTML = `<i class="fi fi-rr-check-circle"></i><div class="toast-content"><h4>${title}</h4><p>${message}</p></div><button class="toast-close" onclick="this.parentElement.remove()">&times;</button>`;
+                container.appendChild(toast);
+                setTimeout(() => { if (toast.parentElement) toast.remove(); }, 4000);
+            };
+
+            // ========== FILTERS ==========
+            window.applyFilters = function() {
+                const schoolYear = document.getElementById('schoolYearFilter').value;
+                const quarter = document.getElementById('semesterFilter').value;
+                const gradeLevel = document.getElementById('gradeFilter').value;
+                
+                let url = '{% url "heads-school-performance" %}?';
+                url += 'school_year=' + schoolYear;
+                url += '&quarter=' + quarter;
+                url += '&grade_level=' + gradeLevel;
+                
+                window.location.href = url;
+            };
+
+            // ========== CHARTS ==========
+            {% if has_data %}
+            // Enrollment Trend Chart
+            const enrollmentCtx = document.getElementById('enrollmentTrendChart').getContext('2d');
+            new Chart(enrollmentCtx, {
+                type: 'line', 
+                data: { 
+                    labels: {{ enrollment_trend_labels|safe }}, 
+                    datasets: [{ 
+                        label: 'Enrollment', 
+                        data: {{ enrollment_trend_data|safe }}, 
+                        borderColor: '#5EA173', 
+                        backgroundColor: 'rgba(94,161,115,0.1)', 
+                        fill: true, 
+                        tension: 0.3, 
+                        pointBackgroundColor: '#5EA173', 
+                        pointRadius: 5 
+                    }] 
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: true, 
+                    plugins: { legend: { display: false } } 
+                }
+            });
+
+            // Promotion Rate Chart
+            const promotionCtx = document.getElementById('promotionRateChart').getContext('2d');
+            new Chart(promotionCtx, {
+                type: 'bar', 
+                data: { 
+                    labels: {{ promotion_labels|safe }}, 
+                    datasets: [{ 
+                        label: 'Promotion Rate (%)', 
+                        data: {{ promotion_data|safe }}, 
+                        backgroundColor: '#123499', 
+                        borderRadius: 6 
+                    }] 
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: true, 
+                    plugins: { legend: { display: false } }, 
+                    scales: { y: { min: 80, max: 100 } } 
+                }
+            });
+
+            // Year-over-Year Chart
+            const yoyCtx = document.getElementById('yearOverYearChart').getContext('2d');
+            new Chart(yoyCtx, {
+                type: 'bar', 
+                data: { 
+                    labels: {{ yoy_labels|safe }}, 
+                    datasets: [
+                        { 
+                            label: 'Previous Year', 
+                            data: {{ prev_year_data|safe }}, 
+                            backgroundColor: '#5EA173', 
+                            borderRadius: 6 
+                        },
+                        { 
+                            label: '{{ current_sy_label|escapejs }}', 
+                            data: {{ curr_year_data|safe }}, 
+                            backgroundColor: '#123499', 
+                            borderRadius: 6 
+                        }
+                    ] 
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: true, 
+                    plugins: { legend: { position: 'top' } } 
+                }
+            });
+            {% endif %}
+
+            // Initialize
+            updateSidebarState();
+            updateGreeting();
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            setInterval(updateGreeting, 60000);
+        })();
+    </script>
+</body>
+</html>

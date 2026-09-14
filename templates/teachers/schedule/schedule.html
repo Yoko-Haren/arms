@@ -1,0 +1,1256 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Schedule - Formify LIS Teacher Portal</title>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Century Gothic', sans-serif;
+        }
+
+        :root {
+            --rich-black: #00072D;
+            --dark-blue: #051650;
+            --secondary-green: #5EA173;
+            --gray-bg: #f5f7fb;
+            --border-color: #e9ecef;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --sidebar-width: 280px;
+            --sidebar-collapsed-width: 80px;
+            /* Subject colors */
+            --subject-math: #4A90E2;
+            --subject-science: #50B5A9;
+            --subject-english: #F5A623;
+            --subject-filipino: #D0021B;
+            --subject-social: #9B59B6;
+            --subject-mapeh: #F39C12;
+            --subject-tle: #1ABC9C;
+            --subject-values: #E74C3C;
+            --subject-others: #95A5A6;
+        }
+
+        body {
+            background: var(--gray-bg);
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            transition: width 0.3s ease;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+
+        .sidebar.collapsed .sidebar-header h2,
+        .sidebar.collapsed .user-details,
+        .sidebar.collapsed .nav-link span,
+        .sidebar.collapsed .logo-area span {
+            display: none;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            justify-content: center;
+            padding: 1.5rem 0.5rem;
+        }
+
+        .sidebar.collapsed .user-info {
+            justify-content: center;
+            padding: 0.8rem;
+            margin: 0 0.5rem 1.5rem;
+        }
+
+        .sidebar.collapsed .nav-link {
+            justify-content: center;
+            padding: 0.85rem 0;
+            gap: 0;
+        }
+
+        .sidebar.collapsed .nav-link i {
+            margin: 0;
+            font-size: 1.3rem;
+        }
+
+        .sidebar.collapsed .fold-btn {
+            margin: 0 auto;
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            overflow: hidden;
+        }
+
+        .sidebar-header i.fi {
+            font-size: 2rem;
+            color: var(--secondary-green);
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+
+        .sidebar-header h2 span {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            display: block;
+        }
+
+        .fold-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .fold-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin: 0 1rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: var(--secondary-green);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--rich-black);
+            flex-shrink: 0;
+        }
+
+        .user-details h4 { font-size: 0.9rem; margin-bottom: 0.2rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0 0.75rem;
+            flex: 1;
+        }
+
+        .nav-item { margin-bottom: 0.25rem; }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .nav-link:hover { background: rgba(94, 161, 115, 0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+
+        .nav-link i.fi {
+            width: 22px;
+            font-size: 1.1rem;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .nav-footer {
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 1rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem;
+            transition: margin-left 0.3s ease;
+            min-height: 100vh;
+        }
+
+        .sidebar.collapsed ~ .main-content {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .welcome h1 { font-size: 1.3rem; color: var(--rich-black); }
+        .welcome p { color: var(--text-secondary); font-size: 0.8rem; }
+
+        .top-bar-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .date-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            background: var(--gray-bg);
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+        }
+
+        /* Poro Greeting */
+        .poro-greeting {
+            background: linear-gradient(135deg, #f0f9f0, #e8f5e9);
+            border-radius: 20px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid rgba(94, 161, 115, 0.3);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .poro-greeting-content { display: flex; align-items: center; gap: 1rem; }
+
+        .character-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--secondary-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(94, 161, 115, 0.3);
+            overflow: hidden;
+        }
+
+        .character-icon img { width: 100%; height: 100%; object-fit: cover; }
+
+        .poro-message h3 { font-size: 1rem; color: var(--rich-black); margin-bottom: 0.2rem; }
+        .poro-message p { font-size: 0.75rem; color: var(--text-secondary); }
+
+        /* Schedule Controls */
+        .schedule-controls {
+            background: white;
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .view-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .view-btn {
+            background: var(--gray-bg);
+            border: none;
+            padding: 0.5rem 1.2rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .view-btn.active {
+            background: var(--secondary-green);
+            color: white;
+        }
+
+        .date-nav {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .date-nav button {
+            background: var(--gray-bg);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .date-nav input {
+            padding: 0.4rem 0.8rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .current-week-badge {
+            background: var(--gray-bg);
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-export {
+            background: var(--caribbean-blue);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .btn-export:hover {
+            background: #0e2a7a;
+            transform: translateY(-1px);
+        }
+
+        /* Week View */
+        .week-view {
+            background: white;
+            border-radius: 20px;
+            overflow-x: auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .week-grid {
+            display: grid;
+            grid-template-columns: 70px repeat(5, 1fr);
+            min-width: 800px;
+        }
+
+        .week-hour {
+            border-right: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.8rem 0.3rem;
+            text-align: center;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            background: var(--gray-bg);
+            font-weight: 600;
+        }
+
+        .week-day-header {
+            text-align: center;
+            padding: 0.8rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            border-bottom: 2px solid var(--border-color);
+            background: var(--gray-bg);
+        }
+
+        .week-day-header .day-name { color: var(--text-primary); }
+        .week-day-header .day-date { font-size: 0.7rem; color: var(--text-secondary); }
+        .week-day-header.today { background: rgba(94, 161, 115, 0.15); }
+
+        .week-cell {
+            border-right: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            min-height: 70px;
+            padding: 0.3rem;
+            position: relative;
+            background: white;
+            vertical-align: top;
+        }
+
+        .schedule-item {
+            background: var(--secondary-green);
+            color: white;
+            border-radius: 8px;
+            padding: 0.4rem 0.5rem;
+            margin-bottom: 0.3rem;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .schedule-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .schedule-item .subject { font-weight: 700; font-size: 0.75rem; }
+        .schedule-item .section { font-size: 0.65rem; opacity: 0.9; }
+        .schedule-item .room { font-size: 0.6rem; opacity: 0.8; margin-top: 0.2rem; }
+
+        /* Subject Colors */
+        .schedule-item.math { background: var(--subject-math); }
+        .schedule-item.science { background: var(--subject-science); }
+        .schedule-item.english { background: var(--subject-english); }
+        .schedule-item.filipino { background: var(--subject-filipino); }
+        .schedule-item.social { background: var(--subject-social); }
+        .schedule-item.mapeh { background: var(--subject-mapeh); }
+        .schedule-item.tle { background: var(--subject-tle); }
+        .schedule-item.values { background: var(--subject-values); }
+        .schedule-item.others { background: var(--subject-others); }
+
+        /* List View */
+        .list-view {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .list-day-section {
+            border-bottom: 8px solid var(--gray-bg);
+        }
+
+        .list-day-header {
+            background: var(--secondary-green);
+            color: white;
+            padding: 0.8rem 1.2rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .list-day-header .day-date {
+            font-size: 0.75rem;
+            opacity: 0.9;
+        }
+
+        .list-items {
+            padding: 0.5rem;
+        }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            gap: 1rem;
+            flex-wrap: wrap;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .list-item:hover {
+            background: rgba(94, 161, 115, 0.05);
+        }
+
+        .list-time {
+            width: 100px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--rich-black);
+        }
+
+        .list-subject {
+            flex: 2;
+            min-width: 150px;
+        }
+
+        .list-subject .subject-name {
+            font-weight: 600;
+            color: var(--rich-black);
+        }
+
+        .list-subject .subject-code {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+        }
+
+        .list-section {
+            flex: 1;
+            min-width: 120px;
+            font-size: 0.8rem;
+        }
+
+        .list-room {
+            width: 100px;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .schedule-badge {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            margin-right: 0.5rem;
+        }
+
+        /* Empty State */
+        .empty-schedule {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-schedule i {
+            font-size: 3rem;
+            opacity: 0.5;
+            margin-bottom: 1rem;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 450px;
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 { font-size: 1rem; color: var(--rich-black); }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .modal-body { padding: 1.5rem; }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.8rem;
+        }
+
+        .detail-row {
+            display: flex;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--gray-bg);
+        }
+
+        .detail-label {
+            width: 100px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .detail-value {
+            flex: 1;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+
+        .btn-primary {
+            background: var(--secondary-green);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        /* Mobile Overlay */
+        .mobile-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 99;
+            display: none;
+        }
+
+        .mobile-overlay.show { display: block; }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            background: white;
+            border-radius: 12px;
+            padding: 0.8rem 1.2rem;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            min-width: 280px;
+            animation: slideInRight 0.3s ease;
+            border-left: 4px solid var(--secondary-green);
+        }
+
+        .toast i { color: var(--secondary-green); }
+
+        .toast-content h4 { font-size: 0.85rem; color: var(--rich-black); }
+        .toast-content p { font-size: 0.7rem; color: var(--text-secondary); }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* ============================================================ */
+        /* PRINT STYLES - Optimized for Black Text on White Background */
+        /* ============================================================ */
+        @media print {
+            /* Hide non-essential elements */
+            .sidebar, 
+            .top-bar-actions, 
+            .poro-greeting, 
+            .schedule-controls, 
+            .nav-menu, 
+            .nav-footer, 
+            .fold-btn, 
+            .date-display, 
+            .action-buttons,
+            .mobile-overlay,
+            .toast-container,
+            .modal {
+                display: none !important;
+            }
+
+            /* Main content takes full page */
+            .main-content {
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+            }
+
+            /* Remove shadows and borders */
+            .week-view, .list-view {
+                box-shadow: none;
+                border: none;
+            }
+
+            /* Force black text on white background for all elements */
+            body, .main-content, .week-view, .list-view, .week-grid, .week-cell, .list-item {
+                background: white !important;
+                color: black !important;
+            }
+
+            /* Make all text black for printing */
+            .week-hour, .week-day-header, .day-name, .day-date, .subject, .section, .room,
+            .list-time, .subject-name, .subject-code, .list-section, .list-room,
+            .schedule-badge, .detail-label, .detail-value {
+                color: black !important;
+            }
+
+            /* Remove background colors from schedule items - use borders instead */
+            .schedule-item {
+                background: white !important;
+                border: 1px solid #ccc !important;
+                color: black !important;
+                box-shadow: none !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Keep borders visible */
+            .week-hour, .week-day-header, .week-cell, .list-item {
+                border-color: #ccc !important;
+            }
+
+            /* Ensure table headers have border */
+            .week-day-header {
+                border-bottom: 2px solid #000 !important;
+                font-weight: bold !important;
+            }
+
+            /* Make time column stand out */
+            .week-hour {
+                font-weight: bold !important;
+                background: #f5f5f5 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Today highlight becomes bold instead of colored background */
+            .week-day-header.today {
+                background: white !important;
+                font-weight: bold !important;
+                text-decoration: underline !important;
+            }
+
+            /* Subject codes in print */
+            .schedule-item .subject {
+                font-weight: bold !important;
+                font-size: 10pt !important;
+            }
+
+            .schedule-item .section, .schedule-item .room {
+                font-size: 8pt !important;
+            }
+
+            /* Ensure all content fits on page */
+            .week-view {
+                overflow: visible !important;
+            }
+
+            .week-grid {
+                min-width: auto !important;
+            }
+
+            /* Page breaks */
+            .schedule-item {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+            .list-day-section {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+            /* Force background colors to print (for the light gray backgrounds) */
+            .week-hour, .week-day-header {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .main-content { margin-left: 0 !important; padding: 1rem; }
+            .schedule-controls { flex-direction: column; align-items: stretch; }
+            .view-buttons { justify-content: center; }
+            .date-nav { justify-content: center; }
+            .action-buttons { justify-content: center; }
+            .list-item { flex-direction: column; align-items: flex-start; }
+            .list-time, .list-subject, .list-section, .list-room { width: 100%; }
+            .toast-container { left: 10px; right: 10px; }
+            .toast { min-width: auto; }
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-area">
+                    <i class="fi fi-rr-graduation-cap"></i>
+                    <h2>Formify <span>Learner Information System</span></h2>
+                </div>
+                <button class="fold-btn" id="foldBtn">
+                    <i class="fi fi-rr-angle-small-left"></i>
+                </button>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+                <div class="user-details">
+                    <h4>{{ request.user.get_full_name }}</h4>
+                    <p>Teacher • {{ current_sy }}</p>
+                </div>
+            </div>
+
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="{% url 'teachers-dashboard' %}" class="nav-link"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-classes' %}" class="nav-link"><i class="fi fi-rr-presentation"></i><span>My Classes</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-grades' %}" class="nav-link"><i class="fi fi-rr-pencil"></i><span>Grade Encoding</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-attendance' %}" class="nav-link"><i class="fi fi-rr-calendar-check"></i><span>Attendance</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-forms' %}" class="nav-link"><i class="fi fi-rr-document"></i><span>School Forms</span></a></li>
+            <li class="nav-item"><a href="/teachers/reports/" class="nav-link"><i class="fi fi-rr-chart-line-up"></i><span>Reports</span></a></li>
+            <li class="nav-item"><a href="/teachers/schedule/" class="nav-link active"><i class="fi fi-rr-calendar"></i><span>Schedule</span></a></li>
+        </ul>
+
+            <ul class="nav-menu nav-footer">
+                <li class="nav-item"><a href="{% url 'signout' %}" class="nav-link"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content" id="mainContent">
+            <div class="top-bar">
+                <div class="welcome">
+                    <h1>My Schedule</h1>
+                    <p>Your weekly class schedule for {{ current_sy }}</p>
+                </div>
+                <div class="top-bar-actions">
+                    <div class="date-display"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
+                </div>
+            </div>
+
+            <div class="poro-greeting">
+                <div class="poro-greeting-content">
+                    <div class="character-icon">
+                        <img src="{% static 'shared/poro/Poro.png' %}" alt="Poro" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'fi fi-rr-smile\' style=\'font-size:1.8rem; color:white;\'></i>';">
+                    </div>
+                    <div class="poro-message">
+                        <h3>Your Schedule is Ready!</h3>
+                        <p>Here are all your classes for the week. Click any class for details.</p>
+                    </div>
+                </div>
+            </div>
+
+            {% if not has_schedule %}
+            <div class="empty-schedule">
+                <i class="fi fi-rr-calendar-slash"></i>
+                <h3>No Schedule Found</h3>
+                <p>{{ error_message|default:"No class assignments found for the current school year." }}</p>
+            </div>
+            {% else %}
+
+            <div class="schedule-controls">
+                <div class="view-buttons">
+                    <button class="view-btn active" data-view="week">Week View</button>
+                    <button class="view-btn" data-view="list">List View</button>
+                </div>
+                <div class="date-nav">
+                    <button id="prevBtn"><i class="fi fi-rr-angle-small-left"></i></button>
+                    <input type="date" id="datePicker">
+                    <button id="nextBtn"><i class="fi fi-rr-angle-small-right"></i></button>
+                </div>
+                <div class="current-week-badge" id="weekRange"></div>
+                <div class="action-buttons">
+                    <button id="exportPdfBtn" class="btn-export">
+                        <i class="fi fi-rr-download"></i> Export PDF
+                    </button>
+                    <button id="printBtn" class="btn-export" style="background: var(--subject-others);">
+                        <i class="fi fi-rr-print"></i> Print
+                    </button>
+                </div>
+            </div>
+
+            <!-- Week View Container -->
+            <div id="weekViewContainer" class="week-view"></div>
+
+            <!-- List View Container -->
+            <div id="listViewContainer" class="list-view" style="display: none;"></div>
+
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Schedule Details Modal -->
+    <div id="scheduleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Class Details</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-row">
+                    <div class="detail-label">Subject:</div>
+                    <div class="detail-value" id="modalSubject"></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Section:</div>
+                    <div class="detail-value" id="modalSection"></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Time:</div>
+                    <div class="detail-value" id="modalTime"></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Room:</div>
+                    <div class="detail-value" id="modalRoom"></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Day:</div>
+                    <div class="detail-value" id="modalDay"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Django data passed from backend
+        const scheduleData = {{ schedule_items|safe }};
+        const daysOfWeek = {{ days|safe }};
+        const teacherName = "{{ teacher_name }}";
+
+        // State
+        let currentViewDate = new Date();
+        let currentViewMode = 'week';
+
+        // Toast function
+        function showToast(title, message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const icon = type === 'success' ? 'fi fi-rr-check-circle' : (type === 'error' ? 'fi fi-rr-cross-circle' : 'fi fi-rr-info-circle');
+            const color = type === 'success' ? '#5EA173' : (type === 'error' ? '#dc3545' : '#f39c12');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.style.borderLeftColor = color;
+            toast.innerHTML = `
+                <i class="${icon}" style="color:${color}"></i>
+                <div class="toast-content">
+                    <h4>${title}</h4>
+                    <p>${message}</p>
+                </div>
+                <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Helper Functions
+        function getWeekDates(referenceDate) {
+            const date = new Date(referenceDate);
+            const day = date.getDay();
+            const diff = day === 0 ? -6 : 1 - day;
+            const monday = new Date(date);
+            monday.setDate(date.getDate() + diff);
+            const week = [];
+            for (let i = 0; i < 5; i++) { // Monday to Friday only
+                const d = new Date(monday);
+                d.setDate(monday.getDate() + i);
+                week.push(d);
+            }
+            return week;
+        }
+
+        function formatWeekRange(weekDates) {
+            if (!weekDates.length) return '';
+            const start = weekDates[0];
+            const end = weekDates[weekDates.length - 1];
+            return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+        }
+
+        function getSchedulesForDay(dayName) {
+            return scheduleData.filter(s => s.day === dayName);
+        }
+
+        function renderWeekView() {
+            const weekDates = getWeekDates(currentViewDate);
+            const timeSlots = [];
+            for (let hour = 7; hour <= 17; hour++) {
+                for (let minute of [0, 30]) {
+                    if (hour === 17 && minute === 30) continue;
+                    timeSlots.push({ hour, minute });
+                }
+            }
+
+            let html = `<div class="week-grid">`;
+            html += `<div class="week-hour">Time</div>`;
+            
+            for (let i = 0; i < weekDates.length; i++) {
+                const d = weekDates[i];
+                const isToday = d.toDateString() === new Date().toDateString();
+                html += `<div class="week-day-header ${isToday ? 'today' : ''}">
+                            <div class="day-name">${daysOfWeek[i]}</div>
+                            <div class="day-date">${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                        </div>`;
+            }
+            html += `</div>`;
+
+            for (let slot of timeSlots) {
+                const timeStr = `${slot.hour.toString().padStart(2, '0')}:${slot.minute.toString().padStart(2, '0')}`;
+                const displayTime = slot.minute === 0 ? `${slot.hour}:00` : `${slot.hour}:30`;
+                
+                html += `<div class="week-grid">`;
+                html += `<div class="week-hour">${displayTime}</div>`;
+                
+                for (let i = 0; i < weekDates.length; i++) {
+                    const daySchedules = getSchedulesForDay(daysOfWeek[i]);
+                    const slotSchedules = daySchedules.filter(s => {
+                        return s.start_raw <= timeStr && s.end_raw > timeStr;
+                    });
+                    
+                    html += `<div class="week-cell">`;
+                    for (let sch of slotSchedules) {
+                        html += `<div class="schedule-item ${sch.color}" onclick='showScheduleDetails(${JSON.stringify(sch).replace(/'/g, "&#39;")})'>
+                                    <div class="subject">${sch.subject_code}</div>
+                                    <div class="section">${sch.section_name}</div>
+                                    <div class="room">${sch.room}</div>
+                                </div>`;
+                    }
+                    html += `</div>`;
+                }
+                html += `</div>`;
+            }
+            
+            document.getElementById('weekViewContainer').innerHTML = html;
+        }
+
+        function renderListView() {
+            const weekDates = getWeekDates(currentViewDate);
+            let html = '';
+            
+            for (let i = 0; i < weekDates.length; i++) {
+                const d = weekDates[i];
+                const dayName = daysOfWeek[i];
+                const daySchedules = getSchedulesForDay(dayName);
+                daySchedules.sort((a, b) => a.start_raw.localeCompare(b.start_raw));
+                
+                html += `<div class="list-day-section">
+                            <div class="list-day-header">
+                                <span>${dayName}</span>
+                                <span class="day-date">${d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                                <span style="font-size:0.7rem; opacity:0.8;">${daySchedules.length} class${daySchedules.length !== 1 ? 'es' : ''}</span>
+                            </div>
+                            <div class="list-items">`;
+                
+                if (daySchedules.length === 0) {
+                    html += `<div class="empty-schedule" style="padding:1.5rem;">No classes scheduled for this day.</div>`;
+                } else {
+                    for (let sch of daySchedules) {
+                        html += `<div class="list-item" onclick='showScheduleDetails(${JSON.stringify(sch).replace(/'/g, "&#39;")})'>
+                                    <div class="list-time">
+                                        <span class="schedule-badge" style="background:var(--subject-${sch.color});"></span>
+                                        ${sch.start_time} - ${sch.end_time}
+                                    </div>
+                                    <div class="list-subject">
+                                        <div class="subject-name">${sch.subject_name}</div>
+                                        <div class="subject-code">${sch.subject_code}</div>
+                                    </div>
+                                    <div class="list-section">${sch.section_name}</div>
+                                    <div class="list-room">${sch.room}</div>
+                                </div>`;
+                    }
+                }
+                
+                html += `</div></div>`;
+            }
+            
+            document.getElementById('listViewContainer').innerHTML = html;
+        }
+
+        function refreshView() {
+            if (currentViewMode === 'week') {
+                document.getElementById('weekViewContainer').style.display = 'block';
+                document.getElementById('listViewContainer').style.display = 'none';
+                renderWeekView();
+            } else {
+                document.getElementById('weekViewContainer').style.display = 'none';
+                document.getElementById('listViewContainer').style.display = 'block';
+                renderListView();
+            }
+            updateDatePicker();
+            updateWeekRange();
+        }
+
+        function updateDatePicker() {
+            const year = currentViewDate.getFullYear();
+            const month = String(currentViewDate.getMonth() + 1).padStart(2, '0');
+            const day = String(currentViewDate.getDate()).padStart(2, '0');
+            document.getElementById('datePicker').value = `${year}-${month}-${day}`;
+        }
+
+        function updateWeekRange() {
+            const weekDates = getWeekDates(currentViewDate);
+            const rangeElem = document.getElementById('weekRange');
+            if (rangeElem) {
+                rangeElem.textContent = formatWeekRange(weekDates);
+            }
+        }
+
+        function changeWeek(delta) {
+            currentViewDate.setDate(currentViewDate.getDate() + (delta * 7));
+            refreshView();
+        }
+
+        function goToDate() {
+            const dateStr = document.getElementById('datePicker').value;
+            if (dateStr) {
+                currentViewDate = new Date(dateStr);
+                refreshView();
+            }
+        }
+
+        function showScheduleDetails(schedule) {
+            document.getElementById('modalSubject').innerHTML = `<strong>${schedule.subject_name}</strong><br><span style="font-size:0.7rem; color:var(--text-secondary);">${schedule.subject_code}</span>`;
+            document.getElementById('modalSection').textContent = schedule.section_name;
+            document.getElementById('modalTime').textContent = `${schedule.start_time} - ${schedule.end_time}`;
+            document.getElementById('modalRoom').textContent = schedule.room;
+            document.getElementById('modalDay').textContent = schedule.day;
+            document.getElementById('scheduleModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('scheduleModal').classList.remove('active');
+        }
+
+        // Export PDF
+        function exportToPDF() {
+            showToast('Exporting', 'Generating PDF schedule...', 'info');
+            window.location.href = "{% url 'schedule-export' %}";
+        }
+
+        // Print
+        function printSchedule() {
+            window.print();
+        }
+
+        // Event Listeners
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentViewMode = btn.dataset.view;
+                refreshView();
+            });
+        });
+
+        document.getElementById('prevBtn').addEventListener('click', () => changeWeek(-1));
+        document.getElementById('nextBtn').addEventListener('click', () => changeWeek(1));
+        document.getElementById('datePicker').addEventListener('change', goToDate);
+        
+        const exportBtn = document.getElementById('exportPdfBtn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', exportToPDF);
+        }
+        
+        const printBtn = document.getElementById('printBtn');
+        if (printBtn) {
+            printBtn.addEventListener('click', printSchedule);
+        }
+
+        // Sidebar toggle
+        const sidebar = document.getElementById('sidebar');
+        const foldBtn = document.getElementById('foldBtn');
+        const mobileOverlay = document.getElementById('mobileOverlay');
+        let sidebarCollapsed = false;
+
+        function toggleSidebar() {
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('mobile-open');
+                mobileOverlay.classList.toggle('show');
+            } else {
+                sidebarCollapsed = !sidebarCollapsed;
+                sidebar.classList.toggle('collapsed', sidebarCollapsed);
+                const icon = foldBtn.querySelector('i');
+                if (icon) icon.className = sidebarCollapsed ? 'fi fi-rr-angle-small-right' : 'fi fi-rr-angle-small-left';
+            }
+        }
+
+        foldBtn.addEventListener('click', toggleSidebar);
+        mobileOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('mobile-open');
+            mobileOverlay.classList.remove('show');
+        });
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                sidebar.classList.remove('mobile-open');
+                mobileOverlay.classList.remove('show');
+            }
+        });
+
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        // Initialize
+        refreshView();
+    </script>
+</body>
+</html>

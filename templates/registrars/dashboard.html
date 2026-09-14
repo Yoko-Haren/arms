@@ -1,0 +1,89 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Dashboard - ARMS</title>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: #f5f7fb; min-height: 100vh; }
+        .navbar { background: #1a1a2e; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; color: white; }
+        .navbar a { color: white; text-decoration: none; margin-left: 1rem; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+        .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin-bottom: 2rem; }
+        .stat-card { background: white; border-radius: 16px; padding: 1.5rem; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .stat-card h3 { font-size: 2rem; font-weight: 800; }
+        .stat-card p { color: #6c757d; font-size: 0.8rem; margin-top: 0.3rem; }
+        .card { background: white; border-radius: 16px; padding: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
+        .btn { padding: 0.6rem 1.2rem; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
+        .btn-primary { background: #123499; color: white; }
+        .btn-success { background: #5EA173; color: white; }
+        .btn-outline { background: transparent; border: 2px solid #e0e5ea; color: #1a1a2e; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        th { text-align: left; padding: 0.7rem; background: #f8f9fa; font-weight: 700; border-bottom: 2px solid #e0e5ea; }
+        td { padding: 0.6rem 0.7rem; border-bottom: 1px solid #f0f0f0; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div>
+            <strong style="font-size:1.1rem;">📋 Registrar Portal</strong>
+            <span style="font-size:0.7rem;opacity:0.7;margin-left:0.5rem;">{{ school.school_name }}</span>
+        </div>
+        <div>
+            <a href="{% url 'registrars:upload_class_list' %}">Upload Class List</a>
+            <a href="{% url 'registrars:section_list' %}">Sections</a>
+            <a href="{% url 'signout' %}">Logout</a>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <h2 style="margin-bottom:1.5rem;">Welcome, {{ user.get_full_name }}</h2>
+        
+        {% if messages %}
+        {% for m in messages %}
+        <div style="padding:0.8rem;margin-bottom:1rem;border-radius:10px;background:{% if m.tags == 'success' %}#d4edda{% elif m.tags == 'error' %}#f8d7da{% else %}#e3f0ff{% endif %};color:{% if m.tags == 'success' %}#155724{% elif m.tags == 'error' %}#721c24{% else %}#2D6AFF{% endif %};">
+            {{ m }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        
+        <div class="stat-grid">
+            <div class="stat-card"><h3 style="color:#123499;">{{ total_students }}</h3><p>Enrolled Students</p></div>
+            <div class="stat-card"><h3 style="color:#5EA173;">{{ total_sections }}</h3><p>Sections</p></div>
+            <div class="stat-card"><h3 style="color:#f39c12;">{{ total_teachers }}</h3><p>Teachers</p></div>
+            <div class="stat-card"><h3 style="color:#6A1B9A;">{{ total_subjects }}</h3><p>Subjects</p></div>
+        </div>
+        
+        <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <h3>Quick Actions</h3>
+            </div>
+            <div style="display:flex;gap:1rem;">
+                <a href="{% url 'registrars:upload_class_list' %}" class="btn btn-primary"><i class="fi fi-rr-upload"></i> Upload Class List (CSV)</a>
+                <a href="{% url 'registrars:section_list' %}" class="btn btn-outline"><i class="fi fi-rr-list"></i> View Sections</a>
+            </div>
+        </div>
+        
+        {% if recent_enrollments %}
+        <div class="card">
+            <h3 style="margin-bottom:1rem;">Recent Enrollments</h3>
+            <table>
+                <thead><tr><th>Student ID</th><th>Name</th><th>Section</th></tr></thead>
+                <tbody>
+                    {% for e in recent_enrollments %}
+                    <tr>
+                        <td>{{ e.student.lrn }}</td>
+                        <td>{{ e.student.last_name }}, {{ e.student.first_name }}</td>
+                        <td>{{ e.section.section_name }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

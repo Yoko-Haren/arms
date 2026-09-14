@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Security - Formify Admin Portal</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'AvantGarde', 'Century Gothic', sans-serif;
+        }
+
+        :root {
+            --rich-black: #00072D;
+            --dark-blue: #051650;
+            --secondary-green: #5EA173;
+            --gray-bg: #f5f7fb;
+            --border-color: #e9ecef;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --sidebar-width: 280px;
+            --danger-red: #dc3545;
+            --warning-orange: #f39c12;
+            --success-green: #28a745;
+            --info-blue: #17a2b8;
+        }
+
+        body {
+            background: var(--gray-bg);
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar-header i { font-size: 2rem; color: var(--secondary-green); }
+        .sidebar-header h2 { font-size: 1.1rem; font-weight: 600; }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin: 0 1rem 1.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+        }
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: var(--secondary-green);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--rich-black);
+        }
+        .user-details h4 { font-size: 0.9rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+
+        .nav-menu { list-style: none; padding: 0 0.75rem; }
+        .nav-item { margin-bottom: 0.25rem; }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+        .nav-link i { width: 22px; }
+
+        .nav-footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .welcome h1 { font-size: 1.3rem; color: var(--rich-black); }
+        .welcome p { color: var(--text-secondary); font-size: 0.8rem; }
+        .top-bar-actions { display: flex; align-items: center; gap: 1rem; }
+        .date-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            background: var(--gray-bg);
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+        }
+
+        /* Settings Layout */
+        .settings-container {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            gap: 1.5rem;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            min-height: calc(100vh - 140px);
+        }
+
+        .settings-sidebar {
+            background: var(--gray-bg);
+            padding: 1.5rem 0;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .settings-nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.8rem 1.5rem;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+        .settings-nav-link:hover { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .settings-nav-link.active { background: rgba(94,161,115,0.15); color: var(--secondary-green); border-left-color: var(--secondary-green); }
+        .settings-nav-link i { width: 20px; font-size: 1rem; }
+
+        .settings-content {
+            padding: 1.5rem;
+            overflow-y: auto;
+            max-height: calc(100vh - 140px);
+        }
+
+        .settings-section {
+            display: none;
+        }
+        .settings-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            color: var(--rich-black);
+            margin-bottom: 0.25rem;
+        }
+        .section-desc {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* Form Styles */
+        .settings-form {
+            max-width: 700px;
+        }
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--rich-black);
+            margin-bottom: 0.4rem;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.85rem;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        /* Toggle Switch */
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .toggle-info h4 {
+            font-size: 0.9rem;
+            color: var(--rich-black);
+            margin-bottom: 0.2rem;
+        }
+        .toggle-info p {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--border-color);
+            transition: 0.3s;
+            border-radius: 34px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+        input:checked + .toggle-slider {
+            background-color: var(--secondary-green);
+        }
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+
+        /* Buttons */
+        .btn-save {
+            background: var(--secondary-green);
+            color: white;
+            padding: 0.6rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+        }
+        .btn-save:hover { background: #4a8c5e; }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.6rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .btn-danger {
+            background: var(--danger-red);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Password Field with Toggle */
+        .password-wrapper {
+            position: relative;
+        }
+        .password-wrapper input {
+            width: 100%;
+            padding-right: 2.5rem;
+        }
+        .toggle-password {
+            position: absolute;
+            right: 0.8rem;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: var(--text-secondary);
+            background: none;
+            border: none;
+        }
+
+        /* Activity Log Table */
+        .activity-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .activity-table th, .activity-table td {
+            text-align: left;
+            padding: 0.6rem 0.3rem;
+            font-size: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .activity-table th { color: var(--text-secondary); font-weight: 600; }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 450px;
+            animation: modalSlideIn 0.3s ease;
+        }
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+        }
+        .modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; }
+        .modal-body { padding: 1.5rem; }
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        .menu-toggle {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: var(--secondary-green);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 992px) {
+            .settings-container {
+                grid-template-columns: 1fr;
+            }
+            .settings-sidebar {
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 768px) {
+            .menu-toggle { display: block; }
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+    <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-shield-alt"></i>
+                <h2>Formify <br><span>Admin Portal</span></h2>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar">SA</div>
+                <div class="user-details">
+                    <h4>System Admin</h4>
+                    <p>Super Administrator</p>
+                </div>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="../dashboard/index.html" class="nav-link"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li class="nav-item"><a href="../detection/index.html" class="nav-link"><i class="fas fa-robot"></i> AI Anomaly Detection</a></li>
+                <li class="nav-item"><a href="../anomalyLogs/index.html" class="nav-link"><i class="fas fa-exclamation-triangle"></i> Anomaly Logs</a></li>
+                <li class="nav-item"><a href="../modelTraining/index.html" class="nav-link"><i class="fas fa-brain"></i> AI Model Training</a></li>
+                <li class="nav-item"><a href="../monitoring/index.html" class="nav-link"><i class="fas fa-chart-line"></i> System Monitoring</a></li>
+                <li class="nav-item"><a href="../auditTrail/index.html" class="nav-link"><i class="fas fa-history"></i> Audit Trail</a></li>
+                <li class="nav-item"><a href="../security/index.html" class="nav-link active"><i class="fas fa-shield-alt"></i> Security</a></li>
+                <li class="nav-item"><a href="../settings/index.html" class="nav-link"><i class="fas fa-cog"></i> Settings</a></li>
+            </ul>
+            <ul class="nav-menu nav-footer">
+                <li class="nav-item"><a href="#" class="nav-link"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="top-bar">
+                <div class="welcome">
+                    <h1>Security Settings</h1>
+                    <p>Data Privacy Act compliance, authentication policies, and security configuration</p>
+                </div>
+                <div class="top-bar-actions">
+                    <div class="date-display"><i class="fas fa-calendar"></i><span id="currentDate"></span></div>
+                </div>
+            </div>
+
+            <div class="settings-container">
+                <div class="settings-sidebar">
+                    <div class="settings-nav-link active" data-section="auth"><i class="fas fa-key"></i> Authentication</div>
+                    <div class="settings-nav-link" data-section="session"><i class="fas fa-clock"></i> Session Management</div>
+                    <div class="settings-nav-link" data-section="dpa"><i class="fas fa-file-contract"></i> Data Privacy Act (DPA)</div>
+                    <div class="settings-nav-link" data-section="encryption"><i class="fas fa-lock"></i> Encryption</div>
+                    <div class="settings-nav-link" data-section="audit"><i class="fas fa-history"></i> Audit & Logging</div>
+                    <div class="settings-nav-link" data-section="security"><i class="fas fa-shield-virus"></i> Threat Protection</div>
+                </div>
+
+                <div class="settings-content">
+                    <!-- Authentication Section -->
+                    <div class="settings-section active" id="section-auth">
+                        <h2 class="section-title">Authentication Policies</h2>
+                        <p class="section-desc">Configure how users authenticate and access the system</p>
+                        <div class="settings-form">
+                            <div class="toggle-item">
+                                <div class="toggle-info"><h4>Require Strong Password</h4><p>Minimum 8 chars, uppercase, lowercase, number, special character</p></div>
+                                <label class="toggle-switch"><input type="checkbox" id="strongPassword" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="toggle-item">
+                                <div class="toggle-info"><h4>Two-Factor Authentication (2FA)</h4><p>Require verification code during login for all Admin accounts</p></div>
+                                <label class="toggle-switch"><input type="checkbox" id="twoFactor"><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="toggle-item">
+                                <div class="toggle-info"><h4>Account Lockout on Failed Attempts</h4><p>Lock account after 5 failed login attempts</p></div>
+                                <label class="toggle-switch"><input type="checkbox" id="accountLockout" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Lockout Duration (minutes)</label><input type="number" id="lockoutDuration" value="30" min="5" max="1440"></div>
+                                <div class="form-group"><label>Password Expiry (days)</label><input type="number" id="passwordExpiry" value="90" min="30" max="365"></div>
+                            </div>
+                            <button class="btn-save" onclick="saveSettings('auth')">Save Authentication Settings</button>
+                        </div>
+                    </div>
+
+                    <!-- Session Management Section -->
+                    <div class="settings-section" id="section-session">
+                        <h2 class="section-title">Session Management</h2>
+                        <p class="section-desc">Configure session timeout, concurrent sessions, and idle logout</p>
+                        <div class="settings-form">
+                            <div class="toggle-item">
+                                <div class="toggle-info"><h4>Auto Logout on Idle</h4><p>Automatically log out inactive users</p></div>
+                                <label class="toggle-switch"><input type="checkbox" id="autoLogout" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="form-group"><label>Idle Timeout (minutes)</label><select id="sessionTimeout"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60" selected>1 hour</option><option value="120">2 hours</option></select></div>
+                            <div class="toggle-item">
+                                <div class="toggle-info"><h4>Single Session Per User</h4><p>Prevent multiple concurrent logins from different devices</p></div>
+                                <label class="toggle-switch"><input type="checkbox" id="singleSession"><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="toggle-item">
+                                <div class="toggle-info"><h4>Remember Me Duration</h4><p>How long "Remember Me" keeps users logged in</p></div>
+                                <select id="rememberDuration" style="width:150px;"><option value="1">1 day</option><option value="7" selected>7 days</option><option value="30">30 days</option></select>
+                            </div>
+                            <button class="btn-save" onclick="saveSettings('session')">Save Session Settings</button>
+                        </div>
+                    </div>
+
+                    <!-- Data Privacy Act (DPA) Section -->
+                    <div class="settings-section" id="section-dpa">
+                        <h2 class="section-title">Data Privacy Act Compliance (RA 10173)</h2>
+                        <p class="section-desc">Configure data retention, consent, and privacy policies</p>
+                        <div class="settings-form">
+                            <div class="toggle-item">
+                                <div class="toggle-info"><h4>Data Retention Period</h4><p>Automatically archive/delete records after specified period</p></div>
+                                <select id="retentionPeriod" style="width:180px;"><option value="1">1 year</option><option value="3" selected>3 years</option><option value="5">5 years</option><option value="10">10 years (DepEd requirement)</option></select>
+                            </div>
+                            <div class="toggle-item">
+                                <div class="toggle-info"><h4>Require Consent for Data Processing</h4><p>Users must accept privacy policy before using the system</p></div>
+                                <label class="toggle-switch"><input type="checkbox" id="requireConsent" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="toggle-item">
+                                <div class="toggle-info"><h4>Data Access Logging</h4><p>Log every access to personal student data</p></div>
+                                <label class="toggle-switch"><input type="checkbox" id="dataAccessLogging" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="form-group"><label>Data Protection Officer (DPO) Email</label><input type="email" id="dpoEmail" value="dpo@deped.gov.ph"></div>
+                            <button class="btn-save" onclick="saveSettings('dpa')">Save Privacy Settings</button>
+                        </div>
+                        <div style="margin-top: 1.5rem; background: var(--gray-bg); padding: 1rem; border-radius: 12px;">
+                            <h4 style="font-size:0.85rem;">Latest Privacy Policy Version</h4>
+                            <p style="font-size:0.7rem; margin-top:0.3rem;">Version 2.0 - Last updated April 10, 2026</p>
+                            <button class="btn-outline" style="margin-top:0.5rem;" onclick="viewPrivacyPolicy()">View Privacy Policy</button>
+                        </div>
+                    </div>
+
+                    <!-- Encryption Section -->
+                    <div class="settings-section" id="section-encryption">
+                        <h2 class="section-title">Encryption & Data Protection</h2>
+                        <p class="section-desc">Configure data encryption standards and key management</p>
+                        <div class="settings-form">
+                            <div class="toggle-item">
+                                <div class="toggle-info"><h4>End-to-End Encryption</h4><p>Encrypt all data at rest and in transit</p></div>
+                                <label class="toggle-switch"><input type="checkbox" id="e2eEncryption" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="form-group"><label>Encryption Standard</label><select id="encryptionStandard"><option value="AES-128">AES-128</option><option value="AES-256" selected>AES-256 (Recommended)</option></select></div>
+                            <div class="toggle-item">
+                                <div class="toggle-info"><h4>Backup Encryption</h4><p>Encrypt all system backups</p></div>
+                                <label class="toggle-switch"><input type="checkbox" id="backupEncryption" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="form-group"><label>Key Rotation Period (days)</label><input type="number" id="keyRotation" value="180" min="30" max="365"></div>
+                            <button class="btn-save" onclick="saveSettings('encryption')">Save Encryption Settings</button>
+                        </div>
+                    </div>
+
+                    <!-- Audit & Logging Section -->
+                    <div class="settings-section" id="section-audit">
+                        <h2 class="section-title">Audit & Logging</h2>
+                        <p class="section-desc">Configure what gets logged and for how long</p>
+                        <div class="settings-form">
+                            <div class="toggle-item">
+                                <div class="toggle-info"><h4>Log All User Actions</h4><p>Record every action performed by users</p></div>
+                                <label class="toggle-switch"><input type="checkbox" id="logAllActions" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="toggle-item">
+                                <div class="toggle-info"><h4>Log Sensitive Data Access</h4><p>Record when users access grades, SF10, personal info</p></div>
+                                <label class="toggle-switch"><input type="checkbox" id="logSensitiveAccess" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="form-group"><label>Log Retention Period (days)</label><select id="logRetention"><option value="30">30 days</option><option value="90" selected>90 days (3 months)</option><option value="180">180 days (6 months)</option><option value="365">1 year</option></select></div>
+                            <button class="btn-save" onclick="saveSettings('audit')">Save Logging Settings</button>
+                        </div>
+                        <div style="margin-top: 1.5rem;">
+                            <h4 style="font-size:0.85rem;">Recent Security Events</h4>
+                            <table class="activity-table">
+                                <thead><tr><th>Timestamp</th><th>Event</th><th>Status</th></tr></thead>
+                                <tbody>
+                                    <tr><td>2026-04-15 08:30:22</td><td>Failed login attempt - Admin account</td><td><span style="color:var(--danger-red);">Blocked</span></td></tr>
+                                    <tr><td>2026-04-14 23:45:00</td><td>2FA verification successful</td><td><span style="color:var(--success-green);">Passed</span></td></tr>
+                                    <tr><td>2026-04-14 16:20:15</td><td>Password change - System Admin</td><td><span style="color:var(--success-green);">Completed</span></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Threat Protection Section -->
+                    <div class="settings-section" id="section-security">
+                        <h2 class="section-title">Threat Protection</h2>
+                        <p class="section-desc">Configure security measures against common threats</p>
+                        <div class="settings-form">
+                            <div class="toggle-item">
+                                <div class="toggle-info"><h4>Rate Limiting</h4><p>Limit API requests per IP to prevent brute force</p></div>
+                                <label class="toggle-switch"><input type="checkbox" id="rateLimiting" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="form-group"><label>Max Requests per Minute</label><input type="number" id="rateLimit" value="60" min="10" max="500"></div>
+                            <div class="toggle-item">
+                                <div class="toggle-info"><h4>SQL Injection Protection</h4><p>Automatically sanitize database queries</p></div>
+                                <label class="toggle-switch"><input type="checkbox" id="sqlProtection" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="toggle-item">
+                                <div class="toggle-info"><h4>XSS Protection</h4><p>Sanitize user input to prevent cross-site scripting</p></div>
+                                <label class="toggle-switch"><input type="checkbox" id="xssProtection" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="toggle-item">
+                                <div class="toggle-info"><h4>IP Whitelisting for Admin Access</h4><p>Restrict admin login to specific IP addresses</p></div>
+                                <label class="toggle-switch"><input type="checkbox" id="ipWhitelist"><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="form-group"><label>Allowed IPs (comma-separated)</label><input type="text" id="allowedIPs" placeholder="192.168.1.100, 10.0.0.1"></div>
+                            <button class="btn-save" onclick="saveSettings('threat')">Save Security Settings</button>
+                        </div>
+                        <div style="margin-top: 1rem; background: #f8d7da; border-radius: 12px; padding: 1rem; border-left: 4px solid var(--danger-red);">
+                            <h4 style="font-size:0.8rem; color:var(--danger-red);">Emergency Actions</h4>
+                            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                                <button class="btn-outline" style="border-color:var(--danger-red);" onclick="forceLogoutAll()">Force Logout All Users</button>
+                                <button class="btn-outline" style="border-color:var(--danger-red);" onclick="enableMaintenanceMode()">Enable Maintenance Mode</button>
+                                <button class="btn-danger" onclick="lockdownSystem()">Lockdown System</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function saveSettings(section) {
+            localStorage.setItem('security_strongPassword', document.getElementById('strongPassword').checked);
+            localStorage.setItem('security_twoFactor', document.getElementById('twoFactor').checked);
+            localStorage.setItem('security_accountLockout', document.getElementById('accountLockout').checked);
+            localStorage.setItem('security_lockoutDuration', document.getElementById('lockoutDuration').value);
+            localStorage.setItem('security_passwordExpiry', document.getElementById('passwordExpiry').value);
+            localStorage.setItem('security_sessionTimeout', document.getElementById('sessionTimeout').value);
+            localStorage.setItem('security_singleSession', document.getElementById('singleSession').checked);
+            localStorage.setItem('security_retentionPeriod', document.getElementById('retentionPeriod').value);
+            localStorage.setItem('security_requireConsent', document.getElementById('requireConsent').checked);
+            localStorage.setItem('security_encryptionStandard', document.getElementById('encryptionStandard').value);
+            localStorage.setItem('security_logRetention', document.getElementById('logRetention').value);
+            localStorage.setItem('security_rateLimiting', document.getElementById('rateLimiting').checked);
+            localStorage.setItem('security_rateLimit', document.getElementById('rateLimit').value);
+            alert(`✅ Security settings saved successfully. (${section} updated)`);
+        }
+
+        function loadSavedSettings() {
+            const saved = localStorage.getItem('security_strongPassword');
+            if (saved !== null) document.getElementById('strongPassword').checked = saved === 'true';
+            const twoFactor = localStorage.getItem('security_twoFactor');
+            if (twoFactor !== null) document.getElementById('twoFactor').checked = twoFactor === 'true';
+            const lockout = localStorage.getItem('security_accountLockout');
+            if (lockout !== null) document.getElementById('accountLockout').checked = lockout === 'true';
+            const lockoutDur = localStorage.getItem('security_lockoutDuration');
+            if (lockoutDur) document.getElementById('lockoutDuration').value = lockoutDur;
+            const pwdExpiry = localStorage.getItem('security_passwordExpiry');
+            if (pwdExpiry) document.getElementById('passwordExpiry').value = pwdExpiry;
+            const sessionTimeout = localStorage.getItem('security_sessionTimeout');
+            if (sessionTimeout) document.getElementById('sessionTimeout').value = sessionTimeout;
+            const singleSession = localStorage.getItem('security_singleSession');
+            if (singleSession !== null) document.getElementById('singleSession').checked = singleSession === 'true';
+            const retention = localStorage.getItem('security_retentionPeriod');
+            if (retention) document.getElementById('retentionPeriod').value = retention;
+            const requireConsent = localStorage.getItem('security_requireConsent');
+            if (requireConsent !== null) document.getElementById('requireConsent').checked = requireConsent === 'true';
+            const encryption = localStorage.getItem('security_encryptionStandard');
+            if (encryption) document.getElementById('encryptionStandard').value = encryption;
+            const logRetention = localStorage.getItem('security_logRetention');
+            if (logRetention) document.getElementById('logRetention').value = logRetention;
+            const rateLimiting = localStorage.getItem('security_rateLimiting');
+            if (rateLimiting !== null) document.getElementById('rateLimiting').checked = rateLimiting === 'true';
+            const rateLimit = localStorage.getItem('security_rateLimit');
+            if (rateLimit) document.getElementById('rateLimit').value = rateLimit;
+        }
+
+        function viewPrivacyPolicy() {
+            alert("📜 Formify Privacy Policy v2.0\n\nThis system complies with the Data Privacy Act of 2012 (RA 10173). All personal data collected is used solely for educational records management. Data retention period is 10 years as per DepEd policy.");
+        }
+
+        function forceLogoutAll() {
+            if (confirm("⚠️ Force logout ALL users? This will end all active sessions across the system.")) {
+                alert("All users have been logged out. They will need to sign in again.");
+            }
+        }
+
+        function enableMaintenanceMode() {
+            if (confirm("🛠️ Enable maintenance mode? Users will see a maintenance page and cannot access the system.")) {
+                alert("Maintenance mode enabled. The system is now offline for users.");
+            }
+        }
+
+        function lockdownSystem() {
+            if (confirm("🔒 LOCKDOWN SYSTEM? This will immediately suspend all user access and log out all sessions. Only Admin can restore access.")) {
+                alert("SYSTEM LOCKDOWN ACTIVATED. All user access suspended.");
+            }
+        }
+
+        // Navigation
+        document.querySelectorAll('.settings-nav-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.settings-nav-link').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+                const sectionId = link.dataset.section;
+                document.querySelectorAll('.settings-section').forEach(section => section.classList.remove('active'));
+                document.getElementById(`section-${sectionId}`).classList.add('active');
+            });
+        });
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+        function updateDateTime() { document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }); }
+
+        loadSavedSettings();
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+    </script>
+</body>
+</html>

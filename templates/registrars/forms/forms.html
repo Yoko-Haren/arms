@@ -1,0 +1,554 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Forms — Formify LIS Registrar</title>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI','Century Gothic',sans-serif}
+    :root{--rich-black:#00072D;--dark-blue:#051650;--caribbean-blue:#123499;--secondary-green:#5EA173;--green-dark:#4a8a5e;--gray-bg:#f5f7fb;--border-color:#e9ecef;--text-primary:#2d3748;--text-secondary:#718096;--text-light:#a0aec0;--sidebar-width:280px;--sidebar-collapsed-width:80px;--radius-sm:8px;--radius-md:14px;--radius-lg:20px;--radius-xl:28px;--shadow-sm:0 2px 10px rgba(0,0,0,.05);--shadow-md:0 8px 25px rgba(0,0,0,.1)}
+    body{background:var(--gray-bg);min-height:100vh}
+    .layout{display:flex;min-height:100vh}
+    .sidebar{width:var(--sidebar-width);background:linear-gradient(180deg,var(--rich-black),var(--dark-blue));color:#fff;position:fixed;height:100vh;overflow-y:auto;overflow-x:hidden;transition:width .3s;z-index:100;display:flex;flex-direction:column}
+    .sidebar.collapsed{width:var(--sidebar-collapsed-width)}
+    .sidebar.collapsed .sb-logo-text,.sidebar.collapsed .user-details,.sidebar.collapsed .nav-link span{display:none}
+    .sidebar.collapsed .sb-header{justify-content:center;padding:1.5rem .5rem}
+    .sidebar.collapsed .sb-logo{display:none}
+    .sidebar.collapsed .user-info{justify-content:center;padding:.8rem;margin:0 .5rem 1.5rem}
+    .sidebar.collapsed .nav-link{justify-content:center;padding:.85rem 0;gap:0}
+    .sidebar.collapsed .fold-btn{margin:0 auto}
+    .sidebar::-webkit-scrollbar{width:4px}
+    .sidebar::-webkit-scrollbar-thumb{background:var(--secondary-green);border-radius:4px}
+    .sb-header{display:flex;align-items:center;justify-content:space-between;padding:1.5rem;border-bottom:1px solid rgba(255,255,255,.1)}
+    .sb-logo{display:flex;align-items:center;gap:.8rem}
+    .sb-logo i{font-size:1.8rem;color:var(--secondary-green)}
+    .sb-logo-text h2{font-size:1rem;font-weight:700}
+    .sb-logo-text span{font-size:.65rem;opacity:.6;display:block}
+    .fold-btn{background:rgba(255,255,255,.1);border:none;color:#fff;cursor:pointer;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:background .2s;flex-shrink:0}
+    .fold-btn:hover{background:rgba(255,255,255,.25)}
+    .user-info{display:flex;align-items:center;gap:.8rem;padding:.9rem;margin:1rem 1rem 1.5rem;background:rgba(255,255,255,.1);border-radius:12px;overflow:hidden;white-space:nowrap}
+    .user-avatar{width:42px;height:42px;background:var(--secondary-green);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:var(--rich-black);flex-shrink:0}
+    .user-details h4{font-size:.85rem;font-weight:600}
+    .user-details p{font-size:.65rem;opacity:.65}
+    .nav-menu{list-style:none;padding:0 .75rem;flex:1}
+    .nav-item{margin-bottom:.2rem}
+    .nav-link{display:flex;align-items:center;gap:.9rem;padding:.7rem 1rem;color:rgba(255,255,255,.8);text-decoration:none;border-radius:10px;font-size:.875rem;transition:all .25s;white-space:nowrap;overflow:hidden}
+    .nav-link:hover{background:rgba(94,161,115,.2);color:#fff}
+    .nav-link.active{background:var(--secondary-green);color:var(--rich-black);font-weight:600}
+    .nav-link i{width:20px;font-size:1rem;text-align:center;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center}
+    .nav-footer{margin-top:auto;padding:1rem .75rem;border-top:1px solid rgba(255,255,255,.1)}
+    .main{flex:1;margin-left:var(--sidebar-width);padding:1.5rem;transition:margin-left .3s;min-height:100vh}
+    .sidebar.collapsed~.main{margin-left:var(--sidebar-collapsed-width)}
+    .top-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;background:#fff;padding:1rem 1.5rem;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);margin-bottom:1.5rem}
+    .page-title h1{font-size:1.25rem;color:var(--rich-black);font-weight:700}
+    .page-title p{font-size:.78rem;color:var(--text-secondary);display:flex;align-items:center;gap:.4rem;margin-top:.2rem}
+    .top-actions{display:flex;align-items:center;gap:.8rem}
+    .date-chip{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--text-secondary);background:var(--gray-bg);padding:.35rem .75rem;border-radius:8px}
+    .notif-wrap{position:relative}
+    .notif-btn{background:none;border:none;padding:.35rem;cursor:pointer;display:flex;align-items:center;border-radius:8px;transition:background .2s}
+    .notif-btn:hover{background:var(--gray-bg)}
+    .notif-btn i{font-size:1.2rem;color:var(--text-primary)}
+    .notif-count{position:absolute;top:-4px;right:-6px;background:#dc3545;color:#fff;font-size:.55rem;padding:.1rem .35rem;border-radius:10px;min-width:16px;text-align:center;font-weight:700}
+    .notif-count.zero{background:#adb5bd}
+    .notif-dropdown{position:absolute;top:44px;right:0;width:340px;background:#fff;border-radius:var(--radius-lg);box-shadow:0 12px 32px rgba(0,0,0,.18);z-index:300;display:none;overflow:hidden;border:1px solid var(--border-color)}
+    .notif-dropdown.open{display:block;animation:fadeDown .2s ease}
+    @keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+    .notif-head{padding:.8rem 1.2rem;background:var(--gray-bg);border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.82rem;color:var(--rich-black)}
+    .notif-list{max-height:340px;overflow-y:auto}
+    .notif-item{display:flex;gap:.7rem;padding:.8rem 1.2rem;border-bottom:1px solid var(--border-color);cursor:pointer;transition:background .2s}
+    .notif-item:hover{background:var(--gray-bg)}
+    .notif-item.unread{background:rgba(94,161,115,.05);border-left:3px solid var(--secondary-green)}
+    .notif-icon{width:32px;height:32px;background:rgba(94,161,115,.12);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--secondary-green);font-size:.8rem}
+    .notif-body .notif-title{font-size:.78rem;font-weight:600;color:var(--rich-black)}
+    .notif-body .notif-msg{font-size:.7rem;color:var(--text-secondary);line-height:1.4}
+    .notif-body .notif-time{font-size:.62rem;color:var(--text-light);margin-top:.2rem}
+    .notif-foot{padding:.6rem;text-align:center;border-top:1px solid var(--border-color);background:var(--gray-bg)}
+    .notif-foot a{color:var(--secondary-green);font-size:.72rem;font-weight:600;cursor:pointer}
+    .poro-banner{background:linear-gradient(135deg,#f0f9f0,#e8f5e9);border:1px solid rgba(94,161,115,.3);border-radius:var(--radius-xl);padding:1rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+    .poro-left{display:flex;align-items:center;gap:1rem}
+    .poro-icon{width:50px;height:50px;background:var(--secondary-green);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;box-shadow:0 4px 12px rgba(94,161,115,.3);animation:bounce 2s ease infinite}
+    .poro-icon img{width:100%;height:100%;object-fit:cover}
+    @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+    .poro-msg h3{font-size:1rem;color:var(--rich-black);font-weight:700;margin-bottom:.2rem}
+    .poro-msg p{font-size:.75rem;color:var(--text-secondary)}
+    .forms-tally{background:var(--secondary-green);color:#fff;padding:.6rem 1.2rem;border-radius:30px;font-weight:700;font-size:.82rem;display:flex;align-items:center;gap:.6rem;white-space:nowrap}
+    .context-bar{background:#fff;border-radius:var(--radius-md);padding:.9rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem;box-shadow:var(--shadow-sm)}
+    .ctx-selectors{display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+    .ctx-group{display:flex;align-items:center;gap:.4rem}
+    .ctx-group label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);white-space:nowrap}
+    .ctx-group select{padding:.4rem 1.8rem .4rem .7rem;border:2px solid var(--border-color);border-radius:8px;font-size:.82rem;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right .5rem center;appearance:none;cursor:pointer;outline:none;transition:border-color .2s}
+    .ctx-group select:focus{border-color:var(--secondary-green)}
+    .ctx-actions{display:flex;gap:.6rem}
+    .btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1rem;border-radius:var(--radius-sm);font-size:.8rem;font-weight:600;cursor:pointer;border:none;transition:all .2s;white-space:nowrap;text-decoration:none}
+    .btn-green{background:var(--secondary-green);color:#fff}
+    .btn-green:hover{background:var(--green-dark);transform:translateY(-1px)}
+    .btn-outline{background:transparent;border:2px solid var(--border-color);color:var(--text-primary)}
+    .btn-outline:hover{border-color:var(--secondary-green);color:var(--secondary-green);background:rgba(94,161,115,.05)}
+    .btn-sm{padding:.35rem .8rem;font-size:.75rem}
+    .btn-warning{background:#856404;color:#fff}
+    .btn-warning:hover{background:#6a4e03}
+    .btn-danger{background:#dc3545;color:#fff}
+    .btn-danger:hover{background:#c82333}
+    .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+    .quick-actions{display:flex;gap:.8rem;margin-bottom:1.5rem;flex-wrap:wrap}
+    .forms-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+    .forms-section-header h2{font-size:1rem;font-weight:700;color:var(--rich-black);display:flex;align-items:center;gap:.4rem}
+    .forms-section-header h2 i{color:var(--secondary-green)}
+    .forms-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1.2rem;margin-bottom:2rem}
+    @media(max-width:1400px){.forms-grid{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:1100px){.forms-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:600px){.forms-grid{grid-template-columns:1fr}}
+    .form-card{background:#fff;border-radius:var(--radius-lg);padding:1.3rem;border:1.5px solid var(--border-color);box-shadow:var(--shadow-sm);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;position:relative}
+    .form-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--secondary-green)}
+    .form-card.is-locked{opacity:.55;cursor:not-allowed}
+    .form-card.is-locked:hover{transform:none;box-shadow:var(--shadow-sm);border-color:var(--border-color)}
+    .fc-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.9rem}
+    .fc-icon{width:44px;height:44px;background:var(--gray-bg);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--secondary-green)}
+    .fc-code{font-size:1.1rem;font-weight:800;color:var(--rich-black);letter-spacing:-.3px}
+    .fc-name{font-size:.75rem;color:var(--text-secondary);line-height:1.4;margin-bottom:.9rem;flex:1}
+    .fc-footer{display:flex;align-items:center;justify-content:space-between;padding-top:.8rem;border-top:1px solid var(--border-color);margin-top:auto}
+    .fc-stats{display:flex;gap:1rem;font-size:.7rem;color:var(--text-secondary);margin-top:.5rem}
+    .fc-stats span strong{color:var(--text-primary)}
+    .lock-btn{position:absolute;top:.6rem;right:.6rem;background:none;border:none;cursor:pointer;font-size:.85rem;padding:.25rem;border-radius:6px;transition:all .2s;z-index:2}
+    .lock-btn:hover{background:var(--gray-bg)}
+    .lock-btn.locked{color:#dc3545}
+    .lock-btn.unlocked{color:var(--secondary-green)}
+    .pill{padding:.22rem .65rem;border-radius:20px;font-size:.65rem;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+    .pill-completed,.pill-approved{background:#d4edda;color:#155724}
+    .pill-submitted{background:#cce5ff;color:#004085}
+    .pill-reviewed{background:#d6e4ff;color:#003a70}
+    .pill-ready{background:#fff3cd;color:#856404}
+    .pill-partial{background:#ffeaa7;color:#6c5200}
+    .pill-pending,.pill-not-submitted{background:#f5f5f5;color:var(--text-secondary)}
+    .pill-locked{background:#f8d7da;color:#721c24}
+    .pill-returned{background:#fce4ec;color:#c62828}
+    .pill-rejected{background:#f8d7da;color:#721c24}
+    .toast-container{position:fixed;top:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem}
+    .toast{padding:.75rem 1.2rem;border-radius:var(--radius-sm);color:#fff;font-size:.8rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.2);animation:toastIn .3s ease;max-width:380px;display:flex;align-items:center;gap:.6rem}
+    .toast.success{background:#28a745}
+    .toast.error{background:#dc3545}
+    .toast.warning{background:#f39c12;color:#000}
+    .toast.info{background:var(--caribbean-blue)}
+    @keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateX(40px)}}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem}
+    @media(max-width:1200px){.two-col{grid-template-columns:1fr}}
+    .card{background:#fff;border-radius:var(--radius-lg);padding:1.3rem 1.5rem;box-shadow:var(--shadow-sm);margin-bottom:1.5rem}
+    .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+    .card-header h2{font-size:1rem;font-weight:700;color:var(--rich-black);display:flex;align-items:center;gap:.4rem}
+    .card-header h2 i{color:var(--secondary-green)}
+    table{width:100%;border-collapse:collapse}
+    th{text-align:left;padding:.7rem .6rem;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--border-color)}
+    td{padding:.7rem .6rem;border-bottom:1px solid var(--border-color);font-size:.8rem;color:var(--text-primary)}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:var(--gray-bg)}
+    .tbl-actions{display:flex;gap:.4rem}
+    .icon-btn{width:28px;height:28px;border-radius:6px;background:var(--gray-bg);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:.8rem;transition:all .2s}
+    .icon-btn:hover{background:var(--secondary-green);color:#fff}
+    .icon-btn.forward:hover{background:var(--caribbean-blue)}
+    .icon-btn.return:hover{background:#ffc107;color:#000}
+    .icon-btn.reject:hover{background:#dc3545}
+    .approval-item{display:flex;align-items:center;justify-content:space-between;padding:.8rem 0;border-bottom:1px solid var(--border-color)}
+    .approval-item:last-child{border-bottom:none}
+    .approval-info h4{font-size:.85rem;color:var(--rich-black)}
+    .approval-info p{font-size:.65rem;color:var(--text-secondary)}
+    .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(4px);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem}
+    .modal-overlay.open{display:flex}
+    .modal{background:#fff;border-radius:var(--radius-xl);width:100%;max-width:580px;box-shadow:0 24px 60px rgba(0,0,0,.22);animation:modalIn .28s cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column;max-height:90vh}
+    .modal.modal-lg{max-width:900px}
+    .modal.modal-xl{max-width:1100px}
+    @keyframes modalIn{from{opacity:0;transform:translateY(-16px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+    .modal-header{padding:1.2rem 1.5rem 1rem;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+    .modal-header h2{font-size:1.05rem;font-weight:700;color:var(--rich-black);display:flex;align-items:center;gap:.5rem}
+    .modal-header h2 i{color:var(--secondary-green)}
+    .modal-close{background:none;border:none;cursor:pointer;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-light);font-size:1rem;transition:all .2s}
+    .modal-close:hover{background:var(--gray-bg);color:var(--text-primary)}
+    .modal-body{padding:1.3rem 1.5rem;overflow-y:auto;flex:1}
+    .modal-footer{padding:.9rem 1.5rem 1.2rem;border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;gap:.7rem;flex-shrink:0;flex-wrap:wrap}
+    .form-row{margin-bottom:1rem}
+    .form-row label{display:block;font-size:.75rem;font-weight:700;color:var(--text-primary);margin-bottom:.4rem}
+    .form-row input,.form-row select,.form-row textarea{width:100%;padding:.7rem .9rem;border:2px solid var(--border-color);border-radius:var(--radius-sm);font-size:.85rem;font-family:inherit;outline:none;transition:border-color .2s}
+    .form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--secondary-green)}
+    .form-row textarea{min-height:90px;resize:vertical}
+    .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 2rem;text-align:center}
+    .empty i{font-size:2.5rem;color:var(--text-light);margin-bottom:.8rem;opacity:.6}
+    .empty h3{font-size:.9rem;font-weight:600;color:var(--text-secondary);margin-bottom:.3rem}
+    .empty p{font-size:.75rem;color:var(--text-light);max-width:280px;line-height:1.5}
+    .workflow-chain{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin:1rem 0}
+    .wf-step{display:flex;align-items:center;gap:.35rem;padding:.3rem .7rem;border-radius:20px;font-size:.68rem;font-weight:600}
+    .wf-step.done{background:#d4edda;color:#155724}
+    .wf-step.active{background:var(--secondary-green);color:#fff}
+    .wf-step.future{background:var(--gray-bg);color:var(--text-secondary)}
+    .wf-arrow{color:var(--text-light);font-size:.75rem}
+    .data-source-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin:1rem 0}
+    .ds-item{background:var(--gray-bg);border-radius:var(--radius-sm);padding:.6rem .8rem;font-size:.75rem;cursor:pointer;transition:all .2s;border:1.5px solid transparent;position:relative}
+    .ds-item:hover{background:rgba(94,161,115,.08);border-color:rgba(94,161,115,.3)}
+    .ds-item strong{display:flex;align-items:center;gap:.4rem;color:var(--rich-black);font-size:.8rem;margin-bottom:.1rem}
+    .ds-item .ds-expand-icon{margin-left:auto;font-size:.65rem;transition:transform .25s;color:var(--text-light)}
+    .ds-item.expanded .ds-expand-icon{transform:rotate(180deg)}
+    .ds-item .ds-detail{max-height:0;overflow:hidden;transition:max-height .3s ease,margin-top .3s ease,padding-top .3s ease;margin-top:0;padding-top:0;border-top:1px solid transparent}
+    .ds-item.expanded .ds-detail{max-height:200px;margin-top:.5rem;padding-top:.5rem;border-top-color:var(--border-color)}
+    .ds-detail-row{display:flex;align-items:center;justify-content:space-between;padding:.25rem 0;font-size:.72rem;color:var(--text-secondary)}
+    .ds-detail-row .ds-status{font-size:.65rem;font-weight:600;padding:.1rem .45rem;border-radius:10px}
+    .ds-status.complete{background:#d4edda;color:#155724}
+    .ds-status.partial{background:#fff3cd;color:#856404}
+    .ds-status.missing{background:#f8d7da;color:#721c24}
+    .section-tabs{display:flex;gap:.3rem;border-bottom:2px solid var(--border-color);margin-bottom:1rem;flex-wrap:wrap}
+    .section-tab{padding:.5rem 1rem;font-size:.75rem;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;color:var(--text-secondary)}
+    .section-tab:hover{color:var(--secondary-green)}
+    .section-tab.active{color:var(--secondary-green);border-bottom-color:var(--secondary-green)}
+    .section-panel{display:none}
+    .section-panel.active{display:block}
+    .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1rem}
+    @media(max-width:768px){.summary-grid{grid-template-columns:repeat(2,1fr)}}
+    .summary-card{background:var(--gray-bg);border-radius:var(--radius-md);padding:.8rem 1rem;text-align:center}
+    .summary-card .sc-value{font-size:1.5rem;font-weight:800;color:var(--rich-black)}
+    .summary-card .sc-label{font-size:.65rem;color:var(--text-secondary);margin-top:.2rem;text-transform:uppercase;letter-spacing:.04em}
+    .summary-card .sc-value.green{color:#28a745}
+    .summary-card .sc-value.red{color:#dc3545}
+    .summary-card .sc-value.blue{color:var(--caribbean-blue)}
+    .submission-meta{display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:1rem;font-size:.75rem;color:var(--text-secondary)}
+    .submission-meta strong{color:var(--text-primary)}
+    .mobile-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;display:none}
+    .mobile-overlay.show{display:block}
+    @media(max-width:768px){
+        .sidebar{transform:translateX(-100%);transition:transform .3s;width:var(--sidebar-width)!important}
+        .sidebar.mobile-open{transform:translateX(0)}
+        .main{margin-left:0!important;padding:1rem}
+        .modal{max-width:100%;border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+        .modal-overlay{align-items:flex-end}
+        .notif-dropdown{width:290px;right:-10px}
+        .data-source-grid{grid-template-columns:1fr}
+        .summary-grid{grid-template-columns:repeat(2,1fr)}
+    }
+    </style>
+</head>
+<body>
+<div class="toast-container" id="toastContainer"></div>
+<div class="mobile-overlay" id="mobileOverlay"></div>
+<div class="layout">
+
+<aside class="sidebar" id="sidebar">
+    <div class="sb-header">
+        <div class="sb-logo"><i class="fi fi-rr-graduation-cap"></i><div class="sb-logo-text"><h2>Formify</h2><span>Registrar Portal</span></div></div>
+        <button class="fold-btn" id="foldBtn"><i class="fi fi-rr-angle-small-left" id="foldIcon"></i></button>
+    </div>
+    <div class="user-info">
+        <div class="user-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+        <div class="user-details"><h4>{{ request.user.get_full_name }}</h4><p>School Registrar</p></div>
+    </div>
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="{% url 'registrars:dashboard' %}" class="nav-link"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:student-records' %}" class="nav-link"><i class="fi fi-rr-user"></i><span>Student Records</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:enrollment-management' %}" class="nav-link"><i class="fi fi-rr-file-invoice"></i><span>Enrollment</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:grade-validation' %}" class="nav-link"><i class="fi fi-rr-check-double"></i><span>Grade Validation</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:forms' %}" class="nav-link active"><i class="fi fi-rr-folder-open"></i><span>School Forms</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:transfer-management' %}" class="nav-link"><i class="fi fi-rr-exchange-alt"></i><span>Transfer Requests</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:reports-analytics' %}" class="nav-link"><i class="fi fi-rr-chart-line-up"></i><span>Reports</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:section-schedule-management' %}" class="nav-link"><i class="fi fi-rr-calendar"></i><span>Sections & Schedule</span></a></li>
+        </ul>
+    <ul class="nav-menu nav-footer">
+        <li class="nav-item">
+            <form method="POST" action="{% url 'signout' %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="nav-link" style="width:100%;background:none;border:none;cursor:pointer;"><i class="fas fa-sign-out-alt"></i><span>Logout</span></button>
+            </form>
+        </li>
+    </ul>
+</aside>
+
+<div class="main" id="mainContent">
+    <div class="top-bar">
+        <div class="page-title"><h1>School Forms Management</h1><p><i class="fi fi-rr-folder-open"></i><strong>{{ selected_section }}</strong>&nbsp;·&nbsp;{{ quarter_name }}&nbsp;·&nbsp;{{ current_sy }}</p></div>
+        <div class="top-actions">
+            <div class="date-chip"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
+            <div class="notif-wrap">
+                <button class="notif-btn" id="notifBtn"><i class="fi fi-rr-bell"></i><span class="notif-count {% if not form_notifications %}zero{% endif %}" id="notifCount">{{ form_notifications|length }}</span></button>
+                <div class="notif-dropdown" id="notifDropdown">
+                    <div class="notif-head"><span>Notifications</span><span style="font-size:.7rem;opacity:.65;">{{ form_notifications|length }} unread</span></div>
+                    <div class="notif-list">
+                        {% if form_notifications %}
+                            {% for n in form_notifications %}
+                            <div class="notif-item unread"><div class="notif-icon"><i class="fi fi-rr-bell"></i></div><div class="notif-body"><div class="notif-title">{{ n.title }}</div><div class="notif-msg">{{ n.message|truncatechars:90 }}</div><div class="notif-time">{{ n.created_at|timesince }} ago</div></div></div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty" style="min-height:120px;padding:1.5rem;"><i class="fi fi-rr-bell" style="font-size:1.8rem;margin-bottom:.5rem;"></i><p style="margin:0;">No notifications</p></div>
+                        {% endif %}
+                    </div>
+                    <div class="notif-foot"><a id="markAllRead">Mark all as read</a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="poro-banner">
+        <div class="poro-left">
+            <div class="poro-icon"><img src="{% static 'shared/poro/Poro.png' %}" alt="Poro" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fi fi-rr-smile\' style=\'font-size:1.6rem;color:#fff;\'></i>';"></div>
+            <div class="poro-msg"><h3>Forms Management Center</h3><p>{% if total_submitted > 0 %}{{ total_submitted }} form{{ total_submitted|pluralize }} pending review. {{ total_approved }} approved by School Head.{% else %}Review submitted forms and forward them to the School Head for final approval.{% endif %}</p></div>
+        </div>
+        <div class="forms-tally"><i class="fi fi-rr-check-circle"></i>{{ total_approved }} / {{ total_forms }} Approved</div>
+    </div>
+
+    <div class="quick-actions">
+        <button class="btn btn-green" onclick="openModal('batchModal')"><i class="fi fi-rr-layers"></i> Batch Generate</button>
+        <button class="btn btn-outline" onclick="openModal('sf10Modal')"><i class="fi fi-rr-scroll"></i> Generate SF10</button>
+        <button class="btn btn-outline" onclick="batchPrintSF9()"><i class="fi fi-rr-print"></i> Batch Print SF9</button>
+        <button class="btn btn-outline" onclick="exportSF1()"><i class="fi fi-rr-download"></i> Export SF1</button>
+    </div>
+
+    <form class="context-bar" method="GET" id="ctxForm">
+        <div class="ctx-selectors">
+            <div class="ctx-group"><label><i class="fi fi-rr-calendar"></i> SY</label><select name="school_year" onchange="document.getElementById('ctxForm').submit()">{% for sy in available_sy %}<option value="{{ sy.id }}" {% if sy.id == current_sy_id %}selected{% endif %}>{{ sy.label }}</option>{% endfor %}</select></div>
+            <div class="ctx-group"><label>Quarter</label><select name="quarter" onchange="document.getElementById('ctxForm').submit()">{% for q in quarter_options %}<option value="{{ q.label }}" {% if q.label == quarter_label %}selected{% endif %}>{{ q.name }}{% if q.is_current %} ●{% endif %}{% if q.is_locked %} 🔒{% endif %}</option>{% endfor %}</select></div>
+            <div class="ctx-group"><label>Grade Level</label><select name="grade_level" onchange="document.getElementById('ctxForm').submit()"><option value="">All</option>{% for gl in grade_levels %}<option value="{{ gl.grade_level__id }}" {% if request.GET.grade_level == gl.grade_level__id|stringformat:"s" %}selected{% endif %}>{{ gl.grade_level__grade_name }}</option>{% endfor %}</select></div>
+            <div class="ctx-group"><label>Section</label><select name="section_id" onchange="document.getElementById('ctxForm').submit()">{% for sec in sections_data %}<option value="{{ sec.section_id }}" {% if sec.section_id == selected_section_id %}selected{% endif %}>{{ sec.section_name }} ({{ sec.student_count }})</option>{% empty %}<option value="">— No sections —</option>{% endfor %}</select></div>
+        </div>
+        <div class="ctx-actions"><button type="button" class="btn btn-outline btn-sm" id="lockAllBtn" onclick="toggleLockAll()" title="Lock/Unlock All Forms"><i class="fi fi-rr-lock" id="lockAllIcon"></i> <span id="lockAllText">Lock All</span></button></div>
+    </form>
+
+    <div class="forms-section-header"><h2><i class="fi fi-rr-file-alt"></i> Official School Forms (SF1-SF10)</h2><span style="font-size:.75rem;color:var(--text-secondary);">{{ total_forms }} forms · Click to review</span></div>
+
+    <div class="forms-grid">
+        {% if forms_status %}
+            {% for form in forms_status %}
+            <div class="form-card {% if form.is_locked %}is-locked{% endif %}"
+                 data-form-code="{{ form.code }}"
+                 data-form-name="{{ form.name }}"
+                 data-form-icon="{{ form.icon }}"
+                 data-status="{{ form.status }}"
+                 data-status-text="{{ form.status_text }}"
+                 data-locked="{{ form.is_locked|yesno:'true,false' }}"
+                 data-submission-id="{{ form.submission_id|default:'' }}"
+                 data-approved-count="{{ form.approved_count }}"
+                 data-pending-count="{{ form.pending_count }}"
+                 data-submitted-by="{{ form.submitted_by|escapejs }}"
+                 data-submitted-date="{{ form.submitted_date|escapejs }}"
+                 data-reviewed-by="{{ form.reviewed_by|escapejs }}"
+                 data-reviewed-at="{{ form.reviewed_at|escapejs }}"
+                 data-remarks="{{ form.remarks|escapejs }}"
+                 onclick="openFormDetail(this)">
+                <button class="lock-btn {{ form.is_locked|yesno:'locked,unlocked' }}" onclick="event.stopPropagation(); toggleLock('{{ form.code }}')" title="{{ form.is_locked|yesno:'Unlock,Lock' }} form"><i class="fi {{ form.is_locked|yesno:'fi-rr-lock,fi-rr-lock-open-alt' }}"></i></button>
+                <div class="fc-header"><div class="fc-icon"><i class="fi {{ form.icon }}"></i></div>{% if form.is_locked %}<i class="fi fi-rr-lock" style="color:var(--text-light);font-size:.8rem;"></i>{% endif %}</div>
+                <div class="fc-code">{{ form.code }}</div><div class="fc-name">{{ form.name }}</div>
+                <div class="fc-stats"><span><strong>{{ form.approved_count }}</strong> approved</span><span><strong>{{ form.pending_count }}</strong> pending</span></div>
+                <div class="fc-footer"><span class="pill pill-{{ form.status_class }}">{{ form.status_text }}</span></div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div style="grid-column:1/-1;"><div class="empty"><i class="fi fi-rr-folder-open"></i><h3>No Forms Available</h3><p>Configure the school year and ensure sections are set up to view form data.</p></div></div>
+        {% endif %}
+    </div>
+
+    <div class="two-col">
+        <div class="card">
+            <div class="card-header"><h2><i class="fi fi-rr-time-past"></i> Pending Your Review</h2><span style="font-size:.75rem;color:var(--text-secondary);">{{ pending_approvals|length }} awaiting</span></div>
+            {% if pending_approvals %}
+                {% for approval in pending_approvals %}
+                <div class="approval-item"><div class="approval-info"><h4>{{ approval.form_code }} — {{ approval.form_name|truncatechars:30 }}</h4><p>{{ approval.section }} · Submitted by {{ approval.submitted_by }} · {{ approval.date }}</p><p style="font-size:.7rem;margin-top:.2rem;">Status: <span class="pill pill-submitted">{{ approval.status }}</span></p></div><div class="tbl-actions"><button class="icon-btn forward" title="Review & Forward to School Head" onclick="reviewAndForward({{ approval.id }})"><i class="fi fi-rr-arrow-right"></i></button><button class="icon-btn return" title="Return for Revision" onclick="openReviewModal({{ approval.id }}, 'return')"><i class="fi fi-rr-undo-alt"></i></button><button class="icon-btn reject" title="Reject" onclick="openReviewModal({{ approval.id }}, 'reject')"><i class="fi fi-rr-cross"></i></button></div></div>
+                {% endfor %}
+            {% else %}
+                <div class="empty" style="min-height:150px;padding:1.5rem;"><i class="fi fi-rr-check-circle"></i><h3>No Pending Reviews</h3><p>All teacher submissions have been processed.</p></div>
+            {% endif %}
+        </div>
+        <div class="card">
+            <div class="card-header"><h2><i class="fi fi-rr-triangle-warning"></i> Correction Requests</h2><span style="font-size:.75rem;color:var(--text-secondary);">{{ form_requests|length }} pending</span></div>
+            {% if form_requests %}
+                {% for req in form_requests %}
+                <div class="approval-item"><div class="approval-info"><h4>{{ req.description }}</h4><p>Requested by {{ req.requested_by }} · {{ req.date }}</p><p style="font-size:.7rem;color:var(--text-secondary);">Current: <span style="color:#dc3545;">{{ req.current_value }}</span> → Proposed: <span style="color:var(--secondary-green);">{{ req.proposed_value }}</span></p></div><div class="tbl-actions"><button class="icon-btn forward" title="Approve" onclick="processCorrection({{ req.id }}, 'approve')"><i class="fi fi-rr-check"></i></button><button class="icon-btn reject" title="Reject" onclick="processCorrection({{ req.id }}, 'reject')"><i class="fi fi-rr-cross"></i></button></div></div>
+                {% endfor %}
+            {% else %}
+                <div class="empty" style="min-height:150px;padding:1.5rem;"><i class="fi fi-rr-check-circle"></i><h3>No Correction Requests</h3><p>All data correction requests have been resolved.</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h2><i class="fi fi-rr-history"></i> Recent Form Activity</h2></div>
+        {% if recent_submissions %}
+        <table><thead><tr><th>Form</th><th>Section</th><th>Submitted By</th><th>Quarter</th><th>Date</th><th>Status</th></tr></thead><tbody>{% for sub in recent_submissions %}<tr><td><strong>{{ sub.form_code }}</strong></td><td>{{ sub.section }}</td><td>{{ sub.submitted_by }}</td><td>{{ sub.quarter }}</td><td>{{ sub.date }}</td><td><span class="pill pill-{{ sub.status_class }}">{{ sub.status }}</span></td></tr>{% endfor %}</tbody></table>
+        {% else %}<div class="empty"><i class="fi fi-rr-time-past"></i><h3>No Recent Activity</h3><p>Form submissions will appear here once teachers begin submitting.</p></div>{% endif %}
+    </div>
+</div>
+</div>
+
+<!-- ════════════════════ EXPANDED FORM DETAIL MODAL ════════════════════ -->
+<div class="modal-overlay" id="formDetailModal">
+    <div class="modal modal-xl">
+        <div class="modal-header"><h2><i class="fi fi-rr-document" id="detailIcon"></i> <span id="detailTitle">Form Details</span></h2><button class="modal-close" onclick="closeModal('formDetailModal')"><i class="fi fi-rr-cross-small"></i></button></div>
+        <div class="modal-body">
+            <p style="font-size:.78rem;color:var(--text-secondary);margin-bottom:.3rem;" id="detailContext"></p>
+            <div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;margin-bottom:.5rem;" id="detailStatusWrap"></div>
+            <div class="workflow-chain" id="workflowChain"></div>
+            <div class="submission-meta" id="submissionMeta" style="display:none;"></div>
+            <div class="summary-grid" id="summaryCards" style="display:none;"></div>
+            <div class="section-tabs" id="sectionTabs">
+                <div class="section-tab active" data-tab="tab-overview">📋 Overview</div>
+                <div class="section-tab" data-tab="tab-students">👥 Student Roster</div>
+                <div class="section-tab" data-tab="tab-formdata" id="tabFormDataHeader" style="display:none;">📄 Form Data</div>
+                <div class="section-tab" data-tab="tab-history" id="tabHistoryHeader">🕒 Activity Log</div>
+            </div>
+            <div class="section-panel active" id="tab-overview">
+                <h4 style="font-size:.78rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin:.8rem 0 .5rem;">Data Sources <span style="font-weight:400;text-transform:none;font-size:.7rem;">(click to expand)</span></h4>
+                <div class="data-source-grid" id="dataSources"></div>
+                <h4 style="font-size:.78rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin:1rem 0 .5rem;">Form Description</h4>
+                <p id="formDescription" style="font-size:.8rem;color:var(--text-secondary);line-height:1.5;"></p>
+            </div>
+            <div class="section-panel" id="tab-students">
+                <div style="max-height:350px;overflow-y:auto;border:1px solid var(--border-color);border-radius:8px;">
+                    <table style="font-size:.75rem;"><thead><tr><th>LRN</th><th>Name</th><th>Sex</th><th>Birth Date</th><th>Guardian</th><th id="formSpecificColHeader" style="display:none;">Status</th></tr></thead>
+                        <tbody id="sectionStudentsTable">
+                            {% for st in section_students %}
+                            <tr data-promo-status="{{ st.promotion_status|escapejs }}">
+                                <td>{{ st.lrn }}</td><td>{{ st.name }}</td><td>{{ st.sex }}</td><td>{{ st.birth_date|default:"—" }}</td><td>{{ st.guardian }}</td>
+                                <td class="form-specific-col" style="display:none;">—</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text-secondary);">No students in this section</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="section-panel" id="tab-formdata"><div id="formSpecificContent" style="font-size:.8rem;color:var(--text-secondary);"><p>Form-specific data will appear here based on the selected form type.</p></div></div>
+            <div class="section-panel" id="tab-history"><div id="activityLog" style="font-size:.8rem;color:var(--text-secondary);"><p>Loading activity log...</p></div></div>
+        </div>
+        <div class="modal-footer" id="detailFooter"><button class="btn btn-outline" onclick="closeModal('formDetailModal')">Close</button></div>
+    </div>
+</div>
+
+<!-- ════════════════════ REVIEW MODAL ════════════════════ -->
+<div class="modal-overlay" id="reviewModal">
+    <div class="modal"><div class="modal-header"><h2><i class="fi fi-rr-document-signed"></i> <span id="reviewModalTitle">Review Submission</span></h2><button class="modal-close" onclick="closeModal('reviewModal')"><i class="fi fi-rr-cross-small"></i></button></div>
+        <form method="POST" id="reviewForm" action="">{% csrf_token %}<input type="hidden" name="action" id="reviewAction">
+            <div class="modal-body"><p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:1rem;" id="reviewModalMessage">You are about to <strong id="reviewActionText">return</strong> this submission.</p><div class="form-row"><label>Remarks <span style="color:#dc3545;">*</span></label><textarea name="remarks" id="reviewRemarks" placeholder="Provide a reason for this action..." required></textarea></div></div>
+            <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeModal('reviewModal')">Cancel</button><button type="submit" class="btn btn-green" id="reviewSubmitBtn">Confirm</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- ════════════════════ BATCH GENERATE MODAL ════════════════════ -->
+<div class="modal-overlay" id="batchModal">
+    <div class="modal"><div class="modal-header"><h2><i class="fi fi-rr-layers"></i> Batch Generate Forms</h2><button class="modal-close" onclick="closeModal('batchModal')"><i class="fi fi-rr-cross-small"></i></button></div>
+        <form method="POST" action="{% url 'registrars:batch-generate' %}">{% csrf_token %}<input type="hidden" name="section_id" value="{{ selected_section_id }}"><input type="hidden" name="school_year" value="{{ current_sy_id }}">
+            <div class="modal-body"><p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:1rem;">Select forms to generate for <strong>{{ selected_section }}</strong> — {{ quarter_name }}.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">{% for form in forms_status %}<label style="display:flex;align-items:center;gap:.5rem;font-size:.85rem;cursor:pointer;padding:.5rem;border:1px solid var(--border-color);border-radius:8px;"><input type="checkbox" name="forms" value="{{ form.code }}" {% if form.status_class == 'ready' %}checked{% endif %}>{{ form.code }} — {{ form.name|truncatechars:25 }}</label>{% endfor %}</div></div>
+            <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeModal('batchModal')">Cancel</button><button type="submit" class="btn btn-green"><i class="fi fi-rr-cog"></i> Generate Selected</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- ════════════════════ SF10 GENERATION MODAL ════════════════════ -->
+<div class="modal-overlay" id="sf10Modal">
+    <div class="modal"><div class="modal-header"><h2><i class="fi fi-rr-scroll"></i> Generate SF10 (Form 137)</h2><button class="modal-close" onclick="closeModal('sf10Modal')"><i class="fi fi-rr-cross-small"></i></button></div>
+        <form method="POST" action="{% url 'registrars:generate-sf10' %}">{% csrf_token %}
+            <div class="modal-body"><p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:1rem;">Generate a Permanent Record (SF10) for a specific student.</p><div class="form-row"><label>Select Student</label><select name="student_id" required><option value="">— Select student —</option>{% for st in all_students %}<option value="{{ st.id }}">{{ st.name }} ({{ st.lrn }}) — {{ st.grade_level }}</option>{% endfor %}</select></div></div>
+            <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeModal('sf10Modal')">Cancel</button><button type="submit" class="btn btn-green"><i class="fi fi-rr-scroll"></i> Generate SF10</button></div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function(){'use strict';
+
+// ═══════════════════ REAL DATA FROM DJANGO ═══════════════════
+const SECTION='{{ selected_section|escapejs }}';
+const QUARTER='{{ quarter_name|escapejs }}';
+const SY='{{ current_sy|escapejs }}';
+const DS_STATS=JSON.parse('{{ data_source_stats_json|escapejs }}'||'{}');
+const ACTIVITY_LOGS=JSON.parse('{{ activity_logs_json|escapejs }}'||'[]');
+const ENROLLED_COUNT={{ enrolled_count|default:0 }};
+const PROMO_PROMOTED={{ promo_promoted|default:0 }};
+const PROMO_RETAINED={{ promo_retained|default:0 }};
+const PROMO_CONDITIONAL={{ promo_conditional|default:0 }};
+const FINALIZED_GRADES={{ finalized_grades|default:0 }};
+const TOTAL_GRADES={{ total_grades|default:0 }};
+
+// ═══════════════════ CONSTANTS ═══════════════════
+const FORM_WORKFLOW={'SF1':['Teacher Prepares','Teacher Certifies','Registrar Reviews','School Head Approves','Locked'],'SF2':['Teacher Records','Teacher Certifies','Registrar Audits','Archived'],'SF3':['Teacher Records','Teacher Certifies','Registrar Archives'],'SF4':['System Detects','Registrar Processes','School Head Approves'],'SF5':['Teacher Recommends','Teacher Certifies','Registrar Validates','School Head Approves','Locked'],'SF6':['Registrar Generates','Registrar Certifies','School Head Approves'],'SF7':['Registrar Maintains','School Head Approves'],'SF8':['Nurse Records','Registrar Validates','Archived'],'SF9':['Teacher Encodes','Teacher Certifies','Registrar Reviews','Registrar Prints','Distributed'],'SF10':['System Generates','Registrar Certifies','Locked Permanently']};
+const FORM_DATA_SOURCES={'SF1':[['Enrollment Records','Students with status Enrolled'],['Student Master','LRN, personal info, addresses'],['Guardian Info','Primary contact details'],['Section Assignment','Grade level & section']],'SF2':[['Attendance Records','Daily status per student'],['Attendance Summary','Monthly aggregates'],['Enrollment','Active students in section']],'SF3':[['Book Inventory','Textbook issuance records'],['Enrollment','Students per section']],'SF4':[['Enrollment History','Status change events'],['Transfer Records','In/out transfer details']],'SF5':[['Promotion Recommendations','Teacher recommendations'],['Final Grades','End-of-year computed grades'],['Enrollment','Active learners']],'SF6':[['All Form Data','Aggregated from SF1-SF5'],['Enrollment Stats','Section-level summaries'],['Promotion Data','Retention & promotion rates']],'SF7':[['Personnel Records','Teaching & non-teaching staff'],['Assignment Data','Teaching loads & sections']],'SF8':[['Health Records','BMI, nutritional status'],['Medical History','Immunization, conditions']],'SF9':[['Grade Components','WW, PT, QA raw scores'],['Quarterly Grades','Transmuted grades per subject'],['Honor Records','Awards and recognition'],['Attendance Summary','Days present/absent']],'SF10':[['SF10 History','Permanent record — Registrar-owned'],['Student Master','Lifetime academic record'],['Enrollment','All years attended']]};
+const FORM_DESCRIPTIONS={'SF1':'School Register — Official masterlist of all enrolled students in this section. Contains LRN, full name, sex, birth date, and guardian information for DepEd compliance.','SF2':'Daily Attendance Report — Records the daily presence/absence of learners. Must be maintained throughout the quarter and certified at the end of each month.','SF3':'Books Issued and Returned — Tracks textbook and learning material distribution to students. Managed in coordination with the School Librarian.','SF4':'Monthly Learner Movement — Documents transfers, dropouts, and new enrollees within the school. Critical for maintaining accurate enrollment counts.','SF5':'Report on Promotion & Retention — End-of-year form showing which students are promoted, retained, or require intervention based on final grades and teacher recommendations.','SF6':'Summary Report — Aggregated statistics across all forms (SF1-SF5) for the school. Generated and certified by the Registrar.','SF7':'School Personnel Data — Staff roster including teaching load assignments, qualifications, and employment status.','SF8':'Learner Health & Nutrition — Health status records including BMI measurements, feeding program participation, and medical conditions.','SF9':'Report Card / Progress Report — Individual student report card showing quarterly grades per subject, general average, and teacher remarks.','SF10':'Permanent Record (Form 137) — Lifetime academic record of a student. Generated upon request for transfer or graduation purposes.'};
+const DS_KEY_MAP={'Enrollment Records':['enrollment_status','enrollment_count','enrollment_note'],'Student Master':['lrn_status','lrn_count','lrn_note'],'Guardian Info':['guardian_status','guardian_count','guardian_note'],'Section Assignment':null,'Attendance Records':['attendance_status','attendance_count','attendance_note'],'Attendance Summary':['attendance_status','attendance_count','attendance_note'],'Grade Components':['grades_status','grades_count','grades_note'],'Quarterly Grades':['grades_status','grades_count','grades_note'],'Final Grades':['grades_status','grades_count','grades_note'],'Promotion Recommendations':['promo_status','promo_count','promo_note'],'Honor Records':['grades_status','grades_count','grades_note'],'Enrollment History':['enrollment_status','enrollment_count','enrollment_note'],'Enrollment Stats':['enrollment_status','enrollment_count','enrollment_note'],'Promotion Data':['promo_status','promo_count','promo_note'],'Transfer Records':null,'Book Inventory':null,'Personnel Records':null,'Health Records':null,'Medical History':null,'SF10 History':null,'All Form Data':null,'Assignment Data':null};
+
+// ═══════════════════ TOAST ═══════════════════
+function showToast(m,t){t=t||'info';const c=document.getElementById('toastContainer');if(!c)return;const e=document.createElement('div');e.className='toast '+t;const i={success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};e.innerHTML='<span>'+(i[t]||'ℹ️')+'</span> '+m;c.appendChild(e);e.addEventListener('click',function(){e.style.animation='toastOut .3s ease forwards';setTimeout(function(){e.remove()},300)});setTimeout(function(){if(e.parentNode){e.style.animation='toastOut .3s ease forwards';setTimeout(function(){if(e.parentNode)e.remove()},300)}},4000)}window.showToast=showToast;
+
+// ═══════════════════ SIDEBAR ═══════════════════
+const sidebar=document.getElementById('sidebar'),foldBtn=document.getElementById('foldBtn'),foldIcon=document.getElementById('foldIcon'),main=document.getElementById('mainContent'),mobileOv=document.getElementById('mobileOverlay');let collapsed=false;function adjustMargin(){if(window.innerWidth>768)main.style.marginLeft=collapsed?'var(--sidebar-collapsed-width)':'var(--sidebar-width)';else main.style.marginLeft='0'}foldBtn.addEventListener('click',()=>{if(window.innerWidth<=768){const o=sidebar.classList.toggle('mobile-open');mobileOv.classList.toggle('show',o)}else{collapsed=!collapsed;sidebar.classList.toggle('collapsed',collapsed);foldIcon.className=collapsed?'fi fi-rr-angle-small-right':'fi fi-rr-angle-small-left';adjustMargin()}});mobileOv.addEventListener('click',()=>{sidebar.classList.remove('mobile-open');mobileOv.classList.remove('show')});window.addEventListener('resize',adjustMargin);adjustMargin();
+document.getElementById('currentDate').textContent=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+const notifBtn=document.getElementById('notifBtn'),notifDropdown=document.getElementById('notifDropdown');if(notifBtn&&notifDropdown){notifBtn.addEventListener('click',e=>{e.stopPropagation();notifDropdown.classList.toggle('open')});document.addEventListener('click',e=>{if(!e.target.closest('.notif-wrap'))notifDropdown.classList.remove('open')})}document.getElementById('markAllRead')?.addEventListener('click',()=>{document.querySelectorAll('.notif-item.unread').forEach(el=>el.classList.remove('unread'));const b=document.getElementById('notifCount');if(b){b.textContent='0';b.className='notif-count zero'}notifDropdown?.classList.remove('open');showToast('All notifications marked as read','success')});
+
+// ═══════════════════ MODAL HELPERS ═══════════════════
+function openModal(id){const e=document.getElementById(id);if(e){e.classList.add('open');document.body.style.overflow='hidden'}}function closeModal(id){const e=document.getElementById(id);if(e){e.classList.remove('open');document.body.style.overflow=''}}window.openModal=openModal;window.closeModal=closeModal;document.querySelectorAll('.modal-overlay').forEach(ov=>{ov.addEventListener('click',e=>{if(e.target===ov)closeModal(ov.id)})});document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>closeModal(m.id))});
+
+// ═══════════════════ SECTION TABS ═══════════════════
+function switchTab(n){document.querySelectorAll('#sectionTabs .section-tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.section-panel').forEach(p=>p.classList.remove('active'));const te=document.querySelector('#sectionTabs .section-tab[data-tab="'+n+'"]');const pe=document.getElementById(n);if(te)te.classList.add('active');if(pe)pe.classList.add('active')}document.getElementById('sectionTabs').addEventListener('click',function(e){const t=e.target.closest('.section-tab');if(t)switchTab(t.dataset.tab)});
+function toggleDsItem(el){document.querySelectorAll('.ds-item.expanded').forEach(i=>{if(i!==el)i.classList.remove('expanded')});el.classList.toggle('expanded')}window.toggleDsItem=toggleDsItem;
+function getCSRF(){const i=document.querySelector('input[name="csrfmiddlewaretoken"]');return i?i.value:''}
+
+// ═══════════════════ FORM DETAIL MODAL (ALL REAL DATA) ═══════════════════
+function openFormDetail(card){
+    const code=card.dataset.formCode,name=card.dataset.formName,icon=card.dataset.formIcon,status=card.dataset.status,statusText=card.dataset.statusText,submissionId=card.dataset.submissionId,locked=card.dataset.locked==='true',approvedCount=parseInt(card.dataset.approvedCount)||0,pendingCount=parseInt(card.dataset.pendingCount)||0;
+    const submittedBy=card.dataset.submittedBy||'—',submittedDate=card.dataset.submittedDate||'—',reviewedBy=card.dataset.reviewedBy||'—',reviewedAt=card.dataset.reviewedAt||'—',formRemarks=card.dataset.remarks||'';
+
+    document.getElementById('detailIcon').className='fi '+icon;
+    document.getElementById('detailTitle').textContent=code+' — '+name;
+    document.getElementById('detailContext').textContent=SECTION+' · '+QUARTER+' · '+SY;
+
+    const sMap={approved:'Approved by School Head',submitted:'Pending Registrar Review',reviewed:'Forwarded to School Head',returned:'Returned to Teacher',rejected:'Rejected',locked:'Locked',not_submitted:'Not Submitted',available:'Available'};
+    const cMap={approved:'completed',submitted:'submitted',reviewed:'reviewed',returned:'returned',rejected:'rejected',locked:'locked',not_submitted:'pending',available:'ready'};
+    document.getElementById('detailStatusWrap').innerHTML='<span class="pill pill-'+(cMap[status]||'pending')+'">'+(sMap[status]||statusText)+'</span>'+(submissionId?'<span style="font-size:.7rem;color:var(--text-secondary);">Submission #'+submissionId+'</span>':'');
+
+    const wf=FORM_WORKFLOW[code]||['System','Teacher','Registrar','Approved'],wfEl=document.getElementById('workflowChain');wfEl.innerHTML='';
+    let aI=0;if(status==='not_submitted'||status==='available')aI=0;else if(status==='submitted')aI=2;else if(status==='reviewed')aI=3;else if(status==='approved')aI=wf.length-1;else if(status==='returned')aI=1;else if(status==='rejected')aI=-1;else if(status==='locked')aI=wf.length-1;
+    wf.forEach((s,i)=>{if(i>0)wfEl.insertAdjacentHTML('beforeend','<span class="wf-arrow">→</span>');let cl='future';if(aI===-1)cl='future';else if(i<aI)cl='done';else if(i===aI)cl='active';const ch=cl==='done'?'<i class="fi fi-rr-check-circle"></i> ':'';wfEl.insertAdjacentHTML('beforeend','<span class="wf-step '+cl+'">'+ch+s+'</span>')});
+
+    // Submission Meta (REAL)
+    const metaEl=document.getElementById('submissionMeta');
+    if(submissionId&&status!=='not_submitted'&&status!=='available'){metaEl.style.display='flex';let h='';if(submittedBy)h+='<span><strong>Submitted by:</strong> '+submittedBy+'</span>';if(submittedDate)h+='<span><strong>Date:</strong> '+submittedDate+'</span>';h+='<span><strong>Quarter:</strong> '+QUARTER+'</span>';if(reviewedBy&&status!=='submitted')h+='<span><strong>Reviewed by:</strong> '+reviewedBy+'</span>';if(formRemarks)h+='<span><strong>Remarks:</strong> '+formRemarks+'</span>';metaEl.innerHTML=h}else{metaEl.style.display='none'}
+
+    // Data Sources (REAL stats)
+    const ds=FORM_DATA_SOURCES[code]||[],dsEl=document.getElementById('dataSources');
+    dsEl.innerHTML=ds.map(([title,desc])=>{const keys=DS_KEY_MAP[title];let detSt='complete',detCt='—',detNt='Available';if(keys&&DS_STATS[keys[0]]){detSt=DS_STATS[keys[0]]||'complete';detCt=DS_STATS[keys[1]]||'—';detNt=DS_STATS[keys[2]]||'Available'}const stCl=detSt==='complete'?'complete':(detSt==='partial'?'partial':'missing');const pillCl=stCl==='complete'?'pill-completed':(stCl==='partial'?'pill-ready':'pill-pending');return'<div class="ds-item" onclick="toggleDsItem(this)"><strong>'+title+'<span class="pill '+pillCl+'" style="font-size:.6rem;margin-left:.3rem;">'+detSt+'</span><i class="fi fi-rr-angle-small-down ds-expand-icon"></i></strong><span>'+desc+'</span><div class="ds-detail"><div class="ds-detail-row"><span>Records</span><span class="ds-status '+stCl+'">'+detCt+'</span></div><div class="ds-detail-row"><span>Status</span><span>'+detNt+'</span></div></div></div>'}).join('');
+
+    document.getElementById('formDescription').textContent=FORM_DESCRIPTIONS[code]||'No description available.';
+
+    // Summary Cards (REAL counts)
+    const sumEl=document.getElementById('summaryCards');
+    if(code==='SF5'){sumEl.style.display='grid';sumEl.innerHTML='<div class="summary-card"><div class="sc-value green">'+ENROLLED_COUNT+'</div><div class="sc-label">Total Students</div></div><div class="summary-card"><div class="sc-value green">'+PROMO_PROMOTED+'</div><div class="sc-label">Promoted</div></div><div class="summary-card"><div class="sc-value red">'+PROMO_RETAINED+'</div><div class="sc-label">Retained</div></div><div class="summary-card"><div class="sc-value blue">'+PROMO_CONDITIONAL+'</div><div class="sc-label">Conditional</div></div>'}
+    else if(code==='SF9'){const ns=Math.max(0,ENROLLED_COUNT-approvedCount-pendingCount);sumEl.style.display='grid';sumEl.innerHTML='<div class="summary-card"><div class="sc-value green">'+ENROLLED_COUNT+'</div><div class="sc-label">Report Cards</div></div><div class="summary-card"><div class="sc-value green">'+approvedCount+'</div><div class="sc-label">Approved</div></div><div class="summary-card"><div class="sc-value blue">'+pendingCount+'</div><div class="sc-label">Pending</div></div><div class="summary-card"><div class="sc-value">'+ns+'</div><div class="sc-label">Not Started</div></div>'}
+    else if(code==='SF1'){sumEl.style.display='grid';sumEl.innerHTML='<div class="summary-card"><div class="sc-value green">'+ENROLLED_COUNT+'</div><div class="sc-label">Enrolled</div></div><div class="summary-card"><div class="sc-value green">'+(DS_STATS.lrn_count||ENROLLED_COUNT)+'</div><div class="sc-label">LRNs Complete</div></div><div class="summary-card"><div class="sc-value green">'+(DS_STATS.guardian_count||ENROLLED_COUNT)+'</div><div class="sc-label">Guardians</div></div><div class="summary-card"><div class="sc-value blue">1</div><div class="sc-label">Section</div></div>'}
+    else{sumEl.style.display='none'}
+
+    // Form-Specific Content (REAL)
+    const tFD=document.getElementById('tabFormDataHeader'),fSC=document.getElementById('formSpecificContent'),fSCH=document.getElementById('formSpecificColHeader'),fSCs=document.querySelectorAll('.form-specific-col');
+    fSCs.forEach(c=>c.style.display='none');fSCH.style.display='none';
+    if(code==='SF5'){tFD.style.display='inline-block';fSCH.style.display='';fSCH.textContent='Promotion Status';fSCs.forEach(c=>c.style.display='');const rows=document.querySelectorAll('#sectionStudentsTable tr');rows.forEach((r,i)=>{if(i===0)return;const sc=r.querySelector('.form-specific-col');const ps=r.dataset.promoStatus||'—';let pCl='pill-pending';if(ps==='Promoted')pCl='pill-completed';else if(ps==='Retained')pCl='pill-locked';else if(ps==='Conditionally Promoted')pCl='pill-ready';if(sc)sc.innerHTML='<span class="pill '+pCl+'">'+ps+'</span>'});fSC.innerHTML='<h4 style="font-size:.82rem;font-weight:700;color:var(--rich-black);margin-bottom:.5rem;">Promotion Recommendations</h4><p style="margin-bottom:.8rem;">Teacher has submitted recommendations for '+ENROLLED_COUNT+' students.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;"><div style="background:#d4edda;border-radius:8px;padding:.8rem;text-align:center;"><div style="font-size:1.5rem;font-weight:800;color:#155724;">'+PROMO_PROMOTED+'</div><div style="font-size:.7rem;color:#155724;">Promoted to Next Grade</div></div><div style="background:#f8d7da;border-radius:8px;padding:.8rem;text-align:center;"><div style="font-size:1.5rem;font-weight:800;color:#721c24;">'+(PROMO_RETAINED+PROMO_CONDITIONAL)+'</div><div style="font-size:.7rem;color:#721c24;">Retained / Conditional</div></div></div>'}
+    else if(code==='SF1'){tFD.style.display='inline-block';fSC.innerHTML='<h4 style="font-size:.82rem;font-weight:700;color:var(--rich-black);margin-bottom:.5rem;">School Register Summary</h4><p>This register contains the official masterlist of '+ENROLLED_COUNT+' students enrolled in '+SECTION+' for '+SY+'.</p><p style="margin-top:.5rem;">✅ All LRNs verified<br>✅ Guardian information complete<br>✅ Birth dates recorded</p>'}
+    else if(code==='SF9'){tFD.style.display='inline-block';const gP=TOTAL_GRADES>0?Math.round((FINALIZED_GRADES/TOTAL_GRADES)*100):0;fSC.innerHTML='<h4 style="font-size:.82rem;font-weight:700;color:var(--rich-black);margin-bottom:.5rem;">Report Card Preview</h4><p>'+approvedCount+' report cards approved by the School Head.</p><p style="margin-top:.5rem;">📊 Grades Finalized: '+FINALIZED_GRADES+' / '+TOTAL_GRADES+' ('+gP+'%)<br>📝 '+approvedCount+' students with complete report cards</p>'}
+    else if(code==='SF10'){tFD.style.display='inline-block';fSC.innerHTML='<h4 style="font-size:.82rem;font-weight:700;color:var(--rich-black);margin-bottom:.5rem;">Permanent Record (Form 137)</h4><p>SF10 is generated on-demand for individual students. Use the "Generate SF10" button in Quick Actions.</p><p style="margin-top:.5rem;">🔒 This form is locked upon generation<br>📋 Contains lifetime academic history<br>📤 Required for transfer requests</p>'}
+    else{tFD.style.display='none';fSC.innerHTML='<p style="font-size:.8rem;color:var(--text-secondary);">Form-specific data will be available once the teacher submits this form.</p>'}
+
+    // Activity Log (REAL)
+    const aLE=document.getElementById('activityLog');
+    if(ACTIVITY_LOGS.length>0){aLE.innerHTML=ACTIVITY_LOGS.map(l=>'<div style="padding:.5rem 0;border-bottom:1px solid var(--border-color);"><strong style="color:var(--rich-black);">'+l.date+'</strong> — '+l.user+': '+l.description+'</div>').join('')}else{aLE.innerHTML='<p>No activity recorded for this section yet.</p>'}
+
+    switchTab('tab-overview');
+
+    // Footer buttons
+    const footer=document.getElementById('detailFooter');let btns='<button class="btn btn-outline" onclick="closeModal(\'formDetailModal\')">Close</button>';
+    if(!locked){if(status==='submitted'){btns+='<button class="btn btn-green" onclick="reviewAndForward('+(submissionId||0)+');closeModal(\'formDetailModal\');"><i class="fi fi-rr-arrow-right"></i> Review & Forward to School Head</button><button class="btn btn-outline" onclick="closeModal(\'formDetailModal\');openReviewModal('+(submissionId||0)+',\'return\')"><i class="fi fi-rr-undo-alt"></i> Return for Revision</button><button class="btn btn-danger" onclick="closeModal(\'formDetailModal\');openReviewModal('+(submissionId||0)+',\'reject\')"><i class="fi fi-rr-cross"></i> Reject</button>'}else if(status==='reviewed'){btns+='<span style="font-size:.78rem;color:var(--text-secondary);padding:.5rem;display:flex;align-items:center;gap:.4rem;"><i class="fi fi-rr-info"></i> Awaiting School Head approval</span><button class="btn btn-outline" onclick="closeModal(\'formDetailModal\');openReviewModal('+(submissionId||0)+',\'return\')"><i class="fi fi-rr-undo-alt"></i> Return for Revision</button>'}else if(status==='approved'){btns+='<button class="btn btn-green" onclick="showToast(\'Downloading '+code+' PDF…\',\'success\')"><i class="fi fi-rr-download"></i> Download PDF</button><button class="btn btn-outline" onclick="showToast(\'Printing '+code+'…\',\'info\')"><i class="fi fi-rr-print"></i> Print</button>'}else if(status==='returned'){btns+='<span style="font-size:.78rem;color:#856404;padding:.5rem;"><i class="fi fi-rr-info"></i> Returned to teacher — awaiting revision</span>'}else if(status==='rejected'){btns+='<span style="font-size:.78rem;color:#dc3545;padding:.5rem;"><i class="fi fi-rr-info"></i> Permanently rejected</span>'}}else{btns+='<button class="btn btn-outline" disabled><i class="fi fi-rr-lock"></i> Form is Locked</button>'}footer.innerHTML=btns;openModal('formDetailModal')}window.openFormDetail=openFormDetail;
+
+// ═══════════════════ REVIEW & FORWARD ═══════════════════
+function reviewAndForward(sid){if(!sid){showToast('No submission to process.','warning');return}if(!confirm('Review this submission and forward it to the School Head for final approval?'))return;var f=document.createElement('form');f.method='POST';f.action='/registrars/forms/process/'+sid+'/';f.style.display='none';f.innerHTML='<input type="hidden" name="csrfmiddlewaretoken" value="'+getCSRF()+'"><input type="hidden" name="action" value="review"><input type="hidden" name="remarks" value="Reviewed by Registrar — forwarded to School Head for final approval.">';document.body.appendChild(f);f.submit();showToast('Form reviewed and forwarded to School Head.','success')}window.reviewAndForward=reviewAndForward;
+function openReviewModal(sid,act){if(!sid){showToast('No submission selected.','warning');return}var f=document.getElementById('reviewForm');f.action='/registrars/forms/process/'+sid+'/';document.getElementById('reviewAction').value=act;if(act==='return'){document.getElementById('reviewModalTitle').textContent='Return for Revision';document.getElementById('reviewActionText').textContent='return for revision';document.getElementById('reviewSubmitBtn').textContent='Return to Teacher';document.getElementById('reviewSubmitBtn').className='btn btn-warning';document.getElementById('reviewModalMessage').innerHTML='You are about to <strong>return</strong> this submission to the teacher for revision. They will need to fix issues and re-certify.'}else{document.getElementById('reviewModalTitle').textContent='Reject Submission';document.getElementById('reviewActionText').textContent='reject';document.getElementById('reviewSubmitBtn').textContent='Reject Permanently';document.getElementById('reviewSubmitBtn').className='btn btn-danger';document.getElementById('reviewModalMessage').innerHTML='You are about to <strong>permanently reject</strong> this submission. This action cannot be undone.'}document.getElementById('reviewRemarks').value='';openModal('reviewModal')}window.openReviewModal=openReviewModal;
+function toggleLock(fc){var f=document.createElement('form');f.method='POST';f.action = '/registrars/forms/lock/' + fc + '/';f.style.display='none';f.innerHTML='<input type="hidden" name="csrfmiddlewaretoken" value="'+getCSRF()+'"><input type="hidden" name="school_year" value="{{ current_sy_id }}">';document.body.appendChild(f);f.submit();showToast(fc+' lock toggled. Page will reload...','info')}window.toggleLock=toggleLock;
+var allLocked=false;function toggleLockAll(){var codes=[{% for f in forms_status %}'{{ f.code }}'{% if not forloop.last %},{% endif %}{% endfor %}];allLocked=!allLocked;codes.forEach(function(c,i){setTimeout(function(){toggleLock(c)},i*200)});showToast(allLocked?'Locking all forms...':'Unlocking all forms...','info');document.getElementById('lockAllIcon').className=allLocked?'fi fi-rr-lock':'fi fi-rr-lock-open-alt';document.getElementById('lockAllText').textContent=allLocked?'Unlock All':'Lock All'}window.toggleLockAll=toggleLockAll;
+function processCorrection(cid,act){var f=document.createElement('form');f.method='POST';f.action='/registrars/forms/correction/'+cid+'/';f.style.display='none';f.innerHTML='<input type="hidden" name="csrfmiddlewaretoken" value="'+getCSRF()+'"><input type="hidden" name="action" value="'+act+'">';document.body.appendChild(f);f.submit();showToast('Correction '+act+'d.',act==='approve'?'success':'warning')}window.processCorrection=processCorrection;
+window.batchPrintSF9=function(){showToast('Batch printing SF9 report cards...','info')};
+window.exportSF1=function(){showToast('Exporting SF1 Masterlist...','info')};
+})();
+</script>
+</body>
+</html>

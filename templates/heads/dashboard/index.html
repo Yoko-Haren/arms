@@ -1,0 +1,800 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Head Dashboard - Formify LIS</title>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', 'Century Gothic', sans-serif; }
+        :root {
+            --rich-black: #00072D; --dark-blue: #051650; --caribbean-blue: #123499;
+            --secondary-green: #5EA173; --secondary-green-light: #7dbb8f;
+            --gray-bg: #f5f7fb; --border-color: #e9ecef;
+            --text-primary: #2d3748; --text-secondary: #718096;
+            --warning-bg: #fff3cd; --warning-text: #856404; --warning-orange: #f39c12;
+            --success-bg: #d4edda; --success-text: #155724;
+            --danger-bg: #f8d7da; --danger-text: #721c24; --danger-red: #dc3545;
+            --info-bg: #e3f0ff; --info-text: #2D6AFF;
+            --purple: #9b59b6; --teal: #17a2b8;
+            --sidebar-width: 280px; --sidebar-collapsed-width: 80px;
+            --empty-state-color: #a0aec0;
+            --card-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            --card-shadow-hover: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        body { background: var(--gray-bg); min-height: 100vh; }
+        .dashboard { display: flex; min-height: 100vh; }
+        
+        /* ===== SIDEBAR ===== */
+        .sidebar { width: var(--sidebar-width); background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%); color: white; position: fixed; height: 100vh; overflow-y: auto; overflow-x: hidden; transition: width 0.3s; z-index: 100; display: flex; flex-direction: column; }
+        .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
+        .sidebar.collapsed .sidebar-header h2, .sidebar.collapsed .user-details, .sidebar.collapsed .nav-link span, .sidebar.collapsed .badge-count { display: none; }
+        .sidebar.collapsed .sidebar-header { justify-content: center; padding: 1.5rem 0.5rem; }
+        .sidebar.collapsed .user-info { justify-content: center; padding: 0.8rem; margin: 0 0.5rem 1.5rem; }
+        .sidebar.collapsed .nav-link { justify-content: center; padding: 0.85rem 0; gap: 0; }
+        .sidebar.collapsed .nav-link i { margin: 0; font-size: 1.2rem; }
+        .sidebar.collapsed .user-avatar { margin: 0; }
+        .sidebar.collapsed .fold-btn { margin: 0 auto; }
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
+        .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .logo-area { display: flex; align-items: center; gap: 1rem; overflow: hidden; }
+        .sidebar-header i.fi { font-size: 2rem; color: var(--secondary-green); flex-shrink: 0; }
+        .sidebar-header h2 { font-size: 1.1rem; font-weight: 600; line-height: 1.3; }
+        .sidebar-header h2 span { font-size: 0.7rem; opacity: 0.7; display: block; }
+        .fold-btn { background: rgba(255,255,255,0.1); border: none; color: white; cursor: pointer; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
+        .fold-btn:hover { background: rgba(255,255,255,0.25); }
+        .user-info { display: flex; align-items: center; gap: 1rem; padding: 1rem; margin: 1rem 1rem 1.5rem; background: rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; }
+        .user-avatar { width: 45px; height: 45px; background: var(--secondary-green); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 700; color: var(--rich-black); flex-shrink: 0; }
+        .user-details h4 { font-size: 0.9rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+        .nav-menu { list-style: none; padding: 0 0.75rem; flex: 1; }
+        .nav-item { margin-bottom: 0.25rem; position: relative; }
+        .nav-link { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; color: rgba(255,255,255,0.8); text-decoration: none; border-radius: 10px; font-size: 0.9rem; cursor: pointer; white-space: nowrap; overflow: hidden; transition: all 0.3s; }
+        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+        .nav-link i.fi { width: 22px; font-size: 1.1rem; text-align: center; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+        .nav-link .badge-count { background: var(--danger-red); color: white; font-size: 0.6rem; padding: 0.1rem 0.4rem; border-radius: 10px; margin-left: auto; font-weight: 700; }
+        .nav-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content { flex: 1; margin-left: var(--sidebar-width); padding: 1.5rem; transition: margin-left 0.3s; min-height: 100vh; }
+        .sidebar.collapsed ~ .main-content { margin-left: var(--sidebar-collapsed-width); }
+
+        /* ===== TOP BAR ===== */
+        .top-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; background: white; padding: 1rem 1.5rem; border-radius: 16px; box-shadow: var(--card-shadow); }
+        .welcome h1 { font-size: 1.3rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
+        .welcome p { color: var(--text-secondary); font-size: 0.8rem; }
+        .top-bar-actions { display: flex; align-items: center; gap: 1rem; position: relative; }
+        .date-display { display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.8rem; background: var(--gray-bg); padding: 0.4rem 0.8rem; border-radius: 8px; }
+        
+        /* ===== NOTIFICATIONS ===== */
+        .notification-dropdown { position: relative; }
+        .notification-badge { position: relative; cursor: pointer; background: none; border: none; padding: 0.3rem; }
+        .notification-badge i.fi { font-size: 1.3rem; color: var(--text-primary); }
+        .notification-badge:hover i.fi { color: var(--secondary-green); }
+        .badge-count { position: absolute; top: -5px; right: -8px; background: #dc3545; color: white; font-size: 0.6rem; padding: 0.15rem 0.4rem; border-radius: 10px; min-width: 16px; text-align: center; font-weight: 700; }
+        .badge-count.zero { background: #adb5bd; }
+        .dropdown-menu { position: absolute; top: 45px; right: 0; width: 360px; background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 200; display: none; overflow: hidden; border: 1px solid var(--border-color); }
+        .dropdown-menu.show { display: block; animation: fadeInDown 0.25s ease; }
+        @keyframes fadeInDown { from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)} }
+        .dropdown-header { padding: 0.9rem 1.2rem; background: var(--gray-bg); border-bottom: 1px solid var(--border-color); font-weight: 700; font-size: 0.85rem; color: var(--rich-black); display: flex; justify-content: space-between; align-items: center; }
+        .notification-list { max-height: 380px; overflow-y: auto; }
+        .notification-item { display: flex; align-items: flex-start; gap: 0.8rem; padding: 0.9rem 1.2rem; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s; }
+        .notification-item:hover { background: var(--gray-bg); }
+        .notification-item.unread { background: rgba(94,161,115,0.06); border-left: 3px solid var(--secondary-green); }
+        .notification-icon { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .notification-icon.form { background: rgba(94,161,115,0.12); color: var(--secondary-green); }
+        .notification-icon.grade { background: rgba(18,52,153,0.1); color: var(--caribbean-blue); }
+        .notification-icon.transfer { background: rgba(243,156,18,0.1); color: var(--warning-orange); }
+        .notification-icon.alert { background: rgba(220,53,69,0.1); color: var(--danger-red); }
+        .notification-content .notification-title { font-size: 0.8rem; font-weight: 600; color: var(--rich-black); margin-bottom: 0.15rem; }
+        .notification-content .notification-message { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; }
+        .notification-content .notification-time { font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.3rem; }
+        .dropdown-footer { padding: 0.7rem; text-align: center; border-top: 1px solid var(--border-color); background: var(--gray-bg); }
+        .dropdown-footer a { color: var(--secondary-green); font-size: 0.75rem; font-weight: 600; cursor: pointer; text-decoration: none; }
+
+        /* ===== PORO GREETING ===== */
+        .poro-greeting { background: linear-gradient(135deg, #f0f9f0, #e8f5e9); border-radius: 20px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(94,161,115,0.3); flex-wrap: wrap; gap: 1rem; }
+        .poro-greeting-content { display: flex; align-items: center; gap: 1rem; }
+        .character-icon { width: 50px; height: 50px; background: var(--secondary-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(94,161,115,0.3); animation: bounce 2s ease infinite; overflow: hidden; }
+        .character-icon img { width: 100%; height: 100%; object-fit: cover; }
+        @keyframes bounce { 0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)} }
+        .poro-message h3 { font-size: 1rem; color: var(--rich-black); margin-bottom: 0.2rem; }
+        .poro-message p { font-size: 0.75rem; color: var(--text-secondary); }
+
+        /* ===== STATS ===== */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: white; padding: 1.2rem; border-radius: 16px; display: flex; align-items: center; gap: 0.8rem; box-shadow: var(--card-shadow); transition: all 0.3s; cursor: pointer; position: relative; overflow: hidden; }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: var(--card-shadow-hover); }
+        .stat-card::after { content: ''; position: absolute; top: 0; right: 0; width: 4px; height: 100%; }
+        .stat-card.blue::after { background: var(--caribbean-blue); }
+        .stat-card.green::after { background: var(--secondary-green); }
+        .stat-card.orange::after { background: var(--warning-orange); }
+        .stat-card.purple::after { background: var(--purple); }
+        .stat-card.clickable .stat-info h3 { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
+        .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+        .stat-icon.blue { background: rgba(18,52,153,0.1); color: var(--caribbean-blue); }
+        .stat-icon.green { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .stat-icon.orange { background: rgba(243,156,18,0.1); color: #f39c12; }
+        .stat-icon.purple { background: rgba(155,89,182,0.1); color: var(--purple); }
+        .stat-info { flex: 1; min-width: 0; }
+        .stat-info h3 { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.2rem; }
+        .stat-info .value { font-size: 1.6rem; font-weight: 700; color: var(--rich-black); line-height: 1.2; }
+        .stat-info .sub { font-size: 0.65rem; color: var(--text-secondary); }
+        .trend-up { color: var(--secondary-green); font-weight: 600; }
+        .trend-down { color: var(--danger-red); font-weight: 600; }
+
+        /* ===== BUTTONS ===== */
+        .quick-actions { display: flex; gap: 0.8rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .btn-primary { background: var(--secondary-green); color: white; padding: 0.6rem 1.2rem; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; text-decoration: none; transition: all 0.2s; }
+        .btn-primary:hover { background: var(--caribbean-blue); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(94,161,115,0.3); }
+        .btn-outline { background: transparent; border: 2px solid var(--border-color); color: var(--text-primary); padding: 0.6rem 1.2rem; border-radius: 10px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; text-decoration: none; transition: all 0.2s; }
+        .btn-outline:hover { border-color: var(--secondary-green); color: var(--secondary-green); }
+        .btn-outline:disabled, .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.75rem; border-radius: 8px; }
+        .btn-danger { background: var(--danger-red); color: white; border: none; }
+        .btn-danger:hover { background: #c82333; }
+
+        /* ===== CARDS & GRIDS ===== */
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+        .three-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+        .card { background: white; border-radius: 16px; padding: 1.2rem; box-shadow: var(--card-shadow); }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+        .section-header h2 { font-size: 1rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
+        .section-header h2 i { color: var(--secondary-green); }
+        .section-header .header-badge { font-size: 0.65rem; padding: 0.15rem 0.5rem; border-radius: 12px; font-weight: 600; }
+        .header-badge.urgent { background: var(--danger-bg); color: var(--danger-text); }
+        .header-badge.normal { background: var(--info-bg); color: var(--info-text); }
+        .view-all { color: var(--secondary-green); font-size: 0.75rem; cursor: pointer; text-decoration: none; font-weight: 600; transition: all 0.2s; }
+        .view-all:hover { color: var(--caribbean-blue); }
+
+        /* ===== COMPLIANCE ITEMS ===== */
+        .compliance-item { display: flex; justify-content: space-between; align-items: center; padding: 0.7rem 0; border-bottom: 1px solid var(--border-color); gap: 1rem; }
+        .compliance-item:last-child { border-bottom: none; }
+        .compliance-info { flex: 1; min-width: 0; }
+        .compliance-info h4 { font-size: 0.85rem; color: var(--rich-black); }
+        .compliance-info p { font-size: 0.7rem; color: var(--text-secondary); }
+        .progress-bar { background: var(--gray-bg); border-radius: 10px; height: 8px; overflow: hidden; width: 100px; flex-shrink: 0; }
+        .progress-fill { height: 100%; border-radius: 10px; transition: width 0.5s ease; }
+        .progress-fill.green { background: var(--secondary-green); }
+        .progress-fill.blue { background: var(--caribbean-blue); }
+        .progress-fill.orange { background: var(--warning-orange); }
+        .progress-fill.red { background: var(--danger-red); }
+        .status-badge { padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.65rem; font-weight: 600; white-space: nowrap; }
+        .status-good { background: var(--success-bg); color: var(--success-text); }
+        .status-warning { background: var(--warning-bg); color: var(--warning-text); }
+        .status-pending { background: var(--info-bg); color: var(--info-text); }
+        .status-danger { background: var(--danger-bg); color: var(--danger-text); }
+
+        /* ===== TABLES ===== */
+        .eval-table { width: 100%; border-collapse: collapse; }
+        .eval-table th, .eval-table td { text-align: left; padding: 0.6rem; font-size: 0.75rem; border-bottom: 1px solid var(--border-color); }
+        .eval-table th { color: var(--text-secondary); font-weight: 600; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 0.5px; }
+        .eval-table tbody tr:hover { background: var(--gray-bg); }
+        .eval-table tbody tr.clickable { cursor: pointer; }
+        .rating-stars { color: var(--warning-orange); letter-spacing: 2px; }
+
+        /* ===== CHARTS ===== */
+        .analytics-card { background: white; border-radius: 16px; padding: 1.2rem; box-shadow: var(--card-shadow); }
+        .analytics-title { font-size: 0.85rem; font-weight: 600; color: var(--rich-black); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .analytics-title i { color: var(--secondary-green); }
+        .chart-container { position: relative; width: 100%; }
+        canvas { max-height: 200px; width: 100% !important; }
+
+        /* ===== EMPTY STATES ===== */
+        .empty-container { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.5rem; text-align: center; min-height: 150px; }
+        .empty-icon { font-size: 2.5rem; color: var(--empty-state-color); margin-bottom: 0.8rem; opacity: 0.5; }
+        .empty-title { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.3rem; }
+        .empty-message { font-size: 0.75rem; color: var(--empty-state-color); max-width: 280px; line-height: 1.5; }
+
+        /* ===== RECENT ACTIVITY ===== */
+        .activity-timeline { position: relative; padding-left: 1.5rem; }
+        .activity-timeline::before { content: ''; position: absolute; left: 0.5rem; top: 0; bottom: 0; width: 2px; background: var(--border-color); }
+        .activity-item { position: relative; padding: 0.5rem 0 0.5rem 1rem; }
+        .activity-item::before { content: ''; position: absolute; left: -1.1rem; top: 0.8rem; width: 8px; height: 8px; border-radius: 50%; background: var(--secondary-green); border: 2px solid white; }
+        .activity-item .activity-time { font-size: 0.65rem; color: var(--text-secondary); }
+        .activity-item .activity-text { font-size: 0.75rem; color: var(--text-primary); }
+        .activity-item .activity-user { font-size: 0.7rem; color: var(--caribbean-blue); font-weight: 600; }
+
+        /* ===== TOAST ===== */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 0.5rem; }
+        .toast { background: white; border-radius: 12px; padding: 0.8rem 1.2rem; box-shadow: 0 8px 25px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 0.8rem; min-width: 300px; animation: slideInRight 0.3s ease; border-left: 4px solid var(--secondary-green); }
+        .toast.error { border-left-color: var(--danger-red); }
+        .toast.warning { border-left-color: var(--warning-orange); }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* ===== MODAL ===== */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; display: none; align-items: center; justify-content: center; }
+        .modal-overlay.show { display: flex; }
+        .modal { background: white; border-radius: 16px; padding: 1.5rem; width: 90%; max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        .modal h3 { margin-bottom: 1rem; color: var(--rich-black); }
+        .modal textarea { width: 100%; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.8rem; font-size: 0.85rem; resize: vertical; min-height: 80px; }
+        .modal-actions { display: flex; gap: 0.8rem; justify-content: flex-end; margin-top: 1rem; }
+
+        /* ===== MOBILE ===== */
+        .mobile-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
+        .mobile-overlay.show { display: block; }
+        .mobile-menu-btn { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-primary); }
+
+        @media (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } .three-col { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 768px) { 
+            .mobile-menu-btn { display: block; }
+            .sidebar { transform: translateX(-100%); width: var(--sidebar-width) !important; } 
+            .sidebar.mobile-open { transform: translateX(0); } 
+            .main-content { margin-left: 0 !important; } 
+            .stats-grid { grid-template-columns: 1fr; } 
+            .two-col, .three-col { grid-template-columns: 1fr; } 
+            .dropdown-menu { width: 290px; right: -20px; } 
+        }
+
+        /* ===== PRINT ===== */
+        @media print {
+            .sidebar, .top-bar-actions, .quick-actions, .poro-greeting, .view-all, .mobile-menu-btn { display: none !important; }
+            .main-content { margin-left: 0 !important; padding: 0 !important; }
+            .card, .analytics-card { box-shadow: none; border: 1px solid #ddd; break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <!-- ========== SIDEBAR ========== -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area"><i class="fi fi-rr-graduation-cap"></i><h2>Formify <span>School Head Portal</span></h2></div>
+            <button class="fold-btn" id="foldBtn"><i class="fi fi-rr-angle-left"></i></button>
+        </div>
+        <div class="user-info">
+            <div class="user-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+            <div class="user-details"><h4>{{ request.user.get_full_name }}</h4><p>School Principal</p></div>
+        </div>
+<ul class="nav-menu">
+    <li class="nav-item"><a href="{% url 'heads-dashboard' %}" class="nav-link active"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+    <li class="nav-item"><a href="{% url 'heads-school-performance' %}" class="nav-link"><i class="fi fi-rr-chart-histogram"></i><span>School Performance</span></a></li>
+    <li class="nav-item"><a href="{% url 'heads-forms-compliance' %}" class="nav-link"><i class="fi fi-rr-document"></i><span>Forms Compliance</span></a></li>
+    <li class="nav-item"><a href="{% url 'heads-teacher-evaluation' %}" class="nav-link"><i class="fi fi-rr-presentation"></i><span>Teacher Evaluation</span></a></li>
+    <li class="nav-item"><a href="{% url 'heads-reports' %}" class="nav-link"><i class="fi fi-rr-chart-line-up"></i><span>Reports & Analytics</span></a></li>
+    <li class="nav-item"><a href="{% url 'heads-announcements' %}" class="nav-link"><i class="fi fi-rr-megaphone"></i><span>Announcements</span></a></li>
+    <li class="nav-item"><a href="{% url 'heads-messages' %}" class="nav-link"><i class="fi fi-rr-envelope"></i><span>Messages</span></a></li>
+    <li class="nav-item"><a href="{% url 'heads-user-management' %}" class="nav-link"><i class="fi fi-rr-users-gear"></i><span>User Management</span></a></li>
+    <li class="nav-item"><a href="{% url 'heads-settings' %}" class="nav-link"><i class="fi fi-rr-settings"></i><span>Settings</span></a></li>
+</ul>
+        <ul class="nav-menu nav-footer">
+            <li class="nav-item"><a href="{% url 'signout' %}" class="nav-link"><i class="fi fi-rr-sign-out-alt"></i><span>Logout</span></a></li>
+        </ul>
+    </div>
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <div class="main-content" id="mainContent">
+        <!-- TOP BAR -->
+        <div class="top-bar">
+            <div style="display:flex;align-items:center;gap:1rem;">
+                <button class="mobile-menu-btn" id="mobileMenuBtn"><i class="fi fi-rr-menu-burger"></i></button>
+                <div class="welcome">
+                    <h1 id="greetingText"><i class="fi fi-rr-dashboard" style="color:var(--secondary-green);"></i> Hello, {{ request.user.first_name }}!</h1>
+                    <p>{% if has_data %}School Year {{ current_sy_label }} • {{ total_teachers }} teachers • {{ total_enrollment }} students{% else %}Oversight • Compliance • Performance Metrics{% endif %}</p>
+                </div>
+            </div>
+            <div class="top-bar-actions">
+                <button class="btn-outline btn-sm" onclick="refreshDashboard()" title="Refresh data"><i class="fi fi-rr-refresh"></i></button>
+                <div class="date-display"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
+                <div class="notification-dropdown">
+                    <button class="notification-badge" id="notificationBtn"><i class="fi fi-rr-bell"></i><span class="badge-count {% if notification_count == 0 %}zero{% endif %}" id="notifCount">{{ notification_count }}</span></button>
+                    <div class="dropdown-menu" id="notificationDropdown">
+                        <div class="dropdown-header"><span>Notifications</span><button class="btn-sm btn-outline" onclick="markAllRead()" style="font-size:0.65rem;">Mark all read</button></div>
+                        <div class="notification-list" id="notificationList">
+                            {% if notifications %}
+                                {% for n in notifications %}
+                                <div class="notification-item {% if not n.is_read %}unread{% endif %}">
+                                    <div class="notification-icon {{ n.icon_class }}"><i class="fi {{ n.icon }}"></i></div>
+                                    <div class="notification-content">
+                                        <div class="notification-title">{{ n.title }}</div>
+                                        <div class="notification-message">{{ n.message|truncatechars:80 }}</div>
+                                        <div class="notification-time">{{ n.time_ago }}</div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-container" style="min-height:100px;padding:1rem;">
+                                    <i class="fi fi-rr-bell" style="font-size:2rem;color:var(--empty-state-color);opacity:0.5;"></i>
+                                    <p style="font-size:0.75rem;color:var(--empty-state-color);margin-top:0.5rem;">No notifications yet</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PORO GREETING -->
+        <div class="poro-greeting">
+            <div class="poro-greeting-content">
+                <div class="character-icon"><img src="{% static 'shared/poro/Poro.png' %}" alt="Poro" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fi fi-rr-smile\' style=\'font-size:1.8rem;color:white;\'></i>';"></div>
+                <div class="poro-message">
+                    <h3>Welcome back, {{ request.user.first_name }}!</h3>
+                    <p id="poroMessage">
+                        {% if has_data %}
+                            {% if overall_compliance >= 80 %}
+                                Forms compliance at <strong>{{ overall_compliance }}%</strong> — looking great!
+                            {% elif overall_compliance >= 50 %}
+                                Forms compliance at {{ overall_compliance }}%. {{ pending_actions|length }} action{{ pending_actions|pluralize }} need{{ pending_actions|pluralize:"s," }} attention.
+                            {% else %}
+                                Forms compliance needs attention ({{ overall_compliance }}%). Please follow up with your registrar.
+                            {% endif %}
+                        {% else %}
+                            Your dashboard is ready. Start by setting up the current school year.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            {% if has_data %}
+            <div style="display:flex;gap:0.5rem;">
+                <a href="/heads/reports/" class="btn-outline btn-sm"><i class="fi fi-rr-chart-line-up"></i> Reports</a>
+                <a href="/heads/announcements/create/" class="btn-primary btn-sm"><i class="fi fi-rr-megaphone"></i> Announce</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ========== STATS GRID ========== -->
+        <div class="stats-grid">
+            <div class="stat-card blue clickable" onclick="window.location.href='/heads/reports/?tab=enrollment'">
+                <div class="stat-icon blue"><i class="fi fi-rr-school"></i></div>
+                <div class="stat-info">
+                    <h3>Total Enrollment</h3>
+                    <div class="value">{{ total_enrollment|default:"—" }}</div>
+                    <div class="sub">JHS: {{ jhs_count|default:"0" }} | SHS: {{ shs_count|default:"0" }}</div>
+                </div>
+            </div>
+            <div class="stat-card green clickable" onclick="window.location.href='/heads/evaluation/'">
+                <div class="stat-icon green"><i class="fi fi-rr-presentation"></i></div>
+                <div class="stat-info">
+                    <h3>Teaching Staff</h3>
+                    <div class="value">{{ total_teachers|default:"—" }}</div>
+                    <div class="sub">Full-time: {{ full_time|default:"0" }} | Part-time: {{ part_time|default:"0" }}</div>
+                </div>
+            </div>
+            <div class="stat-card orange clickable" onclick="window.location.href='{% url 'heads-forms-compliance' %}'">
+                <div class="stat-icon orange"><i class="fi fi-rr-document"></i></div>
+                <div class="stat-info">
+                    <h3>Forms Compliance</h3>
+                    <div class="value">{{ overall_compliance|default:"—" }}%</div>
+                    <div class="sub">
+                        {% if overall_compliance >= 80 %}<span class="trend-up"><i class="fi fi-rr-arrow-up"></i> On Track</span>
+                        {% elif overall_compliance >= 50 %}<span style="color:var(--warning-orange);">Needs Attention</span>
+                        {% else %}<span class="trend-down"><i class="fi fi-rr-arrow-down"></i> Critical</span>{% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card purple clickable" onclick="window.location.href='/heads/reports/?tab=academic'">
+                <div class="stat-icon purple"><i class="fi fi-rr-trophy"></i></div>
+                <div class="stat-info">
+                    <h3>Retention Rate</h3>
+                    <div class="value">{% if retention_rate %}{{ retention_rate }}%{% else %}—{% endif %}</div>
+                    <div class="sub">Current school year</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== QUICK ACTIONS ========== -->
+        <div class="quick-actions">
+            {% if has_data %}
+                <a href="{% url 'heads-forms-compliance' %}" class="btn-primary">
+                    <i class="fi fi-rr-document"></i> Review Forms 
+                    {% if pending_approvals_count > 0 %}({{ pending_approvals_count }}){% endif %}
+                </a>
+                <a href="/heads/evaluation/" class="btn-outline"><i class="fi fi-rr-presentation"></i> Evaluate Teachers</a>
+                <a href="/heads/announcements/create/" class="btn-outline"><i class="fi fi-rr-megaphone"></i> Post Announcement</a>
+                <a href="/heads/reports/" class="btn-outline"><i class="fi fi-rr-chart-line-up"></i> View Reports</a>
+            {% else %}
+                <button class="btn-primary" disabled><i class="fi fi-rr-document"></i> Review Forms</button>
+                <button class="btn-outline" disabled><i class="fi fi-rr-presentation"></i> Evaluate Teachers</button>
+                <button class="btn-outline" disabled><i class="fi fi-rr-megaphone"></i> Post Announcement</button>
+            {% endif %}
+        </div>
+
+        <!-- ========== TWO COLUMN: COMPLIANCE & TEACHERS ========== -->
+        <div class="two-col">
+            <!-- FORMS COMPLIANCE -->
+            <div class="card">
+                <div class="section-header">
+                    <h2><i class="fi fi-rr-document"></i> Forms Compliance Status</h2>
+                    <a href="{% url 'heads-forms-compliance' %}" class="view-all">View All <i class="fi fi-rr-arrow-right"></i></a>
+                </div>
+                {% if forms_compliance %}
+                    {% for form in forms_compliance %}
+                    <div class="compliance-item">
+                        <div class="compliance-info">
+                            <h4>{{ form.form_code }} — {{ form.form_name }}</h4>
+                            <p>{{ form.submitted_sections|default:"0" }}/{{ form.total_sections|default:"0" }} sections submitted</p>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill {% if form.pct >= 80 %}green{% elif form.pct >= 50 %}blue{% elif form.pct > 0 %}orange{% else %}red{% endif %}" style="width:{{ form.pct }}%;"></div>
+                        </div>
+                        <span style="font-size:0.75rem;font-weight:600;min-width:35px;text-align:right;">{{ form.pct }}%</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-container">
+                        <i class="fi fi-rr-folder-open empty-icon"></i>
+                        <div class="empty-title">No Form Data</div>
+                        <div class="empty-message">Form compliance tracking will appear here once the school year is configured and submissions begin.</div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- TEACHER PERFORMANCE -->
+            <div class="card">
+                <div class="section-header">
+                    <h2><i class="fi fi-rr-presentation"></i> Teacher Performance Overview</h2>
+                    <a href="/heads/evaluation/" class="view-all">View All <i class="fi fi-rr-arrow-right"></i></a>
+                </div>
+                {% if teacher_evals %}
+                <div style="overflow-x:auto;">
+                <table class="eval-table">
+                    <thead><tr><th>Teacher</th><th>Subject/Grade</th><th>Rating</th><th>Status</th></tr></thead>
+                    <tbody>
+                        {% for ev in teacher_evals %}
+                        <tr class="clickable" onclick="window.location.href='/heads/evaluation/teacher/{{ ev.teacher_id }}/'">
+                            <td><strong>{{ ev.teacher_name }}</strong></td>
+                            <td>{{ ev.grade_handled }}</td>
+                            <td>
+                                {% if ev.rating %}
+                                    <span class="rating-stars">
+                                        {% for i in "12345" %}
+                                            {% if forloop.counter <= ev.rating|floatformat:0|add:"0" %}
+                                                ★
+                                            {% else %}
+                                                ☆
+                                            {% endif %}
+                                        {% endfor %}
+                                    </span>
+                                    {{ ev.rating|floatformat:1 }}
+                                {% else %}
+                                    <span style="color:var(--text-secondary);">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="status-badge {% if ev.status == 'Completed' %}status-good{% elif ev.status == 'In Progress' %}status-pending{% else %}status-warning{% endif %}">{{ ev.status }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+                {% else %}
+                    <div class="empty-container">
+                        <i class="fi fi-rr-presentation empty-icon"></i>
+                        <div class="empty-title">No Evaluations Yet</div>
+                        <div class="empty-message">Teacher evaluation data will appear here once the RPMS cycle begins. Start evaluating your teachers to track their performance.</div>
+                    </div>
+                {% endif %}
+                {% if unevaluated_count > 0 %}
+                <div style="margin-top:0.8rem;padding:0.6rem;background:var(--warning-bg);border-radius:8px;font-size:0.7rem;color:var(--warning-text);">
+                    <i class="fi fi-rr-exclamation-triangle"></i> {{ unevaluated_count }} teacher(s) still need evaluation this cycle.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ========== THREE COLUMN CHARTS ========== -->
+        <div class="three-col">
+            <!-- ENROLLMENT BY GRADE -->
+            <div class="analytics-card">
+                <div class="analytics-title"><i class="fi fi-rr-chart-pie"></i> Enrollment by Grade Level</div>
+                {% if enrollment_by_grade %}
+                <div class="chart-container"><canvas id="enrollmentChart"></canvas></div>
+                {% else %}
+                <div class="empty-container" style="min-height:160px;">
+                    <i class="fi fi-rr-chart-pie empty-icon" style="font-size:2rem;"></i>
+                    <div class="empty-message">No enrollment data available.</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- PROMOTION RATE -->
+            <div class="analytics-card">
+                <div class="analytics-title"><i class="fi fi-rr-chart-line-up"></i> Promotion Rate</div>
+                {% if promotion_data %}
+                <div class="chart-container"><canvas id="promotionChart"></canvas></div>
+                {% else %}
+                <div class="empty-container" style="min-height:160px;">
+                    <i class="fi fi-rr-chart-line-up empty-icon" style="font-size:2rem;"></i>
+                    <div class="empty-message">Promotion data will populate after SY completion.</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ATTENDANCE RATE -->
+            <div class="analytics-card">
+                <div class="analytics-title"><i class="fi fi-rr-calendar-check"></i> Monthly Attendance Rate</div>
+                {% if attendance_data %}
+                <div class="chart-container"><canvas id="attendanceChart"></canvas></div>
+                {% else %}
+                <div class="empty-container" style="min-height:160px;">
+                    <i class="fi fi-rr-calendar-check empty-icon" style="font-size:2rem;"></i>
+                    <div class="empty-message">Attendance data will populate monthly.</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ========== PENDING ACTIONS & RECENT ACTIVITY ========== -->
+        <div class="two-col">
+            <!-- PENDING ACTIONS -->
+            <div class="card">
+                <div class="section-header">
+                    <h2><i class="fi fi-rr-clock"></i> Pending Actions</h2>
+                    <span class="header-badge {% if pending_actions|length > 3 %}urgent{% else %}normal{% endif %}">{{ pending_actions|length }} action{{ pending_actions|pluralize }}</span>
+                </div>
+                {% if pending_actions %}
+                    {% for action in pending_actions %}
+                    <div class="compliance-item">
+                        <div class="compliance-info">
+                            <h4>{{ action.title }}</h4>
+                            <p>{{ action.detail }}</p>
+                        </div>
+                        <span class="status-badge {{ action.badge_class }}">{{ action.badge_text }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-container">
+                        <i class="fi fi-rr-check-circle empty-icon"></i>
+                        <div class="empty-title">All Clear</div>
+                        <div class="empty-message">No pending actions require your attention right now.</div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- RECENT ACTIVITY -->
+            <div class="card">
+                <div class="section-header">
+                    <h2><i class="fi fi-rr-time-past"></i> Recent Activity</h2>
+                    <a href="/heads/audit-log/" class="view-all">View Log</a>
+                </div>
+                {% if recent_activity %}
+                <div class="activity-timeline">
+                    {% for activity in recent_activity %}
+                    <div class="activity-item">
+                        <div class="activity-time">{{ activity.time_ago }}</div>
+                        <div class="activity-text">{{ activity.description }}</div>
+                        <div class="activity-user">by {{ activity.user_name }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-container">
+                    <i class="fi fi-rr-history empty-icon"></i>
+                    <div class="empty-title">No Recent Activity</div>
+                    <div class="empty-message">Activity log will appear here as actions are performed in the system.</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ========== ANNOUNCEMENTS ========== -->
+        {% if recent_announcements %}
+        <div class="card">
+            <div class="section-header">
+                <h2><i class="fi fi-rr-megaphone"></i> Recent Announcements</h2>
+                <a href="/heads/announcements/" class="view-all">View All</a>
+            </div>
+            {% for announcement in recent_announcements %}
+            <div class="compliance-item">
+                <div class="compliance-info">
+                    <h4>{{ announcement.title }}</h4>
+                    <p>{{ announcement.content|truncatechars:100 }} • {{ announcement.created_at|date:"M d, Y" }}</p>
+                </div>
+                <span class="status-badge {% if announcement.priority == 'High' %}status-danger{% elif announcement.priority == 'Medium' %}status-warning{% else %}status-pending{% endif %}">{{ announcement.priority }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- MODAL FOR QUICK ACTIONS -->
+<div class="modal-overlay" id="quickActionModal">
+    <div class="modal">
+        <h3 id="modalTitle">Quick Action</h3>
+        <div id="modalContent"></div>
+        <div class="modal-actions">
+            <button class="btn-outline btn-sm" onclick="closeModal()">Cancel</button>
+            <button class="btn-primary btn-sm" id="modalConfirmBtn" onclick="confirmAction()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+(function() {
+    // ===== SIDEBAR =====
+    const sidebar = document.getElementById('sidebar');
+    const foldBtn = document.getElementById('foldBtn');
+    const mainContent = document.getElementById('mainContent');
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    let collapsed = false;
+    
+    function adjustMargin() {
+        if (window.innerWidth > 768) {
+            mainContent.style.marginLeft = collapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)';
+        } else {
+            mainContent.style.marginLeft = '0';
+        }
+    }
+    
+    foldBtn.addEventListener('click', () => {
+        if (window.innerWidth <= 768) { 
+            const o = sidebar.classList.toggle('mobile-open'); 
+            mobileOverlay.classList.toggle('show', o); 
+        } else { 
+            collapsed = !collapsed; 
+            sidebar.classList.toggle('collapsed', collapsed); 
+            foldBtn.querySelector('i').className = collapsed ? 'fi fi-rr-angle-right' : 'fi fi-rr-angle-left'; 
+            adjustMargin(); 
+        }
+    });
+    
+    mobileMenuBtn.addEventListener('click', () => {
+        sidebar.classList.add('mobile-open');
+        mobileOverlay.classList.add('show');
+    });
+    
+    mobileOverlay.addEventListener('click', () => { 
+        sidebar.classList.remove('mobile-open'); 
+        mobileOverlay.classList.remove('show'); 
+    });
+    
+    window.addEventListener('resize', adjustMargin);
+    adjustMargin();
+
+    // ===== NOTIFICATIONS =====
+    document.getElementById('notificationBtn').addEventListener('click', e => { 
+        e.stopPropagation(); 
+        document.getElementById('notificationDropdown').classList.toggle('show'); 
+    });
+    document.addEventListener('click', () => document.getElementById('notificationDropdown').classList.remove('show'));
+
+    // ===== GREETING & DATE =====
+    function updateGreeting() {
+        const h = new Date().getHours();
+        const g = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+        const name = '{{ request.user.first_name|escapejs }}' || 'Principal';
+        document.getElementById('greetingText').innerHTML = `<i class="fi fi-rr-dashboard" style="color:var(--secondary-green);"></i> ${g}, ${name}!`;
+    }
+    function updateDate() { 
+        const now = new Date();
+        document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); 
+    }
+    updateGreeting(); updateDate();
+    setInterval(updateDate, 60000); 
+    setInterval(updateGreeting, 60000);
+
+    // ===== TOAST =====
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        const icons = { success: 'fi-rr-check-circle', error: 'fi-rr-exclamation', warning: 'fi-rr-exclamation-triangle' };
+        toast.innerHTML = `<i class="fi ${icons[type] || icons.success}"></i><div style="flex:1;"><strong>${type.charAt(0).toUpperCase()+type.slice(1)}</strong><p style="font-size:0.75rem;margin:0;">${message}</p></div><button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;">&times;</button>`;
+        container.appendChild(toast);
+        setTimeout(() => { if (toast.parentElement) toast.remove(); }, 4000);
+    }
+
+    // ===== MODAL =====
+    window.closeModal = function() { document.getElementById('quickActionModal').classList.remove('show'); };
+    window.confirmAction = function() { closeModal(); showToast('Action confirmed!', 'success'); };
+
+    // ===== MARK ALL READ =====
+    window.markAllRead = function() {
+        fetch('/heads/mark-notifications-read/', { 
+            method: 'POST', 
+            headers: { 'X-CSRFToken': getCookie('csrftoken') } 
+        })
+        .then(r => r.json())
+        .then(() => { 
+            document.getElementById('notifCount').textContent = '0'; 
+            document.getElementById('notifCount').classList.add('zero');
+            showToast('Notifications marked as read', 'success'); 
+        });
+    };
+
+    // ===== REFRESH =====
+    window.refreshDashboard = function() {
+        location.reload();
+    };
+
+    // ===== GET CSRF TOKEN =====
+    function getCookie(name) { 
+        let v = null; 
+        document.cookie.split(';').forEach(c => { 
+            c = c.trim(); 
+            if (c.substring(0, name.length + 1) === (name + '=')) 
+                v = decodeURIComponent(c.substring(name.length + 1)); 
+        }); 
+        return v; 
+    }
+
+    // ===== CHARTS =====
+    {% if enrollment_by_grade %}
+    new Chart(document.getElementById('enrollmentChart'), {
+        type: 'bar',
+        data: {
+            labels: [{% for g in enrollment_by_grade %}'{{ g.grade_name|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+            datasets: [{ 
+                data: [{% for g in enrollment_by_grade %}{{ g.count }}{% if not forloop.last %},{% endif %}{% endfor %}], 
+                backgroundColor: [
+                    '#5EA173', '#123499', '#f39c12', '#9b59b6', '#17a2b8',
+                    '#5EA173', '#123499', '#f39c12', '#9b59b6', '#17a2b8',
+                    '#5EA173', '#123499'
+                ],
+                borderRadius: 6,
+                borderWidth: 0
+            }]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { legend: { display: false } }, 
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } 
+        }
+    });
+    {% endif %}
+
+    {% if promotion_data %}
+    new Chart(document.getElementById('promotionChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Promoted', 'Conditionally Promoted', 'Retained'],
+            datasets: [{ 
+                data: [
+                    {{ promotion_data.promoted|default:0 }}, 
+                    {{ promotion_data.conditional|default:0 }}, 
+                    {{ promotion_data.retained|default:0 }}
+                ], 
+                backgroundColor: ['#5EA173', '#f39c12', '#dc3545'],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15, font: { size: 10 } } } }
+        }
+    });
+    {% endif %}
+
+    {% if attendance_data %}
+    new Chart(document.getElementById('attendanceChart'), {
+        type: 'line',
+        data: {
+            labels: [{% for a in attendance_data %}'{{ a.month|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+            datasets: [{ 
+                label: 'Attendance %',
+                data: [{% for a in attendance_data %}{{ a.rate }}{% if not forloop.last %},{% endif %}{% endfor %}], 
+                borderColor: '#5EA173',
+                backgroundColor: 'rgba(94,161,115,0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                pointHoverRadius: 5
+            }]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { min: 80, max: 100, ticks: { callback: v => v + '%' } } }
+        }
+    });
+    {% endif %}
+})();
+</script>
+</body>
+</html>

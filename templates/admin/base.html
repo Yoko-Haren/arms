@@ -1,0 +1,488 @@
+<!-- templates/admin/base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARMS Admin Panel - {% block title %}Dashboard{% endblock %}</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #123499;
+            --primary-dark: #0d2572;
+            --primary-light: #e8eeff;
+            --primary-gradient: linear-gradient(135deg, #123499, #1a4dcc);
+            --success: #2E7D32;
+            --success-light: #e8f5e9;
+            --success-gradient: linear-gradient(135deg, #2E7D32, #43a047);
+            --danger: #C62828;
+            --danger-light: #ffebee;
+            --danger-gradient: linear-gradient(135deg, #C62828, #e53935);
+            --warning: #E65100;
+            --warning-light: #fff3e0;
+            --warning-gradient: linear-gradient(135deg, #E65100, #f57c00);
+            --info: #1565C0;
+            --info-light: #e3f2fd;
+            --info-gradient: linear-gradient(135deg, #1565C0, #1e88e5);
+            --purple: #6A1B9A;
+            --purple-light: #f3e5f5;
+            --gray-50: #f8f9fa;
+            --gray-100: #f0f4f8;
+            --gray-200: #e8ecf1;
+            --gray-300: #e0e5ea;
+            --gray-500: #6c757d;
+            --gray-700: #1a1a2e;
+            --gray-900: #0f0f1a;
+            --sidebar-bg: linear-gradient(180deg, #0f0f2e 0%, #1a1a3e 50%, #16213e 100%);
+            --radius-xs: 8px;
+            --radius-sm: 10px;
+            --radius-md: 16px;
+            --radius-lg: 20px;
+            --radius-xl: 24px;
+            --shadow-xs: 0 2px 8px rgba(0,0,0,0.04);
+            --shadow-sm: 0 2px 10px rgba(0,0,0,0.06);
+            --shadow-md: 0 2px 12px rgba(0,0,0,0.08);
+            --shadow-lg: 0 6px 20px rgba(0,0,0,0.12);
+            --shadow-xl: 0 12px 40px rgba(0,0,0,0.15);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #f5f7fb;
+            color: var(--gray-700);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        /* ========== SIDEBAR ========== */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            height: 100vh;
+            background: var(--sidebar-bg);
+            color: white;
+            transition: var(--transition);
+            z-index: 1050;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+        }
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-track { background: transparent; }
+        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+        
+        .sidebar-brand {
+            padding: 1.75rem 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+        .sidebar-brand-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            flex-shrink: 0;
+            box-shadow: 0 4px 15px rgba(18,52,153,0.4);
+        }
+        .sidebar-brand-text h3 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -0.3px;
+            color: white;
+            line-height: 1.2;
+        }
+        .sidebar-brand-text small {
+            font-size: 0.68rem;
+            opacity: 0.55;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        
+        .sidebar-nav {
+            padding: 1rem 0.75rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .sidebar-section-title {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.3);
+            padding: 0.75rem 0.75rem 0.4rem;
+            font-weight: 700;
+        }
+        
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.7rem 0.85rem;
+            border-radius: var(--radius-sm);
+            color: rgba(255,255,255,0.65);
+            text-decoration: none;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: var(--transition);
+            position: relative;
+        }
+        .sidebar-link:hover {
+            background: rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.9);
+        }
+        .sidebar-link.active {
+            background: rgba(18,52,153,0.4);
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 2px 12px rgba(18,52,153,0.25);
+        }
+        .sidebar-link.active::before {
+            content: '';
+            position: absolute;
+            left: -0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 20px;
+            background: white;
+            border-radius: 0 3px 3px 0;
+        }
+        .sidebar-link-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-xs);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+            transition: var(--transition);
+            background: rgba(255,255,255,0.06);
+        }
+        .sidebar-link.active .sidebar-link-icon {
+            background: rgba(255,255,255,0.2);
+        }
+        .sidebar-link:hover .sidebar-link-icon {
+            background: rgba(255,255,255,0.12);
+        }
+        
+        .sidebar-footer {
+            padding: 1rem 0.75rem;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            flex-shrink: 0;
+        }
+        .sidebar-user {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0.75rem;
+        }
+        .sidebar-user-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .sidebar-user-info { flex: 1; min-width: 0; }
+        .sidebar-user-name {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .sidebar-user-role {
+            font-size: 0.65rem;
+            opacity: 0.55;
+        }
+        
+        /* ========== MAIN CONTENT ========== */
+        .main-content {
+            margin-left: 280px;
+            padding: 1.5rem;
+            min-height: 100vh;
+            transition: var(--transition);
+        }
+        
+        /* ========== TOP BAR ========== */
+        .top-bar {
+            background: white;
+            padding: 0.9rem 1.5rem;
+            border-radius: var(--radius-lg);
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--gray-200);
+        }
+        .page-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--gray-700);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .page-title i { color: var(--primary); font-size: 1.1rem; }
+        
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .user-greeting {
+            font-size: 0.78rem;
+            color: var(--gray-500);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .user-greeting i { color: var(--primary); font-size: 1.1rem; }
+        .user-greeting strong { color: var(--gray-700); }
+        
+        .btn-logout {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.73rem;
+            font-weight: 600;
+            border: 2px solid var(--gray-300);
+            background: white;
+            color: var(--gray-500);
+            cursor: pointer;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+        .btn-logout:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+            background: var(--danger-light);
+        }
+        
+        /* ========== ALERTS ========== */
+        .alert {
+            border: none;
+            border-radius: var(--radius-md);
+            padding: 1rem 1.25rem;
+            font-size: 0.82rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-xs);
+        }
+        .alert-success { background: var(--success-light); color: var(--success); }
+        .alert-danger { background: var(--danger-light); color: var(--danger); }
+        .alert-warning { background: var(--warning-light); color: var(--warning); }
+        .alert-info { background: var(--info-light); color: var(--info); }
+        
+        /* ========== CARDS (GLOBAL) ========== */
+        .card {
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            background: white;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+        .card-header {
+            background: white;
+            border-bottom: 2px solid var(--gray-100);
+            padding: 1.2rem 1.5rem;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--gray-700);
+        }
+        .card-body { padding: 1.5rem; }
+        
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 1024px) {
+            .sidebar { width: 80px; }
+            .sidebar-brand-text,
+            .sidebar-link span,
+            .sidebar-section-title,
+            .sidebar-user-info,
+            .sidebar-footer .sidebar-user-info { display: none; }
+            .sidebar-link { justify-content: center; padding: 0.75rem; }
+            .sidebar-link.active::before { left: -0.25rem; }
+            .sidebar-brand { justify-content: center; padding: 1.25rem 0.5rem; }
+            .sidebar-nav { padding: 1rem 0.5rem; }
+            .sidebar-footer { padding: 0.75rem 0.5rem; }
+            .sidebar-user { justify-content: center; }
+            .main-content { margin-left: 80px; }
+        }
+        @media (max-width: 640px) {
+            .sidebar { width: 0; padding: 0; }
+            .sidebar.open { width: 280px; }
+            .main-content { margin-left: 0; }
+            .top-bar { flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- MOBILE OVERLAY -->
+    <div id="sidebarOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1040;" onclick="toggleSidebar()"></div>
+    
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-icon">
+                <i class="fas fa-school"></i>
+            </div>
+            <div class="sidebar-brand-text">
+                <h3>ARMS</h3>
+                <small>Admin Portal</small>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <div class="sidebar-section-title">Main Menu</div>
+            <a href="{% url 'admin_panel:dashboard' %}" class="sidebar-link {% if active == 'dashboard' %}active{% endif %}">
+                <span class="sidebar-link-icon"><i class="fas fa-tachometer-alt"></i></span>
+                <span>Dashboard</span>
+            </a>
+            <a href="{% url 'admin_panel:school_list' %}" class="sidebar-link {% if active == 'schools' %}active{% endif %}">
+                <span class="sidebar-link-icon"><i class="fas fa-building"></i></span>
+                <span>Schools</span>
+            </a>
+            <a href="{% url 'admin_panel:principal_list' %}" class="sidebar-link {% if active == 'principals' %}active{% endif %}">
+                <span class="sidebar-link-icon"><i class="fas fa-user-tie"></i></span>
+                <span>Principals</span>
+            </a>
+            
+            <div class="sidebar-section-title">Configuration</div>
+            <a href="{% url 'admin_panel:grade_level_list' %}" class="sidebar-link {% if active == 'grade_levels' %}active{% endif %}">
+                <span class="sidebar-link-icon"><i class="fas fa-layer-group"></i></span>
+                <span>Grade Levels</span>
+            </a>
+            <a href="{% url 'admin_panel:school_year_manage' %}" class="sidebar-link {% if active == 'school_years' %}active{% endif %}">
+                <span class="sidebar-link-icon"><i class="fas fa-calendar-alt"></i></span>
+                <span>School Years</span>
+            </a>
+            <a href="{% url 'admin_panel:quarter_manage' %}" class="sidebar-link {% if active == 'quarters' %}active{% endif %}">
+                <span class="sidebar-link-icon"><i class="fas fa-clock"></i></span>
+                <span>Quarters</span>
+            </a>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-user-avatar">
+                    {{ request.user.get_full_name|default:request.user.username|slice:":1"|upper }}
+                </div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+                    <div class="sidebar-user-role">Administrator</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+    
+    <!-- MAIN CONTENT -->
+    <main class="main-content" id="mainContent">
+        <!-- MOBILE HAMBURGER -->
+        <button id="mobileMenuBtn" style="display:none;position:fixed;top:1rem;left:1rem;z-index:1060;width:40px;height:40px;border-radius:10px;background:white;border:1px solid var(--gray-200);cursor:pointer;box-shadow:var(--shadow-sm);" onclick="toggleSidebar()">
+            <i class="fas fa-bars" style="color:var(--primary);"></i>
+        </button>
+        
+        <!-- TOP BAR -->
+        <div class="top-bar">
+            <div class="page-title">
+                <i class="fas fa-tachometer-alt"></i>
+                {% block page_title %}Dashboard{% endblock %}
+            </div>
+            <div class="user-menu">
+                <span class="user-greeting">
+                    <i class="fas fa-user-circle"></i>
+                    Hello, <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+                </span>
+                <a href="{% url 'admin_panel:logout' %}" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+        
+        <!-- MESSAGES -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'danger' %}times-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" style="font-size:0.6rem;"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+    </main>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Mobile sidebar toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('open');
+            if (sidebar.classList.contains('open')) {
+                overlay.style.display = 'block';
+            } else {
+                overlay.style.display = 'none';
+            }
+        }
+        
+        // Show mobile menu button on small screens
+        function checkMobile() {
+            const btn = document.getElementById('mobileMenuBtn');
+            if (window.innerWidth <= 640) {
+                btn.style.display = 'flex';
+                btn.style.alignItems = 'center';
+                btn.style.justifyContent = 'center';
+            } else {
+                btn.style.display = 'none';
+                document.getElementById('sidebar').classList.remove('open');
+                document.getElementById('sidebarOverlay').style.display = 'none';
+            }
+        }
+        window.addEventListener('resize', checkMobile);
+        document.addEventListener('DOMContentLoaded', checkMobile);
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

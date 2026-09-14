@@ -1,0 +1,337 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sections - Registrar</title>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <style>
+        :root {
+            --bg: #f5f7fb;
+            --white: #ffffff;
+            --text: #1a1a2e;
+            --muted: #6c757d;
+            --border: #e8ecf1;
+            --primary: #123499;
+            --success: #5EA173;
+            --warning: #f39c12;
+            --danger: #dc3545;
+            --radius: 12px;
+            --shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background: var(--bg); min-height: 100vh; color: var(--text); }
+
+        /* Navbar */
+        .navbar {
+            background: var(--text); padding: 0.9rem 2rem;
+            display: flex; justify-content: space-between; align-items: center; color: white;
+        }
+        .navbar-brand { font-weight: 700; font-size: 1.05rem; color: white; text-decoration: none; }
+        .navbar-links { display: flex; gap: 1.5rem; align-items: center; }
+        .navbar-links a { color: rgba(255,255,255,0.75); text-decoration: none; font-size: 0.82rem; transition: all 0.2s; }
+        .navbar-links a:hover, .navbar-links a.active { color: white; font-weight: 600; }
+
+        /* Container */
+        .container { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem; }
+
+        /* Page Header */
+        .page-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;
+        }
+        .page-header h2 { font-size: 1.2rem; font-weight: 700; }
+        .page-header .subtitle { font-size: 0.75rem; color: var(--muted); margin-top: 0.15rem; }
+
+        /* Stats Strip */
+        .stats-strip {
+            display: flex; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;
+        }
+        .stat-item {
+            display: flex; align-items: center; gap: 0.6rem;
+            font-size: 0.8rem; color: var(--muted);
+        }
+        .stat-item .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .stat-item .dot.blue { background: var(--primary); }
+        .stat-item .dot.green { background: var(--success); }
+        .stat-item .dot.orange { background: var(--warning); }
+        .stat-item .dot.purple { background: #6A1B9A; }
+        .stat-item strong { color: var(--text); font-size: 0.9rem; }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1rem; gap: 0.8rem; flex-wrap: wrap;
+        }
+        .search-box {
+            padding: 0.5rem 0.9rem; border: 2px solid var(--border); border-radius: 8px;
+            font-size: 0.8rem; width: 260px; background: var(--white); font-family: inherit;
+        }
+        .search-box:focus { outline: none; border-color: var(--primary); }
+        .btn {
+            padding: 0.5rem 1rem; border-radius: 8px; border: none; font-weight: 600;
+            cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
+            gap: 0.4rem; font-size: 0.78rem; font-family: inherit;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-outline { background: var(--white); border: 2px solid var(--border); color: var(--text); }
+
+        /* Table */
+        .table-wrapper {
+            background: var(--white); border-radius: var(--radius);
+            box-shadow: var(--shadow); overflow: hidden;
+        }
+        .table-scroll { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.78rem; min-width: 900px; }
+        thead th {
+            text-align: left; padding: 0.75rem 0.9rem; background: #f8f9fa;
+            font-weight: 700; font-size: 0.68rem; text-transform: uppercase;
+            letter-spacing: 0.5px; color: var(--muted); border-bottom: 2px solid var(--border);
+            cursor: pointer; user-select: none; white-space: nowrap;
+            transition: background 0.2s;
+        }
+        thead th:hover { background: #eef1f5; }
+        thead th .sort-icon { margin-left: 0.3rem; font-size: 0.6rem; opacity: 0.3; }
+        thead th.sorted .sort-icon { opacity: 1; color: var(--primary); }
+        tbody td { padding: 0.65rem 0.9rem; border-bottom: 1px solid #f0f2f5; }
+        tbody tr { transition: background 0.15s; }
+        tbody tr:hover { background: #f8faff; }
+
+        /* Badges */
+        .badge {
+            display: inline-block; padding: 0.2rem 0.55rem; border-radius: 20px;
+            font-size: 0.62rem; font-weight: 600;
+        }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-danger { background: #f8d7da; color: #721c24; }
+        .badge-info { background: #e3f0ff; color: #2D6AFF; }
+        .badge-subject { background: #f0f0ff; color: #123499; margin: 1px 2px; display: inline-block; }
+
+        /* Capacity bar */
+        .mini-bar { background: #e9ecef; height: 4px; border-radius: 2px; width: 60px; margin-top: 3px; }
+        .mini-bar-fill { height: 100%; border-radius: 2px; }
+        .mini-bar-fill.green { background: var(--success); }
+        .mini-bar-fill.orange { background: var(--warning); }
+        .mini-bar-fill.red { background: var(--danger); }
+
+        /* Teacher tooltip */
+        .teacher-popup {
+            position: relative; cursor: pointer; color: var(--primary);
+            text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px;
+        }
+        .teacher-popup:hover .teacher-list {
+            display: block;
+        }
+        .teacher-list {
+            display: none; position: absolute; bottom: 100%; left: 0;
+            background: var(--text); color: white; padding: 0.6rem 0.8rem;
+            border-radius: 8px; font-size: 0.7rem; white-space: nowrap; z-index: 10;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+        .teacher-list::after {
+            content: ''; position: absolute; top: 100%; left: 20px;
+            border: 6px solid transparent; border-top-color: var(--text);
+        }
+
+        /* Empty row */
+        .empty-row td { text-align: center; padding: 3rem; color: var(--muted); }
+        .empty-row .icon { font-size: 2.5rem; opacity: 0.3; margin-bottom: 0.5rem; }
+
+        /* Row status colors */
+        tr.row-empty { border-left: 3px solid var(--warning); }
+        tr.row-full { border-left: 3px solid var(--danger); }
+        tr.row-active { border-left: 3px solid var(--success); }
+
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .navbar { padding: 0.8rem 1rem; }
+            .navbar-links { gap: 0.8rem; }
+            .navbar-links a { font-size: 0.7rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="{% url 'registrars:dashboard' %}" class="navbar-brand">📋 Registrar Portal</a>
+        <div class="navbar-links">
+            <a href="{% url 'registrars:dashboard' %}">Dashboard</a>
+            <a href="{% url 'registrars:upload_class_list' %}">Upload Class List</a>
+            <a href="{% url 'registrars:section_list' %}" class="active">Sections</a>
+            <a href="{% url 'signout' %}">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div>
+                <h2>📚 All Sections</h2>
+                <p class="subtitle">SY {{ current_sy.year_label|default:"N/A" }}</p>
+            </div>
+            <a href="{% url 'registrars:upload_class_list' %}" class="btn btn-primary">
+                <i class="fi fi-rr-upload"></i> Upload Class List
+            </a>
+        </div>
+
+        <!-- Stats Strip -->
+        <div class="stats-strip">
+            <div class="stat-item"><span class="dot blue"></span> <strong>{{ total_sections }}</strong> Total Sections</div>
+            <div class="stat-item"><span class="dot green"></span> <strong>{{ sections_with_students }}</strong> Active</div>
+            <div class="stat-item"><span class="dot orange"></span> <strong>{{ sections_empty }}</strong> Empty</div>
+            <div class="stat-item"><span class="dot purple"></span> <strong>{{ total_enrolled }}</strong> Students</div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <input type="text" class="search-box" id="searchInput" placeholder="🔍 Filter by section name, teacher, or subject..." onkeyup="filterTable()">
+            <span style="font-size:0.7rem;color:var(--muted);" id="rowCount"></span>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrapper">
+            <div class="table-scroll">
+                <table id="sectionTable">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable(0, this)">Section <span class="sort-icon">↕</span></th>
+                            <th onclick="sortTable(1, this)">Grade Level <span class="sort-icon">↕</span></th>
+                            <th onclick="sortTable(2, this)">Enrolled <span class="sort-icon">↕</span></th>
+                            <th>Capacity</th>
+                            <th>Subjects</th>
+                            <th>Teachers</th>
+                            <th onclick="sortTable(6, this)">Status <span class="sort-icon">↕</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in sections %}
+                        <tr class="{% if item.is_empty %}row-empty{% elif item.is_full %}row-full{% else %}row-active{% endif %}"
+                            data-section="{{ item.section.section_name|lower }}"
+                            data-teachers="{% for t in item.teachers %}{{ t.name|lower }} {% endfor %}"
+                            data-subjects="{% for s in item.subjects %}{{ s.code|lower }} {{ s.name|lower }} {% endfor %}"
+                            data-status="{% if item.is_empty %}empty{% elif item.is_full %}full{% else %}active{% endif %}"
+                            data-enrolled="{{ item.enrolled_count }}">
+
+                            <td><strong>{{ item.section.section_name }}</strong></td>
+                            <td>{{ item.section.grade_level.grade_name|default:"—" }}</td>
+                            <td>
+                                {{ item.enrolled_count }}
+                                {% if item.max_capacity > 0 %}
+                                <div class="mini-bar">
+                                    <div class="mini-bar-fill {% if item.enrolled_count >= item.max_capacity %}red{% elif item.enrolled_count > item.max_capacity|add:'-5' %}orange{% else %}green{% endif %}"
+                                         style="width: {% widthratio item.enrolled_count item.max_capacity 100 %}%"></div>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.max_capacity }}</td>
+                            <td>
+                                {% if item.subjects %}
+                                    {% for subj in item.subjects %}
+                                        <span class="badge badge-subject" title="{{ subj.name }}">{{ subj.code }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span style="color:#adb5bd;">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.teachers %}
+                                    <span class="teacher-popup">
+                                        {{ item.teachers|length }} teacher{{ item.teachers|length|pluralize }}
+                                        <span class="teacher-list">
+                                            {% for t in item.teachers %}
+                                                {{ t.name }}{% if not forloop.last %}<br>{% endif %}
+                                            {% endfor %}
+                                        </span>
+                                    </span>
+                                {% else %}
+                                    <span style="color:#adb5bd;">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.is_empty %}
+                                    <span class="badge badge-warning">⚠ Empty</span>
+                                {% elif item.is_full %}
+                                    <span class="badge badge-danger">Full</span>
+                                {% else %}
+                                    <span class="badge badge-success">Active</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr class="empty-row">
+                            <td colspan="7">
+                                <div class="icon">📭</div>
+                                <strong>No Sections Found</strong>
+                                <p style="font-size:0.78rem;margin-top:0.3rem;">Upload a class list CSV to create sections.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ===== FILTER =====
+    function filterTable() {
+        var query = document.getElementById('searchInput').value.toLowerCase();
+        var rows = document.querySelectorAll('#sectionTable tbody tr:not(.empty-row)');
+        var visible = 0;
+        rows.forEach(function(row) {
+            var text = (row.getAttribute('data-section') || '') + ' ' +
+                       (row.getAttribute('data-teachers') || '') + ' ' +
+                       (row.getAttribute('data-subjects') || '');
+            var match = text.includes(query);
+            row.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+        document.getElementById('rowCount').textContent = visible + ' of ' + rows.length + ' sections';
+    }
+
+    // ===== SORT =====
+    function sortTable(colIndex, th) {
+        var table = document.getElementById('sectionTable');
+        var tbody = table.querySelector('tbody');
+        var rows = Array.from(tbody.querySelectorAll('tr:not(.empty-row)'));
+        var dir = th.classList.contains('sorted-asc') ? 'desc' : 'asc';
+
+        // Reset all headers
+        table.querySelectorAll('th').forEach(function(h) {
+            h.classList.remove('sorted', 'sorted-asc', 'sorted-desc');
+        });
+        th.classList.add('sorted', dir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+
+        rows.sort(function(a, b) {
+            var aVal, bVal;
+            if (colIndex === 2) { // Enrolled (numeric)
+                aVal = parseInt(a.getAttribute('data-enrolled')) || 0;
+                bVal = parseInt(b.getAttribute('data-enrolled')) || 0;
+            } else if (colIndex === 6) { // Status
+                var order = {'empty': 0, 'active': 1, 'full': 2};
+                aVal = order[a.getAttribute('data-status')] || 0;
+                bVal = order[b.getAttribute('data-status')] || 0;
+            } else { // Text columns
+                aVal = (a.cells[colIndex]?.textContent || '').trim().toLowerCase();
+                bVal = (b.cells[colIndex]?.textContent || '').trim().toLowerCase();
+            }
+
+            if (typeof aVal === 'string') {
+                return dir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            }
+            return dir === 'asc' ? aVal - bVal : bVal - aVal;
+        });
+
+        rows.forEach(function(row) { tbody.appendChild(row); });
+    }
+
+    // Initialize count
+    document.addEventListener('DOMContentLoaded', function() {
+        var rows = document.querySelectorAll('#sectionTable tbody tr:not(.empty-row)');
+        document.getElementById('rowCount').textContent = rows.length + ' sections';
+    });
+    </script>
+</body>
+</html>

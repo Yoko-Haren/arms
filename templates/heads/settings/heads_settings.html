@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Settings - Formify School Head Portal</title>
+    
+    <!-- Flaticon UIcons -->
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'AvantGarde', 'Century Gothic', sans-serif;
+        }
+
+        :root {
+            --rich-black: #00072D;
+            --dark-blue: #051650;
+            --secondary-green: #5EA173;
+            --gray-bg: #f5f7fb;
+            --border-color: #e9ecef;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --sidebar-width: 280px;
+            --sidebar-collapsed-width: 80px;
+            --danger-red: #dc3545;
+            --warning-orange: #f39c12;
+        }
+
+        body {
+            background: var(--gray-bg);
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ========== FOLDABLE SIDEBAR ========== */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            transition: width 0.3s ease;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+
+        .sidebar.collapsed .sidebar-header h2,
+        .sidebar.collapsed .user-details,
+        .sidebar.collapsed .nav-link span,
+        .sidebar.collapsed .logo-area span {
+            display: none;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            justify-content: center;
+            padding: 1.5rem 0.5rem;
+        }
+
+        .sidebar.collapsed .sidebar-header .logo-area {
+            justify-content: center;
+            display: none;
+        }
+
+        .sidebar.collapsed .user-info {
+            justify-content: center;
+            padding: 0.8rem;
+            margin: 0 0.5rem 1.5rem 0.5rem;
+        }
+
+        .sidebar.collapsed .nav-link {
+            justify-content: center;
+            padding: 0.85rem 0;
+            gap: 0;
+        }
+
+        .sidebar.collapsed .nav-link i {
+            margin: 0;
+            width: auto;
+            font-size: 1.3rem;
+        }
+
+        .sidebar.collapsed .user-avatar {
+            margin: 0;
+        }
+
+        .sidebar.collapsed .nav-footer .nav-link {
+            justify-content: center;
+        }
+
+        .sidebar.collapsed .fold-btn {
+            margin: 0 auto;
+        }
+
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-header .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .sidebar-header i.fi {
+            font-size: 2rem;
+            color: var(--secondary-green);
+            flex-shrink: 0;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            line-height: 1.3;
+            transition: opacity 0.2s ease;
+        }
+
+        .sidebar-header h2 span {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            display: block;
+        }
+
+        .fold-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            font-size: 1rem;
+        }
+
+        .fold-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.05);
+        }
+
+        .fold-btn i {
+            transition: transform 0.3s ease;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin: 0 1rem 1.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: var(--secondary-green);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--rich-black);
+            flex-shrink: 0;
+        }
+
+        .user-details h4 { font-size: 0.9rem; margin-bottom: 0.2rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0 0.75rem;
+            flex: 1;
+        }
+
+        .nav-item { margin-bottom: 0.25rem; }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+        .nav-link i.fi { width: 22px; font-size: 1.1rem; text-align: center; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+
+        .nav-footer {
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 1rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem;
+            transition: margin-left 0.3s ease;
+            min-height: 100vh;
+        }
+
+        .sidebar.collapsed ~ .main-content {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .welcome h1 { font-size: 1.3rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
+        .welcome p { color: var(--text-secondary); font-size: 0.8rem; }
+
+        .top-bar-actions { display: flex; align-items: center; gap: 1rem; position: relative; }
+        .date-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            background: var(--gray-bg);
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            color: var(--text-secondary);
+        }
+
+        /* Notification Dropdown */
+        .notification-dropdown { position: relative; }
+
+        .notification-badge {
+            position: relative;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0.3rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .notification-badge i.fi { font-size: 1.3rem; color: var(--text-primary); transition: color 0.2s; }
+        .notification-badge:hover i.fi { color: var(--secondary-green); }
+
+        .badge-count {
+            position: absolute;
+            top: -5px;
+            right: -8px;
+            background: #dc3545;
+            color: white;
+            font-size: 0.6rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 10px;
+            min-width: 16px;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 45px;
+            right: 0;
+            width: 340px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            z-index: 200;
+            display: none;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .dropdown-menu.show {
+            display: block;
+            animation: fadeInDown 0.25s ease;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .dropdown-header {
+            padding: 0.9rem 1.2rem;
+            background: var(--gray-bg);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--rich-black);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notification-list { max-height: 380px; overflow-y: auto; }
+
+        .notification-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+            padding: 0.9rem 1.2rem;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .notification-item:hover { background: var(--gray-bg); }
+        .notification-item.unread { background: rgba(94, 161, 115, 0.06); border-left: 3px solid var(--secondary-green); }
+
+        .notification-icon {
+            width: 36px;
+            height: 36px;
+            background: rgba(94, 161, 115, 0.12);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--secondary-green);
+            flex-shrink: 0;
+            font-size: 0.85rem;
+        }
+
+        .notification-content { flex: 1; min-width: 0; }
+        .notification-title { font-size: 0.8rem; font-weight: 600; color: var(--rich-black); margin-bottom: 0.15rem; }
+        .notification-message { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; }
+        .notification-time { font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.3rem; }
+
+        .dropdown-footer {
+            padding: 0.7rem;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            background: var(--gray-bg);
+        }
+
+        .dropdown-footer a {
+            color: var(--secondary-green);
+            text-decoration: none;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .dropdown-footer a:hover { text-decoration: underline; }
+
+        /* Poro Greeting Banner */
+        .poro-greeting {
+            background: linear-gradient(135deg, #f0f9f0 0%, #e8f5e9 100%);
+            border-radius: 20px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid rgba(94, 161, 115, 0.3);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .poro-greeting-content { display: flex; align-items: center; gap: 1rem; }
+
+        .character-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--secondary-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(94, 161, 115, 0.3);
+            animation: bounce 2s ease infinite;
+            overflow: hidden;
+        }
+
+        .character-icon img { width: 100%; height: 100%; object-fit: cover; }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+
+        .poro-message h3 { font-size: 1rem; color: var(--rich-black); margin-bottom: 0.2rem; }
+        .poro-message p { font-size: 0.75rem; color: var(--text-secondary); }
+
+        /* Settings Layout */
+        .settings-container {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            gap: 1.5rem;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            min-height: calc(100vh - 140px);
+        }
+
+        .settings-sidebar {
+            background: var(--gray-bg);
+            padding: 1.5rem 0;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .settings-nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.8rem 1.5rem;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            cursor: pointer;
+        }
+
+        .settings-nav-link:hover { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .settings-nav-link.active { background: rgba(94,161,115,0.15); color: var(--secondary-green); border-left-color: var(--secondary-green); }
+        .settings-nav-link i { width: 20px; font-size: 1rem; }
+
+        .settings-content {
+            padding: 1.5rem;
+            overflow-y: auto;
+            max-height: calc(100vh - 140px);
+        }
+
+        .settings-section { display: none; }
+        .settings-section.active { display: block; animation: fadeIn 0.3s ease; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-title { font-size: 1.2rem; color: var(--rich-black); margin-bottom: 0.25rem; }
+        .section-desc { color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); }
+
+        .settings-form { max-width: 700px; }
+        .form-group { margin-bottom: 1.2rem; }
+        .form-group label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--rich-black); margin-bottom: 0.4rem; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--secondary-green); }
+        .form-group small { display: block; font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.3rem; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+        .toggle-item { display: flex; align-items: center; justify-content: space-between; padding: 0.8rem 0; border-bottom: 1px solid var(--border-color); }
+        .toggle-info h4 { font-size: 0.9rem; color: var(--rich-black); margin-bottom: 0.2rem; }
+        .toggle-info p { font-size: 0.7rem; color: var(--text-secondary); }
+        .toggle-switch { position: relative; width: 50px; height: 24px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: 0.3s; border-radius: 34px; }
+        .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%; }
+        input:checked + .toggle-slider { background-color: var(--secondary-green); }
+        input:checked + .toggle-slider:before { transform: translateX(26px); }
+
+        .quarter-card { background: var(--gray-bg); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+        .quarter-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; }
+        .quarter-header h4 { font-size: 0.9rem; color: var(--rich-black); }
+        .quarter-date { font-size: 0.7rem; color: var(--text-secondary); }
+
+        .btn-save { background: var(--secondary-green); color: white; padding: 0.6rem 1.5rem; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.85rem; margin-top: 1rem; display: flex; align-items: center; gap: 0.4rem; }
+        .btn-save:hover { background: #4a8c5e; }
+        .btn-outline { background: transparent; border: 2px solid var(--border-color); color: var(--text-primary); padding: 0.6rem 1.5rem; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; }
+        .btn-outline:hover { border-color: var(--secondary-green); color: var(--secondary-green); }
+        .btn-danger { background: var(--danger-red); color: white; padding: 0.6rem 1.5rem; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; }
+        .btn-danger:hover { background: #c82333; }
+
+        /* Toast Notification */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 0.5rem; }
+        .toast { background: white; border-radius: 12px; padding: 1rem 1.5rem; box-shadow: 0 8px 25px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 0.8rem; min-width: 300px; animation: slideInRight 0.3s ease; border-left: 4px solid var(--secondary-green); }
+        .toast.success { border-left-color: var(--secondary-green); }
+        .toast i { color: var(--secondary-green); }
+        .toast-content { flex: 1; }
+        .toast-content h4 { font-size: 0.85rem; color: var(--rich-black); margin-bottom: 0.1rem; }
+        .toast-content p { font-size: 0.7rem; color: var(--text-secondary); }
+        .toast-close { background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 0.9rem; }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Mobile Overlay */
+        .mobile-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
+        .mobile-overlay.show { display: block; }
+
+        @media (max-width: 992px) { .settings-container { grid-template-columns: 1fr; } .settings-sidebar { border-right: none; border-bottom: 1px solid var(--border-color); } .form-row { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; width: var(--sidebar-width) !important; } .sidebar.mobile-open { transform: translateX(0); } .sidebar.collapsed { width: var(--sidebar-width) !important; } .main-content { margin-left: 0 !important; } .dropdown-menu { width: 290px; right: -20px; } .toast-container { left: 10px; right: 10px; } .toast { min-width: auto; } }
+    </style>
+</head>
+<body>
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-area">
+                    <i class="fi fi-rr-graduation-cap"></i>
+                    <h2>Formify <span>School Head Portal</span></h2>
+                </div>
+                <button class="fold-btn" id="foldBtn" title="Toggle sidebar">
+                    <i class="fi fi-rr-angle-left"></i>
+                </button>
+            </div>
+            <br>
+            <div class="user-info">
+                <div class="user-avatar">MS</div>
+                <div class="user-details">
+                    <h4>Dr. Maria R. Santos</h4>
+                    <p>School Principal IV</p>
+                </div>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="../dashboard/index.html" class="nav-link"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+                <li class="nav-item"><a href="../performance/school_performance.html" class="nav-link"><i class="fi fi-rr-chart-histogram"></i><span>School Performance</span></a></li>
+                <li class="nav-item"><a href="../compliance/forms_compliance.html" class="nav-link"><i class="fi fi-rr-document"></i><span>Forms Compliance</span></a></li>
+                <li class="nav-item"><a href="../evaluation/teacher_evaluation.html" class="nav-link"><i class="fi fi-rr-presentation"></i><span>Teacher Evaluation</span></a></li>
+                <li class="nav-item"><a href="../reports/heads_reports.html" class="nav-link"><i class="fi fi-rr-chart-line-up"></i><span>Reports & Analytics</span></a></li>
+                <li class="nav-item"><a href="../announcements/announcements.html" class="nav-link"><i class="fi fi-rr-megaphone"></i><span>Announcements</span></a></li>
+                <li class="nav-item"><a href="../messages/messages.html" class="nav-link"><i class="fi fi-rr-envelope"></i><span>Messages</span></a></li>
+                <li class="nav-item"><a href="../management/user_management.html" class="nav-link"><i class="fi fi-rr-users-gear"></i><span>User Management</span></a></li>
+                <li class="nav-item"><a href="../settings/heads_settings.html" class="nav-link active"><i class="fi fi-rr-settings"></i><span>Settings</span></a></li>
+            </ul>
+
+            <ul class="nav-menu nav-footer">
+                <li class="nav-item"><a href="../accounts/signin.html" class="nav-link"><i class="fi fi-rr-sign-out"></i><span>Logout</span></a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content" id="mainContent">
+            <div class="top-bar">
+                <div class="welcome">
+                    <h1 id="greetingText">System Settings</h1>
+                    <p>Configure school information, academic calendar, and system preferences</p>
+                </div>
+                <div class="top-bar-actions">
+                    <div class="date-display"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
+                    <div class="notification-dropdown">
+                        <button class="notification-badge" id="notificationBtn">
+                            <i class="fi fi-rr-bell"></i>
+                            <span class="badge-count" id="notifCount">2</span>
+                        </button>
+                        <div class="dropdown-menu" id="notificationDropdown">
+                            <div class="dropdown-header"><span>Notifications</span><span style="font-size:0.7rem; opacity:0.7;">2 unread</span></div>
+                            <div class="notification-list" id="notificationList"></div>
+                            <div class="dropdown-footer"><a id="markAllRead">Mark all as read</a></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Poro Greeting -->
+            <div class="poro-greeting">
+                <div class="poro-greeting-content">
+                    <div class="character-icon">
+                        <img src="../../shared/poro/Poro.png" alt="Poro" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'fi fi-rr-smile\' style=\'font-size:1.8rem; color:white;\'></i>';">
+                    </div>
+                    <div class="poro-message">
+                        <h3>Settings Center</h3>
+                        <p>Configure your school profile, academic calendar, grading system, and security preferences.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-container">
+                <div class="settings-sidebar">
+                    <div class="settings-nav-link active" data-section="school"><i class="fi fi-rr-school"></i> School Information</div>
+                    <div class="settings-nav-link" data-section="academic"><i class="fi fi-rr-calendar"></i> Academic Settings</div>
+                    <div class="settings-nav-link" data-section="grading"><i class="fi fi-rr-chart-line-up"></i> Grading System</div>
+                    <div class="settings-nav-link" data-section="notifications"><i class="fi fi-rr-bell"></i> Notifications</div>
+                    <div class="settings-nav-link" data-section="security"><i class="fi fi-rr-shield"></i> Security</div>
+                    <div class="settings-nav-link" data-section="backup"><i class="fi fi-rr-database"></i> Data Management</div>
+                </div>
+
+                <div class="settings-content">
+                    <!-- School Information -->
+                    <div class="settings-section active" id="section-school">
+                        <h2 class="section-title">School Information</h2>
+                        <p class="section-desc">Basic information about your school that appears on all official forms and reports</p>
+                        <div class="settings-form">
+                            <div class="form-group"><label>School Name</label><input type="text" id="schoolName" value="Panabo City National High School"></div>
+                            <div class="form-row">
+                                <div class="form-group"><label>School ID</label><input type="text" id="schoolId" value="305123"></div>
+                                <div class="form-group"><label>DepEd Division</label><input type="text" id="division" value="Davao del Norte Division"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Region</label><input type="text" id="region" value="Region XI - Davao Region"></div>
+                                <div class="form-group"><label>School Type</label><select id="schoolType"><option value="public" selected>Public (National High School)</option><option value="private">Private</option><option value="integrated">Integrated School</option></select></div>
+                            </div>
+                            <div class="form-group"><label>School Address</label><textarea id="address" rows="2">Brgy. San Francisco, Panabo City, Davao del Norte, Philippines 8105</textarea></div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Principal Name</label><input type="text" id="principal" value="Dr. Maria R. Santos"></div>
+                                <div class="form-group"><label>Principal Title</label><input type="text" id="principalTitle" value="School Principal IV"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Contact Number</label><input type="text" id="contact" value="(084) 123-4567"></div>
+                                <div class="form-group"><label>Email Address</label><input type="email" id="schoolEmail" value="panabocity_nhs@deped.gov.ph"></div>
+                            </div>
+                            <button class="btn-save" onclick="saveSettings('school')"><i class="fi fi-rr-disk"></i> Save School Information</button>
+                        </div>
+                    </div>
+
+                    <!-- Academic Settings -->
+                    <div class="settings-section" id="section-academic">
+                        <h2 class="section-title">Academic Settings</h2>
+                        <p class="section-desc">Configure school year, quarters, and important academic dates</p>
+                        <div class="settings-form">
+                            <div class="form-row">
+                                <div class="form-group"><label>Current School Year</label><select id="currentSy"><option value="2024-2025">2024-2025</option><option value="2025-2026" selected>2025-2026</option><option value="2026-2027">2026-2027</option></select></div>
+                                <div class="form-group"><label>Current Semester/Quarter</label><select id="currentQuarter"><option value="Q1">Quarter 1</option><option value="Q2">Quarter 2</option><option value="Q3" selected>Quarter 3</option><option value="Q4">Quarter 4</option></select></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Start of School Year</label><input type="date" id="syStart" value="2025-06-02"></div>
+                                <div class="form-group"><label>End of School Year</label><input type="date" id="syEnd" value="2026-04-15"></div>
+                            </div>
+                            <h3 style="font-size:0.9rem; margin:1rem 0 0.5rem 0;">Quarter Periods</h3>
+                            <div id="quarterSettings"></div>
+                            <button class="btn-save" onclick="saveSettings('academic')"><i class="fi fi-rr-disk"></i> Save Academic Settings</button>
+                        </div>
+                    </div>
+
+                    <!-- Grading System -->
+                    <div class="settings-section" id="section-grading">
+                        <h2 class="section-title">Grading System</h2>
+                        <p class="section-desc">Configure grade thresholds and honor roll requirements (DepEd-aligned)</p>
+                        <div class="settings-form">
+                            <div class="form-group"><label>Passing Grade Threshold (%)</label><input type="number" id="passingGrade" value="75" min="60" max="100" step="1"><small>Minimum grade required to pass a subject (DepEd standard: 75)</small></div>
+                            <h3 style="font-size:0.9rem; margin:1rem 0 0.5rem 0;">Honors Thresholds</h3>
+                            <div class="form-row">
+                                <div class="form-group"><label>With Honors (Minimum)</label><input type="number" id="honorsMin" value="90" min="75" max="100" step="0.5"></div>
+                                <div class="form-group"><label>With High Honors (Minimum)</label><input type="number" id="highHonorsMin" value="95" min="75" max="100" step="0.5"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>With Highest Honors (Minimum)</label><input type="number" id="highestHonorsMin" value="98" min="75" max="100" step="0.5"></div>
+                                <div class="form-group"><label>Conduct Grade Required</label><select id="conductRequired"><option value="always">Always Required</option><option value="honors">Required for Honors Only</option><option value="never" selected>Not Required</option></select></div>
+                            </div>
+                            <div class="toggle-item" style="margin-top:1rem;">
+                                <div class="toggle-info"><h4>Automatic Honor Roll Calculation</h4><p>System automatically computes and flags honor students based on grades</p></div>
+                                <label class="toggle-switch"><input type="checkbox" id="autoHonors" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <button class="btn-save" onclick="saveSettings('grading')"><i class="fi fi-rr-disk"></i> Save Grading Settings</button>
+                        </div>
+                    </div>
+
+                    <!-- Notifications -->
+                    <div class="settings-section" id="section-notifications">
+                        <h2 class="section-title">Notification Settings</h2>
+                        <p class="section-desc">Configure system notifications and alerts</p>
+                        <div class="toggle-item"><div class="toggle-info"><h4>Email Notifications</h4><p>Receive system updates and important alerts via email</p></div><label class="toggle-switch"><input type="checkbox" id="emailNotif" checked><span class="toggle-slider"></span></label></div>
+                        <div class="toggle-item"><div class="toggle-info"><h4>Forms Deadline Reminders</h4><p>Get notified when SF1-SF10 submission deadlines are approaching</p></div><label class="toggle-switch"><input type="checkbox" id="formReminders" checked><span class="toggle-slider"></span></label></div>
+                        <div class="toggle-item"><div class="toggle-info"><h4>Teacher Evaluation Alerts</h4><p>Receive alerts when teacher evaluations are pending</p></div><label class="toggle-switch"><input type="checkbox" id="evalAlerts" checked><span class="toggle-slider"></span></label></div>
+                        <div class="toggle-item"><div class="toggle-info"><h4>System Maintenance Notices</h4><p>Get notified about scheduled system maintenance</p></div><label class="toggle-switch"><input type="checkbox" id="maintenanceNotif" checked><span class="toggle-slider"></span></label></div>
+                        <div class="form-group" style="margin-top:1rem;"><label>Notification Email (if different from account)</label><input type="email" id="notifEmail" placeholder="notifications@deped.gov.ph"></div>
+                        <button class="btn-save" onclick="saveSettings('notifications')"><i class="fi fi-rr-disk"></i> Save Notification Preferences</button>
+                    </div>
+
+                    <!-- Security -->
+                    <div class="settings-section" id="section-security">
+                        <h2 class="section-title">Security Settings</h2>
+                        <p class="section-desc">Manage password, session security, and access controls</p>
+                        <div class="settings-form">
+                            <div class="form-group"><label>Current Password</label><input type="password" id="currentPwd" placeholder="Enter current password"></div>
+                            <div class="form-row">
+                                <div class="form-group"><label>New Password</label><input type="password" id="newPwd" placeholder="Enter new password"></div>
+                                <div class="form-group"><label>Confirm New Password</label><input type="password" id="confirmPwd" placeholder="Confirm new password"></div>
+                            </div>
+                            <div class="toggle-item" style="margin-top:1rem;">
+                                <div class="toggle-info"><h4>Two-Factor Authentication (2FA)</h4><p>Require verification code during login for additional security</p></div>
+                                <label class="toggle-switch"><input type="checkbox" id="twoFactor"><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="toggle-item">
+                                <div class="toggle-info"><h4>Session Timeout</h4><p>Automatically log out after period of inactivity</p></div>
+                                <select id="sessionTimeout" style="width:120px;"><option value="30">30 minutes</option><option value="60" selected>1 hour</option><option value="120">2 hours</option><option value="240">4 hours</option></select>
+                            </div>
+                            <button class="btn-save" onclick="saveSettings('security')"><i class="fi fi-rr-shield"></i> Update Security Settings</button>
+                            <hr style="margin: 1.5rem 0; border-color: var(--border-color);">
+                            <h3 style="font-size:0.9rem; margin-bottom:1rem;">Login Activity</h3>
+                            <div id="recentLogins" style="background:var(--gray-bg); border-radius:12px; padding:0.8rem;">
+                                <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-secondary);">Apr 15, 2026 09:45:22 - Logged in from 192.168.1.100 (Chrome on Windows)</div>
+                                <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-secondary); margin-top:0.5rem;">Apr 14, 2026 16:20:15 - Logged in from 192.168.1.100 (Chrome on Windows)</div>
+                                <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-secondary); margin-top:0.5rem;">Apr 13, 2026 08:15:30 - Logged in from 192.168.1.100 (Chrome on Windows)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data Management -->
+                    <div class="settings-section" id="section-backup">
+                        <h2 class="section-title">Data Management</h2>
+                        <p class="section-desc">Backup, restore, and data export options</p>
+                        <div style="margin-bottom:1.5rem;">
+                            <h3 style="font-size:0.9rem; margin-bottom:0.5rem;">Backup & Restore</h3>
+                            <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+                                <button class="btn-save" onclick="createBackup()"><i class="fi fi-rr-disk"></i> Create Backup</button>
+                                <button class="btn-outline" onclick="restoreBackup()"><i class="fi fi-rr-upload"></i> Restore from Backup</button>
+                            </div>
+                            <div style="background:var(--gray-bg); border-radius:12px; padding:0.8rem;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;"><span style="font-size:0.8rem;"><strong>Last Backup:</strong> April 10, 2026 02:30 AM</span><button class="btn-outline" style="padding:0.2rem 0.8rem;"><i class="fi fi-rr-download"></i> Download</button></div>
+                                <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:0.8rem;"><strong>Backup Size:</strong> 24.5 MB</span><span style="font-size:0.7rem; color:var(--text-secondary);">Auto-backup enabled</span></div>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 style="font-size:0.9rem; margin-bottom:0.5rem;">Data Export</h3>
+                            <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+                                <button class="btn-outline" onclick="exportData('students')"><i class="fi fi-rr-file-spreadsheet"></i> Export Student Data (CSV)</button>
+                                <button class="btn-outline" onclick="exportData('teachers')"><i class="fi fi-rr-file-spreadsheet"></i> Export Teacher Data (CSV)</button>
+                                <button class="btn-outline" onclick="exportData('grades')"><i class="fi fi-rr-file-spreadsheet"></i> Export Grade Data (CSV)</button>
+                            </div>
+                        </div>
+                        <div style="margin-top:1.5rem; border-top:1px solid var(--border-color); padding-top:1.5rem;">
+                            <h3 style="font-size:0.9rem; color:var(--danger-red); margin-bottom:0.5rem;">Danger Zone</h3>
+                            <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:1rem;">These actions are irreversible. Please proceed with caution.</p>
+                            <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                                <button class="btn-danger" onclick="clearAllData()"><i class="fi fi-rr-trash"></i> Clear All Test Data</button>
+                                <button class="btn-outline" onclick="resetSystem()" style="border-color:var(--danger-red);"><i class="fi fi-rr-refresh"></i> Factory Reset System</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ========== SIDEBAR FOLD FUNCTIONALITY ==========
+            const sidebar = document.getElementById('sidebar');
+            const foldBtn = document.getElementById('foldBtn');
+            const mainContent = document.getElementById('mainContent');
+            const mobileOverlay = document.getElementById('mobileOverlay');
+            let sidebarCollapsed = false;
+
+            function updateSidebarState() {
+                const isMobile = window.innerWidth <= 768;
+                if (isMobile) {
+                    sidebar.classList.remove('collapsed');
+                    sidebarCollapsed = false;
+                    foldBtn.querySelector('i').className = 'fi fi-rr-angle-left';
+                    if (!sidebar.classList.contains('mobile-open')) mobileOverlay.classList.remove('show');
+                } else {
+                    sidebar.classList.remove('mobile-open');
+                    mobileOverlay.classList.remove('show');
+                    if (sidebarCollapsed) {
+                        sidebar.classList.add('collapsed');
+                        foldBtn.querySelector('i').className = 'fi fi-rr-angle-right';
+                    } else {
+                        sidebar.classList.remove('collapsed');
+                        foldBtn.querySelector('i').className = 'fi fi-rr-angle-left';
+                    }
+                }
+                adjustMainMargin();
+            }
+
+            function adjustMainMargin() {
+                if (window.innerWidth <= 768) mainContent.style.marginLeft = '0';
+                else mainContent.style.marginLeft = sidebar.classList.contains('collapsed') ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)';
+            }
+
+            function toggleSidebar() {
+                if (window.innerWidth <= 768) {
+                    const isOpen = sidebar.classList.toggle('mobile-open');
+                    if (isOpen) mobileOverlay.classList.add('show');
+                    else mobileOverlay.classList.remove('show');
+                } else {
+                    sidebarCollapsed = !sidebarCollapsed;
+                    if (sidebarCollapsed) {
+                        sidebar.classList.add('collapsed');
+                        foldBtn.querySelector('i').className = 'fi fi-rr-angle-right';
+                    } else {
+                        sidebar.classList.remove('collapsed');
+                        foldBtn.querySelector('i').className = 'fi fi-rr-angle-left';
+                    }
+                    adjustMainMargin();
+                }
+            }
+
+            foldBtn.addEventListener('click', toggleSidebar);
+            mobileOverlay.addEventListener('click', () => { sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('show'); });
+            window.addEventListener('resize', updateSidebarState);
+
+            // ========== NOTIFICATIONS ==========
+            const notifications = [
+                { id: 1, title: "Backup Reminder", message: "Last system backup was 5 days ago. Schedule a new backup soon.", time: "1 day ago", unread: true, type: "backup" },
+                { id: 2, title: "Settings Changed", message: "Grading thresholds were updated by the registrar on April 12.", time: "3 days ago", unread: true, type: "update" }
+            ];
+
+            function renderNotifications() {
+                const container = document.getElementById('notificationList');
+                document.getElementById('notifCount').textContent = notifications.filter(n => n.unread).length;
+                container.innerHTML = notifications.map(n => `
+                    <div class="notification-item ${n.unread ? 'unread' : ''}" data-id="${n.id}">
+                        <div class="notification-icon"><i class="fi fi-rr-${n.type==='backup'?'database':'document'}"></i></div>
+                        <div class="notification-content"><div class="notification-title">${n.title}</div><div class="notification-message">${n.message}</div><div class="notification-time">${n.time}</div></div>
+                    </div>
+                `).join('');
+                document.querySelectorAll('.notification-item').forEach(item => {
+                    item.addEventListener('click', function(e) { e.stopPropagation(); const id = parseInt(this.dataset.id); const notif = notifications.find(n => n.id === id); if (notif && notif.unread) { notif.unread = false; renderNotifications(); } });
+                });
+            }
+
+            document.getElementById('notificationBtn').addEventListener('click', e => { e.stopPropagation(); document.getElementById('notificationDropdown').classList.toggle('show'); });
+            document.getElementById('markAllRead').addEventListener('click', e => { e.preventDefault(); notifications.forEach(n => n.unread = false); renderNotifications(); });
+            document.addEventListener('click', e => { if (!e.target.closest('.notification-dropdown')) document.getElementById('notificationDropdown').classList.remove('show'); });
+
+            // ========== NAVIGATION ==========
+            window.navigateTo = function(url) { window.location.href = url; };
+
+            // ========== DYNAMIC GREETING ==========
+            function updateGreeting() {
+                const hour = new Date().getHours();
+                let greeting = 'Good morning';
+                if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
+                if (hour >= 17 || hour < 5) greeting = 'Good evening';
+                document.getElementById('greetingText').innerHTML = `${greeting}, Dr. Santos!`;
+            }
+
+            function updateDateTime() { document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }); }
+
+            // ========== TOAST NOTIFICATION ==========
+            window.showToast = function(title, message) {
+                const container = document.getElementById('toastContainer');
+                const toast = document.createElement('div');
+                toast.className = 'toast success';
+                toast.innerHTML = `<i class="fi fi-rr-check-circle"></i><div class="toast-content"><h4>${title}</h4><p>${message}</p></div><button class="toast-close" onclick="this.parentElement.remove()">&times;</button>`;
+                container.appendChild(toast);
+                setTimeout(() => { if (toast.parentElement) toast.remove(); }, 4000);
+            };
+
+            // ========== QUARTERS DATA ==========
+            let quarters = [
+                { name: "Quarter 1", start: "2025-06-02", end: "2025-08-08" },
+                { name: "Quarter 2", start: "2025-08-11", end: "2025-10-17" },
+                { name: "Quarter 3", start: "2025-10-20", end: "2026-01-23" },
+                { name: "Quarter 4", start: "2026-01-26", end: "2026-04-15" }
+            ];
+
+            function loadQuarters() {
+                const stored = localStorage.getItem('schoolQuarters');
+                if (stored) quarters = JSON.parse(stored);
+                renderQuarterSettings();
+            }
+
+            function renderQuarterSettings() {
+                const container = document.getElementById('quarterSettings');
+                container.innerHTML = quarters.map((q, idx) => `
+                    <div class="quarter-card">
+                        <div class="quarter-header"><h4>${q.name}</h4><span class="quarter-date">${q.start} to ${q.end}</span></div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Start Date</label><input type="date" class="quarter-start" data-idx="${idx}" value="${q.start}"></div>
+                            <div class="form-group"><label>End Date</label><input type="date" class="quarter-end" data-idx="${idx}" value="${q.end}"></div>
+                        </div>
+                    </div>
+                `);
+                document.querySelectorAll('.quarter-start, .quarter-end').forEach(input => {
+                    input.addEventListener('change', function() {
+                        const idx = parseInt(this.dataset.idx);
+                        if (this.classList.contains('quarter-start')) quarters[idx].start = this.value;
+                        else quarters[idx].end = this.value;
+                        localStorage.setItem('schoolQuarters', JSON.stringify(quarters));
+                    });
+                });
+            }
+
+            // ========== NAVIGATION ==========
+            document.querySelectorAll('.settings-nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.querySelectorAll('.settings-nav-link').forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                    document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+                    document.getElementById(`section-${link.dataset.section}`).classList.add('active');
+                });
+            });
+
+            // ========== SAVE SETTINGS ==========
+            window.saveSettings = function(section) {
+                const sectionNames = {
+                    'school': 'School Information',
+                    'academic': 'Academic Settings',
+                    'grading': 'Grading System',
+                    'notifications': 'Notification Preferences',
+                    'security': 'Security Settings'
+                };
+                if (section === 'academic') {
+                    localStorage.setItem('schoolQuarters', JSON.stringify(quarters));
+                    localStorage.setItem('currentSY', document.getElementById('currentSy').value);
+                    localStorage.setItem('currentQuarter', document.getElementById('currentQuarter').value);
+                    localStorage.setItem('syStart', document.getElementById('syStart').value);
+                    localStorage.setItem('syEnd', document.getElementById('syEnd').value);
+                }
+                if (section === 'school') {
+                    localStorage.setItem('schoolName', document.getElementById('schoolName').value);
+                    localStorage.setItem('schoolId', document.getElementById('schoolId').value);
+                }
+                if (section === 'grading') {
+                    localStorage.setItem('passingGrade', document.getElementById('passingGrade').value);
+                    localStorage.setItem('honorsMin', document.getElementById('honorsMin').value);
+                    localStorage.setItem('highHonorsMin', document.getElementById('highHonorsMin').value);
+                    localStorage.setItem('highestHonorsMin', document.getElementById('highestHonorsMin').value);
+                    localStorage.setItem('autoHonors', document.getElementById('autoHonors').checked);
+                }
+                if (section === 'notifications') {
+                    localStorage.setItem('emailNotif', document.getElementById('emailNotif').checked);
+                    localStorage.setItem('formReminders', document.getElementById('formReminders').checked);
+                }
+                if (section === 'security') {
+                    const newPwd = document.getElementById('newPwd').value;
+                    if (newPwd && newPwd === document.getElementById('confirmPwd').value && newPwd.length >= 6) {
+                        localStorage.setItem('userPassword', btoa(newPwd));
+                    }
+                    localStorage.setItem('twoFactor', document.getElementById('twoFactor').checked);
+                    localStorage.setItem('sessionTimeout', document.getElementById('sessionTimeout').value);
+                }
+                showToast('Settings Saved', `${sectionNames[section]} has been updated successfully.`);
+            };
+
+            // ========== BACKUP & RESTORE ==========
+            window.createBackup = function() {
+                const backup = {
+                    timestamp: new Date().toISOString(),
+                    schoolName: document.getElementById('schoolName').value,
+                    schoolId: document.getElementById('schoolId').value,
+                    quarters: quarters,
+                    grading: {
+                        passingGrade: document.getElementById('passingGrade').value,
+                        honorsMin: document.getElementById('honorsMin').value,
+                        highHonorsMin: document.getElementById('highHonorsMin').value,
+                        highestHonorsMin: document.getElementById('highestHonorsMin').value
+                    }
+                };
+                const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `formify_backup_${new Date().toISOString().slice(0,19)}.json`;
+                link.click();
+                showToast('Backup Created', 'System backup has been downloaded.');
+            };
+
+            window.restoreBackup = function() {
+                showToast('Restore Backup', 'Please select a backup file to restore from.');
+            };
+
+            window.exportData = function(type) {
+                showToast('Export Started', `Exporting ${type} data as CSV file for download.`);
+            };
+
+            window.clearAllData = function() {
+                showToast('Warning', 'Test data cleared. This is a simulated action.');
+            };
+
+            window.resetSystem = function() {
+                showToast('Factory Reset', 'Factory reset requested. Contact system administrator for confirmation.');
+            };
+
+            // ========== LOAD SAVED SETTINGS ==========
+            function loadSavedSettings() {
+                const savedSy = localStorage.getItem('currentSY');
+                if (savedSy) document.getElementById('currentSy').value = savedSy;
+                const savedQuarter = localStorage.getItem('currentQuarter');
+                if (savedQuarter) document.getElementById('currentQuarter').value = savedQuarter;
+                const syStart = localStorage.getItem('syStart');
+                if (syStart) document.getElementById('syStart').value = syStart;
+                const syEnd = localStorage.getItem('syEnd');
+                if (syEnd) document.getElementById('syEnd').value = syEnd;
+                const passing = localStorage.getItem('passingGrade');
+                if (passing) document.getElementById('passingGrade').value = passing;
+                const honorsMin = localStorage.getItem('honorsMin');
+                if (honorsMin) document.getElementById('honorsMin').value = honorsMin;
+                const highHonorsMin = localStorage.getItem('highHonorsMin');
+                if (highHonorsMin) document.getElementById('highHonorsMin').value = highHonorsMin;
+                const highestHonorsMin = localStorage.getItem('highestHonorsMin');
+                if (highestHonorsMin) document.getElementById('highestHonorsMin').value = highestHonorsMin;
+                const autoHonors = localStorage.getItem('autoHonors');
+                if (autoHonors !== null) document.getElementById('autoHonors').checked = autoHonors === 'true';
+                const emailNotif = localStorage.getItem('emailNotif');
+                if (emailNotif !== null) document.getElementById('emailNotif').checked = emailNotif === 'true';
+                const formReminders = localStorage.getItem('formReminders');
+                if (formReminders !== null) document.getElementById('formReminders').checked = formReminders === 'true';
+                const twoFactor = localStorage.getItem('twoFactor');
+                if (twoFactor !== null) document.getElementById('twoFactor').checked = twoFactor === 'true';
+                const sessionTimeout = localStorage.getItem('sessionTimeout');
+                if (sessionTimeout) document.getElementById('sessionTimeout').value = sessionTimeout;
+                const schoolName = localStorage.getItem('schoolName');
+                if (schoolName) document.getElementById('schoolName').value = schoolName;
+                const schoolId = localStorage.getItem('schoolId');
+                if (schoolId) document.getElementById('schoolId').value = schoolId;
+            }
+
+            // Toggle switches visual sync
+            document.querySelectorAll('.toggle-switch input').forEach(input => {
+                const span = input.nextElementSibling;
+                if (input.checked) span.style.backgroundColor = '#5EA173';
+                else span.style.backgroundColor = '#e9ecef';
+                input.addEventListener('change', () => {
+                    if (input.checked) span.style.backgroundColor = '#5EA173';
+                    else span.style.backgroundColor = '#e9ecef';
+                });
+            });
+
+            updateSidebarState();
+            updateGreeting();
+            updateDateTime();
+            renderNotifications();
+            loadQuarters();
+            loadSavedSettings();
+            setInterval(updateDateTime, 1000);
+            setInterval(updateGreeting, 60000);
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1157 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports & Analytics - Formify LIS Registrar</title>
+    
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    
+    <style>
+        /* ===== ROOT VARIABLES & BASE ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        :root { 
+            --rich-black: #00072D; --dark-blue: #051650; --bangladesh-blue: #0A2472; 
+            --caribbean-blue: #123499; --secondary-green: #5EA173; --secondary-green-light: #7dbb8f;
+            --warning-orange: #f39c12; --danger-red: #dc3545; --gray-bg: #f5f7fb; 
+            --border-color: #e9ecef; --text-primary: #2d3748; --text-secondary: #718096; 
+            --sidebar-width: 280px; --sidebar-collapsed-width: 80px; 
+            --empty-state-color: #a0aec0; --card-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            --purple: #9b59b6; --teal: #17a2b8; --pink: #e83e8c;
+        }
+        body { background: var(--gray-bg); min-height: 100vh; }
+        .dashboard { display: flex; min-height: 100vh; }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar { width: var(--sidebar-width); background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%); color: white; position: fixed; height: 100vh; overflow-y: auto; overflow-x: hidden; transition: width 0.3s ease; z-index: 100; display: flex; flex-direction: column; }
+        .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
+        .sidebar.collapsed .sidebar-header h2, .sidebar.collapsed .user-details, .sidebar.collapsed .nav-link span, .sidebar.collapsed .logo-area span { display: none; }
+        .sidebar.collapsed .sidebar-header { justify-content: center; padding: 1.5rem 0.5rem; }
+        .sidebar.collapsed .sidebar-header .logo-area { display: none; }
+        .sidebar.collapsed .user-info { justify-content: center; padding: 0.8rem; margin: 0 0.5rem 1.5rem; }
+        .sidebar.collapsed .nav-link { justify-content: center; padding: 0.85rem 0; gap: 0; }
+        .sidebar.collapsed .nav-link i { margin: 0; font-size: 1.3rem; }
+        .sidebar.collapsed .user-avatar { margin: 0; }
+        .sidebar.collapsed .fold-btn { margin: 0 auto; }
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
+        .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .logo-area { display: flex; align-items: center; gap: 1rem; overflow: hidden; }
+        .sidebar-header i.fa-graduation-cap { font-size: 2rem; color: var(--secondary-green); flex-shrink: 0; }
+        .sidebar-header h2 { font-size: 1.1rem; font-weight: 600; line-height: 1.3; }
+        .sidebar-header h2 span { font-size: 0.7rem; opacity: 0.7; display: block; }
+        .fold-btn { background: rgba(255,255,255,0.1); border: none; color: white; cursor: pointer; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
+        .fold-btn:hover { background: rgba(255,255,255,0.25); }
+        .user-info { display: flex; align-items: center; gap: 1rem; padding: 1rem; margin: 0 1rem 1.5rem; background: rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; }
+        .user-avatar { width: 45px; height: 45px; background: var(--secondary-green); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; font-weight: 600; color: var(--rich-black); flex-shrink: 0; }
+        .user-details h4 { font-size: 0.9rem; margin-bottom: 0.2rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+        .nav-menu { list-style: none; padding: 0 0.75rem; flex: 1; }
+        .nav-item { margin-bottom: 0.25rem; }
+        .nav-link { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; color: rgba(255,255,255,0.8); text-decoration: none; border-radius: 10px; transition: all 0.3s; font-size: 0.9rem; cursor: pointer; white-space: nowrap; overflow: hidden; }
+        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+        .nav-link i { width: 22px; font-size: 1.1rem; text-align: center; flex-shrink: 0; }
+        .nav-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; }
+        .main-content { flex: 1; margin-left: var(--sidebar-width); padding: 1.5rem; transition: margin-left 0.3s; min-height: 100vh; }
+        .sidebar.collapsed ~ .main-content { margin-left: var(--sidebar-collapsed-width); }
+
+        /* ===== TOP BAR ===== */
+        .top-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; background: white; padding: 1rem 1.5rem; border-radius: 16px; box-shadow: var(--card-shadow); }
+        .page-title h1 { font-size: 1.3rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
+        .page-title p { color: var(--text-secondary); font-size: 0.8rem; }
+        .top-bar-actions { display: flex; align-items: center; gap: 1rem; position: relative; }
+        .date-display { display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.8rem; background: var(--gray-bg); padding: 0.4rem 0.8rem; border-radius: 8px; }
+        
+        /* ===== NOTIFICATIONS ===== */
+        .notification-dropdown { position: relative; }
+        .notification-badge { position: relative; cursor: pointer; background: none; border: none; padding: 0.3rem; }
+        .notification-badge i { font-size: 1.3rem; color: var(--text-primary); }
+        .notification-badge:hover i { color: var(--secondary-green); }
+        .badge-count { position: absolute; top: -5px; right: -8px; background: #dc3545; color: white; font-size: 0.6rem; padding: 0.15rem 0.4rem; border-radius: 10px; min-width: 16px; text-align: center; font-weight: 700; }
+        .dropdown-menu { position: absolute; top: 45px; right: 0; width: 340px; background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 200; display: none; overflow: hidden; border: 1px solid var(--border-color); }
+        .dropdown-menu.show { display: block; animation: fadeInDown 0.25s ease; }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .dropdown-header { padding: 0.9rem 1.2rem; background: var(--gray-bg); border-bottom: 1px solid var(--border-color); font-weight: 700; font-size: 0.85rem; color: var(--rich-black); display: flex; justify-content: space-between; align-items: center; }
+        .notification-list { max-height: 380px; overflow-y: auto; }
+        .notification-item { display: flex; align-items: flex-start; gap: 0.8rem; padding: 0.9rem 1.2rem; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s; }
+        .notification-item:hover { background: var(--gray-bg); }
+        .notification-item.unread { background: rgba(94,161,115,0.06); border-left: 3px solid var(--secondary-green); }
+        .notification-icon { width: 36px; height: 36px; background: rgba(94,161,115,0.12); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--secondary-green); flex-shrink: 0; }
+        .notification-content { flex: 1; }
+        .notification-title { font-size: 0.8rem; font-weight: 600; color: var(--rich-black); margin-bottom: 0.15rem; }
+        .notification-message { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; }
+        .notification-time { font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.3rem; }
+        .dropdown-footer { padding: 0.7rem; text-align: center; border-top: 1px solid var(--border-color); background: var(--gray-bg); }
+        .dropdown-footer a { color: var(--secondary-green); font-size: 0.75rem; font-weight: 600; cursor: pointer; text-decoration: none; }
+
+        /* ===== PORO GREETING ===== */
+        .poro-greeting { background: linear-gradient(135deg, #f0f9f0, #e8f5e9); border-radius: 20px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(94,161,115,0.3); flex-wrap: wrap; gap: 1rem; }
+        .poro-greeting-content { display: flex; align-items: center; gap: 1rem; }
+        .character-icon { width: 50px; height: 50px; background: var(--secondary-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(94,161,115,0.3); animation: bounce 2s ease infinite; overflow: hidden; }
+        .character-icon img { width: 100%; height: 100%; object-fit: cover; }
+        @keyframes bounce { 0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)} }
+        .poro-message h3 { font-size: 1rem; color: var(--rich-black); margin-bottom: 0.2rem; }
+        .poro-message p { font-size: 0.75rem; color: var(--text-secondary); }
+
+        /* ===== BUTTONS ===== */
+        .quick-actions { display: flex; gap: 0.8rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .btn-primary { background: var(--secondary-green); color: white; padding: 0.5rem 1.2rem; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; text-decoration: none; transition: all 0.2s; }
+        .btn-primary:hover { background: #3d8b5a; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(94,161,115,0.3); }
+        .btn-outline { background: transparent; border: 2px solid var(--border-color); color: var(--text-primary); padding: 0.5rem 1.2rem; border-radius: 10px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; text-decoration: none; transition: all 0.2s; }
+        .btn-outline:hover { border-color: var(--secondary-green); color: var(--secondary-green); }
+        .btn-sm { padding: 0.3rem 0.8rem; font-size: 0.7rem; border-radius: 6px; }
+
+        /* ===== FILTERS ===== */
+        .filter-bar { background: white; padding: 1rem 1.5rem; border-radius: 16px; margin-bottom: 1.5rem; box-shadow: var(--card-shadow); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+        .filter-group { display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: center; }
+        .filter-select { padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; background: white; font-size: 0.8rem; color: var(--text-primary); cursor: pointer; outline: none; min-width: 150px; }
+        .filter-select:focus { border-color: var(--secondary-green); box-shadow: 0 0 0 3px rgba(94,161,115,0.1); }
+        .filter-label { font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; }
+        .filter-tabs { display: flex; gap: 0.3rem; background: var(--gray-bg); padding: 0.3rem; border-radius: 10px; }
+        .filter-tab { padding: 0.4rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); background: transparent; transition: all 0.2s; }
+        .filter-tab.active { background: white; color: var(--secondary-green); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+        .filter-tab:hover:not(.active) { color: var(--text-primary); }
+
+        /* ===== STATS GRID ===== */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: white; padding: 1rem; border-radius: 16px; display: flex; align-items: center; gap: 0.8rem; box-shadow: var(--card-shadow); transition: all 0.2s; cursor: pointer; position: relative; overflow: hidden; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        .stat-card::after { content: ''; position: absolute; top: 0; right: 0; width: 4px; height: 100%; border-radius: 0 16px 16px 0; }
+        .stat-card.blue::after { background: var(--caribbean-blue); }
+        .stat-card.green::after { background: var(--secondary-green); }
+        .stat-card.orange::after { background: var(--warning-orange); }
+        .stat-card.purple::after { background: var(--purple); }
+        .stat-icon { width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+        .stat-icon.blue { background: rgba(18,52,153,0.1); color: var(--caribbean-blue); }
+        .stat-icon.green { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .stat-icon.orange { background: rgba(243,156,18,0.1); color: var(--warning-orange); }
+        .stat-icon.purple { background: rgba(155,89,182,0.1); color: var(--purple); }
+        .stat-info { flex: 1; min-width: 0; }
+        .stat-info h3 { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-info .value { font-size: 1.5rem; font-weight: 700; color: var(--rich-black); line-height: 1.2; }
+        .stat-info .sub { font-size: 0.65rem; color: var(--text-secondary); }
+        .stat-clickable { cursor: pointer; }
+        .stat-clickable .stat-info h3 { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
+
+        /* ===== REPORT CARDS & GRIDS ===== */
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+        .three-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+        .report-card { background: white; border-radius: 16px; padding: 1.2rem; box-shadow: var(--card-shadow); }
+        .report-card.full-width { grid-column: 1 / -1; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+        .section-header h2 { font-size: 1rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
+        .section-header h2 i { color: var(--secondary-green); }
+        .section-header .header-actions { display: flex; gap: 0.5rem; }
+        .view-all { color: var(--secondary-green); font-size: 0.75rem; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .view-all:hover { color: #3d8b5a; }
+
+        /* ===== CHARTS ===== */
+        .chart-container { position: relative; height: 280px; width: 100%; }
+        .chart-container.small { height: 220px; }
+        .chart-container.large { height: 350px; }
+        canvas { max-height: 260px; }
+
+        /* ===== TABLES ===== */
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        .data-table th { text-align: left; padding: 0.6rem; background: var(--gray-bg); color: var(--text-secondary); font-weight: 600; font-size: 0.7rem; text-transform: uppercase; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+        .data-table td { padding: 0.6rem; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
+        .data-table tbody tr:hover { background: var(--gray-bg); }
+        .data-table tbody tr.clickable { cursor: pointer; }
+        .data-table tbody tr.clickable:hover { background: rgba(94,161,115,0.05); }
+        .table-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.65rem; font-weight: 600; }
+        .table-badge.success { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .table-badge.warning { background: rgba(243,156,18,0.1); color: var(--warning-orange); }
+        .table-badge.danger { background: rgba(220,53,69,0.1); color: var(--danger-red); }
+        .table-badge.info { background: rgba(18,52,153,0.1); color: var(--caribbean-blue); }
+        .progress-bar { background: var(--gray-bg); border-radius: 10px; height: 8px; overflow: hidden; width: 80px; display: inline-block; vertical-align: middle; margin-right: 6px; }
+        .progress-fill { height: 100%; border-radius: 10px; transition: width 0.5s ease; }
+        .progress-fill.green { background: var(--secondary-green); }
+        .progress-fill.blue { background: var(--caribbean-blue); }
+        .progress-fill.orange { background: var(--warning-orange); }
+        .progress-fill.purple { background: var(--purple); }
+        .trend-up { color: var(--secondary-green); font-weight: 600; }
+        .trend-down { color: var(--danger-red); font-weight: 600; }
+
+        /* ===== KPI CARDS ===== */
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .kpi-card { background: white; padding: 1.2rem; border-radius: 16px; box-shadow: var(--card-shadow); text-align: center; transition: all 0.2s; }
+        .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        .kpi-card .kpi-value { font-size: 2rem; font-weight: 700; color: var(--rich-black); margin-bottom: 0.3rem; }
+        .kpi-card .kpi-label { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; }
+        .kpi-card .kpi-change { font-size: 0.7rem; margin-top: 0.3rem; }
+        .kpi-card.green { border-top: 3px solid var(--secondary-green); }
+        .kpi-card.blue { border-top: 3px solid var(--caribbean-blue); }
+        .kpi-card.orange { border-top: 3px solid var(--warning-orange); }
+        .kpi-card.purple { border-top: 3px solid var(--purple); }
+
+        /* ===== TOAST ===== */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 0.5rem; }
+        .toast { background: white; border-radius: 12px; padding: 0.8rem 1.2rem; box-shadow: 0 8px 25px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 0.8rem; min-width: 300px; animation: slideInRight 0.3s ease; border-left: 4px solid var(--secondary-green); }
+        .toast.error { border-left-color: var(--danger-red); }
+        .toast.warning { border-left-color: var(--warning-orange); }
+        .toast.success i { color: var(--secondary-green); }
+        .toast.error i { color: var(--danger-red); }
+        .toast-close { background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 1.2rem; }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* ===== LOADING ===== */
+        .loading-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border-color); border-top-color: var(--secondary-green); border-radius: 50%; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; border-radius: 16px; z-index: 10; }
+        .loading-overlay .spinner-large { width: 40px; height: 40px; border-width: 3px; }
+
+        /* ===== MOBILE ===== */
+        .mobile-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
+        .mobile-overlay.show { display: block; }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state { text-align: center; padding: 2rem; color: var(--empty-state-color); }
+        .empty-state i { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+        .empty-state p { font-size: 0.85rem; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1400px) { .three-col { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } .two-col, .three-col { grid-template-columns: 1fr; } .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 768px) { 
+            .sidebar { transform: translateX(-100%); width: var(--sidebar-width) !important; } 
+            .sidebar.mobile-open { transform: translateX(0); } 
+            .main-content { margin-left: 0 !important; } 
+            .stats-grid, .kpi-grid { grid-template-columns: 1fr; } 
+            .filter-group { flex-direction: column; width: 100%; }
+            .filter-select { width: 100%; }
+            .filter-tabs { flex-wrap: wrap; }
+        }
+
+        /* ===== PRINT STYLES ===== */
+        @media print {
+            .sidebar, .top-bar-actions, .quick-actions, .filter-bar, .poro-greeting, .view-all { display: none !important; }
+            .main-content { margin-left: 0 !important; padding: 0 !important; }
+            .report-card { box-shadow: none; border: 1px solid #ddd; break-inside: avoid; }
+            .stats-grid, .two-col, .three-col, .kpi-grid { gap: 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="mobile-overlay" id="mobileOverlay"></div>
+
+<div class="dashboard">
+    <!-- ========== SIDEBAR ========== -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area"><i class="fas fa-graduation-cap"></i><h2>Formify <span>Registrar Portal</span></h2></div>
+            <button class="fold-btn" id="foldBtn"><i class="fas fa-chevron-left"></i></button>
+        </div>
+        <div class="user-info">
+            <div class="user-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+            <div class="user-details"><h4>{{ request.user.get_full_name }}</h4><p>School Registrar</p></div>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="{% url 'registrars:dashboard' %}" class="nav-link"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:student-records' %}" class="nav-link"><i class="fi fi-rr-user"></i><span>Student Records</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:enrollment-management' %}" class="nav-link"><i class="fi fi-rr-file-invoice"></i><span>Enrollment</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:grade-validation' %}" class="nav-link"><i class="fi fi-rr-check-double"></i><span>Grade Validation</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:forms' %}" class="nav-link"><i class="fi fi-rr-folder-open"></i><span>School Forms</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:transfer-management' %}" class="nav-link"><i class="fi fi-rr-exchange-alt"></i><span>Transfer Requests</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:reports-analytics' %}" class="nav-link active"><i class="fi fi-rr-chart-line-up"></i><span>Reports</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:section-schedule-management' %}" class="nav-link"><i class="fi fi-rr-calendar"></i><span>Sections & Schedule</span></a></li>
+        </ul>
+        <ul class="nav-menu nav-footer">
+            <li class="nav-item"><a href="{% url 'signout' %}" class="nav-link"><i class="fi fi-rr-sign-out-alt"></i><span>Logout</span></a></li>
+        </ul>
+    </div>
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <div class="main-content" id="mainContent">
+        <!-- TOP BAR -->
+        <div class="top-bar">
+            <div class="page-title">
+                <h1 id="greetingText"><i class="fas fa-chart-bar" style="color:var(--secondary-green);"></i> Reports & Analytics</h1>
+                <p>Enrollment trends, academic performance, and institutional insights</p>
+            </div>
+            <div class="top-bar-actions">
+                <div class="date-display"><i class="fas fa-calendar"></i><span id="currentDate"></span></div>
+                <div class="notification-dropdown">
+                    <button class="notification-badge" id="notificationBtn"><i class="fas fa-bell"></i><span class="badge-count" id="notifCount">0</span></button>
+                    <div class="dropdown-menu" id="notificationDropdown">
+                        <div class="dropdown-header"><span>Notifications</span><span style="font-size:0.7rem;opacity:0.7;" id="notifUnreadLabel">0 unread</span></div>
+                        <div class="notification-list" id="notificationList"><div class="notification-item" style="justify-content:center;padding:2rem;"><span style="color:var(--text-secondary);font-size:0.8rem;">No notifications</span></div></div>
+                        <div class="dropdown-footer"><a onclick="markAllRead()">Mark all as read</a></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PORO GREETING -->
+        <div class="poro-greeting">
+            <div class="poro-greeting-content">
+                <div class="character-icon">
+                    <img src="{% static 'shared/poro/Poro.png' %}" alt="Poro" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fas fa-chart-pie\' style=\'font-size:1.8rem;color:white;\'></i>';">
+                </div>
+                <div class="poro-message">
+                    <h3 id="poroTitle">✨ Reports & Analytics Center ✨</h3>
+                    <p id="poroMessage">Track enrollment trends, academic performance, and compliance metrics at a glance.</p>
+                </div>
+            </div>
+            <div class="quick-actions" style="margin-bottom:0;">
+                <button class="btn-primary" onclick="exportAllReports()"><i class="fas fa-download"></i> Export All</button>
+                <button class="btn-outline btn-sm" onclick="generatePDFReport()"><i class="fas fa-file-pdf"></i> PDF</button>
+                <button class="btn-outline btn-sm" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+                <button class="btn-outline btn-sm" onclick="refreshAllData()"><i class="fas fa-sync-alt"></i> Refresh</button>
+            </div>
+        </div>
+
+        <!-- ========== FILTER BAR (EXPANDED) ========== -->
+        <div class="filter-bar">
+            <div class="filter-group">
+                <span class="filter-label">School Year</span>
+                <select class="filter-select" id="schoolYearFilter" onchange="loadAllData()">
+                    <option value="">All School Years</option>
+                    {% for sy in available_sy %}
+                        <option value="{{ sy.id }}" {% if sy.id == current_sy_id %}selected{% endif %}>{{ sy.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-tabs" id="reportTabs">
+                <button class="filter-tab active" onclick="switchReportTab('overview', this)">Overview</button>
+                <button class="filter-tab" onclick="switchReportTab('enrollment', this)">Enrollment</button>
+                <button class="filter-tab" onclick="switchReportTab('academic', this)">Academic</button>
+                <button class="filter-tab" onclick="switchReportTab('transfers', this)">Transfers</button>
+                <button class="filter-tab" onclick="switchReportTab('compliance', this)">Compliance</button>
+                <button class="filter-tab" onclick="switchReportTab('demographics', this)">Demographics</button>
+            </div>
+            <div>
+                <select class="filter-select" id="quarterFilter" onchange="loadAllData()" style="min-width:120px;">
+                    <option value="">All Quarters</option>
+                    <option value="Q1">Quarter 1</option>
+                    <option value="Q2">Quarter 2</option>
+                    <option value="Q3">Quarter 3</option>
+                    <option value="Q4">Quarter 4</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- ========== QUICK STATS ========== -->
+        <div class="stats-grid">
+            <div class="stat-card blue stat-clickable" onclick="switchReportTab('enrollment')">
+                <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+                <div class="stat-info">
+                    <h3>Total Enrollment</h3>
+                    <div class="value" id="statEnrollment">—</div>
+                    <div class="sub" id="statEnrollmentTrend">Loading...</div>
+                </div>
+            </div>
+            <div class="stat-card green stat-clickable" onclick="switchReportTab('academic')">
+                <div class="stat-icon green"><i class="fas fa-chart-line"></i></div>
+                <div class="stat-info">
+                    <h3>Average Grade</h3>
+                    <div class="value" id="statAvgGrade">—</div>
+                    <div class="sub">Across all subjects</div>
+                </div>
+            </div>
+            <div class="stat-card orange stat-clickable" onclick="switchReportTab('academic')">
+                <div class="stat-icon orange"><i class="fas fa-trophy"></i></div>
+                <div class="stat-info">
+                    <h3>Honor Students</h3>
+                    <div class="value" id="statHonors">—</div>
+                    <div class="sub">With Honors & Above</div>
+                </div>
+            </div>
+            <div class="stat-card purple stat-clickable" onclick="switchReportTab('transfers')">
+                <div class="stat-icon purple"><i class="fas fa-exchange-alt"></i></div>
+                <div class="stat-info">
+                    <h3>Transfer Rate</h3>
+                    <div class="value" id="statTransferRate">—</div>
+                    <div class="sub" id="statTransferTrend">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== OVERVIEW TAB ========== -->
+        <div id="tab-overview" class="report-tab active">
+            <!-- ENROLLMENT & GRADE CHARTS -->
+            <div class="two-col">
+                <div class="report-card">
+                    <div class="section-header">
+                        <h2><i class="fas fa-chart-line"></i> Enrollment Trend (5-Year)</h2>
+                        <div class="header-actions">
+                            <span class="view-all" onclick="exportChart('enrollmentChart')"><i class="fas fa-download"></i> PNG</span>
+                        </div>
+                    </div>
+                    <div class="chart-container"><canvas id="enrollmentChart"></canvas></div>
+                </div>
+                <div class="report-card">
+                    <div class="section-header">
+                        <h2><i class="fas fa-chart-bar"></i> Grade Distribution</h2>
+                        <div class="header-actions">
+                            <span class="view-all" onclick="exportChart('gradeChart')"><i class="fas fa-download"></i> PNG</span>
+                        </div>
+                    </div>
+                    <div class="chart-container"><canvas id="gradeChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- HONOR ROLL & TRANSFERS -->
+            <div class="two-col">
+                <div class="report-card">
+                    <div class="section-header">
+                        <h2><i class="fas fa-medal"></i> Honor Roll by Grade Level</h2>
+                    </div>
+                    <div style="overflow-x:auto;" id="honorTableContainer">
+                        <table class="data-table" id="honorTable">
+                            <thead><tr><th>Grade Level</th><th>Students</th><th>Highest Honors</th><th>High Honors</th><th>With Honors</th><th>Rate</th></tr></thead>
+                            <tbody><tr><td colspan="6"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading...</p></div></td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="report-card">
+                    <div class="section-header">
+                        <h2><i class="fas fa-calendar-alt"></i> Monthly Transfer Summary</h2>
+                    </div>
+                    <div class="chart-container"><canvas id="transferChart"></canvas></div>
+                    <div style="overflow-x:auto; margin-top:1rem;" id="transferTableContainer">
+                        <table class="data-table">
+                            <thead><tr><th>Month</th><th>Incoming</th><th>Outgoing</th><th>Net</th></tr></thead>
+                            <tbody id="transferSummaryBody"><tr><td colspan="4"><div class="empty-state"><p>Loading...</p></div></td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FORMS COMPLIANCE -->
+            <div class="report-card">
+                <div class="section-header">
+                    <h2><i class="fas fa-check-circle"></i> School Forms Compliance</h2>
+                    <div class="header-actions">
+                        <span class="view-all" onclick="exportComplianceReport()"><i class="fas fa-file-excel"></i> Excel</span>
+                    </div>
+                </div>
+                <div style="overflow-x:auto;" id="complianceTableContainer">
+                    <table class="data-table" style="width:100%;">
+                        <thead><tr><th>Form</th><th>Description</th><th>Status</th><th>Completion</th><th>Last Updated</th><th>Sections Done</th></tr></thead>
+                        <tbody id="complianceTable"><tr><td colspan="6"><div class="empty-state"><p>Loading...</p></div></td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== ENROLLMENT TAB (DETAILED) ========== -->
+        <div id="tab-enrollment" class="report-tab" style="display:none;">
+            <!-- KPI Cards -->
+            <div class="kpi-grid">
+                <div class="kpi-card green">
+                    <div class="kpi-value" id="kpiTotalEnrolled">—</div>
+                    <div class="kpi-label">Total Enrolled</div>
+                    <div class="kpi-change" id="kpiEnrollmentChange"></div>
+                </div>
+                <div class="kpi-card blue">
+                    <div class="kpi-value" id="kpiNewStudents">—</div>
+                    <div class="kpi-label">New Students</div>
+                </div>
+                <div class="kpi-card orange">
+                    <div class="kpi-value" id="kpiTransferees">—</div>
+                    <div class="kpi-label">Transferees</div>
+                </div>
+                <div class="kpi-card purple">
+                    <div class="kpi-value" id="kpiBalikAral">—</div>
+                    <div class="kpi-label">Balik-Aral</div>
+                </div>
+            </div>
+
+            <div class="two-col">
+                <div class="report-card">
+                    <div class="section-header"><h2><i class="fas fa-chart-pie"></i> Enrollment by Grade Level</h2></div>
+                    <div class="chart-container large"><canvas id="enrollmentByGradeChart"></canvas></div>
+                </div>
+                <div class="report-card">
+                    <div class="section-header"><h2><i class="fas fa-chart-line"></i> Monthly Enrollment Trend</h2></div>
+                    <div class="chart-container large"><canvas id="monthlyEnrollmentChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="report-card">
+                <div class="section-header"><h2><i class="fas fa-table"></i> Enrollment Breakdown</h2></div>
+                <div style="overflow-x:auto;" id="enrollmentBreakdownContainer">
+                    <table class="data-table">
+                        <thead><tr><th>Grade Level</th><th>Section</th><th>Total</th><th>Male</th><th>Female</th><th>New</th><th>Transferee</th><th>Balik-Aral</th><th>Old Student</th><th>Capacity</th></tr></thead>
+                        <tbody id="enrollmentBreakdownBody"><tr><td colspan="10"><div class="empty-state"><p>Loading...</p></div></td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== ACADEMIC TAB ========== -->
+        <div id="tab-academic" class="report-tab" style="display:none;">
+            <div class="kpi-grid">
+                <div class="kpi-card green"><div class="kpi-value" id="kpiAvgGrade">—</div><div class="kpi-label">School Average</div></div>
+                <div class="kpi-card blue"><div class="kpi-value" id="kpiPassRate">—</div><div class="kpi-label">Pass Rate</div></div>
+                <div class="kpi-card orange"><div class="kpi-value" id="kpiFailRate">—</div><div class="kpi-label">At-Risk Students</div></div>
+                <div class="kpi-card purple"><div class="kpi-value" id="kpiSubjectsTotal">—</div><div class="kpi-label">Total Subjects</div></div>
+            </div>
+
+            <div class="two-col">
+                <div class="report-card">
+                    <div class="section-header"><h2><i class="fas fa-chart-bar"></i> Grades by Subject (Average)</h2></div>
+                    <div class="chart-container large"><canvas id="gradesBySubjectChart"></canvas></div>
+                </div>
+                <div class="report-card">
+                    <div class="section-header"><h2><i class="fas fa-chart-radar"></i> Performance by Quarter</h2></div>
+                    <div class="chart-container large"><canvas id="quarterPerformanceChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="report-card">
+                <div class="section-header"><h2><i class="fas fa-table"></i> Subject Performance Summary</h2></div>
+                <div style="overflow-x:auto;" id="subjectPerformanceContainer">
+                    <table class="data-table">
+                        <thead><tr><th>Subject</th><th>Avg Grade</th><th>Highest</th><th>Lowest</th><th>Pass Rate</th><th>Students</th><th>Trend</th></tr></thead>
+                        <tbody id="subjectPerformanceBody"><tr><td colspan="7"><div class="empty-state"><p>Loading...</p></div></td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== TRANSFERS TAB ========== -->
+        <div id="tab-transfers" class="report-tab" style="display:none;">
+            <div class="kpi-grid">
+                <div class="kpi-card green"><div class="kpi-value" id="kpiTotalTransfers">—</div><div class="kpi-label">Total Transfers</div></div>
+                <div class="kpi-card blue"><div class="kpi-value" id="kpiIncoming">—</div><div class="kpi-label">Incoming</div></div>
+                <div class="kpi-card orange"><div class="kpi-value" id="kpiOutgoing">—</div><div class="kpi-label">Outgoing</div></div>
+                <div class="kpi-card purple"><div class="kpi-value" id="kpiPendingTransfers">—</div><div class="kpi-label">Pending</div></div>
+            </div>
+
+            <div class="two-col">
+                <div class="report-card">
+                    <div class="section-header"><h2><i class="fas fa-chart-line"></i> Transfer Trend (Monthly)</h2></div>
+                    <div class="chart-container large"><canvas id="transferTrendChart"></canvas></div>
+                </div>
+                <div class="report-card">
+                    <div class="section-header"><h2><i class="fas fa-chart-doughnut"></i> Transfer by Grade Level</h2></div>
+                    <div class="chart-container large"><canvas id="transferByGradeChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="report-card">
+                <div class="section-header"><h2><i class="fas fa-list"></i> Recent Transfer Details</h2></div>
+                <div style="overflow-x:auto;" id="recentTransfersContainer">
+                    <table class="data-table">
+                        <thead><tr><th>Student</th><th>LRN</th><th>Type</th><th>From/To School</th><th>Grade Level</th><th>Status</th><th>Date</th></tr></thead>
+                        <tbody id="recentTransfersBody"><tr><td colspan="7"><div class="empty-state"><p>Loading...</p></div></td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== COMPLIANCE TAB ========== -->
+        <div id="tab-compliance" class="report-tab" style="display:none;">
+            <div class="kpi-grid">
+                <div class="kpi-card green"><div class="kpi-value" id="kpiFormsCompleted">—</div><div class="kpi-label">Forms Completed</div></div>
+                <div class="kpi-card blue"><div class="kpi-value" id="kpiFormsPending">—</div><div class="kpi-label">Pending Review</div></div>
+                <div class="kpi-card orange"><div class="kpi-value" id="kpiFormsOverdue">—</div><div class="kpi-label">Overdue</div></div>
+                <div class="kpi-card purple"><div class="kpi-value" id="kpiComplianceRate">—</div><div class="kpi-label">Overall Compliance</div></div>
+            </div>
+
+            <div class="two-col">
+                <div class="report-card">
+                    <div class="section-header"><h2><i class="fas fa-chart-bar"></i> Compliance by Form Type</h2></div>
+                    <div class="chart-container large"><canvas id="complianceByFormChart"></canvas></div>
+                </div>
+                <div class="report-card">
+                    <div class="section-header"><h2><i class="fas fa-chart-line"></i> Compliance Over Time</h2></div>
+                    <div class="chart-container large"><canvas id="complianceTimelineChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="report-card">
+                <div class="section-header"><h2><i class="fas fa-table"></i> Section-wise Compliance</h2></div>
+                <div style="overflow-x:auto;" id="sectionComplianceContainer">
+                    <table class="data-table">
+                        <thead><tr><th>Section</th><th>Grade Level</th><th>SF1</th><th>SF2</th><th>SF3</th><th>SF4</th><th>SF5</th><th>SF6</th><th>SF7</th><th>SF8</th><th>SF9</th><th>SF10</th><th>Overall</th></tr></thead>
+                        <tbody id="sectionComplianceBody"><tr><td colspan="13"><div class="empty-state"><p>Loading...</p></div></td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== DEMOGRAPHICS TAB ========== -->
+        <div id="tab-demographics" class="report-tab" style="display:none;">
+            <div class="three-col">
+                <div class="report-card">
+                    <div class="section-header"><h2><i class="fas fa-venus-mars"></i> Gender Distribution</h2></div>
+                    <div class="chart-container"><canvas id="genderChart"></canvas></div>
+                </div>
+                <div class="report-card">
+                    <div class="section-header"><h2><i class="fas fa-map-marker-alt"></i> Residency Status</h2></div>
+                    <div class="chart-container"><canvas id="residencyChart"></canvas></div>
+                </div>
+                <div class="report-card">
+                    <div class="section-header"><h2><i class="fas fa-hand-holding-heart"></i> 4Ps Beneficiaries</h2></div>
+                    <div class="chart-container"><canvas id="4psChart"></canvas></div>
+                </div>
+            </div>
+            <div class="two-col">
+                <div class="report-card">
+                    <div class="section-header"><h2><i class="fas fa-calendar-alt"></i> Age Distribution</h2></div>
+                    <div class="chart-container large"><canvas id="ageDistributionChart"></canvas></div>
+                </div>
+                <div class="report-card">
+                    <div class="section-header"><h2><i class="fas fa-globe"></i> Religion Distribution</h2></div>
+                    <div class="chart-container large"><canvas id="religionChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+    // ==================== SIDEBAR ====================
+    const sidebar = document.getElementById('sidebar'), foldBtn = document.getElementById('foldBtn'), mainContent = document.getElementById('mainContent'), mobileOverlay = document.getElementById('mobileOverlay');
+    let sidebarCollapsed = false;
+    function updateSidebarState() {
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) { sidebar.classList.remove('collapsed'); sidebarCollapsed = false; foldBtn.querySelector('i').className = 'fas fa-chevron-left'; if (!sidebar.classList.contains('mobile-open')) mobileOverlay.classList.remove('show'); }
+        else { sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('show'); if (sidebarCollapsed) { sidebar.classList.add('collapsed'); foldBtn.querySelector('i').className = 'fas fa-chevron-right'; } else { sidebar.classList.remove('collapsed'); foldBtn.querySelector('i').className = 'fas fa-chevron-left'; } }
+        adjustMainMargin();
+    }
+    function adjustMainMargin() { mainContent.style.marginLeft = window.innerWidth <= 768 ? '0' : sidebar.classList.contains('collapsed') ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)'; }
+    foldBtn.addEventListener('click', () => { if (window.innerWidth <= 768) { const isOpen = sidebar.classList.toggle('mobile-open'); mobileOverlay.classList.toggle('show', isOpen); } else { sidebarCollapsed = !sidebarCollapsed; sidebar.classList.toggle('collapsed', sidebarCollapsed); foldBtn.querySelector('i').className = sidebarCollapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-left'; adjustMainMargin(); } });
+    mobileOverlay.addEventListener('click', () => { sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('show'); });
+    window.addEventListener('resize', updateSidebarState); updateSidebarState();
+
+    // ==================== UTILITIES ====================
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', warning: 'fa-exclamation-triangle' };
+        toast.innerHTML = `<i class="fas ${icons[type] || icons.success}"></i><div style="flex:1;"><strong>${type.charAt(0).toUpperCase()+type.slice(1)}</strong><p style="font-size:0.8rem;margin:0;">${message}</p></div><button class="toast-close" onclick="this.parentElement.remove()">&times;</button>`;
+        container.appendChild(toast);
+        setTimeout(() => { if (toast.parentElement) toast.remove(); }, 5000);
+    }
+    function getCookie(name) { let v = null; document.cookie.split(';').forEach(c => { c = c.trim(); if (c.substring(0, name.length + 1) === (name + '=')) v = decodeURIComponent(c.substring(name.length + 1)); }); return v; }
+
+    // ==================== TAB SWITCHING ====================
+    let currentTab = 'overview';
+    const tabNames = ['overview', 'enrollment', 'academic', 'transfers', 'compliance', 'demographics'];
+    
+    function switchReportTab(tab, btn) {
+        // Update tabs
+        document.querySelectorAll('.report-tab').forEach(t => t.style.display = 'none');
+        const tabEl = document.getElementById('tab-' + tab);
+        if (tabEl) tabEl.style.display = 'block';
+        
+        // Update buttons
+        document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        
+        currentTab = tab;
+        
+        // Update Poro message
+        const poroMessages = {
+            overview: "Track enrollment trends, academic performance, and compliance metrics at a glance.",
+            enrollment: "Dive deep into enrollment statistics, grade-level distribution, and student types.",
+            academic: "Analyze grade distributions, subject performance, and honor roll statistics.",
+            transfers: "Monitor incoming and outgoing student transfers with detailed summaries.",
+            compliance: "Track school forms (SF1-SF10) submission and approval status across all sections.",
+            demographics: "Explore student demographics including gender, age, religion, and residency."
+        };
+        document.getElementById('poroMessage').textContent = poroMessages[tab] || poroMessages.overview;
+        
+        loadTabData(tab);
+    }
+
+    // ==================== DATA LOADING ====================
+    function loadAllData() {
+        loadTabData(currentTab);
+        loadOverviewStats();
+    }
+
+    function loadOverviewStats() {
+        const sy = document.getElementById('schoolYearFilter').value;
+        const quarter = document.getElementById('quarterFilter').value;
+        
+        fetch(`/registrars/reports/data/?school_year=${sy}&report_type=overview&quarter=${quarter}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    updateOverviewStats(data);
+                    updateEnrollmentChart(data);
+                    updateGradeChart(data);
+                    updateTransferChart(data);
+                    updateHonorTable(data);
+                    updateTransferSummary(data);
+                    updateComplianceTable(data);
+                }
+            })
+            .catch(() => showToast('Error loading report data', 'error'));
+    }
+
+    function loadTabData(tab) {
+        const sy = document.getElementById('schoolYearFilter').value;
+        const quarter = document.getElementById('quarterFilter').value;
+        
+        // Show loading states
+        document.querySelectorAll(`#tab-${tab} .empty-state p`).forEach(el => { el.innerHTML = '<span class="loading-spinner"></span> Loading...'; });
+        
+        fetch(`/registrars/reports/data/?school_year=${sy}&report_type=${tab}&quarter=${quarter}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    switch(tab) {
+                        case 'overview':
+                            updateOverviewStats(data);
+                            updateEnrollmentChart(data);
+                            updateGradeChart(data);
+                            updateTransferChart(data);
+                            updateHonorTable(data);
+                            updateTransferSummary(data);
+                            updateComplianceTable(data);
+                            break;
+                        case 'enrollment':
+                            updateEnrollmentTab(data);
+                            break;
+                        case 'academic':
+                            updateAcademicTab(data);
+                            break;
+                        case 'transfers':
+                            updateTransfersTab(data);
+                            break;
+                        case 'compliance':
+                            updateComplianceTab(data);
+                            break;
+                        case 'demographics':
+                            updateDemographicsTab(data);
+                            break;
+                    }
+                }
+            })
+            .catch(() => showToast('Error loading tab data', 'error'));
+    }
+
+    // ==================== OVERVIEW UPDATES ====================
+    function updateOverviewStats(data) {
+        document.getElementById('statEnrollment').textContent = data.total_enrollment?.toLocaleString() || '—';
+        document.getElementById('statAvgGrade').textContent = data.avg_grade || '—';
+        document.getElementById('statHonors').textContent = data.honor_count?.toLocaleString() || '—';
+        document.getElementById('statTransferRate').textContent = (data.transfer_rate || '—') + '%';
+        
+        const trendEl = document.getElementById('statEnrollmentTrend');
+        if (data.enrollment_trend > 0) trendEl.innerHTML = '<span class="trend-up"><i class="fas fa-arrow-up"></i> +' + data.enrollment_trend + '%</span>';
+        else if (data.enrollment_trend < 0) trendEl.innerHTML = '<span class="trend-down"><i class="fas fa-arrow-down"></i> ' + data.enrollment_trend + '%</span>';
+        else trendEl.textContent = 'No change from last year';
+        
+        document.getElementById('statTransferTrend').textContent = data.total_transfers ? `${data.total_transfers} total transfers` : 'No transfers';
+    }
+
+    function updateEnrollmentChart(data) {
+        enrollmentChart.data.labels = data.enrollment_labels || [];
+        enrollmentChart.data.datasets[0].data = data.enrollment_values || [];
+        enrollmentChart.update();
+    }
+
+    function updateGradeChart(data) {
+        gradeChart.data.labels = data.grade_labels || [];
+        gradeChart.data.datasets[0].data = data.grade_values || [];
+        gradeChart.update();
+    }
+
+    function updateTransferChart(data) {
+        transferChart.data.labels = data.transfer_labels || [];
+        transferChart.data.datasets[0].data = data.transfer_incoming || [];
+        transferChart.data.datasets[1].data = data.transfer_outgoing || [];
+        transferChart.update();
+    }
+
+    function updateHonorTable(data) {
+        const tbody = document.querySelector('#honorTable tbody');
+        const honors = data.honor_breakdown || [];
+        if (!honors.length) { tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-medal"></i><p>No honor roll data available</p></div></td></tr>'; return; }
+        tbody.innerHTML = honors.map(h => {
+            const rate = h.total > 0 ? ((h.highest + h.high + h.with_honors) / h.total * 100).toFixed(1) : 0;
+            return `<tr><td><strong>${h.grade_name}</strong></td><td>${h.total}</td><td>${h.highest}</td><td>${h.high}</td><td>${h.with_honors}</td><td><div class="progress-bar"><div class="progress-fill green" style="width:${rate}%;"></div></div> ${rate}%</td></tr>`;
+        }).join('');
+    }
+
+    function updateTransferSummary(data) {
+        const tbody = document.getElementById('transferSummaryBody');
+        const summary = data.transfer_summary || [];
+        if (!summary.length) { tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><p>No transfer data</p></div></td></tr>'; return; }
+        tbody.innerHTML = summary.map(m => {
+            const net = m.incoming - m.outgoing;
+            return `<tr><td>${m.month}</td><td>${m.incoming}</td><td>${m.outgoing}</td><td class="${net >= 0 ? 'trend-up' : 'trend-down'}">${net >= 0 ? '+' : ''}${net}</td></tr>`;
+        }).join('');
+    }
+
+    function updateComplianceTable(data) {
+        const tbody = document.getElementById('complianceTable');
+        const compliance = data.compliance || [];
+        if (!compliance.length) { tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>No compliance data</p></div></td></tr>'; return; }
+        tbody.innerHTML = compliance.map(c => {
+            let statusBadge = '<span class="table-badge info">Pending</span>';
+            if (c.completion >= 100) statusBadge = '<span class="table-badge success">Completed</span>';
+            else if (c.completion > 0) statusBadge = '<span class="table-badge warning">In Progress</span>';
+            return `<tr>
+                <td><strong>${c.form_code}</strong></td>
+                <td>${c.form_name}</td>
+                <td>${statusBadge}</td>
+                <td><div class="progress-bar"><div class="progress-fill ${c.completion >= 100 ? 'green' : c.completion > 50 ? 'blue' : 'orange'}" style="width:${c.completion}%;"></div></div> ${c.completion}%</td>
+                <td>${c.last_updated}</td>
+                <td>${c.sections_done || '—'}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    // ==================== ENROLLMENT TAB ====================
+    function updateEnrollmentTab(data) {
+        // KPI cards
+        document.getElementById('kpiTotalEnrolled').textContent = data.total_enrollment?.toLocaleString() || '—';
+        document.getElementById('kpiNewStudents').textContent = data.new_students || '—';
+        document.getElementById('kpiTransferees').textContent = data.transferees || '—';
+        document.getElementById('kpiBalikAral').textContent = data.balik_aral || '—';
+        
+        document.getElementById('kpiEnrollmentChange').innerHTML = data.enrollment_trend > 0 
+            ? '<span class="trend-up"><i class="fas fa-arrow-up"></i> +' + data.enrollment_trend + '%</span>' 
+            : '<span class="trend-down"><i class="fas fa-arrow-down"></i> ' + data.enrollment_trend + '%</span>';
+        
+        // Charts
+        if (window.enrollmentByGradeChart) {
+            enrollmentByGradeChart.data.labels = data.grade_labels || [];
+            enrollmentByGradeChart.data.datasets[0].data = data.grade_enrollment_counts || [];
+            enrollmentByGradeChart.update();
+        }
+        
+        if (window.monthlyEnrollmentChart) {
+            monthlyEnrollmentChart.data.labels = data.monthly_labels || [];
+            monthlyEnrollmentChart.data.datasets[0].data = data.monthly_counts || [];
+            monthlyEnrollmentChart.update();
+        }
+        
+        // Breakdown table
+        const tbody = document.getElementById('enrollmentBreakdownBody');
+        const breakdown = data.enrollment_breakdown || [];
+        if (!breakdown.length) { tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><p>No enrollment data available</p></div></td></tr>'; return; }
+        tbody.innerHTML = breakdown.map(b => `<tr>
+            <td><strong>${b.grade_name}</strong></td><td>${b.section}</td><td>${b.total}</td>
+            <td>${b.male}</td><td>${b.female}</td><td>${b.new_students}</td>
+            <td>${b.transferees}</td><td>${b.balik_aral}</td><td>${b.old_students}</td>
+            <td><div class="progress-bar"><div class="progress-fill ${b.total/b.capacity > 0.9 ? 'orange' : 'green'}" style="width:${(b.total/b.capacity*100).toFixed(0)}%;"></div></div> ${b.total}/${b.capacity}</td>
+        </tr>`).join('');
+    }
+
+    // ==================== ACADEMIC TAB ====================
+    function updateAcademicTab(data) {
+        document.getElementById('kpiAvgGrade').textContent = data.avg_grade || '—';
+        document.getElementById('kpiPassRate').textContent = (data.pass_rate || '—') + '%';
+        document.getElementById('kpiFailRate').textContent = data.at_risk_students || '—';
+        document.getElementById('kpiSubjectsTotal').textContent = data.total_subjects || '—';
+        
+        if (window.gradesBySubjectChart) {
+            gradesBySubjectChart.data.labels = data.subject_labels || [];
+            gradesBySubjectChart.data.datasets[0].data = data.subject_averages || [];
+            gradesBySubjectChart.update();
+        }
+        
+        if (window.quarterPerformanceChart) {
+            quarterPerformanceChart.data.datasets[0].data = data.quarter_averages || [];
+            quarterPerformanceChart.update();
+        }
+        
+        const tbody = document.getElementById('subjectPerformanceBody');
+        const subjects = data.subject_performance || [];
+        if (!subjects.length) { tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>No grade data available</p></div></td></tr>'; return; }
+        tbody.innerHTML = subjects.map(s => `<tr>
+            <td><strong>${s.subject}</strong></td><td>${s.avg_grade}</td><td>${s.highest}</td><td>${s.lowest}</td>
+            <td><div class="progress-bar"><div class="progress-fill ${s.pass_rate >= 90 ? 'green' : s.pass_rate >= 75 ? 'blue' : 'orange'}" style="width:${s.pass_rate}%;"></div></div> ${s.pass_rate}%</td>
+            <td>${s.student_count}</td>
+            <td class="${s.trend > 0 ? 'trend-up' : 'trend-down'}">${s.trend > 0 ? '+' : ''}${s.trend}</td>
+        </tr>`).join('');
+    }
+
+    // ==================== TRANSFERS TAB ====================
+    function updateTransfersTab(data) {
+        document.getElementById('kpiTotalTransfers').textContent = data.total_transfers || '—';
+        document.getElementById('kpiIncoming').textContent = data.incoming_count || '—';
+        document.getElementById('kpiOutgoing').textContent = data.outgoing_count || '—';
+        document.getElementById('kpiPendingTransfers').textContent = data.pending_count || '—';
+        
+        if (window.transferTrendChart) {
+            transferTrendChart.data.labels = data.transfer_labels || [];
+            transferTrendChart.data.datasets[0].data = data.transfer_incoming || [];
+            transferTrendChart.data.datasets[1].data = data.transfer_outgoing || [];
+            transferTrendChart.update();
+        }
+        
+        if (window.transferByGradeChart) {
+            transferByGradeChart.data.labels = data.transfer_grade_labels || [];
+            transferByGradeChart.data.datasets[0].data = data.transfer_grade_incoming || [];
+            transferByGradeChart.data.datasets[1].data = data.transfer_grade_outgoing || [];
+            transferByGradeChart.update();
+        }
+        
+        const tbody = document.getElementById('recentTransfersBody');
+        const transfers = data.recent_transfers || [];
+        if (!transfers.length) { tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>No recent transfers</p></div></td></tr>'; return; }
+        tbody.innerHTML = transfers.map(t => `<tr>
+            <td>${t.student_name}</td><td>${t.lrn}</td><td><span class="table-badge ${t.transfer_type === 'INCOMING' ? 'success' : 'warning'}">${t.transfer_type}</span></td>
+            <td>${t.school_name}</td><td>${t.grade_level}</td><td><span class="table-badge ${t.status === 'Documents_Released' ? 'success' : t.status === 'Pending' ? 'danger' : 'info'}">${t.status_display}</span></td>
+            <td>${t.date}</td>
+        </tr>`).join('');
+    }
+
+    // ==================== COMPLIANCE TAB ====================
+    function updateComplianceTab(data) {
+        document.getElementById('kpiFormsCompleted').textContent = data.forms_completed || '—';
+        document.getElementById('kpiFormsPending').textContent = data.forms_pending || '—';
+        document.getElementById('kpiFormsOverdue').textContent = data.forms_overdue || '—';
+        document.getElementById('kpiComplianceRate').textContent = (data.compliance_rate || '—') + '%';
+        
+        if (window.complianceByFormChart) {
+            complianceByFormChart.data.labels = data.form_labels || [];
+            complianceByFormChart.data.datasets[0].data = data.form_completion_rates || [];
+            complianceByFormChart.update();
+        }
+        
+        if (window.complianceTimelineChart) {
+            complianceTimelineChart.data.labels = data.compliance_dates || [];
+            complianceTimelineChart.data.datasets[0].data = data.compliance_rates || [];
+            complianceTimelineChart.update();
+        }
+        
+        const tbody = document.getElementById('sectionComplianceBody');
+        const sections = data.section_compliance || [];
+        if (!sections.length) { tbody.innerHTML = '<tr><td colspan="13"><div class="empty-state"><p>No compliance data</p></div></td></tr>'; return; }
+        tbody.innerHTML = sections.map(s => {
+            let row = `<tr><td><strong>${s.section_name}</strong></td><td>${s.grade_level}</td>`;
+            ['SF1','SF2','SF3','SF4','SF5','SF6','SF7','SF8','SF9','SF10'].forEach(form => {
+                const status = s.forms[form] || 'missing';
+                const icon = status === 'approved' ? '<i class="fas fa-check-circle" style="color:var(--secondary-green);"></i>' 
+                    : status === 'submitted' ? '<i class="fas fa-clock" style="color:var(--warning-orange);"></i>'
+                    : status === 'returned' ? '<i class="fas fa-undo" style="color:var(--danger-red);"></i>'
+                    : '<i class="fas fa-times-circle" style="color:#ccc;"></i>';
+                row += `<td style="text-align:center;">${icon}</td>`;
+            });
+            row += `<td><div class="progress-bar"><div class="progress-fill ${s.completion_pct >= 100 ? 'green' : s.completion_pct >= 50 ? 'blue' : 'orange'}" style="width:${s.completion_pct}%;"></div></div> ${s.completion_pct}%</td></tr>`;
+            return row;
+        }).join('');
+    }
+
+    // ==================== DEMOGRAPHICS TAB ====================
+    function updateDemographicsTab(data) {
+        if (window.genderChart) {
+            genderChart.data.datasets[0].data = [data.male_count || 0, data.female_count || 0];
+            genderChart.update();
+        }
+        
+        if (window.residencyChart) {
+            residencyChart.data.labels = data.residency_labels || [];
+            residencyChart.data.datasets[0].data = data.residency_counts || [];
+            residencyChart.update();
+        }
+        
+        if (window.fourPsChart) {
+            fourPsChart.data.datasets[0].data = [data.four_ps_count || 0, (data.total_enrollment - data.four_ps_count) || 0];
+            fourPsChart.update();
+        }
+        
+        if (window.ageDistributionChart) {
+            ageDistributionChart.data.labels = data.age_labels || [];
+            ageDistributionChart.data.datasets[0].data = data.age_counts || [];
+            ageDistributionChart.update();
+        }
+        
+        if (window.religionChart) {
+            religionChart.data.labels = data.religion_labels || [];
+            religionChart.data.datasets[0].data = data.religion_counts || [];
+            religionChart.update();
+        }
+    }
+
+    // ==================== EXPORTS ====================
+    window.exportChart = function(chartId) {
+        const canvas = document.getElementById(chartId);
+        if (!canvas) return showToast('Chart not found', 'error');
+        const link = document.createElement('a');
+        link.download = chartId + '_' + new Date().toISOString().slice(0,10) + '.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('Chart exported as PNG', 'success');
+    };
+
+    window.exportAllReports = function() {
+        const sy = document.getElementById('schoolYearFilter').value;
+        window.open(`/registrars/reports/export/?school_year=${sy}`, '_blank');
+        showToast('Exporting all reports...', 'success');
+    };
+
+    window.generatePDFReport = function() {
+        const sy = document.getElementById('schoolYearFilter').value;
+        window.open(`/registrars/reports/pdf/?school_year=${sy}`, '_blank');
+        showToast('Generating PDF report...', 'success');
+    };
+
+    window.exportComplianceReport = function() {
+        window.open('/registrars/reports/compliance-export/', '_blank');
+        showToast('Exporting compliance report...', 'success');
+    };
+
+    window.refreshAllData = function() {
+        loadAllData();
+        showToast('All reports refreshed', 'success');
+    };
+
+    // ==================== NOTIFICATIONS ====================
+    const nb = document.getElementById('notificationBtn'), nd = document.getElementById('notificationDropdown');
+    if (nb && nd) { nb.addEventListener('click', e => { e.stopPropagation(); nd.classList.toggle('show'); }); document.addEventListener('click', () => nd.classList.remove('show')); }
+    window.markAllRead = function() {
+        fetch('/registrars/mark-notifications-read/', { method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') } })
+        .then(r => r.json()).then(() => { document.getElementById('notifCount').textContent = '0'; showToast('Notifications marked as read', 'success'); });
+    };
+
+    // ==================== GREETING & CLOCK ====================
+    function updateGreeting() {
+        const h = new Date().getHours();
+        const g = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+        const name = '{{ request.user.first_name }}' || 'Registrar';
+        document.getElementById('greetingText').innerHTML = `<i class="fas fa-chart-bar" style="color:var(--secondary-green);"></i> ${g}, ${name}!`;
+    }
+    function updateDateTime() { 
+        const now = new Date();
+        document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); 
+    }
+    updateGreeting(); updateDateTime(); setInterval(updateDateTime, 60000);
+
+    // ==================== INITIALIZE ALL CHARTS ====================
+    let enrollmentChart, gradeChart, transferChart;
+    let enrollmentByGradeChart, monthlyEnrollmentChart;
+    let gradesBySubjectChart, quarterPerformanceChart;
+    let transferTrendChart, transferByGradeChart;
+    let complianceByFormChart, complianceTimelineChart;
+    let genderChart, residencyChart, fourPsChart, ageDistributionChart, religionChart;
+
+    function initAllCharts() {
+        // Overview charts
+        enrollmentChart = new Chart(document.getElementById('enrollmentChart').getContext('2d'), {
+            type: 'line', 
+            data: { labels: [], datasets: [{ label: 'Enrollment', data: [], borderColor: '#5EA173', backgroundColor: 'rgba(94,161,115,0.1)', fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6 }] }, 
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        gradeChart = new Chart(document.getElementById('gradeChart').getContext('2d'), {
+            type: 'bar', 
+            data: { labels: [], datasets: [{ label: 'Students', data: [], backgroundColor: ['#123499', '#0A2472', '#051650', '#00072D', '#dc3545'], borderRadius: 8 }] }, 
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        transferChart = new Chart(document.getElementById('transferChart').getContext('2d'), {
+            type: 'bar', 
+            data: { labels: [], datasets: [
+                { label: 'Incoming', data: [], backgroundColor: '#5EA173', borderRadius: 6 },
+                { label: 'Outgoing', data: [], backgroundColor: '#f39c12', borderRadius: 6 }
+            ]}, 
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+        });
+
+        // Enrollment tab charts
+        enrollmentByGradeChart = new Chart(document.getElementById('enrollmentByGradeChart').getContext('2d'), {
+            type: 'bar',
+            data: { labels: [], datasets: [{ label: 'Enrolled', data: [], backgroundColor: '#5EA173', borderRadius: 8 }] },
+            options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
+        });
+
+        monthlyEnrollmentChart = new Chart(document.getElementById('monthlyEnrollmentChart').getContext('2d'), {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Enrollments', data: [], borderColor: '#123499', backgroundColor: 'rgba(18,52,153,0.1)', fill: true, tension: 0.3 }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        // Academic tab charts
+        gradesBySubjectChart = new Chart(document.getElementById('gradesBySubjectChart').getContext('2d'), {
+            type: 'bar',
+            data: { labels: [], datasets: [{ label: 'Average Grade', data: [], backgroundColor: '#5EA173', borderRadius: 8 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 70, max: 100 } } }
+        });
+
+        quarterPerformanceChart = new Chart(document.getElementById('quarterPerformanceChart').getContext('2d'), {
+            type: 'radar',
+            data: { labels: ['Q1', 'Q2', 'Q3', 'Q4'], datasets: [{ label: 'School Average', data: [0, 0, 0, 0], borderColor: '#5EA173', backgroundColor: 'rgba(94,161,115,0.2)' }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        // Transfer tab charts
+        transferTrendChart = new Chart(document.getElementById('transferTrendChart').getContext('2d'), {
+            type: 'line',
+            data: { labels: [], datasets: [
+                { label: 'Incoming', data: [], borderColor: '#5EA173', tension: 0.3 },
+                { label: 'Outgoing', data: [], borderColor: '#f39c12', tension: 0.3 }
+            ]},
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        transferByGradeChart = new Chart(document.getElementById('transferByGradeChart').getContext('2d'), {
+            type: 'bar',
+            data: { labels: [], datasets: [
+                { label: 'Incoming', data: [], backgroundColor: '#5EA173' },
+                { label: 'Outgoing', data: [], backgroundColor: '#f39c12' }
+            ]},
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        // Compliance tab charts
+        complianceByFormChart = new Chart(document.getElementById('complianceByFormChart').getContext('2d'), {
+            type: 'bar',
+            data: { labels: [], datasets: [{ label: 'Completion %', data: [], backgroundColor: '#5EA173', borderRadius: 8 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { max: 100 } } }
+        });
+
+        complianceTimelineChart = new Chart(document.getElementById('complianceTimelineChart').getContext('2d'), {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Compliance Rate', data: [], borderColor: '#5EA173', fill: true, backgroundColor: 'rgba(94,161,115,0.1)', tension: 0.3 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { max: 100 } } }
+        });
+
+        // Demographics tab charts
+        genderChart = new Chart(document.getElementById('genderChart').getContext('2d'), {
+            type: 'doughnut',
+            data: { labels: ['Male', 'Female'], datasets: [{ data: [0, 0], backgroundColor: ['#123499', '#9b59b6'] }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        residencyChart = new Chart(document.getElementById('residencyChart').getContext('2d'), {
+            type: 'pie',
+            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#5EA173', '#123499', '#f39c12', '#9b59b6', '#17a2b8'] }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        fourPsChart = new Chart(document.getElementById('4psChart').getContext('2d'), {
+            type: 'doughnut',
+            data: { labels: ['4Ps', 'Non-4Ps'], datasets: [{ data: [0, 0], backgroundColor: ['#f39c12', '#5EA173'] }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        ageDistributionChart = new Chart(document.getElementById('ageDistributionChart').getContext('2d'), {
+            type: 'bar',
+            data: { labels: [], datasets: [{ label: 'Students', data: [], backgroundColor: '#5EA173', borderRadius: 8 }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        religionChart = new Chart(document.getElementById('religionChart').getContext('2d'), {
+            type: 'bar',
+            data: { labels: [], datasets: [{ label: 'Students', data: [], backgroundColor: '#123499', borderRadius: 8 }] },
+            options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
+        });
+    }
+
+    // ==================== INIT ====================
+    initAllCharts();
+    loadAllData();
+</script>
+</body>
+</html>

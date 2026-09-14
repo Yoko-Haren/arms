@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SF1 - School Register</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h2 { font-size: 18px; margin-bottom: 5px; }
+        .header p { font-size: 14px; color: #666; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; }
+        th { background: #f0f0f0; font-weight: 600; }
+        .school-info { margin-bottom: 20px; }
+        .print-btn { margin-bottom: 15px; padding: 8px 20px; background: #5EA173; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        @media print { .print-btn { display: none; } }
+    </style>
+</head>
+<body>
+    <button class="print-btn" onclick="window.print()">🖨 Print SF1</button>
+    
+    <div class="header">
+        <h2>SF1 - SCHOOL REGISTER</h2>
+        <p>School Year: {{ school_year.year_label|default:school_year }}</p>
+        <p>Generated: {{ today|date:"F d, Y" }}</p>
+    </div>
+
+    <div class="school-info">
+        <p><strong>School:</strong> {{ school_profile.school_name|default:"Formify LIS" }}</p>
+        <p><strong>Address:</strong> {{ school_profile.address|default:"" }}</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>LRN</th>
+                <th>Last Name</th>
+                <th>First Name</th>
+                <th>Middle Name</th>
+                <th>Sex</th>
+                <th>Birth Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in students %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ student.lrn|default:"—" }}</td>
+                <td>{{ student.last_name }}</td>
+                <td>{{ student.first_name }}</td>
+                <td>{{ student.middle_name|default:"—" }}</td>
+                <td>{{ student.sex }}</td>
+                <td>{{ student.birth_date|date:"M d, Y"|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 20px;">No students found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

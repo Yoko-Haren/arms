@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SF9 - Learner's Progress Report Card</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 15px; font-size: 10px; }
+        .print-btn { margin-bottom: 10px; padding: 6px 15px; background: #5EA173; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 11px; }
+        @media print { .print-btn { display: none; } body { padding: 0; } }
+        .page { width: 100%; max-width: 800px; margin: 0 auto; }
+        
+        .front-page { border: 1px solid #000; padding: 10px; }
+        .header-line { display: flex; justify-content: space-between; margin-bottom: 3px; }
+        .header-line div { border: 1px solid #000; padding: 3px 5px; text-align: center; font-size: 9px; }
+        .attendance-table { width: 100%; border-collapse: collapse; margin: 5px 0; font-size: 8px; }
+        .attendance-table th, .attendance-table td { border: 1px solid #000; padding: 2px 3px; text-align: center; }
+        .attendance-table th { background: #f0f0f0; }
+        .school-header { text-align: center; margin: 8px 0; }
+        .school-header h3 { font-size: 11px; margin-bottom: 2px; }
+        .school-header p { font-size: 8px; }
+        .learner-info { margin: 8px 0; font-size: 9px; line-height: 1.6; }
+        .signature-section { margin-top: 10px; font-size: 9px; }
+        .signature-line { display: flex; justify-content: space-between; margin-top: 15px; }
+        .signature-line div { text-align: center; }
+        .signature-line .line { border-top: 1px solid #000; width: 150px; margin: 3px auto; }
+        
+        .back-page { border: 1px solid #000; padding: 10px; margin-top: 10px; }
+        .grades-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 8px; }
+        .grades-table th, .grades-table td { border: 1px solid #000; padding: 2px 4px; }
+        .grades-table th { background: #f0f0f0; text-align: center; font-size: 7px; }
+        .grades-table .subject { text-align: left; }
+        .grades-table .grade-col { text-align: center; width: 40px; }
+        .values-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 8px; }
+        .values-table th, .values-table td { border: 1px solid #000; padding: 2px 4px; }
+        .values-table th { background: #f0f0f0; text-align: center; font-size: 7px; }
+        .legend-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 7px; }
+        .legend-table td { padding: 1px 4px; }
+        .section-title { font-weight: bold; font-size: 10px; margin: 8px 0 4px 0; text-align: center; background: #f0f0f0; padding: 3px; border: 1px solid #000; }
+    </style>
+</head>
+<body>
+    <button class="print-btn" onclick="window.print()">🖨 Print SF9</button>
+    
+    <div class="page">
+        <!-- ===== FRONT PAGE ===== -->
+        <div class="front-page">
+            <!-- Attendance Row -->
+            <table class="attendance-table">
+                <tr>
+                    <th></th><th>JUN</th><th>JUL</th><th>AUG</th><th>SEP</th><th>OCT</th><th>NOV</th><th>DEC</th><th>JAN</th><th>FEB</th><th>MAR</th><th>APR</th><th>TOTAL</th>
+                </tr>
+                <tr><td>No. of School Days</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td>No. of Days Present</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td>No. of Days Absent</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            </table>
+            
+            <!-- Parent Signature -->
+            <div style="font-size:8px; margin:5px 0;">PARENT / GUARDIAN'S SIGNATURE</div>
+            <div style="display:flex; gap:10px; font-size:7px;">
+                <div>1st Quarter: _______________</div>
+                <div>2nd Quarter: _______________</div>
+                <div>3rd Quarter: _______________</div>
+                <div>4th Quarter: _______________</div>
+            </div>
+            
+            <!-- Transfer Section -->
+            <div style="font-size:8px; margin:8px 0;">
+                <strong>Certificate of Transfer</strong><br>
+                Admitted to Grade: _________ Section: _________<br>
+                Eligibility for Admission to Grade: _________<br>
+                Approved:<br>
+                <div style="display:flex; justify-content:space-between; margin-top:10px;">
+                    <div style="text-align:center;">_________________________<br>Principal</div>
+                    <div style="text-align:center;">_________________________<br>Teacher</div>
+                </div>
+            </div>
+            
+            <!-- School Header -->
+            <div class="school-header">
+                <p style="font-style:italic;">Republic of the Philippines</p>
+                <p style="font-weight:bold;">DEPARTMENT OF EDUCATION</p>
+                <p>{{ school_profile.school_name|default:"____________________________________" }}</p>
+                <p>{{ school_profile.region|default:"____________________________________" }} Region</p>
+                <p>{{ school_profile.division|default:"____________________________________" }} Division</p>
+            </div>
+            
+            <!-- Learner Info -->
+            <div style="text-align:center; font-weight:bold; font-size:12px; margin:8px 0;">LEARNER'S PROGRESS REPORT CARD</div>
+            <div class="learner-info">
+                <p><strong>Name:</strong> {{ student.last_name }}, {{ student.first_name }} {{ student.middle_name|default:"" }}</p>
+                <p><strong>Age:</strong> ________________ <strong>Sex:</strong> {{ student.sex }}</p>
+                <p><strong>Grade:</strong> {{ enrollment.section.grade_level.grade_name|default:"____" }} &nbsp; <strong>Section:</strong> {{ enrollment.section.section_name|default:"____" }}</p>
+                <p><strong>Curriculum:</strong> __________________________________________</p>
+                <p><strong>School Year:</strong> {{ school_year }}</p>
+                <p><strong>Track/Strand:</strong> ____________________________________________</p>
+            </div>
+            
+            <!-- Dear Parent -->
+            <div style="font-size:8px; margin:8px 0; padding:5px; border:1px solid #000;">
+                <strong>Dear Parent,</strong><br>
+                This report card shows the ability and progress your child has made in different learning areas as well as his/her core values. The school welcomes you should you desire to know more about your child's progress.
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; margin-top:15px; font-size:8px;">
+                <div style="text-align:center;">
+                    <div style="border-top:1px solid #000; width:120px; margin:3px auto;"></div>
+                    Principal
+                </div>
+                <div style="text-align:center;">
+                    <div style="border-top:1px solid #000; width:120px; margin:3px auto;"></div>
+                    Teacher
+                </div>
+            </div>
+        </div>
+        
+        <!-- ===== BACK PAGE ===== -->
+        <div class="back-page">
+            <div style="text-align:center; font-weight:bold; font-size:10px;">LEARNER'S PROGRESS REPORT CARD</div>
+            
+            <!-- First Semester Grades -->
+            <div class="section-title">First Semester</div>
+            <table class="grades-table">
+                <tr><th rowspan="2">Subjects</th><th colspan="2">Quarter</th><th rowspan="2">Semester<br>Final Grade</th></tr>
+                <tr><th>1</th><th>2</th></tr>
+                <tr><td class="subject"><strong>Core Subjects</strong></td><td></td><td></td><td></td></tr>
+                <tr><td class="subject">Oral Communication</td><td class="grade-col"></td><td class="grade-col"></td><td class="grade-col"></td></tr>
+                <tr><td class="subject">Komunikasyon at Pananaliksik sa Wika at Kulturang Pilipino</td><td class="grade-col"></td><td class="grade-col"></td><td class="grade-col"></td></tr>
+                <tr><td class="subject">Introduction to the Philosophy of the Human Person</td><td class="grade-col"></td><td class="grade-col"></td><td class="grade-col"></td></tr>
+                <tr><td class="subject">Physical Education and Health 1</td><td class="grade-col"></td><td class="grade-col"></td><td class="grade-col"></td></tr>
+                <tr><td class="subject">General Mathematics</td><td class="grade-col"></td><td class="grade-col"></td><td class="grade-col"></td></tr>
+                <tr><td class="subject">Earth Science</td><td class="grade-col"></td><td class="grade-col"></td><td class="grade-col"></td></tr>
+                <tr><td class="subject"><strong>Applied and Specialized Subjects</strong></td><td></td><td></td><td></td></tr>
+                <tr><td class="subject">Empowerment Technologies</td><td class="grade-col"></td><td class="grade-col"></td><td class="grade-col"></td></tr>
+                <tr><td class="subject">Pre-Calculus</td><td class="grade-col"></td><td class="grade-col"></td><td class="grade-col"></td></tr>
+                <tr><td class="subject">General Chemistry 1</td><td class="grade-col"></td><td class="grade-col"></td><td class="grade-col"></td></tr>
+                <tr><td class="subject" style="text-align:right; font-weight:bold;">General Average for the Semester</td><td></td><td></td><td class="grade-col"></td></tr>
+            </table>
+            
+            <!-- Second Semester Grades -->
+            <div class="section-title">Second Semester</div>
+            <table class="grades-table">
+                <tr><th rowspan="2">Subjects</th><th colspan="2">Quarter</th><th rowspan="2">Semester<br>Final Grade</th></tr>
+                <tr><th>3</th><th>4</th></tr>
+                <tr><td class="subject"><strong>Core Subjects</strong></td><td></td><td></td><td></td></tr>
+                <tr><td class="subject">Reading and Writing</td><td class="grade-col"></td><td class="grade-col"></td><td class="grade-col"></td></tr>
+                <tr><td class="subject">Pagbasa at Pagsusuri ng Iba't-Ibang Teksto Tungo sa Pananaliksik</td><td class="grade-col"></td><td class="grade-col"></td><td class="grade-col"></td></tr>
+                <tr><td class="subject">Personal Development / Pansariling Kaunlaran</td><td class="grade-col"></td><td class="grade-col"></td><td class="grade-col"></td></tr>
+                <tr><td class="subject">Physical Education and Health 2</td><td class="grade-col"></td><td class="grade-col"></td><td class="grade-col"></td></tr>
+                <tr><td class="subject">Statistics and Probability</td><td class="grade-col"></td><td class="grade-col"></td><td class="grade-col"></td></tr>
+                <tr><td class="subject">Disaster Readiness and Risk Reduction</td><td class="grade-col"></td><td class="grade-col"></td><td class="grade-col"></td></tr>
+                <tr><td class="subject"><strong>Applied and Specialized Subjects</strong></td><td></td><td></td><td></td></tr>
+                <tr><td class="subject">Practical Research 1</td><td class="grade-col"></td><td class="grade-col"></td><td class="grade-col"></td></tr>
+                <tr><td class="subject">Basic Calculus</td><td class="grade-col"></td><td class="grade-col"></td><td class="grade-col"></td></tr>
+                <tr><td class="subject">General Chemistry 2</td><td class="grade-col"></td><td class="grade-col"></td><td class="grade-col"></td></tr>
+                <tr><td class="subject" style="text-align:right; font-weight:bold;">General Average for the Semester</td><td></td><td></td><td class="grade-col"></td></tr>
+            </table>
+            
+            <!-- Core Values -->
+            <div class="section-title">REPORT ON LEARNER'S OBSERVED VALUES</div>
+            <table class="values-table">
+                <tr><th>Core Values</th><th>Behavior Statements</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th></tr>
+                <tr><td><strong>1. Maka-Diyos</strong></td><td>Expresses one's spiritual beliefs while respecting the spiritual beliefs of others</td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td>Shows adherence to ethical principles by upholding truth in all undertakings</td><td></td><td></td><td></td><td></td></tr>
+                <tr><td><strong>2. Makatao</strong></td><td>Is sensitive to individual, social and cultural differences; resists stereotyping people</td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td>Demonstrates contributions toward solidarity</td><td></td><td></td><td></td><td></td></tr>
+                <tr><td><strong>3. Makakalikasan</strong></td><td>Cares for the environment and utilizes resources wisely, judiciously and economically</td><td></td><td></td><td></td><td></td></tr>
+                <tr><td><strong>4. Makabansa</strong></td><td>Demonstrates pride in being a Filipino; exercises the rights and responsibilities of a Filipino citizen</td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td>Demonstrates appropriate behavior in carrying out activities in the school, community and country</td><td></td><td></td><td></td><td></td></tr>
+            </table>
+            
+            <!-- Legend -->
+            <table class="legend-table" style="width:60%; float:left;">
+                <tr><td colspan="2"><strong>Observed Values</strong></td></tr>
+                <tr><td><strong>Marking</strong></td><td><strong>Non-numerical Rating</strong></td></tr>
+                <tr><td>AO</td><td>Always Observed</td></tr>
+                <tr><td>SO</td><td>Sometimes Observed</td></tr>
+                <tr><td>RO</td><td>Rarely Observed</td></tr>
+                <tr><td>NO</td><td>Not Observed</td></tr>
+            </table>
+            
+            <table class="legend-table" style="width:38%; float:right;">
+                <tr><td colspan="3"><strong>Learner Progress and Achievement</strong></td></tr>
+                <tr><td><strong>Descriptors</strong></td><td><strong>Grading Scale</strong></td><td><strong>Remarks</strong></td></tr>
+                <tr><td>Outstanding</td><td>90-100</td><td>Passed</td></tr>
+                <tr><td>Very Satisfactory</td><td>85-89</td><td>Passed</td></tr>
+                <tr><td>Satisfactory</td><td>80-84</td><td>Passed</td></tr>
+                <tr><td>Fairly Satisfactory</td><td>75-79</td><td>Passed</td></tr>
+                <tr><td>Did Not Meet Expectation</td><td>Below 75</td><td>Failed</td></tr>
+            </table>
+            <div style="clear:both;"></div>
+        </div>
+    </div>
+</body>
+</html>

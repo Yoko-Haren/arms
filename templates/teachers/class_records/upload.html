@@ -1,0 +1,222 @@
+{% extends 'teachers/base.html' %}
+{% load static %}
+
+{% block title %}Upload Class Record{% endblock %}
+{% block subtitle %}Import Grades — Drop your E-Class Record{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-zone {
+        border: 3px dashed #e0e5ea; border-radius: 16px; padding: 3rem 2rem;
+        text-align: center; cursor: pointer; transition: all 0.3s; background: #fafbfc;
+    }
+    .upload-zone:hover { border-color: #123499; background: #f0f4ff; }
+    .upload-zone.dragover { border-color: #5EA173; background: #f0faf2; }
+    .upload-zone.has-file { border-color: #5EA173; background: #f0faf2; }
+    
+    .info-box {
+        background: #f0f7ff; border-left: 4px solid #123499;
+        padding: 1rem 1.2rem; border-radius: 10px; margin-bottom: 1.5rem; font-size: 0.82rem;
+    }
+    
+    .modal-overlay {
+        position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+        z-index: 999; display: none; align-items: center; justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-box {
+        background: white; border-radius: 16px; padding: 2rem;
+        max-width: 520px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        animation: modalIn 0.3s ease;
+    }
+    @keyframes modalIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+    .modal-box h3 { font-size: 1.1rem; margin-bottom: 0.8rem; }
+    .modal-box .preview-table { width: 100%; font-size: 0.78rem; margin: 1rem 0; }
+    .modal-box .preview-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid #f0f0f0; }
+    .modal-box .preview-table td:first-child { font-weight: 600; width: 100px; color: #6c757d; }
+    .modal-actions { display: flex; gap: 0.8rem; justify-content: flex-end; margin-top: 1.2rem; }
+    
+    .btn {
+        padding: 0.6rem 1.2rem; border-radius: 10px; font-weight: 600; cursor: pointer;
+        font-size: 0.82rem; font-family: inherit; border: none; display: inline-flex;
+        align-items: center; gap: 0.4rem; transition: all 0.2s;
+    }
+    .btn-primary { background: #123499; color: white; }
+    .btn-success { background: #5EA173; color: white; }
+    .btn-outline { background: white; border: 2px solid #e0e5ea; color: #1a1a2e; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .detected-info { background: #e8f5e9; padding: 0.8rem; border-radius: 8px; margin: 0.8rem 0; font-size: 0.8rem; }
+    .detected-info strong { color: #155724; }
+    .quarter-badges { display: flex; gap: 0.4rem; margin-top: 0.4rem; }
+    .quarter-badge {
+        padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.7rem; font-weight: 600;
+        background: #d4edda; color: #155724;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="max-width:700px;margin:0 auto;">
+
+    <div class="info-box">
+        <strong><i class="fi fi-rr-info"></i> How it works:</strong>
+        <p style="margin:0.3rem 0 0 0;color:#6c757d;">
+            Drop your <strong>DepEd E-Class Record (.xlsx)</strong> file. 
+            The system will <strong>auto-detect</strong> the section by matching student names 
+            and import <strong>all quarters (Q1-Q4)</strong> at once.
+        </p>
+    </div>
+
+    <div class="card">
+        <div class="section-header">
+            <h2><i class="fi fi-rr-upload"></i> Upload E-Class Record</h2>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" id="uploadForm" onsubmit="return showConfirmation(event)">
+            {% csrf_token %}
+
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('csvFile').click()">
+                <i class="fi fi-rr-file-upload" style="font-size:3.5rem;color:#123499;opacity:0.5;"></i>
+                <h4 style="margin-top:0.8rem;">Drop your E-Class Record here</h4>
+                <p style="color:#6c757d;font-size:0.85rem;">Excel (.xlsx) or CSV (.csv)</p>
+                <input type="file" name="csv_file" id="csvFile" accept=".csv,.xlsx,.xls" style="display:none;" onchange="showFileName()" required>
+                <div id="fileNameDisplay" style="margin-top:1rem;font-weight:600;color:#5EA173;font-size:0.9rem;"></div>
+            </div>
+
+            <button type="submit" class="btn-primary" style="width:100%;margin-top:1.2rem;" id="submitBtn">
+                <i class="fi fi-rr-search"></i> Auto-Detect & Import Grades
+            </button>
+        </form>
+    </div>
+
+    <div style="text-align:center;margin-top:1rem;">
+        <a href="?download_template=1" class="btn-outline btn-sm">
+            <i class="fi fi-rr-download"></i> Download CSV Template
+        </a>
+    </div>
+</div>
+
+<!-- CONFIRMATION MODAL -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal-box">
+        <h3>📋 Auto-Detected — Confirm Import</h3>
+        
+        <div class="detected-info" id="detectedInfo">
+            <strong id="modalSubject">—</strong><br>
+            Section: <strong id="modalSection">—</strong><br>
+            Students matched: <strong id="modalMatched">—</strong>
+            <div class="quarter-badges" id="modalQuarters"></div>
+        </div>
+        
+        <table class="preview-table">
+            <tr><td>File:</td><td><strong id="modalFile">—</strong></td></tr>
+            <tr><td>Grades found:</td><td><strong id="modalGrades">—</strong></td></tr>
+        </table>
+        
+        <div style="background:#fff3cd;padding:0.8rem;border-radius:8px;font-size:0.75rem;color:#856404;">
+            <i class="fi fi-rr-exclamation-triangle"></i> 
+            <strong>Warning:</strong> Existing grades will be <strong>updated</strong>. This cannot be undone.
+        </div>
+        
+        <div class="modal-actions">
+            <button class="btn-outline" onclick="closeModal()">Cancel</button>
+            <button class="btn-success" id="confirmSubmit" onclick="submitForm()">
+                <i class="fi fi-rr-check-circle"></i> Confirm & Import
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function showFileName() {
+    var file = document.getElementById('csvFile').files[0];
+    if (file) {
+        document.getElementById('fileNameDisplay').innerHTML = 
+            '<i class="fi fi-rr-check-circle"></i> <strong>' + file.name + '</strong>';
+        document.getElementById('uploadZone').classList.add('has-file');
+    }
+}
+
+function showConfirmation(event) {
+    event.preventDefault();
+    
+    var file = document.getElementById('csvFile').files[0];
+    
+    if (!file) {
+        alert('Please select a file.');
+        return false;
+    }
+    
+    document.getElementById('modalFile').textContent = file.name;
+    document.getElementById('modalSubject').textContent = 'Auto-detecting from file...';
+    document.getElementById('modalSection').textContent = 'Analyzing...';
+    document.getElementById('modalMatched').textContent = '...';
+    document.getElementById('modalGrades').textContent = '...';
+    document.getElementById('modalQuarters').innerHTML = '';
+    
+    document.getElementById('confirmModal').classList.add('show');
+    document.getElementById('confirmSubmit').disabled = true;
+    
+    // Submit for auto-detection
+    var formData = new FormData(document.getElementById('uploadForm'));
+    formData.append('preview_only', 'true');
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        document.getElementById('modalSubject').textContent = data.subject || 'Not detected';
+        document.getElementById('modalSection').textContent = data.section || 'Not detected';
+        document.getElementById('modalMatched').textContent = (data.matched || 0) + ' of ' + (data.total || 0) + ' students';
+        document.getElementById('modalGrades').textContent = (data.grades_found || 0) + ' grades';
+        
+        var quartersHtml = '';
+        if (data.quarters) {
+            data.quarters.forEach(function(q) {
+                quartersHtml += '<span class="quarter-badge">' + q + ': ' + (data['q' + q.replace('Q','') + '_count'] || 0) + ' grades</span>';
+            });
+        }
+        document.getElementById('modalQuarters').innerHTML = quartersHtml || '<span style="color:#856404;">No quarters detected</span>';
+        
+        document.getElementById('confirmSubmit').disabled = false;
+    })
+    .catch(function() {
+        document.getElementById('modalSubject').textContent = 'Error detecting. Will try on import.';
+        document.getElementById('modalSection').textContent = '—';
+        document.getElementById('confirmSubmit').disabled = false;
+    });
+    
+    return false;
+}
+
+function closeModal() {
+    document.getElementById('confirmModal').classList.remove('show');
+}
+
+function submitForm() {
+    document.getElementById('confirmSubmit').disabled = true;
+    document.getElementById('confirmSubmit').innerHTML = '<i class="fi fi-rr-spinner"></i> Importing...';
+    // Remove preview flag for actual import
+    var previewInput = document.querySelector('input[name="preview_only"]');
+    if (previewInput) previewInput.remove();
+    document.getElementById('uploadForm').submit();
+}
+
+// Drag and drop
+var zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('dragover'); });
+zone.addEventListener('dragleave', function() { this.classList.remove('dragover'); });
+zone.addEventListener('drop', function(e) {
+    e.preventDefault(); this.classList.remove('dragover');
+    document.getElementById('csvFile').files = e.dataTransfer.files;
+    showFileName();
+});
+
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+</script>
+{% endblock %}

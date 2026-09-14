@@ -1,0 +1,345 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ARMS - Teacher Portal{% endblock %}</title>
+    
+    <!-- Flaticon Uicons -->
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-bold-rounded/css/uicons-bold-rounded.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', 'Century Gothic', sans-serif; }
+        
+        :root {
+            --rich-black: #00072D;
+            --dark-blue: #051650;
+            --caribbean-blue: #123499;
+            --secondary-green: #5EA173;
+            --secondary-green-light: #7dbb8f;
+            --gray-bg: #f5f7fb;
+            --border-color: #e9ecef;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --warning-bg: #fff3cd;
+            --warning-text: #856404;
+            --warning-orange: #f39c12;
+            --success-bg: #d4edda;
+            --success-text: #155724;
+            --danger-bg: #f8d7da;
+            --danger-text: #721c24;
+            --danger-red: #dc3545;
+            --info-bg: #e3f0ff;
+            --info-text: #2D6AFF;
+            --ai-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --card-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            --card-shadow-hover: 0 8px 25px rgba(0,0,0,0.1);
+            --nav-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            --glow-green: 0 0 20px rgba(94,161,115,0.3);
+            --glow-purple: 0 0 20px rgba(102,126,234,0.3);
+            --transition-speed: 0.3s;
+        }
+        
+        body { background: var(--gray-bg); min-height: 100vh; padding-top: 90px; }
+        
+        /* ===== NAVIGATION PILL ===== */
+        .nav-pill-container {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 1000; width: auto; max-width: 95vw;
+        }
+        .nav-pill {
+            display: flex; align-items: center; gap: 2rem;
+            background: white; border-radius: 50px; padding: 0.6rem 1.5rem;
+            box-shadow: var(--nav-shadow); border: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+        .nav-brand {
+            display: flex; align-items: center; gap: 0.6rem;
+            padding-right: 1.2rem; border-right: 2px solid var(--border-color);
+            text-decoration: none;
+        }
+        .nav-brand-icon {
+            width: 38px; height: 38px; background: var(--ai-gradient);
+            border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            box-shadow: var(--glow-purple);
+        }
+        .nav-brand-icon i { font-size: 1.2rem; color: white; }
+        .nav-brand-text { font-size: 0.9rem; font-weight: 700; color: var(--rich-black); line-height: 1.2; }
+        .nav-brand-text span { display: block; font-size: 0.6rem; font-weight: 500; color: var(--text-secondary); letter-spacing: 0.5px; }
+        
+        .nav-links { display: flex; align-items: center; gap: 0.3rem; list-style: none; }
+        .nav-link-item a {
+            display: flex; align-items: center; gap: 0.6rem;
+            padding: 0.55rem 1rem; border-radius: 30px;
+            text-decoration: none; color: var(--text-secondary);
+            font-size: 0.82rem; font-weight: 500;
+            transition: all var(--transition-speed);
+        }
+        .nav-link-item a:hover { color: var(--rich-black); background: var(--gray-bg); }
+        .nav-link-item a.active {
+            font-weight: 600; box-shadow: var(--glow-green);
+            background: var(--ai-gradient); color: white;
+        }
+        .nav-link-item a i { font-size: 1rem; }
+        
+        .nav-user-section {
+            display: flex; align-items: center; gap: 0.6rem;
+            padding-left: 1rem; border-left: 2px solid var(--border-color);
+        }
+        .nav-user-avatar {
+            width: 35px; height: 35px; background: var(--ai-gradient);
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem; font-weight: 700; color: white;
+            box-shadow: var(--glow-purple);
+        }
+        .nav-user-name { font-size: 0.78rem; font-weight: 600; color: var(--rich-black); }
+        .nav-user-role { font-size: 0.62rem; color: var(--text-secondary); }
+        .nav-logout-btn {
+            display: flex; align-items: center; justify-content: center;
+            width: 35px; height: 35px; border-radius: 10px;
+            color: var(--text-secondary); cursor: pointer; text-decoration: none;
+            transition: all var(--transition-speed);
+        }
+        .nav-logout-btn:hover { background: var(--danger-bg); color: var(--danger-red); }
+        
+        /* ===== MAIN CONTENT ===== */
+        .main-content { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem; }
+        
+        .top-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;
+            background: white; padding: 1rem 1.5rem; border-radius: 20px;
+            box-shadow: var(--card-shadow);
+        }
+        .welcome h1 { font-size: 1.2rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
+        .welcome h1 i { color: var(--secondary-green); font-size: 1.3rem; }
+        .welcome p { color: var(--text-secondary); font-size: 0.78rem; margin-top: 0.2rem; }
+        
+        .date-display {
+            display: flex; align-items: center; gap: 0.5rem;
+            color: var(--text-secondary); font-size: 0.78rem;
+            background: var(--gray-bg); padding: 0.5rem 1rem; border-radius: 10px;
+        }
+        
+        /* Cards */
+        .card {
+            background: white; border-radius: 20px; padding: 1.5rem;
+            box-shadow: var(--card-shadow); margin-bottom: 1.5rem;
+            transition: all var(--transition-speed);
+        }
+        .card:hover { box-shadow: var(--card-shadow-hover); }
+        
+        .section-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1.2rem; flex-wrap: wrap; gap: 0.5rem;
+        }
+        .section-header h2 {
+            font-size: 1rem; color: var(--rich-black);
+            display: flex; align-items: center; gap: 0.5rem; font-weight: 700;
+        }
+        .section-header h2 i { color: var(--secondary-green); font-size: 1.1rem; }
+        
+        /* Stats */
+        .stat-card { border-radius: 16px; padding: 1.5rem; color: white; text-align: center; }
+        .stat-card h3 { font-size: 2rem; font-weight: 800; margin: 0; }
+        .stat-card small { font-size: 0.75rem; opacity: 0.9; }
+        .stat-card.blue { background: linear-gradient(135deg, #123499, #667eea); }
+        .stat-card.green { background: linear-gradient(135deg, #5EA173, #7dbb8f); }
+        .stat-card.purple { background: var(--ai-gradient); }
+        .stat-card.orange { background: linear-gradient(135deg, #f39c12, #e67e22); }
+        
+        /* Buttons */
+        .btn-primary {
+            background: var(--secondary-green); color: white;
+            padding: 0.6rem 1.2rem; border: none; border-radius: 10px;
+            font-weight: 600; cursor: pointer; display: inline-flex;
+            align-items: center; gap: 0.5rem; font-size: 0.82rem;
+            text-decoration: none; transition: all var(--transition-speed);
+        }
+        .btn-primary:hover { background: var(--caribbean-blue); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(94,161,115,0.4); }
+        .btn-outline {
+            background: transparent; border: 2px solid var(--border-color);
+            color: var(--text-primary); padding: 0.5rem 1rem;
+            border-radius: 10px; font-weight: 600; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            font-size: 0.78rem; text-decoration: none; transition: all var(--transition-speed);
+        }
+        .btn-outline:hover { border-color: var(--secondary-green); color: var(--secondary-green); }
+        .btn-sm { padding: 0.35rem 0.7rem; font-size: 0.72rem; border-radius: 8px; }
+        
+        /* Badges */
+        .badge {
+            display: inline-flex; align-items: center; gap: 0.3rem;
+            padding: 0.2rem 0.6rem; border-radius: 20px;
+            font-size: 0.65rem; font-weight: 600;
+        }
+        .badge-success { background: var(--success-bg); color: var(--success-text); }
+        .badge-info { background: var(--info-bg); color: var(--info-text); }
+        .badge-warning { background: var(--warning-bg); color: var(--warning-text); }
+        .badge-danger { background: var(--danger-bg); color: var(--danger-text); }
+        
+        /* Table */
+        .table-responsive { overflow-x: auto; border-radius: 14px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        table th { text-align: left; padding: 0.8rem 1rem; background: #f8f9fa; font-weight: 700; font-size: 0.72rem; text-transform: uppercase; color: var(--text-secondary); border-bottom: 2px solid var(--border-color); }
+        table td { padding: 0.7rem 1rem; border-bottom: 1px solid var(--border-color); }
+        table tbody tr:hover { background: var(--gray-bg); }
+        
+        /* Grid */
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        .three-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+        .four-col { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+        
+        /* Toast */
+        .toast-container { position: fixed; top: 100px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 0.5rem; }
+        .toast {
+            background: white; border-radius: 12px; padding: 0.8rem 1.2rem;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15); display: flex;
+            align-items: center; gap: 0.8rem; min-width: 300px;
+            animation: slideInRight 0.3s ease; border-left: 4px solid var(--secondary-green);
+        }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        
+        /* Mobile */
+        @media (max-width: 768px) {
+            .two-col, .three-col, .four-col { grid-template-columns: 1fr; }
+            .nav-pill { flex-wrap: wrap; gap: 0.5rem; padding: 0.8rem; justify-content: center; }
+            .nav-links { flex-wrap: wrap; justify-content: center; }
+            .nav-link-item a span { display: none; }
+            body { padding-top: 140px; }
+            .main-content { padding: 1rem; }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- ========== NAVIGATION PILL ========== -->
+    <div class="nav-pill-container">
+        <nav class="nav-pill">
+            <a href="{% url 'teachers:dashboard' %}" class="nav-brand">
+                <div class="nav-brand-icon">
+                    <i class="fi fi-rr-chalkboard-user"></i>
+                </div>
+                <div class="nav-brand-text">
+                    ARMS
+                    <span>Teacher Portal</span>
+                </div>
+            </a>
+            
+            <ul class="nav-links">
+                <li class="nav-link-item">
+                    <a href="{% url 'teachers:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                        <i class="fi fi-rr-dashboard"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-link-item">
+                    <a href="{% url 'teachers:class_record_list' %}" class="{% if 'class-records' in request.path %}active{% endif %}">
+                        <i class="fi fi-rr-folder"></i>
+                        <span>Class Records</span>
+                    </a>
+                </li>
+                <li class="nav-link-item">
+                    <a href="{% url 'assessments:list' %}" class="{% if 'assessments' in request.path %}active{% endif %}">
+                        <i class="fi fi-rr-quiz"></i>
+                        <span>Assessments</span>
+                    </a>
+                </li>
+                <li class="nav-link-item">
+                    <a href="{% url 'teachers:class_record_list' %}">
+                        <i class="fi fi-rr-chart-histogram"></i>
+                        <span>Grades</span>
+                    </a>
+                </li>
+                <li class="nav-link-item">
+                    <a href="#">
+                        <i class="fi fi-rr-calendar-check"></i>
+                        <span>Attendance</span>
+                    </a>
+                </li>
+            </ul>            
+            
+            <div class="nav-user-section">
+                <div class="nav-user-avatar">
+                    {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+                </div>
+                <div>
+                    <div class="nav-user-name">{{ request.user.get_full_name }}</div>
+                    <div class="nav-user-role">Teacher</div>
+                </div>
+                <a href="{% url 'signout' %}" class="nav-logout-btn" title="Logout">
+                    <i class="fi fi-rr-sign-out-alt"></i>
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <div class="main-content">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="welcome">
+                <h1 id="greetingText">
+                    <i class="fi fi-rr-dashboard"></i> 
+                    Hello, {{ request.user.first_name }}!
+                </h1>
+                <p>{% block subtitle %}Teacher Portal — {{ request.user.profile.school_name }}{% endblock %}</p>
+            </div>
+            <div class="date-display">
+                <i class="fi fi-rr-calendar"></i>
+                <span id="currentDate"></span>
+            </div>
+        </div>
+        
+        <!-- Toast Container -->
+        <div class="toast-container" id="toastContainer"></div>
+        
+        <!-- Page Content -->
+        {% block content %}{% endblock %}
+    </div>
+
+    <script>
+    (function() {
+        // Greeting
+        function updateGreeting() {
+            var hour = new Date().getHours();
+            var greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+            var userName = '{{ request.user.first_name|escapejs }}' || 'Teacher';
+            document.getElementById('greetingText').innerHTML = 
+                '<i class="fi fi-rr-dashboard" style="color:var(--secondary-green);"></i> ' + greeting + ', ' + userName + '!';
+        }
+        
+        // Date
+        function updateDate() { 
+            var now = new Date();
+            var options = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', options); 
+        }
+        
+        updateGreeting(); 
+        updateDate();
+        
+        // Toast
+        window.showToast = function(message, type) {
+            type = type || 'success';
+            var container = document.getElementById('toastContainer');
+            var toast = document.createElement('div');
+            toast.className = 'toast ' + type;
+            var icons = { success: 'fi-rr-check-circle', error: 'fi-rr-exclamation', warning: 'fi-rr-exclamation-triangle' };
+            toast.innerHTML = '<i class="fi ' + (icons[type] || icons.success) + '"></i><div style="flex:1;"><strong>' + type.charAt(0).toUpperCase() + type.slice(1) + '</strong><p style="font-size:0.75rem;margin:0;">' + message + '</p></div><button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-secondary);">&times;</button>';
+            container.appendChild(toast);
+            setTimeout(function() { if (toast.parentElement) { toast.remove(); } }, 4000);
+        };
+    })();
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Settings - Formify Admin Portal</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'AvantGarde', 'Century Gothic', sans-serif;
+        }
+
+        :root {
+            --rich-black: #00072D;
+            --dark-blue: #051650;
+            --secondary-green: #5EA173;
+            --gray-bg: #f5f7fb;
+            --border-color: #e9ecef;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --sidebar-width: 280px;
+            --danger-red: #dc3545;
+            --warning-orange: #f39c12;
+            --success-green: #28a745;
+            --info-blue: #17a2b8;
+        }
+
+        body {
+            background: var(--gray-bg);
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar-header i { font-size: 2rem; color: var(--secondary-green); }
+        .sidebar-header h2 { font-size: 1.1rem; font-weight: 600; }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin: 0 1rem 1.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+        }
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: var(--secondary-green);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--rich-black);
+        }
+        .user-details h4 { font-size: 0.9rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+
+        .nav-menu { list-style: none; padding: 0 0.75rem; }
+        .nav-item { margin-bottom: 0.25rem; }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+        .nav-link i { width: 22px; }
+
+        .nav-footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .welcome h1 { font-size: 1.3rem; color: var(--rich-black); }
+        .welcome p { color: var(--text-secondary); font-size: 0.8rem; }
+        .top-bar-actions { display: flex; align-items: center; gap: 1rem; }
+        .date-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            background: var(--gray-bg);
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+        }
+
+        /* Settings Layout */
+        .settings-container {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            gap: 1.5rem;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            min-height: calc(100vh - 140px);
+        }
+
+        .settings-sidebar {
+            background: var(--gray-bg);
+            padding: 1.5rem 0;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .settings-nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.8rem 1.5rem;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+        .settings-nav-link:hover { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .settings-nav-link.active { background: rgba(94,161,115,0.15); color: var(--secondary-green); border-left-color: var(--secondary-green); }
+        .settings-nav-link i { width: 20px; font-size: 1rem; }
+
+        .settings-content {
+            padding: 1.5rem;
+            overflow-y: auto;
+            max-height: calc(100vh - 140px);
+        }
+
+        .settings-section {
+            display: none;
+        }
+        .settings-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            color: var(--rich-black);
+            margin-bottom: 0.25rem;
+        }
+        .section-desc {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* Form Styles */
+        .settings-form {
+            max-width: 700px;
+        }
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--rich-black);
+            margin-bottom: 0.4rem;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-family: inherit;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        /* Toggle Switch */
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .toggle-info h4 {
+            font-size: 0.9rem;
+            color: var(--rich-black);
+            margin-bottom: 0.2rem;
+        }
+        .toggle-info p {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--border-color);
+            transition: 0.3s;
+            border-radius: 34px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+        input:checked + .toggle-slider {
+            background-color: var(--secondary-green);
+        }
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+
+        /* Buttons */
+        .btn-save {
+            background: var(--secondary-green);
+            color: white;
+            padding: 0.6rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+        }
+        .btn-save:hover { background: #4a8c5e; }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.6rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .btn-danger {
+            background: var(--danger-red);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Maintenance Mode Banner */
+        .maintenance-banner {
+            background: #fff3cd;
+            border-left: 4px solid var(--warning-orange);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .menu-toggle {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: var(--secondary-green);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 992px) {
+            .settings-container {
+                grid-template-columns: 1fr;
+            }
+            .settings-sidebar {
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 768px) {
+            .menu-toggle { display: block; }
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+    <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-shield-alt"></i>
+                <h2>Formify <br><span>Admin Portal</span></h2>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar">SA</div>
+                <div class="user-details">
+                    <h4>System Admin</h4>
+                    <p>Super Administrator</p>
+                </div>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="../dashboard/index.html" class="nav-link"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li class="nav-item"><a href="../detection/index.html" class="nav-link"><i class="fas fa-robot"></i> AI Anomaly Detection</a></li>
+                <li class="nav-item"><a href="../anomalyLogs/index.html" class="nav-link"><i class="fas fa-exclamation-triangle"></i> Anomaly Logs</a></li>
+                <li class="nav-item"><a href="../modelTraining/index.html" class="nav-link"><i class="fas fa-brain"></i> AI Model Training</a></li>
+                <li class="nav-item"><a href="../monitoring/index.html" class="nav-link"><i class="fas fa-chart-line"></i> System Monitoring</a></li>
+                <li class="nav-item"><a href="../auditTrail/index.html" class="nav-link"><i class="fas fa-history"></i> Audit Trail</a></li>
+                <li class="nav-item"><a href="../security/index.html" class="nav-link"><i class="fas fa-shield-alt"></i> Security</a></li>
+                <li class="nav-item"><a href="../settings/index.html" class="nav-link active"><i class="fas fa-cog"></i> Settings</a></li>
+            </ul>
+            <ul class="nav-menu nav-footer">
+                <li class="nav-item"><a href="#" class="nav-link"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="top-bar">
+                <div class="welcome">
+                    <h1>System Settings</h1>
+                    <p>Global system configuration, maintenance, and feature management</p>
+                </div>
+                <div class="top-bar-actions">
+                    <div class="date-display"><i class="fas fa-calendar"></i><span id="currentDate"></span></div>
+                </div>
+            </div>
+
+            <div class="settings-container">
+                <div class="settings-sidebar">
+                    <div class="settings-nav-link active" data-section="general"><i class="fas fa-globe"></i> General</div>
+                    <div class="settings-nav-link" data-section="features"><i class="fas fa-toggle-on"></i> Feature Toggles</div>
+                    <div class="settings-nav-link" data-section="email"><i class="fas fa-envelope"></i> Email / SMS</div>
+                    <div class="settings-nav-link" data-section="maintenance"><i class="fas fa-tools"></i> Maintenance</div>
+                    <div class="settings-nav-link" data-section="backup"><i class="fas fa-database"></i> Backup</div>
+                    <div class="settings-nav-link" data-section="advanced"><i class="fas fa-code-branch"></i> Advanced</div>
+                </div>
+
+                <div class="settings-content">
+                    <!-- General Settings Section -->
+                    <div class="settings-section active" id="section-general">
+                        <h2 class="section-title">General Settings</h2>
+                        <p class="section-desc">Basic system configuration and branding</p>
+                        <div class="settings-form">
+                            <div class="form-group"><label>System Name</label><input type="text" id="systemName" value="Formify LIS"></div>
+                            <div class="form-group"><label>System URL</label><input type="text" id="systemUrl" value="https://formify.deped.gov.ph"></div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Time Zone</label><select id="timezone"><option value="Asia/Manila" selected>Asia/Manila (GMT+8)</option><option value="UTC">UTC</option></select></div>
+                                <div class="form-group"><label>Date Format</label><select id="dateFormat"><option value="MM/DD/YYYY">MM/DD/YYYY</option><option value="DD/MM/YYYY" selected>DD/MM/YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option></select></div>
+                            </div>
+                            <div class="form-group"><label>Default Language</label><select id="language"><option value="en" selected>English</option><option value="fil">Filipino</option></select></div>
+                            <div class="form-group"><label>Footer Copyright Text</label><input type="text" id="copyright" value="© 2026 Formify LIS - DepEd Davao del Norte Division"></div>
+                            <button class="btn-save" onclick="saveSettings('general')">Save General Settings</button>
+                        </div>
+                    </div>
+
+                    <!-- Feature Toggles Section -->
+                    <div class="settings-section" id="section-features">
+                        <h2 class="section-title">Feature Toggles</h2>
+                        <p class="section-desc">Enable or disable system features globally</p>
+                        <div class="toggle-item">
+                            <div class="toggle-info"><h4>AI Anomaly Detection</h4><p>Poro AI real-time monitoring and alerts</p></div>
+                            <label class="toggle-switch"><input type="checkbox" id="featureAI" checked><span class="toggle-slider"></span></label>
+                        </div>
+                        <div class="toggle-item">
+                            <div class="toggle-info"><h4>Blockchain Audit Trail</h4><p>Immutable logging of all system actions</p></div>
+                            <label class="toggle-switch"><input type="checkbox" id="featureBlockchain" checked><span class="toggle-slider"></span></label>
+                        </div>
+                        <div class="toggle-item">
+                            <div class="toggle-info"><h4>Two-Factor Authentication (2FA)</h4><p>Require 2FA for all user accounts</p></div>
+                            <label class="toggle-switch"><input type="checkbox" id="feature2FA"><span class="toggle-slider"></span></label>
+                        </div>
+                        <div class="toggle-item">
+                            <div class="toggle-info"><h4>Google SSO Login</h4><p>Allow login using @deped.gov.ph Google accounts</p></div>
+                            <label class="toggle-switch"><input type="checkbox" id="featureGoogleSSO" checked><span class="toggle-slider"></span></label>
+                        </div>
+                        <div class="toggle-item">
+                            <div class="toggle-info"><h4>Report Generation</h4><p>Enable PDF and Excel report exports</p></div>
+                            <label class="toggle-switch"><input type="checkbox" id="featureReports" checked><span class="toggle-slider"></span></label>
+                        </div>
+                        <div class="toggle-item">
+                            <div class="toggle-info"><h4>Teacher Dashboard</h4><p>Enable teacher portal access</p></div>
+                            <label class="toggle-switch"><input type="checkbox" id="featureTeacher" checked><span class="toggle-slider"></span></label>
+                        </div>
+                        <button class="btn-save" onclick="saveSettings('features')">Save Feature Settings</button>
+                    </div>
+
+                    <!-- Email / SMS Section -->
+                    <div class="settings-section" id="section-email">
+                        <h2 class="section-title">Email & SMS Gateway</h2>
+                        <p class="section-desc">Configure email and SMS notification delivery</p>
+                        <div class="settings-form">
+                            <div class="form-group"><label>SMTP Server</label><input type="text" id="smtpServer" value="smtp.gmail.com"></div>
+                            <div class="form-row">
+                                <div class="form-group"><label>SMTP Port</label><input type="text" id="smtpPort" value="587"></div>
+                                <div class="form-group"><label>Encryption</label><select id="smtpEncryption"><option value="TLS" selected>TLS</option><option value="SSL">SSL</option><option value="None">None</option></select></div>
+                            </div>
+                            <div class="form-group"><label>Sender Email</label><input type="email" id="senderEmail" value="noreply@formify.deped.gov.ph"></div>
+                            <div class="form-group"><label>Sender Name</label><input type="text" id="senderName" value="Formify LIS"></div>
+                            <div class="form-group"><label>SMS API Key (Semaphore/SMS Gateway)</label><input type="password" id="smsApiKey" placeholder="Enter API key"></div>
+                            <button class="btn-save" onclick="saveSettings('email')">Save Email/SMS Settings</button>
+                            <button class="btn-outline" style="margin-top:0.5rem;" onclick="testEmail()">Test Email Configuration</button>
+                        </div>
+                    </div>
+
+                    <!-- Maintenance Section -->
+                    <div class="settings-section" id="section-maintenance">
+                        <h2 class="section-title">Maintenance</h2>
+                        <p class="section-desc">System maintenance and troubleshooting tools</p>
+                        
+                        <div id="maintenanceBanner" class="maintenance-banner">
+                            <i class="fas fa-tools"></i> Maintenance mode is currently <strong id="maintenanceStatus">OFF</strong>
+                        </div>
+                        
+                        <div class="toggle-item">
+                            <div class="toggle-info"><h4>Maintenance Mode</h4><p>Put the system in maintenance mode. Users will see a maintenance page.</p></div>
+                            <label class="toggle-switch"><input type="checkbox" id="maintenanceMode"><span class="toggle-slider"></span></label>
+                        </div>
+                        <div class="form-group"><label>Maintenance Message</label><textarea id="maintenanceMessage" rows="2">System is currently undergoing scheduled maintenance. Please check back later.</textarea></div>
+                        
+                        <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                            <h4 style="font-size:0.9rem;">Cache Management</h4>
+                            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                                <button class="btn-outline" onclick="clearCache('all')">Clear All Cache</button>
+                                <button class="btn-outline" onclick="clearCache('views')">Clear View Cache</button>
+                                <button class="btn-outline" onclick="clearCache('data')">Clear Data Cache</button>
+                            </div>
+                        </div>
+                        
+                        <button class="btn-save" onclick="saveSettings('maintenance')">Save Maintenance Settings</button>
+                    </div>
+
+                    <!-- Backup Section -->
+                    <div class="settings-section" id="section-backup">
+                        <h2 class="section-title">Backup Settings</h2>
+                        <p class="section-desc">Configure automatic backups and restoration</p>
+                        <div class="toggle-item">
+                            <div class="toggle-info"><h4>Automatic Backups</h4><p>Schedule regular system backups</p></div>
+                            <label class="toggle-switch"><input type="checkbox" id="autoBackup" checked><span class="toggle-slider"></span></label>
+                        </div>
+                        <div class="form-group"><label>Backup Frequency</label><select id="backupFrequency"><option value="daily" selected>Daily at 2:00 AM</option><option value="weekly">Weekly on Sunday</option><option value="monthly">Monthly on 1st day</option></select></div>
+                        <div class="form-group"><label>Backup Retention (days)</label><input type="number" id="backupRetention" value="30" min="7" max="365"></div>
+                        <div class="form-group"><label>Backup Storage Path</label><input type="text" id="backupPath" value="/var/backups/formify/"></div>
+                        
+                        <div style="margin-top: 1rem;">
+                            <h4 style="font-size:0.85rem;">Manual Backup</h4>
+                            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                                <button class="btn-primary" style="background:var(--secondary-green);" onclick="manualBackup()">Create Backup Now</button>
+                                <button class="btn-outline" onclick="downloadBackup()">Download Latest Backup</button>
+                            </div>
+                        </div>
+                        
+                        <button class="btn-save" onclick="saveSettings('backup')">Save Backup Settings</button>
+                    </div>
+
+                    <!-- Advanced Settings Section -->
+                    <div class="settings-section" id="section-advanced">
+                        <h2 class="section-title">Advanced Settings</h2>
+                        <p class="section-desc">API configuration, logging, and system limits</p>
+                        <div class="form-group"><label>API Rate Limit (requests per minute)</label><input type="number" id="apiRateLimit" value="60" min="10" max="500"></div>
+                        <div class="form-group"><label>Max File Upload Size (MB)</label><input type="number" id="maxUploadSize" value="10" min="1" max="100"></div>
+                        <div class="form-group"><label>Session Lifetime (minutes)</label><input type="number" id="sessionLifetime" value="60" min="15" max="480"></div>
+                        <div class="toggle-item">
+                            <div class="toggle-info"><h4>Debug Mode</h4><p>Enable detailed error logging (only for development)</p></div>
+                            <label class="toggle-switch"><input type="checkbox" id="debugMode"><span class="toggle-slider"></span></label>
+                        </div>
+                        <div class="toggle-item">
+                            <div class="toggle-info"><h4>API Logging</h4><p>Log all API requests and responses</p></div>
+                            <label class="toggle-switch"><input type="checkbox" id="apiLogging" checked><span class="toggle-slider"></span></label>
+                        </div>
+                        <button class="btn-save" onclick="saveSettings('advanced')">Save Advanced Settings</button>
+                        
+                        <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                            <h4 style="font-size:0.85rem; color:var(--danger-red);">Danger Zone</h4>
+                            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                                <button class="btn-danger" onclick="resetToDefaults()">Reset to Defaults</button>
+                                <button class="btn-outline" style="border-color:var(--danger-red);" onclick="clearAllData()">Clear All System Data</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function saveSettings(section) {
+            localStorage.setItem('settings_systemName', document.getElementById('systemName').value);
+            localStorage.setItem('settings_systemUrl', document.getElementById('systemUrl').value);
+            localStorage.setItem('settings_timezone', document.getElementById('timezone').value);
+            localStorage.setItem('settings_dateFormat', document.getElementById('dateFormat').value);
+            localStorage.setItem('settings_language', document.getElementById('language').value);
+            localStorage.setItem('settings_copyright', document.getElementById('copyright').value);
+            localStorage.setItem('settings_featureAI', document.getElementById('featureAI').checked);
+            localStorage.setItem('settings_featureBlockchain', document.getElementById('featureBlockchain').checked);
+            localStorage.setItem('settings_feature2FA', document.getElementById('feature2FA').checked);
+            localStorage.setItem('settings_featureGoogleSSO', document.getElementById('featureGoogleSSO').checked);
+            localStorage.setItem('settings_featureReports', document.getElementById('featureReports').checked);
+            localStorage.setItem('settings_featureTeacher', document.getElementById('featureTeacher').checked);
+            localStorage.setItem('settings_smtpServer', document.getElementById('smtpServer').value);
+            localStorage.setItem('settings_smtpPort', document.getElementById('smtpPort').value);
+            localStorage.setItem('settings_senderEmail', document.getElementById('senderEmail').value);
+            localStorage.setItem('settings_senderName', document.getElementById('senderName').value);
+            localStorage.setItem('settings_maintenanceMode', document.getElementById('maintenanceMode').checked);
+            localStorage.setItem('settings_maintenanceMessage', document.getElementById('maintenanceMessage').value);
+            localStorage.setItem('settings_autoBackup', document.getElementById('autoBackup').checked);
+            localStorage.setItem('settings_backupFrequency', document.getElementById('backupFrequency').value);
+            localStorage.setItem('settings_backupRetention', document.getElementById('backupRetention').value);
+            localStorage.setItem('settings_apiRateLimit', document.getElementById('apiRateLimit').value);
+            localStorage.setItem('settings_maxUploadSize', document.getElementById('maxUploadSize').value);
+            localStorage.setItem('settings_sessionLifetime', document.getElementById('sessionLifetime').value);
+            localStorage.setItem('settings_debugMode', document.getElementById('debugMode').checked);
+            localStorage.setItem('settings_apiLogging', document.getElementById('apiLogging').checked);
+            
+            updateMaintenanceBanner();
+            alert(`✅ ${section} settings saved successfully.`);
+        }
+
+        function loadSavedSettings() {
+            const systemName = localStorage.getItem('settings_systemName');
+            if (systemName) document.getElementById('systemName').value = systemName;
+            const systemUrl = localStorage.getItem('settings_systemUrl');
+            if (systemUrl) document.getElementById('systemUrl').value = systemUrl;
+            const timezone = localStorage.getItem('settings_timezone');
+            if (timezone) document.getElementById('timezone').value = timezone;
+            const dateFormat = localStorage.getItem('settings_dateFormat');
+            if (dateFormat) document.getElementById('dateFormat').value = dateFormat;
+            const language = localStorage.getItem('settings_language');
+            if (language) document.getElementById('language').value = language;
+            const copyright = localStorage.getItem('settings_copyright');
+            if (copyright) document.getElementById('copyright').value = copyright;
+            
+            const featureAI = localStorage.getItem('settings_featureAI');
+            if (featureAI !== null) document.getElementById('featureAI').checked = featureAI === 'true';
+            const featureBlockchain = localStorage.getItem('settings_featureBlockchain');
+            if (featureBlockchain !== null) document.getElementById('featureBlockchain').checked = featureBlockchain === 'true';
+            const feature2FA = localStorage.getItem('settings_feature2FA');
+            if (feature2FA !== null) document.getElementById('feature2FA').checked = feature2FA === 'true';
+            const featureGoogleSSO = localStorage.getItem('settings_featureGoogleSSO');
+            if (featureGoogleSSO !== null) document.getElementById('featureGoogleSSO').checked = featureGoogleSSO === 'true';
+            const featureReports = localStorage.getItem('settings_featureReports');
+            if (featureReports !== null) document.getElementById('featureReports').checked = featureReports === 'true';
+            const featureTeacher = localStorage.getItem('settings_featureTeacher');
+            if (featureTeacher !== null) document.getElementById('featureTeacher').checked = featureTeacher === 'true';
+            
+            const smtpServer = localStorage.getItem('settings_smtpServer');
+            if (smtpServer) document.getElementById('smtpServer').value = smtpServer;
+            const smtpPort = localStorage.getItem('settings_smtpPort');
+            if (smtpPort) document.getElementById('smtpPort').value = smtpPort;
+            const senderEmail = localStorage.getItem('settings_senderEmail');
+            if (senderEmail) document.getElementById('senderEmail').value = senderEmail;
+            const senderName = localStorage.getItem('settings_senderName');
+            if (senderName) document.getElementById('senderName').value = senderName;
+            
+            const maintenanceMode = localStorage.getItem('settings_maintenanceMode');
+            if (maintenanceMode !== null) document.getElementById('maintenanceMode').checked = maintenanceMode === 'true';
+            const maintenanceMessage = localStorage.getItem('settings_maintenanceMessage');
+            if (maintenanceMessage) document.getElementById('maintenanceMessage').value = maintenanceMessage;
+            
+            const autoBackup = localStorage.getItem('settings_autoBackup');
+            if (autoBackup !== null) document.getElementById('autoBackup').checked = autoBackup === 'true';
+            const backupFrequency = localStorage.getItem('settings_backupFrequency');
+            if (backupFrequency) document.getElementById('backupFrequency').value = backupFrequency;
+            const backupRetention = localStorage.getItem('settings_backupRetention');
+            if (backupRetention) document.getElementById('backupRetention').value = backupRetention;
+            
+            const apiRateLimit = localStorage.getItem('settings_apiRateLimit');
+            if (apiRateLimit) document.getElementById('apiRateLimit').value = apiRateLimit;
+            const maxUploadSize = localStorage.getItem('settings_maxUploadSize');
+            if (maxUploadSize) document.getElementById('maxUploadSize').value = maxUploadSize;
+            const sessionLifetime = localStorage.getItem('settings_sessionLifetime');
+            if (sessionLifetime) document.getElementById('sessionLifetime').value = sessionLifetime;
+            const debugMode = localStorage.getItem('settings_debugMode');
+            if (debugMode !== null) document.getElementById('debugMode').checked = debugMode === 'true';
+            const apiLogging = localStorage.getItem('settings_apiLogging');
+            if (apiLogging !== null) document.getElementById('apiLogging').checked = apiLogging === 'true';
+            
+            updateMaintenanceBanner();
+        }
+
+        function updateMaintenanceBanner() {
+            const isEnabled = document.getElementById('maintenanceMode').checked;
+            const banner = document.getElementById('maintenanceBanner');
+            const statusSpan = document.getElementById('maintenanceStatus');
+            if (isEnabled) {
+                banner.style.display = 'flex';
+                statusSpan.innerText = 'ON';
+                statusSpan.style.color = 'var(--warning-orange)';
+            } else {
+                banner.style.display = 'none';
+            }
+        }
+
+        function testEmail() {
+            alert('📧 Test email sent to admin@deped.gov.ph. Please check your inbox.');
+        }
+
+        function clearCache(type) {
+            alert(`🗑️ ${type} cache cleared successfully.`);
+        }
+
+        function manualBackup() {
+            alert('💾 Manual backup created successfully.\n\nBackup file: formify_backup_20260415_143022.sql');
+        }
+
+        function downloadBackup() {
+            alert('📥 Downloading latest backup file...');
+        }
+
+        function resetToDefaults() {
+            if (confirm('⚠️ Reset all settings to factory defaults? This action cannot be undone.')) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        function clearAllData() {
+            if (confirm('⚠️⚠️⚠️ DANGER: This will delete ALL system data including users, students, grades, forms.\n\nThis action cannot be undone. Are you absolutely sure?')) {
+                alert('System data cleared. The system will now restart.');
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        // Navigation
+        document.querySelectorAll('.settings-nav-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.settings-nav-link').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+                const sectionId = link.dataset.section;
+                document.querySelectorAll('.settings-section').forEach(section => section.classList.remove('active'));
+                document.getElementById(`section-${sectionId}`).classList.add('active');
+            });
+        });
+
+        // Maintenance mode toggle visual update
+        document.getElementById('maintenanceMode').addEventListener('change', updateMaintenanceBanner);
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+        function updateDateTime() { document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }); }
+
+        loadSavedSettings();
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+    </script>
+</body>
+</html>

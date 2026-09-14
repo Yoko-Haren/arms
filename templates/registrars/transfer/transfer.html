@@ -1,0 +1,904 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transfer Requests - Formify LIS Registrar</title>
+        <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        :root { 
+            --rich-black: #00072D; --dark-blue: #051650; --bangladesh-blue: #0A2472; 
+            --caribbean-blue: #123499; --secondary-green: #5EA173; --secondary-green-light: #7dbb8f;
+            --warning-orange: #f39c12; --danger-red: #dc3545; --gray-bg: #f5f7fb; 
+            --border-color: #e9ecef; --text-primary: #2d3748; --text-secondary: #718096; 
+            --sidebar-width: 280px; --sidebar-collapsed-width: 80px; 
+            --empty-state-color: #a0aec0; --card-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        body { background: var(--gray-bg); min-height: 100vh; }
+        .dashboard { display: flex; min-height: 100vh; }
+
+        .sidebar { width: var(--sidebar-width); background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%); color: white; position: fixed; height: 100vh; overflow-y: auto; overflow-x: hidden; transition: width 0.3s ease; z-index: 100; display: flex; flex-direction: column; }
+        .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
+        .sidebar.collapsed .sidebar-header h2, .sidebar.collapsed .user-details, .sidebar.collapsed .nav-link span, .sidebar.collapsed .logo-area span { display: none; }
+        .sidebar.collapsed .sidebar-header { justify-content: center; padding: 1.5rem 0.5rem; }
+        .sidebar.collapsed .sidebar-header .logo-area { display: none; }
+        .sidebar.collapsed .user-info { justify-content: center; padding: 0.8rem; margin: 0 0.5rem 1.5rem; }
+        .sidebar.collapsed .nav-link { justify-content: center; padding: 0.85rem 0; gap: 0; }
+        .sidebar.collapsed .nav-link i { margin: 0; font-size: 1.3rem; }
+        .sidebar.collapsed .user-avatar { margin: 0; }
+        .sidebar.collapsed .fold-btn { margin: 0 auto; }
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
+        .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .logo-area { display: flex; align-items: center; gap: 1rem; overflow: hidden; }
+        .sidebar-header i.fa-graduation-cap { font-size: 2rem; color: var(--secondary-green); flex-shrink: 0; }
+        .sidebar-header h2 { font-size: 1.1rem; font-weight: 600; line-height: 1.3; }
+        .sidebar-header h2 span { font-size: 0.7rem; opacity: 0.7; display: block; }
+        .fold-btn { background: rgba(255,255,255,0.1); border: none; color: white; cursor: pointer; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
+        .fold-btn:hover { background: rgba(255,255,255,0.25); }
+        .user-info { display: flex; align-items: center; gap: 1rem; padding: 1rem; margin: 0 1rem 1.5rem; background: rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; }
+        .user-avatar { width: 45px; height: 45px; background: var(--secondary-green); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; font-weight: 600; color: var(--rich-black); flex-shrink: 0; }
+        .user-details h4 { font-size: 0.9rem; margin-bottom: 0.2rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+        .nav-menu { list-style: none; padding: 0 0.75rem; flex: 1; }
+        .nav-item { margin-bottom: 0.25rem; }
+        .nav-link { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; color: rgba(255,255,255,0.8); text-decoration: none; border-radius: 10px; transition: all 0.3s; font-size: 0.9rem; cursor: pointer; white-space: nowrap; overflow: hidden; }
+        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+        .nav-link i { width: 22px; font-size: 1.1rem; text-align: center; flex-shrink: 0; }
+        .nav-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; }
+        .main-content { flex: 1; margin-left: var(--sidebar-width); padding: 1.5rem; transition: margin-left 0.3s; min-height: 100vh; }
+        .sidebar.collapsed ~ .main-content { margin-left: var(--sidebar-collapsed-width); }
+
+        .top-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; background: white; padding: 1rem 1.5rem; border-radius: 16px; box-shadow: var(--card-shadow); }
+        .page-title h1 { font-size: 1.3rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
+        .page-title p { color: var(--text-secondary); font-size: 0.8rem; }
+        .top-bar-actions { display: flex; align-items: center; gap: 1rem; position: relative; }
+        .date-display { display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.8rem; background: var(--gray-bg); padding: 0.4rem 0.8rem; border-radius: 8px; }
+        .notification-dropdown { position: relative; }
+        .notification-badge { position: relative; cursor: pointer; background: none; border: none; padding: 0.3rem; }
+        .notification-badge i { font-size: 1.3rem; color: var(--text-primary); }
+        .notification-badge:hover i { color: var(--secondary-green); }
+        .badge-count { position: absolute; top: -5px; right: -8px; background: #dc3545; color: white; font-size: 0.6rem; padding: 0.15rem 0.4rem; border-radius: 10px; min-width: 16px; text-align: center; font-weight: 700; }
+        .dropdown-menu { position: absolute; top: 45px; right: 0; width: 340px; background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 200; display: none; overflow: hidden; border: 1px solid var(--border-color); }
+        .dropdown-menu.show { display: block; animation: fadeInDown 0.25s ease; }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .dropdown-header { padding: 0.9rem 1.2rem; background: var(--gray-bg); border-bottom: 1px solid var(--border-color); font-weight: 700; font-size: 0.85rem; color: var(--rich-black); display: flex; justify-content: space-between; align-items: center; }
+        .notification-list { max-height: 380px; overflow-y: auto; }
+        .notification-item { display: flex; align-items: flex-start; gap: 0.8rem; padding: 0.9rem 1.2rem; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s; }
+        .notification-item:hover { background: var(--gray-bg); }
+        .notification-item.unread { background: rgba(94,161,115,0.06); border-left: 3px solid var(--secondary-green); }
+        .notification-icon { width: 36px; height: 36px; background: rgba(94,161,115,0.12); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--secondary-green); flex-shrink: 0; }
+        .notification-content { flex: 1; }
+        .notification-title { font-size: 0.8rem; font-weight: 600; color: var(--rich-black); margin-bottom: 0.15rem; }
+        .notification-message { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; }
+        .notification-time { font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.3rem; }
+        .dropdown-footer { padding: 0.7rem; text-align: center; border-top: 1px solid var(--border-color); background: var(--gray-bg); }
+        .dropdown-footer a { color: var(--secondary-green); font-size: 0.75rem; font-weight: 600; cursor: pointer; text-decoration: none; }
+
+        .poro-greeting { background: linear-gradient(135deg, #f0f9f0, #e8f5e9); border-radius: 20px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(94,161,115,0.3); flex-wrap: wrap; gap: 1rem; }
+        .poro-greeting-content { display: flex; align-items: center; gap: 1rem; }
+        .character-icon { width: 50px; height: 50px; background: var(--secondary-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(94,161,115,0.3); animation: bounce 2s ease infinite; overflow: hidden; }
+        .character-icon img { width: 100%; height: 100%; object-fit: cover; }
+        @keyframes bounce { 0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)} }
+        .poro-message h3 { font-size: 1rem; color: var(--rich-black); margin-bottom: 0.2rem; }
+        .poro-message p { font-size: 0.75rem; color: var(--text-secondary); }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: white; padding: 1rem; border-radius: 16px; display: flex; align-items: center; gap: 0.8rem; box-shadow: var(--card-shadow); cursor: default; transition: transform 0.2s; }
+        .stat-card:hover { transform: translateY(-2px); }
+        .stat-icon { width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
+        .stat-icon.blue { background: rgba(18,52,153,0.1); color: var(--caribbean-blue); }
+        .stat-icon.green { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .stat-icon.orange { background: rgba(243,156,18,0.1); color: var(--warning-orange); }
+        .stat-icon.red { background: rgba(220,53,69,0.1); color: var(--danger-red); }
+        .stat-info h3 { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; }
+        .stat-info .value { font-size: 1.5rem; font-weight: 700; color: var(--rich-black); }
+        .stat-info .sub { font-size: 0.65rem; color: var(--text-secondary); }
+
+        .quick-actions { display: flex; gap: 0.8rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .btn-primary { background: var(--secondary-green); color: white; padding: 0.5rem 1.2rem; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; text-decoration: none; transition: all 0.2s; }
+        .btn-primary:hover { background: #3d8b5a; transform: translateY(-1px); }
+        .btn-outline { background: transparent; border: 2px solid var(--border-color); color: var(--text-primary); padding: 0.5rem 1.2rem; border-radius: 10px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; text-decoration: none; transition: all 0.2s; }
+        .btn-outline:hover { border-color: var(--secondary-green); color: var(--secondary-green); }
+        .btn-warning { background: var(--warning-orange); color: white; padding: 0.5rem 1.2rem; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; transition: all 0.2s; }
+        .btn-warning:hover { background: #e67e22; transform: translateY(-1px); }
+        .btn-danger { background: var(--danger-red); color: white; padding: 0.5rem 1.2rem; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
+        .btn-danger:hover { background: #c82333; }
+
+        .filter-bar { background: white; padding: 1rem 1.5rem; border-radius: 16px; margin-bottom: 1.5rem; box-shadow: var(--card-shadow); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+        .search-box { display: flex; align-items: center; background: var(--gray-bg); padding: 0.4rem 0.8rem; border-radius: 10px; min-width: 300px; border: 1px solid var(--border-color); }
+        .search-box i { color: var(--text-secondary); margin-right: 0.5rem; }
+        .search-box input { border: none; background: transparent; padding: 0.5rem; width: 100%; outline: none; font-size: 0.9rem; color: var(--text-primary); }
+        .filter-group { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+        .filter-select { padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; background: white; font-size: 0.8rem; color: var(--text-primary); cursor: pointer; outline: none; }
+        .filter-select:focus { border-color: var(--secondary-green); }
+
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; }
+        .tab { padding: 0.5rem 1.2rem; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; border-radius: 8px 8px 0 0; transition: all 0.2s; background: none; border: none; }
+        .tab:hover { color: var(--secondary-green); }
+        .tab.active { color: var(--secondary-green); border-bottom: 3px solid var(--secondary-green); }
+        .tab-badge { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 10px; font-size: 0.65rem; font-weight: 700; margin-left: 0.3rem; }
+
+        .table-container { background: white; border-radius: 16px; padding: 0; box-shadow: var(--card-shadow); overflow-x: auto; margin-bottom: 1.5rem; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 1.2rem 1.5rem 0; margin-bottom: 1rem; }
+        .section-header h2 { font-size: 1rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
+        .section-header h2 i { color: var(--secondary-green); }
+        .view-all { color: var(--secondary-green); text-decoration: none; font-size: 0.75rem; cursor: pointer; font-weight: 600; }
+
+        .transfer-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .transfer-table th { text-align: left; padding: 1rem 1.5rem; background: var(--gray-bg); color: var(--text-secondary); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); }
+        .transfer-table td { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
+        .transfer-table tbody tr { cursor: pointer; transition: background 0.2s; }
+        .transfer-table tbody tr:hover { background: var(--gray-bg); }
+        .student-name { font-weight: 600; color: var(--rich-black); }
+        .badge-status { padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.65rem; font-weight: 600; white-space: nowrap; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-approved, .status-documents_released { background: #d4edda; color: #155724; }
+        .status-rejected { background: #f8d7da; color: #721c24; }
+        .status-documents_requested { background: #cce5ff; color: #004085; }
+        .badge-type { padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.65rem; font-weight: 600; }
+        .type-incoming { background: rgba(18,52,153,0.1); color: var(--caribbean-blue); }
+        .type-outgoing { background: rgba(243,156,18,0.1); color: var(--warning-orange); }
+        .empty-state { text-align: center; padding: 3rem 2rem; color: var(--empty-state-color); }
+        .empty-state i { font-size: 3rem; margin-bottom: 1rem; display: block; }
+        .empty-state h4 { color: var(--text-secondary); margin-bottom: 0.5rem; }
+        .empty-state p { font-size: 0.85rem; }
+
+        .dropdown { position: relative; display: inline-block; }
+        .dots-btn { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 0.3rem 0.5rem; border-radius: 6px; transition: all 0.2s; font-size: 0.9rem; }
+        .dots-btn:hover { background: var(--gray-bg); color: var(--secondary-green); }
+        .dropdown-content { display: none; position: absolute; right: 0; top: 100%; background: white; min-width: 180px; box-shadow: 0 8px 20px rgba(0,0,0,0.15); border-radius: 12px; z-index: 100; overflow: hidden; margin-top: 0.3rem; border: 1px solid var(--border-color); }
+        .dropdown-content.show { display: block; animation: fadeInDown 0.2s ease; }
+        .dropdown-content a { color: var(--text-primary); padding: 0.6rem 1rem; text-decoration: none; display: flex; align-items: center; gap: 0.6rem; font-size: 0.8rem; transition: all 0.2s; cursor: pointer; }
+        .dropdown-content a:hover { background: var(--gray-bg); color: var(--secondary-green); }
+        .dropdown-content a.text-danger { color: var(--danger-red); }
+        .dropdown-content a.text-danger:hover { background: #fff5f5; }
+        .dropdown-divider { height: 1px; background: var(--border-color); margin: 0.3rem 0; }
+
+        .pagination { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); }
+        .pagination-info { font-size: 0.8rem; color: var(--text-secondary); }
+        .pagination-controls { display: flex; gap: 0.5rem; }
+        .page-btn { width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); border-radius: 8px; background: white; color: var(--text-primary); cursor: pointer; transition: all 0.2s; font-size: 0.8rem; }
+        .page-btn:hover { background: var(--secondary-green); color: white; border-color: var(--secondary-green); }
+        .page-btn.active { background: var(--secondary-green); color: white; border-color: var(--secondary-green); }
+
+        .batch-upload-area { border: 2px dashed var(--border-color); border-radius: 16px; padding: 2rem; text-align: center; margin-top: 1rem; cursor: pointer; transition: all 0.2s; background: var(--gray-bg); }
+        .batch-upload-area:hover { border-color: var(--secondary-green); background: rgba(94,161,115,0.05); }
+        .batch-upload-area.dragover { border-color: var(--secondary-green); background: rgba(94,161,115,0.08); }
+        .batch-upload-area i { font-size: 2.5rem; color: var(--text-secondary); margin-bottom: 1rem; }
+        .batch-upload-area h4 { color: var(--rich-black); margin-bottom: 0.3rem; }
+        .file-info { display: none; margin-top: 1rem; padding: 0.8rem; background: white; border-radius: 10px; border: 1px solid var(--border-color); align-items: center; gap: 0.8rem; }
+        .file-info.show { display: flex; }
+        .file-info i { font-size: 1.5rem; color: var(--secondary-green); }
+        .file-info .file-details { flex: 1; text-align: left; }
+        .file-info .file-details strong { display: block; font-size: 0.85rem; color: var(--rich-black); }
+        .file-info .file-details span { font-size: 0.7rem; color: var(--text-secondary); }
+        .file-info .file-remove { cursor: pointer; color: var(--danger-red); font-size: 1.1rem; padding: 0.3rem; }
+        .upload-progress { display: none; margin-top: 1rem; }
+        .upload-progress.show { display: block; }
+        .progress-bar-bg { height: 6px; background: var(--border-color); border-radius: 3px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: var(--secondary-green); border-radius: 3px; transition: width 0.3s; width: 0%; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 24px; width: 90%; max-width: 550px; max-height: 85vh; overflow-y: auto; animation: modalSlideIn 0.3s ease; }
+        .modal-content.large { max-width: 700px; }
+        @keyframes modalSlideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10; border-radius: 24px 24px 0 0; }
+        .modal-header h2 { font-size: 1.1rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
+        .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary); padding: 0 0.3rem; line-height: 1; }
+        .modal-close:hover { color: var(--danger-red); }
+        .modal-body { padding: 1.5rem; }
+        .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.5rem; position: sticky; bottom: 0; background: white; border-radius: 0 0 24px 24px; }
+        .detail-row { display: flex; padding: 0.6rem 0; border-bottom: 1px solid var(--border-color); }
+        .detail-label { width: 130px; font-weight: 600; font-size: 0.8rem; color: var(--text-primary); flex-shrink: 0; }
+        .detail-value { flex: 1; font-size: 0.8rem; color: var(--text-secondary); }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.3rem; color: var(--text-primary); }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.5rem 0.8rem; border: 2px solid var(--border-color); border-radius: 8px; font-size: 0.85rem; color: var(--text-primary); outline: none; transition: border-color 0.2s; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--secondary-green); }
+        .form-group textarea { resize: vertical; font-family: inherit; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 0.5rem; }
+        .toast { background: white; border-radius: 12px; padding: 0.8rem 1.2rem; box-shadow: 0 8px 25px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 0.8rem; min-width: 300px; animation: slideInRight 0.3s ease; border-left: 4px solid var(--secondary-green); }
+        .toast.error { border-left-color: var(--danger-red); }
+        .toast.warning { border-left-color: var(--warning-orange); }
+        .toast.info { border-left-color: var(--caribbean-blue); }
+        .toast i { font-size: 1.1rem; }
+        .toast.success i { color: var(--secondary-green); }
+        .toast.error i { color: var(--danger-red); }
+        .toast.warning i { color: var(--warning-orange); }
+        .toast.info i { color: var(--caribbean-blue); }
+        .toast-content { flex: 1; }
+        .toast-content h4 { font-size: 0.85rem; color: var(--rich-black); margin-bottom: 0.1rem; }
+        .toast-content p { font-size: 0.7rem; color: var(--text-secondary); }
+        .toast-close { background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 0.9rem; padding: 0.2rem; }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .mobile-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
+        .mobile-overlay.show { display: block; }
+
+        @media (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } .filter-bar { flex-direction: column; align-items: flex-start; } .search-box { width: 100%; } }
+        @media (max-width: 768px) { .sidebar { transform: translateX(-100%); width: var(--sidebar-width) !important; } .sidebar.mobile-open { transform: translateX(0); } .main-content { margin-left: 0 !important; } .stats-grid { grid-template-columns: 1fr; } .form-row { grid-template-columns: 1fr; } .tabs { overflow-x: auto; } }
+    </style>
+</head>
+<body>
+<div class="mobile-overlay" id="mobileOverlay"></div>
+
+<div class="dashboard">
+    <!-- SIDEBAR -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <i class="fas fa-graduation-cap"></i>
+                <h2>Formify <span>Registrar Portal</span></h2>
+            </div>
+            <button class="fold-btn" id="foldBtn"><i class="fas fa-chevron-left"></i></button>
+        </div>
+        <div class="user-info">
+            <div class="user-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+            <div class="user-details">
+                <h4>{{ request.user.get_full_name }}</h4>
+                <p>School Registrar</p>
+            </div>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="{% url 'registrars:dashboard' %}" class="nav-link"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:student-records' %}" class="nav-link"><i class="fi fi-rr-user"></i><span>Student Records</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:enrollment-management' %}" class="nav-link"><i class="fi fi-rr-file-invoice"></i><span>Enrollment</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:grade-validation' %}" class="nav-link"><i class="fi fi-rr-check-double"></i><span>Grade Validation</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:forms' %}" class="nav-link"><i class="fi fi-rr-folder-open"></i><span>School Forms</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:transfer-management' %}" class="nav-link active"><i class="fi fi-rr-exchange-alt"></i><span>Transfer Requests</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:reports-analytics' %}" class="nav-link"><i class="fi fi-rr-chart-line-up"></i><span>Reports</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:section-schedule-management' %}" class="nav-link"><i class="fi fi-rr-calendar"></i><span>Sections & Schedule</span></a></li>
+        </ul>
+        <ul class="nav-menu nav-footer">
+            <li class="nav-item"><a href="{% url 'signout' %}" class="nav-link"><i class="fi fi-rr-sign-out-alt"></i><span>Logout</span></a></li>
+        </ul>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content" id="mainContent">
+        <!-- TOP BAR -->
+        <div class="top-bar">
+            <div class="page-title">
+                <h1 id="greetingText">
+                    <i class="fas fa-exchange-alt" style="color:var(--secondary-green);"></i> Transfer Requests Management
+                </h1>
+                <p>Process incoming/outgoing student transfers and track request status</p>
+            </div>
+            <div class="top-bar-actions">
+                <div class="date-display"><i class="fas fa-calendar"></i><span id="currentDate"></span></div>
+                <div class="notification-dropdown">
+                    <button class="notification-badge" id="notificationBtn">
+                        <i class="fas fa-bell"></i>
+                        <span class="badge-count" id="notifCount">0</span>
+                    </button>
+                    <div class="dropdown-menu" id="notificationDropdown">
+                        <div class="dropdown-header">
+                            <span>Notifications</span>
+                            <span style="font-size:0.7rem;opacity:0.7;" id="notifUnreadLabel">0 unread</span>
+                        </div>
+                        <div class="notification-list" id="notificationList">
+                            <div class="notification-item" style="justify-content:center;padding:2rem;">
+                                <span style="color:var(--text-secondary);font-size:0.8rem;">No notifications</span>
+                            </div>
+                        </div>
+                        <div class="dropdown-footer">
+                            <a onclick="markAllRead()">Mark all as read</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PORO GREETING -->
+        <div class="poro-greeting">
+            <div class="poro-greeting-content">
+                <div class="character-icon">
+                    <img src="{% static 'shared/poro/Poro.png' %}" alt="Poro" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fas fa-smile\' style=\'font-size:1.8rem;color:white;\'></i>';">
+                </div>
+                <div class="poro-message">
+                    <h3>✨ Transfer Requests Center ✨</h3>
+                    <p id="poroMessage">Manage incoming and outgoing student transfers efficiently.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- STATS -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon blue"><i class="fas fa-sign-in-alt"></i></div>
+                <div class="stat-info"><h3>Incoming Requests</h3><div class="value" id="statIncoming">—</div><div class="sub">Awaiting action</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon orange"><i class="fas fa-sign-out-alt"></i></div>
+                <div class="stat-info"><h3>Outgoing Requests</h3><div class="value" id="statOutgoing">—</div><div class="sub">Pending release</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+                <div class="stat-info"><h3>Completed</h3><div class="value" id="statCompleted">—</div><div class="sub">This school year</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon red"><i class="fas fa-clock"></i></div>
+                <div class="stat-info"><h3>Pending Documents</h3><div class="value" id="statPendingDocs">—</div><div class="sub">Incomplete requirements</div></div>
+            </div>
+        </div>
+
+        <!-- QUICK ACTIONS -->
+        <div class="quick-actions">
+            <button class="btn-primary" onclick="openNewTransferModal()"><i class="fas fa-plus"></i> New Transfer Request</button>
+            <button class="btn-warning" onclick="document.getElementById('batchFileInput').click()"><i class="fas fa-upload"></i> Batch Upload</button>
+            <button class="btn-outline" onclick="downloadTemplate()"><i class="fas fa-download"></i> Download Template</button>
+            <button class="btn-outline" onclick="exportTransferList()"><i class="fas fa-file-export"></i> Export List</button>
+        </div>
+
+        <!-- FILTER BAR -->
+        <div class="filter-bar">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Search by name, LRN, or school..." onkeyup="debounceFilter()">
+            </div>
+            <div class="filter-group">
+                <select class="filter-select" id="filterType" onchange="loadTransfers()">
+                    <option value="">All Types</option>
+                    <option value="INCOMING">Incoming</option>
+                    <option value="OUTGOING">Outgoing</option>
+                </select>
+                <select class="filter-select" id="filterStatus" onchange="loadTransfers()">
+                    <option value="">All Status</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Documents_Requested">Documents Requested</option>
+                    <option value="Documents_Released">Documents Released</option>
+                    <option value="Rejected">Rejected</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- TABS -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('all')">All Requests</button>
+            <button class="tab" onclick="switchTab('INCOMING')">Incoming <span class="tab-badge" id="incomingTabBadge" style="background:rgba(18,52,153,0.1);color:var(--caribbean-blue);">0</span></button>
+            <button class="tab" onclick="switchTab('OUTGOING')">Outgoing <span class="tab-badge" id="outgoingTabBadge" style="background:rgba(243,156,18,0.1);color:var(--warning-orange);">0</span></button>
+            <button class="tab" onclick="switchTab('Pending')">Pending Approval</button>
+        </div>
+
+        <!-- BATCH UPLOAD (Hidden) -->
+        <input type="file" id="batchFileInput" accept=".csv,.xlsx,.xls" style="display:none;" onchange="handleFileSelect(event)">
+
+        <!-- TABLE -->
+        <div class="table-container">
+            <div class="section-header">
+                <h2><i class="fas fa-exchange-alt"></i> Student Transfer Requests</h2>
+                <span class="view-all" id="recordCount">Showing 0 requests</span>
+            </div>
+            <table class="transfer-table">
+                <thead>
+                    <tr>
+                        <th>LRN</th>
+                        <th>Student Name</th>
+                        <th>Type</th>
+                        <th>From School</th>
+                        <th>To School</th>
+                        <th>Grade Level</th>
+                        <th>Request Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="transferTableBody">
+                    <tr><td colspan="9"><div class="empty-state"><i class="fas fa-spinner fa-pulse"></i><h4>Loading transfer requests...</h4></div></td></tr>
+                </tbody>
+            </table>
+            <div class="pagination">
+                <div class="pagination-info" id="paginationInfo">Showing 0 records</div>
+                <div class="pagination-controls" id="paginationControls"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- VIEW DETAILS MODAL -->
+<div id="viewTransferModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-file-alt" style="color:var(--secondary-green);"></i> Transfer Request Details</h2>
+            <button class="modal-close" onclick="closeModal('viewTransferModal')">&times;</button>
+        </div>
+        <div class="modal-body" id="viewTransferBody"></div>
+        <div class="modal-footer">
+            <button class="btn-outline" onclick="closeModal('viewTransferModal')">Close</button>
+            <button class="btn-primary" id="btnRequestDocs" onclick="processTransfer('request_docs')" style="display:none;"><i class="fas fa-file-signature"></i> Request Documents</button>
+            <button class="btn-primary" id="btnRelease" onclick="processTransfer('release')" style="display:none;"><i class="fas fa-check"></i> Release Documents</button>
+            <button class="btn-danger" id="btnReject" onclick="processTransfer('reject')" style="display:none;"><i class="fas fa-times"></i> Reject</button>
+        </div>
+    </div>
+</div>
+
+<!-- NEW TRANSFER MODAL -->
+<div id="newTransferModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-plus-circle" style="color:var(--secondary-green);"></i> New Transfer Request</h2>
+            <button class="modal-close" onclick="closeModal('newTransferModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Student LRN *</label>
+                <input type="text" id="newLRN" placeholder="12-digit LRN">
+            </div>
+            <div class="form-group">
+                <label>Transfer Type *</label>
+                <select id="newType">
+                    <option value="INCOMING">Incoming (Transfer In)</option>
+                    <option value="OUTGOING">Outgoing (Transfer Out)</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>From School</label><input type="text" id="newFromSchool" placeholder="Current/Previous School"></div>
+                <div class="form-group"><label>To School</label><input type="text" id="newToSchool" placeholder="Destination School"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>From School Address</label><input type="text" id="newFromAddress" placeholder="Address"></div>
+                <div class="form-group"><label>To School Address</label><input type="text" id="newToAddress" placeholder="Address"></div>
+            </div>
+            <div class="form-group">
+                <label>Grade Level</label>
+                <select id="newGradeLevel">
+                    <option value="">Select Grade Level</option>
+                    {% for gl in grade_levels %}<option value="{{ gl.id }}">{{ gl.grade_name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Reason for Transfer</label>
+                <textarea id="newReason" rows="3" placeholder="Reason for transfer..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-outline" onclick="closeModal('newTransferModal')">Cancel</button>
+            <button class="btn-primary" onclick="submitNewTransfer()" id="btnSubmitTransfer"><i class="fas fa-save"></i> Submit Request</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+    // ==================== SIDEBAR LOGIC ====================
+    const sidebar = document.getElementById('sidebar');
+    const foldBtn = document.getElementById('foldBtn');
+    const mainContent = document.getElementById('mainContent');
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    let sidebarCollapsed = false;
+
+    function updateSidebarState() {
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            sidebar.classList.remove('collapsed');
+            sidebarCollapsed = false;
+            foldBtn.querySelector('i').className = 'fas fa-chevron-left';
+            if (!sidebar.classList.contains('mobile-open')) mobileOverlay.classList.remove('show');
+        } else {
+            sidebar.classList.remove('mobile-open');
+            mobileOverlay.classList.remove('show');
+            if (sidebarCollapsed) {
+                sidebar.classList.add('collapsed');
+                foldBtn.querySelector('i').className = 'fas fa-chevron-right';
+            } else {
+                sidebar.classList.remove('collapsed');
+                foldBtn.querySelector('i').className = 'fas fa-chevron-left';
+            }
+        }
+        adjustMainMargin();
+    }
+
+    function adjustMainMargin() {
+        mainContent.style.marginLeft = window.innerWidth <= 768 ? '0' :
+            sidebar.classList.contains('collapsed') ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)';
+    }
+
+    foldBtn.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+            const isOpen = sidebar.classList.toggle('mobile-open');
+            mobileOverlay.classList.toggle('show', isOpen);
+        } else {
+            sidebarCollapsed = !sidebarCollapsed;
+            sidebar.classList.toggle('collapsed', sidebarCollapsed);
+            foldBtn.querySelector('i').className = sidebarCollapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
+            adjustMainMargin();
+        }
+    });
+
+    mobileOverlay.addEventListener('click', () => {
+        sidebar.classList.remove('mobile-open');
+        mobileOverlay.classList.remove('show');
+    });
+
+    window.addEventListener('resize', updateSidebarState);
+    updateSidebarState();
+
+    // ==================== UTILITIES ====================
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+        toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i>
+            <div class="toast-content"><h4>${type.charAt(0).toUpperCase() + type.slice(1)}</h4><p>${message}</p></div>
+            <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>`;
+        container.appendChild(toast);
+        setTimeout(() => { if (toast.parentElement) toast.remove(); }, 5000);
+    }
+
+    function getCookie(name) {
+        let v = null;
+        document.cookie.split(';').forEach(c => {
+            c = c.trim();
+            if (c.substring(0, name.length + 1) === (name + '=')) v = decodeURIComponent(c.substring(name.length + 1));
+        });
+        return v;
+    }
+
+    let currentDropdown = null;
+    let viewingId = null;
+    let currentTab = 'all';
+
+    // ==================== DATA LOADING ====================
+    function loadTransfers() {
+        const type = document.getElementById('filterType').value;
+        const status = document.getElementById('filterStatus').value;
+        const search = document.getElementById('searchInput').value;
+
+        let url = '/registrars/transfer/list-data/?';
+        if (type) url += `transfer_type=${encodeURIComponent(type)}&`;
+        if (status) url += `status=${encodeURIComponent(status)}&`;
+        if (search) url += `search=${encodeURIComponent(search)}&`;
+
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    window.transferData = data.transfers;
+                    window.pendingList = data.pending;
+                    renderAll();
+                    updateStats(data);
+                } else {
+                    showToast(data.error || 'Error loading transfers', 'error');
+                }
+            })
+            .catch(() => showToast('Error loading transfer data', 'error'));
+    }
+
+    function updateStats(data) {
+        const transfers = data.transfers;
+        document.getElementById('statIncoming').textContent = transfers.filter(t => t.transfer_type_code === 'INCOMING').length;
+        document.getElementById('statOutgoing').textContent = transfers.filter(t => t.transfer_type_code === 'OUTGOING').length;
+        document.getElementById('statCompleted').textContent = transfers.filter(t => t.status === 'Documents_Released').length;
+        document.getElementById('statPendingDocs').textContent = transfers.filter(t => t.status === 'Documents_Requested').length;
+        document.getElementById('incomingTabBadge').textContent = transfers.filter(t => t.transfer_type_code === 'INCOMING').length;
+        document.getElementById('outgoingTabBadge').textContent = transfers.filter(t => t.transfer_type_code === 'OUTGOING').length;
+    }
+
+    function renderAll() {
+        renderTransferTable(window.transferData || []);
+    }
+
+    function renderTransferTable(records) {
+        let filtered = [...records];
+        
+        // Apply tab filter
+        if (currentTab === 'INCOMING') filtered = filtered.filter(r => r.transfer_type_code === 'INCOMING');
+        else if (currentTab === 'OUTGOING') filtered = filtered.filter(r => r.transfer_type_code === 'OUTGOING');
+        else if (currentTab === 'Pending') filtered = filtered.filter(r => r.status === 'Pending');
+
+        const tbody = document.getElementById('transferTableBody');
+        document.getElementById('recordCount').textContent = `Showing ${filtered.length} requests`;
+
+        if (!filtered.length) {
+            tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><i class="fas fa-inbox"></i><h4>No transfer requests found</h4><p>Try adjusting your filters or create a new transfer request.</p></div></td></tr>`;
+            document.getElementById('paginationInfo').textContent = 'Showing 0 records';
+            return;
+        }
+
+        tbody.innerHTML = filtered.map(r => `
+            <tr onclick="if(!event.target.closest('.dropdown')&&!event.target.closest('button'))viewTransfer(${r.id})" style="cursor:pointer;">
+                <td><span style="font-size:0.75rem;color:var(--text-secondary);">${escapeHtml(r.lrn || '—')}</span></td>
+                <td><span class="student-name">${escapeHtml(r.student_name)}</span></td>
+                <td><span class="badge-type ${r.transfer_type_code === 'INCOMING' ? 'type-incoming' : 'type-outgoing'}">${escapeHtml(r.transfer_type)}</span></td>
+                <td>${escapeHtml(r.from_school)}</td>
+                <td>${escapeHtml(r.to_school)}</td>
+                <td>${escapeHtml(r.grade_level)}</td>
+                <td>${r.request_date}</td>
+                <td><span class="badge-status status-${r.status.toLowerCase()}">${r.status_display}</span></td>
+                <td onclick="event.stopPropagation()">
+                    <span class="dropdown">
+                        <button class="dots-btn" onclick="toggleDots(event,this)"><i class="fas fa-ellipsis-v"></i></button>
+                        <div class="dropdown-content">
+                            <a onclick="viewTransfer(${r.id})"><i class="fas fa-search"></i> View Details</a>
+                            ${r.status === 'Pending' ? `<a onclick="processTransferById(${r.id},'request_docs')"><i class="fas fa-file-signature"></i> Request Documents</a>` : ''}
+                            ${r.status === 'Documents_Requested' ? `<a onclick="processTransferById(${r.id},'release')"><i class="fas fa-check"></i> Release Documents</a>` : ''}
+                            ${r.status === 'Pending' || r.status === 'Documents_Requested' ? `<a onclick="processTransferById(${r.id},'reject')" class="text-danger"><i class="fas fa-times"></i> Reject</a>` : ''}
+                            <div class="dropdown-divider"></div>
+                            <a onclick="printTransfer(${r.id})"><i class="fas fa-print"></i> Print</a>
+                        </div>
+                    </span>
+                </td>
+            </tr>`).join('');
+        document.getElementById('paginationInfo').textContent = `Showing ${filtered.length} records`;
+    }
+
+    function getStatusClass(status) {
+        const map = {
+            'Pending': 'status-pending',
+            'Documents_Requested': 'status-documents_requested',
+            'Documents_Released': 'status-documents_released',
+            'Rejected': 'status-rejected'
+        };
+        return map[status] || 'status-pending';
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // ==================== DROPDOWN LOGIC ====================
+    window.toggleDots = function(event, btn) {
+        event.preventDefault();
+        event.stopPropagation();
+        const content = btn.parentElement.querySelector('.dropdown-content');
+        if (currentDropdown && currentDropdown !== content) currentDropdown.classList.remove('show');
+        content.classList.toggle('show');
+        currentDropdown = content.classList.contains('show') ? content : null;
+    };
+
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('.dropdown')) {
+            if (currentDropdown) { currentDropdown.classList.remove('show'); currentDropdown = null; }
+        }
+    });
+
+    // ==================== TABS ====================
+    window.switchTab = function(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById('filterType').value = tab === 'INCOMING' ? 'INCOMING' : tab === 'OUTGOING' ? 'OUTGOING' : '';
+        renderAll();
+    };
+
+    // ==================== FILTER DEBOUNCE ====================
+    let filterTimeout;
+    function debounceFilter() {
+        clearTimeout(filterTimeout);
+        filterTimeout = setTimeout(() => loadTransfers(), 400);
+    }
+
+    // ==================== VIEW TRANSFER ====================
+    window.viewTransfer = function(id) {
+        fetch(`/registrars/transfer/${id}/detail-data/`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    viewingId = id;
+                    const t = data.data;
+                    document.getElementById('viewTransferBody').innerHTML = `
+                        <div class="detail-row"><div class="detail-label">LRN</div><div class="detail-value">${escapeHtml(t.lrn || '—')}</div></div>
+                        <div class="detail-row"><div class="detail-label">Student Name</div><div class="detail-value"><strong>${escapeHtml(t.student_name)}</strong></div></div>
+                        <div class="detail-row"><div class="detail-label">Transfer Type</div><div class="detail-value">${t.transfer_type}</div></div>
+                        <div class="detail-row"><div class="detail-label">Grade Level</div><div class="detail-value">${escapeHtml(t.grade_level)}</div></div>
+                        <div class="detail-row"><div class="detail-label">From School</div><div class="detail-value">${escapeHtml(t.from_school)}</div></div>
+                        <div class="detail-row"><div class="detail-label">From Address</div><div class="detail-value">${escapeHtml(t.from_school_address)}</div></div>
+                        <div class="detail-row"><div class="detail-label">To School</div><div class="detail-value">${escapeHtml(t.to_school)}</div></div>
+                        <div class="detail-row"><div class="detail-label">To Address</div><div class="detail-value">${escapeHtml(t.to_school_address)}</div></div>
+                        <div class="detail-row"><div class="detail-label">Request Date</div><div class="detail-value">${t.request_date}</div></div>
+                        <div class="detail-row"><div class="detail-label">Status</div><div class="detail-value"><span class="badge-status ${getStatusClass(t.status)}">${t.status_display}</span></div></div>
+                        ${t.release_date ? `<div class="detail-row"><div class="detail-label">Release Date</div><div class="detail-value">${t.release_date}</div></div>` : ''}
+                        <div class="detail-row"><div class="detail-label">Reason</div><div class="detail-value">${escapeHtml(t.reason || '—')}</div></div>
+                        <div class="detail-row"><div class="detail-label">Remarks</div><div class="detail-value">${escapeHtml(t.remarks || '—')}</div></div>`;
+
+                    // Show/hide action buttons based on status
+                    document.getElementById('btnRequestDocs').style.display = t.status === 'Pending' ? 'inline-flex' : 'none';
+                    document.getElementById('btnRelease').style.display = t.status === 'Documents_Requested' ? 'inline-flex' : 'none';
+                    document.getElementById('btnReject').style.display = (t.status === 'Pending' || t.status === 'Documents_Requested') ? 'inline-flex' : 'none';
+                    
+                    document.getElementById('viewTransferModal').classList.add('active');
+                }
+            })
+            .catch(() => showToast('Error loading transfer details', 'error'));
+    };
+
+    // ==================== PROCESS TRANSFER ====================
+    window.processTransfer = function(action) {
+        if (!viewingId) return;
+        processTransferById(viewingId, action);
+        closeModal('viewTransferModal');
+    };
+
+    window.processTransferById = function(id, action) {
+        const actionLabels = {
+            'request_docs': 'Request Documents for',
+            'release': 'Release Documents for',
+            'reject': 'Reject'
+        };
+        if (!confirm(`${actionLabels[action] || 'Process'} this transfer request?`)) return;
+
+        fetch(`/registrars/transfer/${id}/process/`, {
+            method: 'POST',
+            body: JSON.stringify({ action: action }),
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                showToast(d.message);
+                loadTransfers();
+            } else {
+                showToast(d.error || 'Error', 'error');
+            }
+        })
+        .catch(() => showToast('Network error', 'error'));
+    };
+
+    // ==================== NEW TRANSFER ====================
+    window.openNewTransferModal = function() {
+        document.getElementById('newLRN').value = '';
+        document.getElementById('newFromSchool').value = '';
+        document.getElementById('newToSchool').value = '';
+        document.getElementById('newFromAddress').value = '';
+        document.getElementById('newToAddress').value = '';
+        document.getElementById('newReason').value = '';
+        document.getElementById('newTransferModal').classList.add('active');
+    };
+
+    window.submitNewTransfer = function() {
+        const lrn = document.getElementById('newLRN').value.trim();
+        const transferType = document.getElementById('newType').value;
+        const fromSchool = document.getElementById('newFromSchool').value.trim();
+        const toSchool = document.getElementById('newToSchool').value.trim();
+
+        if (!lrn) { showToast('Please enter a Student LRN', 'warning'); return; }
+        if (transferType === 'OUTGOING' && !toSchool) { showToast('Destination school is required for outgoing transfers', 'warning'); return; }
+        if (transferType === 'INCOMING' && !fromSchool) { showToast('Originating school is required for incoming transfers', 'warning'); return; }
+
+        const btn = document.getElementById('btnSubmitTransfer');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Submitting...';
+
+        const formData = new FormData();
+        formData.append('lrn', lrn);
+        formData.append('transfer_type', transferType);
+        formData.append('from_school_name', fromSchool);
+        formData.append('to_school_name', toSchool);
+        formData.append('from_school_address', document.getElementById('newFromAddress').value);
+        formData.append('to_school_address', document.getElementById('newToAddress').value);
+        formData.append('grade_level', document.getElementById('newGradeLevel').value);
+        formData.append('reason', document.getElementById('newReason').value);
+
+        fetch('/registrars/transfer/create/', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+        .then(r => r.json())
+        .then(d => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> Submit Request';
+            if (d.success) {
+                showToast('Transfer request submitted!');
+                closeModal('newTransferModal');
+                loadTransfers();
+            } else {
+                showToast(d.error || 'Error creating transfer', 'error');
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> Submit Request';
+            showToast('Network error', 'error');
+        });
+    };
+
+    // ==================== EXPORT / PRINT ====================
+    window.exportTransferList = function() { window.open('/registrars/transfer/export/', '_blank'); };
+    window.downloadTemplate = function() { window.open('/registrars/transfer/template/', '_blank'); };
+    window.printTransfer = function(id) { window.open(`/registrars/transfer/${id}/print/`, '_blank'); };
+
+    // ==================== BATCH UPLOAD ====================
+    function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const validExts = ['.csv', '.xlsx', '.xls'];
+        const ext = '.' + file.name.split('.').pop().toLowerCase();
+        if (!validExts.includes(ext)) {
+            showToast('Invalid file type. Please upload .csv, .xlsx, or .xls files.', 'error');
+            return;
+        }
+
+        if (!confirm(`Upload and process "${file.name}"?`)) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        fetch('/registrars/transfer/batch-upload/', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                showToast(d.message);
+                loadTransfers();
+            } else {
+                showToast(d.error || 'Error processing file', 'error');
+            }
+        })
+        .catch(() => showToast('Network error', 'error'))
+        .finally(() => { document.getElementById('batchFileInput').value = ''; });
+    }
+
+    // ==================== NOTIFICATIONS ====================
+    const nb = document.getElementById('notificationBtn');
+    const nd = document.getElementById('notificationDropdown');
+    if (nb && nd) {
+        nb.addEventListener('click', e => { e.stopPropagation(); nd.classList.toggle('show'); });
+        document.addEventListener('click', () => nd.classList.remove('show'));
+    }
+
+    window.markAllRead = function() {
+        fetch('/registrars/mark-notifications-read/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+        .then(r => r.json())
+        .then(() => {
+            document.getElementById('notifCount').textContent = '0';
+            document.getElementById('notifUnreadLabel').textContent = '0 unread';
+            document.getElementById('notificationList').innerHTML = '<div class="notification-item" style="justify-content:center;padding:2rem;"><span style="color:var(--text-secondary);font-size:0.8rem;">No notifications</span></div>';
+            showToast('Notifications marked as read', 'success');
+        });
+    };
+
+    // ==================== GREETING & DATE ====================
+    function updateGreeting() {
+        const h = new Date().getHours();
+        const g = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+        const el = document.getElementById('greetingText');
+        if (el) el.innerHTML = `<i class="fas fa-exchange-alt" style="color:var(--secondary-green);"></i> ${g}, {{ request.user.first_name }}!`;
+    }
+
+    function updateDateTime() {
+        const el = document.getElementById('currentDate');
+        if (el) el.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
+    updateGreeting();
+    updateDateTime();
+    setInterval(updateDateTime, 60000);
+    loadTransfers();
+
+    // ==================== KEYBOARD SHORTCUTS ====================
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'n') { e.preventDefault(); openNewTransferModal(); }
+        if (e.key === 'Escape') {
+            closeModal('newTransferModal');
+            closeModal('viewTransferModal');
+        }
+    });
+</script>
+</body>
+</html>

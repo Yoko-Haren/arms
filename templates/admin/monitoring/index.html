@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>System Monitoring - Formify Admin Portal</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'AvantGarde', 'Century Gothic', sans-serif;
+        }
+
+        :root {
+            --rich-black: #00072D;
+            --dark-blue: #051650;
+            --secondary-green: #5EA173;
+            --gray-bg: #f5f7fb;
+            --border-color: #e9ecef;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --sidebar-width: 280px;
+            --danger-red: #dc3545;
+            --warning-orange: #f39c12;
+            --success-green: #28a745;
+            --info-blue: #17a2b8;
+        }
+
+        body {
+            background: var(--gray-bg);
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar-header i { font-size: 2rem; color: var(--secondary-green); }
+        .sidebar-header h2 { font-size: 1.1rem; font-weight: 600; }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin: 0 1rem 1.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+        }
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: var(--secondary-green);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--rich-black);
+        }
+        .user-details h4 { font-size: 0.9rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+
+        .nav-menu { list-style: none; padding: 0 0.75rem; }
+        .nav-item { margin-bottom: 0.25rem; }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+        .nav-link i { width: 22px; }
+
+        .nav-footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .welcome h1 { font-size: 1.3rem; color: var(--rich-black); }
+        .welcome p { color: var(--text-secondary); font-size: 0.8rem; }
+        .top-bar-actions { display: flex; align-items: center; gap: 1rem; }
+        .date-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            background: var(--gray-bg);
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+        }
+
+        /* Alert Banner */
+        .alert-banner {
+            background: #fff3cd;
+            border-left: 4px solid var(--warning-orange);
+            border-radius: 12px;
+            padding: 0.8rem 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .alert-content { display: flex; align-items: center; gap: 0.5rem; }
+        .alert-content i { font-size: 1.2rem; color: var(--warning-orange); }
+        .alert-content span { font-size: 0.8rem; color: #856404; }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+        .stat-icon.blue { background: rgba(18,52,153,0.1); color: #123499; }
+        .stat-icon.green { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .stat-icon.orange { background: rgba(243,156,18,0.1); color: var(--warning-orange); }
+        .stat-icon.red { background: rgba(220,53,69,0.1); color: var(--danger-red); }
+        .stat-info h3 { font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); }
+        .stat-info .value { font-size: 1.5rem; font-weight: 700; color: var(--rich-black); }
+        .stat-info .sub { font-size: 0.65rem; color: var(--text-secondary); }
+
+        /* System Health Bars */
+        .health-section {
+            background: white;
+            border-radius: 20px;
+            padding: 1.2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .section-header h2 {
+            font-size: 1rem;
+            color: var(--rich-black);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .section-header h2 i { color: var(--secondary-green); }
+
+        .health-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+        }
+        .health-item { text-align: center; }
+        .health-value { font-size: 1.8rem; font-weight: 700; }
+        .health-label { font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.3rem; }
+        .progress-bar {
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        .progress-fill { height: 100%; border-radius: 4px; }
+        .fill-green { background: var(--success-green); }
+        .fill-blue { background: var(--info-blue); }
+        .fill-orange { background: var(--warning-orange); }
+        .fill-red { background: var(--danger-red); }
+
+        /* Two Column Layout */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 1.2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        /* API Endpoints Table */
+        .api-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .api-table th, .api-table td {
+            text-align: left;
+            padding: 0.6rem 0.3rem;
+            font-size: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .api-table th { color: var(--text-secondary); font-weight: 600; }
+        .status-up { color: var(--success-green); }
+        .status-down { color: var(--danger-red); }
+        .status-warning { color: var(--warning-orange); }
+
+        /* Logs Container */
+        .logs-container {
+            background: #1a1a2e;
+            border-radius: 16px;
+            padding: 1rem;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .log-line {
+            padding: 0.2rem 0;
+            border-bottom: 1px solid rgba(0,255,136,0.1);
+        }
+        .log-time { color: #888; margin-right: 0.5rem; }
+        .log-error { color: #ff6b6b; }
+        .log-warning { color: #ffd93d; }
+        .log-info { color: #6bcb77; }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            padding: 0.3rem 0.8rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+
+        .menu-toggle {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: var(--secondary-green);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 1200px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .health-grid { grid-template-columns: repeat(2, 1fr); }
+            .two-col { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .menu-toggle { display: block; }
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .health-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-shield-alt"></i>
+                <h2>Formify <br><span>Admin Portal</span></h2>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar">SA</div>
+                <div class="user-details">
+                    <h4>System Admin</h4>
+                    <p>Super Administrator</p>
+                </div>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="../dashboard/index.html" class="nav-link"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li class="nav-item"><a href="../detection/index.html" class="nav-link"><i class="fas fa-robot"></i> AI Anomaly Detection</a></li>
+                <li class="nav-item"><a href="../anomalyLogs/index.html" class="nav-link"><i class="fas fa-exclamation-triangle"></i> Anomaly Logs</a></li>
+                <li class="nav-item"><a href="../modelTraining/index.html" class="nav-link"><i class="fas fa-brain"></i> AI Model Training</a></li>
+                <li class="nav-item"><a href="../monitoring/index.html" class="nav-link active"><i class="fas fa-chart-line"></i> System Monitoring</a></li>
+                <li class="nav-item"><a href="../auditTrail/index.html" class="nav-link"><i class="fas fa-history"></i> Audit Trail</a></li>
+                <li class="nav-item"><a href="../security/index.html" class="nav-link"><i class="fas fa-shield-alt"></i> Security</a></li>
+                <li class="nav-item"><a href="../settings/index.html" class="nav-link"><i class="fas fa-cog"></i> Settings</a></li>
+            </ul>
+            <ul class="nav-menu nav-footer">
+                <li class="nav-item"><a href="#" class="nav-link"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="top-bar">
+                <div class="welcome">
+                    <h1>System Monitoring</h1>
+                    <p>Real-time server health, API performance, and system logs</p>
+                </div>
+                <div class="top-bar-actions">
+                    <div class="date-display"><i class="fas fa-calendar"></i><span id="currentDate"></span></div>
+                    <button class="btn-outline" onclick="refreshData()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                </div>
+            </div>
+
+            <!-- Alert Banner -->
+            <div class="alert-banner" id="alertBanner">
+                <div class="alert-content">
+                    <i class="fas fa-info-circle"></i>
+                    <span>System is operating normally. All services are healthy.</span>
+                </div>
+                <button class="btn-outline" style="border-color:#856404; color:#856404;" onclick="dismissAlert()">Dismiss</button>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-server"></i></div><div class="stat-info"><h3>Server Uptime</h3><div class="value">99.94%</div><div class="sub">Last 30 days</div></div></div>
+                <div class="stat-card"><div class="stat-icon green"><i class="fas fa-tachometer-alt"></i></div><div class="stat-info"><h3>Avg Response Time</h3><div class="value">245ms</div><div class="sub">API average</div></div></div>
+                <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-users"></i></div><div class="stat-info"><h3>Active Sessions</h3><div class="value" id="activeSessions">24</div><div class="sub">Current users</div></div></div>
+                <div class="stat-card"><div class="stat-icon red"><i class="fas fa-exclamation-circle"></i></div><div class="stat-info"><h3>Error Rate</h3><div class="value">0.12%</div><div class="sub">Last 24h</div></div></div>
+            </div>
+
+            <!-- System Health Metrics -->
+            <div class="health-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-heartbeat"></i> System Health</h2>
+                    <span class="view-all">Last updated: just now</span>
+                </div>
+                <div class="health-grid">
+                    <div class="health-item">
+                        <div class="health-value" id="cpuUsage">34%</div>
+                        <div class="health-label">CPU Usage</div>
+                        <div class="progress-bar"><div class="progress-fill fill-green" id="cpuBar" style="width: 34%;"></div></div>
+                    </div>
+                    <div class="health-item">
+                        <div class="health-value" id="memUsage">42%</div>
+                        <div class="health-label">Memory Usage</div>
+                        <div class="progress-bar"><div class="progress-fill fill-blue" id="memBar" style="width: 42%;"></div></div>
+                    </div>
+                    <div class="health-item">
+                        <div class="health-value" id="diskUsage">24%</div>
+                        <div class="health-label">Disk Usage (2.4/10 GB)</div>
+                        <div class="progress-bar"><div class="progress-fill fill-green" id="diskBar" style="width: 24%;"></div></div>
+                    </div>
+                    <div class="health-item">
+                        <div class="health-value" id="dbConn">8/50</div>
+                        <div class="health-label">DB Connections</div>
+                        <div class="progress-bar"><div class="progress-fill fill-green" id="dbBar" style="width: 16%;"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Two Column: API Endpoints + Performance Chart -->
+            <div class="two-col">
+                <div class="card">
+                    <div class="section-header">
+                        <h2><i class="fas fa-plug"></i> API Endpoint Status</h2>
+                        <button class="btn-outline" onclick="checkAllEndpoints()">Check All</button>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="api-table">
+                            <thead><tr><th>Endpoint</th><th>Status</th><th>Response Time</th><th>Last Checked</th></tr></thead>
+                            <tbody id="apiTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="section-header">
+                        <h2><i class="fas fa-chart-line"></i> API Response Time (Last 24h)</h2>
+                        <span class="view-all">ms average</span>
+                    </div>
+                    <canvas id="responseChart" style="max-height: 200px;"></canvas>
+                </div>
+            </div>
+
+            <!-- Two Column: Database Status + Queued Jobs -->
+            <div class="two-col">
+                <div class="card">
+                    <div class="section-header">
+                        <h2><i class="fas fa-database"></i> Database Status</h2>
+                        <span class="view-all">PostgreSQL 15.2</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <div><strong>Connection Pool:</strong> 8 active / 50 max <span class="status-up">(Healthy)</span></div>
+                        <div><strong>Query Cache Hit Ratio:</strong> 87%</div>
+                        <div><strong>Slow Queries (Last Hour):</strong> 2</div>
+                        <div><strong>Replication Lag:</strong> 0 ms <span class="status-up">(Synced)</span></div>
+                        <div><strong>Last Backup:</strong> 2026-04-14 02:00:00</div>
+                        <div><strong>Database Size:</strong> 2.4 GB</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="section-header">
+                        <h2><i class="fas fa-tasks"></i> Background Jobs Queue</h2>
+                        <span class="view-all">Last 24h</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <div><strong>AI Training Jobs:</strong> 0 pending, 5 completed</div>
+                        <div><strong>Email Queue:</strong> 12 pending, 1,284 sent</div>
+                        <div><strong>Report Generation:</strong> 3 processing</div>
+                        <div><strong>Data Sync (DepEd API):</strong> Last sync 15 min ago</div>
+                        <div><strong>Backup Jobs:</strong> Daily backup completed</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Logs -->
+            <div class="health-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-terminal"></i> System Logs (Last 50 entries)</h2>
+                    <div>
+                        <button class="btn-outline" onclick="exportLogs()"><i class="fas fa-download"></i> Export</button>
+                        <button class="btn-outline" onclick="clearLogs()"><i class="fas fa-trash"></i> Clear</button>
+                    </div>
+                </div>
+                <div class="logs-container" id="logsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Endpoints Data
+        let apiEndpoints = [
+            { name: "GET /api/auth/login", status: "up", responseTime: 124, lastChecked: "Just now" },
+            { name: "POST /api/grades/encode", status: "up", responseTime: 187, lastChecked: "Just now" },
+            { name: "GET /api/forms/sf1", status: "up", responseTime: 156, lastChecked: "Just now" },
+            { name: "GET /api/reports/analytics", status: "up", responseTime: 234, lastChecked: "Just now" },
+            { name: "POST /api/ai/detect", status: "up", responseTime: 89, lastChecked: "Just now" },
+            { name: "GET /api/students/list", status: "warning", responseTime: 489, lastChecked: "Just now" },
+            { name: "POST /api/transfer/create", status: "up", responseTime: 167, lastChecked: "Just now" }
+        ];
+
+        // System Logs
+        let systemLogs = [
+            { time: "2026-04-15 10:32:15", level: "INFO", message: "User 'System Admin' logged in from 192.168.1.100" },
+            { time: "2026-04-15 10:15:22", level: "INFO", message: "AI anomaly detection completed - 3 new anomalies detected" },
+            { time: "2026-04-15 09:45:10", level: "WARNING", message: "High API latency detected on /api/students/list (489ms)" },
+            { time: "2026-04-15 09:30:00", level: "INFO", message: "Daily backup completed successfully. Size: 125MB" },
+            { time: "2026-04-15 08:15:33", level: "ERROR", message: "Failed login attempt for user 'maria.santos' from IP 45.67.89.123" },
+            { time: "2026-04-15 07:00:00", level: "INFO", message: "System health check passed. All services operational." },
+            { time: "2026-04-14 23:45:00", level: "INFO", message: "AI model training completed (v2.4.1) - Accuracy: 94.2%" },
+            { time: "2026-04-14 22:30:00", level: "WARNING", message: "Database connection pool reached 45/50 connections" },
+            { time: "2026-04-14 20:15:00", level: "INFO", message: "User 'Juan Dela Cruz' encoded grades for Grade 10 Science" },
+            { time: "2026-04-14 18:00:00", level: "INFO", message: "System auto-backup scheduled for 2:00 AM" },
+            { time: "2026-04-14 16:30:22", level: "ERROR", message: "API timeout on /api/reports/sf5 - Retrying..." },
+            { time: "2026-04-14 14:20:00", level: "INFO", message: "User 'Maria Rivera' approved transfer request #TR-2026-042" }
+        ];
+
+        let responseChart;
+
+        function renderAPIEndpoints() {
+            const tbody = document.getElementById('apiTableBody');
+            tbody.innerHTML = apiEndpoints.map(api => {
+                let statusClass = api.status === 'up' ? 'status-up' : (api.status === 'warning' ? 'status-warning' : 'status-down');
+                let statusText = api.status === 'up' ? '✓ Operational' : (api.status === 'warning' ? '⚠ Slow Response' : '✗ Down');
+                return `<tr>
+                    <td><code>${api.name}</code></td>
+                    <td><span class="${statusClass}">${statusText}</span></td>
+                    <td>${api.responseTime}ms</td>
+                    <td>${api.lastChecked}</td>
+                <tr>`;
+            }).join('');
+        }
+
+        function renderLogs() {
+            const container = document.getElementById('logsContainer');
+            container.innerHTML = systemLogs.slice(0, 50).map(log => {
+                let logClass = '';
+                if (log.level === 'ERROR') logClass = 'log-error';
+                else if (log.level === 'WARNING') logClass = 'log-warning';
+                else logClass = 'log-info';
+                return `<div class="log-line">
+                    <span class="log-time">[${log.time}]</span>
+                    <span class="${logClass}">[${log.level}]</span>
+                    <span> ${log.message}</span>
+                </div>`;
+            }).join('');
+        }
+
+        function initResponseChart() {
+            const ctx = document.getElementById('responseChart').getContext('2d');
+            responseChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'],
+                    datasets: [{
+                        label: 'Response Time (ms)',
+                        data: [210, 195, 188, 245, 267, 234, 198, 189],
+                        borderColor: '#5EA173',
+                        backgroundColor: 'rgba(94,161,115,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#5EA173'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: true, scales: { y: { min: 100, max: 400 } } }
+            });
+        }
+
+        function refreshData() {
+            // Randomize health metrics for demo
+            const cpu = Math.floor(Math.random() * 40) + 20;
+            const mem = Math.floor(Math.random() * 30) + 30;
+            const disk = Math.floor(Math.random() * 10) + 20;
+            const sessions = Math.floor(Math.random() * 30) + 15;
+            
+            document.getElementById('cpuUsage').innerText = cpu + '%';
+            document.getElementById('memUsage').innerText = mem + '%';
+            document.getElementById('diskUsage').innerText = disk + '%';
+            document.getElementById('activeSessions').innerText = sessions;
+            document.getElementById('cpuBar').style.width = cpu + '%';
+            document.getElementById('memBar').style.width = mem + '%';
+            document.getElementById('diskBar').style.width = disk + '%';
+            
+            if (cpu > 80) document.getElementById('cpuBar').classList.add('fill-red');
+            else if (cpu > 60) document.getElementById('cpuBar').classList.add('fill-orange');
+            
+            // Random API response updates
+            apiEndpoints = apiEndpoints.map(api => ({
+                ...api,
+                responseTime: Math.floor(Math.random() * 300) + 80,
+                lastChecked: "Just now"
+            }));
+            renderAPIEndpoints();
+            
+            // Add new log entry
+            const newLog = {
+                time: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                level: "INFO",
+                message: "Manual system refresh triggered. All metrics updated."
+            };
+            systemLogs.unshift(newLog);
+            renderLogs();
+            
+            // Update chart with random data
+            responseChart.data.datasets[0].data = responseChart.data.datasets[0].data.map(() => Math.floor(Math.random() * 200) + 150);
+            responseChart.update();
+            
+            // Update alert banner based on health
+            const alertBanner = document.getElementById('alertBanner');
+            if (cpu > 85) {
+                alertBanner.innerHTML = `<div class="alert-content"><i class="fas fa-exclamation-triangle"></i><span>⚠ High CPU usage detected (${cpu}%). Consider scaling resources.</span></div><button class="btn-outline" style="border-color:#856404; color:#856404;" onclick="dismissAlert()">Dismiss</button>`;
+                alertBanner.style.background = '#f8d7da';
+                alertBanner.style.borderLeftColor = '#dc3545';
+            } else {
+                alertBanner.innerHTML = `<div class="alert-content"><i class="fas fa-info-circle"></i><span>System is operating normally. All services are healthy.</span></div><button class="btn-outline" style="border-color:#856404; color:#856404;" onclick="dismissAlert()">Dismiss</button>`;
+                alertBanner.style.background = '#fff3cd';
+                alertBanner.style.borderLeftColor = '#f39c12';
+            }
+            
+            document.getElementById('alertBanner').style.display = 'flex';
+        }
+
+        function dismissAlert() {
+            document.getElementById('alertBanner').style.display = 'none';
+        }
+
+        function checkAllEndpoints() {
+            alert('Checking all API endpoints...\n\nAll endpoints are operational with average response time 198ms.');
+            apiEndpoints = apiEndpoints.map(api => ({
+                ...api,
+                status: Math.random() > 0.9 ? 'warning' : 'up',
+                responseTime: Math.floor(Math.random() * 250) + 80,
+                lastChecked: "Just now"
+            }));
+            renderAPIEndpoints();
+        }
+
+        function exportLogs() {
+            let logText = "Timestamp,Level,Message\n";
+            systemLogs.forEach(log => {
+                logText += `"${log.time}","${log.level}","${log.message.replace(/"/g, '""')}"\n`;
+            });
+            const blob = new Blob([logText], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `system_logs_${new Date().toISOString().slice(0,19)}.csv`;
+            link.click();
+        }
+
+        function clearLogs() {
+            if (confirm('Clear all system logs? This action cannot be undone.')) {
+                systemLogs = [];
+                renderLogs();
+            }
+        }
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+        function updateDateTime() { document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }); }
+
+        // Auto-refresh every 30 seconds
+        let refreshInterval = setInterval(refreshData, 30000);
+        
+        // Initialize
+        renderAPIEndpoints();
+        renderLogs();
+        initResponseChart();
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+    </script>
+</body>
+</html>

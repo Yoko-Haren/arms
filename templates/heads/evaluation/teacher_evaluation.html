@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Teacher Evaluation - Formify School Head Portal</title>
+    
+    <!-- Flaticon UIcons -->
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- html2pdf for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'AvantGarde', 'Century Gothic', sans-serif;
+        }
+
+        :root {
+            --rich-black: #00072D;
+            --dark-blue: #051650;
+            --bangladesh-blue: #0A2472;
+            --caribbean-blue: #123499;
+            --secondary-green: #5EA173;
+            --gray-bg: #f5f7fb;
+            --border-color: #e9ecef;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --warning-bg: #fff3cd;
+            --warning-text: #856404;
+            --success-bg: #d4edda;
+            --success-text: #155724;
+            --danger-bg: #f8d7da;
+            --danger-text: #721c24;
+            --sidebar-width: 280px;
+            --sidebar-collapsed-width: 80px;
+        }
+
+        body {
+            background: var(--gray-bg);
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ========== FOLDABLE SIDEBAR ========== */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            transition: width 0.3s ease;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+
+        .sidebar.collapsed .sidebar-header h2,
+        .sidebar.collapsed .user-details,
+        .sidebar.collapsed .nav-link span,
+        .sidebar.collapsed .logo-area span {
+            display: none;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            justify-content: center;
+            padding: 1.5rem 0.5rem;
+        }
+
+        .sidebar.collapsed .sidebar-header .logo-area {
+            justify-content: center;
+            display: none;
+        }
+
+        .sidebar.collapsed .user-info {
+            justify-content: center;
+            padding: 0.8rem;
+            margin: 0 0.5rem 1.5rem 0.5rem;
+        }
+
+        .sidebar.collapsed .nav-link {
+            justify-content: center;
+            padding: 0.85rem 0;
+            gap: 0;
+        }
+
+        .sidebar.collapsed .nav-link i {
+            margin: 0;
+            width: auto;
+            font-size: 1.3rem;
+        }
+
+        .sidebar.collapsed .user-avatar {
+            margin: 0;
+        }
+
+        .sidebar.collapsed .nav-footer .nav-link {
+            justify-content: center;
+        }
+
+        .sidebar.collapsed .fold-btn {
+            margin: 0 auto;
+        }
+
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-header .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .sidebar-header i.fi {
+            font-size: 2rem;
+            color: var(--secondary-green);
+            flex-shrink: 0;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            line-height: 1.3;
+            transition: opacity 0.2s ease;
+        }
+
+        .sidebar-header h2 span {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            display: block;
+        }
+
+        .fold-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            font-size: 1rem;
+        }
+
+        .fold-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.05);
+        }
+
+        .fold-btn i {
+            transition: transform 0.3s ease;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin: 0 1rem 1.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: var(--secondary-green);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--rich-black);
+            flex-shrink: 0;
+        }
+
+        .user-details h4 { font-size: 0.9rem; margin-bottom: 0.2rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0 0.75rem;
+            flex: 1;
+        }
+
+        .nav-item { margin-bottom: 0.25rem; }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+        .nav-link i.fi { width: 22px; font-size: 1.1rem; text-align: center; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+
+        .nav-footer {
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 1rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem;
+            transition: margin-left 0.3s ease;
+            min-height: 100vh;
+        }
+
+        .sidebar.collapsed ~ .main-content {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .welcome h1 { font-size: 1.3rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
+        .welcome p { color: var(--text-secondary); font-size: 0.8rem; }
+
+        .top-bar-actions { display: flex; align-items: center; gap: 1rem; position: relative; }
+        .date-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            background: var(--gray-bg);
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+        }
+
+        /* Notification Dropdown */
+        .notification-dropdown { position: relative; }
+
+        .notification-badge {
+            position: relative;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0.3rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .notification-badge i.fi { font-size: 1.3rem; color: var(--text-primary); transition: color 0.2s; }
+        .notification-badge:hover i.fi { color: var(--secondary-green); }
+
+        .badge-count {
+            position: absolute;
+            top: -5px;
+            right: -8px;
+            background: #dc3545;
+            color: white;
+            font-size: 0.6rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 10px;
+            min-width: 16px;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 45px;
+            right: 0;
+            width: 340px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            z-index: 200;
+            display: none;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .dropdown-menu.show {
+            display: block;
+            animation: fadeInDown 0.25s ease;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .dropdown-header {
+            padding: 0.9rem 1.2rem;
+            background: var(--gray-bg);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--rich-black);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notification-list { max-height: 380px; overflow-y: auto; }
+
+        .notification-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+            padding: 0.9rem 1.2rem;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .notification-item:hover { background: var(--gray-bg); }
+        .notification-item.unread { background: rgba(94, 161, 115, 0.06); border-left: 3px solid var(--secondary-green); }
+
+        .notification-icon {
+            width: 36px;
+            height: 36px;
+            background: rgba(94, 161, 115, 0.12);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--secondary-green);
+            flex-shrink: 0;
+            font-size: 0.85rem;
+        }
+
+        .notification-content { flex: 1; min-width: 0; }
+        .notification-title { font-size: 0.8rem; font-weight: 600; color: var(--rich-black); margin-bottom: 0.15rem; }
+        .notification-message { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; }
+        .notification-time { font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.3rem; }
+
+        .dropdown-footer {
+            padding: 0.7rem;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            background: var(--gray-bg);
+        }
+
+        .dropdown-footer a {
+            color: var(--secondary-green);
+            text-decoration: none;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .dropdown-footer a:hover { text-decoration: underline; }
+
+        /* Poro Greeting Banner */
+        .poro-greeting {
+            background: linear-gradient(135deg, #f0f9f0 0%, #e8f5e9 100%);
+            border-radius: 20px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid rgba(94, 161, 115, 0.3);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .poro-greeting-content { display: flex; align-items: center; gap: 1rem; }
+
+        .character-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--secondary-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(94, 161, 115, 0.3);
+            animation: bounce 2s ease infinite;
+            overflow: hidden;
+        }
+
+        .character-icon img { width: 100%; height: 100%; object-fit: cover; }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+
+        .poro-message h3 { font-size: 1rem; color: var(--rich-black); margin-bottom: 0.2rem; }
+        .poro-message p { font-size: 0.75rem; color: var(--text-secondary); }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+
+        .stat-card:hover { transform: translateY(-3px); }
+
+        .stat-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+
+        .stat-icon.blue { background: rgba(18,52,153,0.1); color: var(--caribbean-blue); }
+        .stat-icon.green { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .stat-icon.orange { background: rgba(243,156,18,0.1); color: #f39c12; }
+        .stat-icon.purple { background: rgba(128,0,128,0.1); color: #9b59b6; }
+
+        .stat-info h3 { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; }
+        .stat-info .value { font-size: 1.5rem; font-weight: 700; color: var(--rich-black); }
+        .stat-info .sub { font-size: 0.65rem; color: var(--text-secondary); }
+
+        /* Filter Bar */
+        .filter-bar {
+            background: white;
+            border-radius: 16px;
+            padding: 0.8rem 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .filter-group { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+        .filter-group label { font-size: 0.8rem; color: var(--text-secondary); }
+
+        select, input {
+            padding: 0.4rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--secondary-green);
+            color: white;
+            border: none;
+            padding: 0.4rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            padding: 0.4rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        /* Teacher Table */
+        .teacher-container {
+            background: white;
+            border-radius: 20px;
+            padding: 1.2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .section-header h2 {
+            font-size: 1rem;
+            color: var(--rich-black);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-header h2 i { color: var(--secondary-green); }
+
+        .view-all { color: var(--secondary-green); text-decoration: none; font-size: 0.75rem; cursor: pointer; }
+
+        .teacher-table { width: 100%; border-collapse: collapse; }
+        .teacher-table th, .teacher-table td {
+            text-align: left;
+            padding: 0.8rem 0.5rem;
+            font-size: 0.8rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .teacher-table th { color: var(--text-secondary); font-weight: 600; font-size: 0.75rem; }
+        .teacher-table tbody tr { cursor: pointer; transition: background 0.2s; }
+        .teacher-table tbody tr:hover { background: rgba(94,161,115,0.05); }
+
+        .status-badge { padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.65rem; font-weight: 600; }
+        .status-exceeds { background: var(--success-bg); color: var(--success-text); }
+        .status-meets { background: var(--warning-bg); color: var(--warning-text); }
+        .status-below { background: var(--danger-bg); color: var(--danger-text); }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: modalSlideIn 0.3s ease;
+        }
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+        }
+        .modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--text-secondary); }
+        .modal-body { padding: 1.5rem; }
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            position: sticky;
+            bottom: 0;
+            background: white;
+        }
+
+        .detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1rem; }
+        .detail-card { background: var(--gray-bg); border-radius: 12px; padding: 0.8rem; }
+        .detail-card h4 { font-size: 0.8rem; color: var(--secondary-green); margin-bottom: 0.5rem; }
+        .detail-card p { font-size: 0.75rem; color: var(--text-primary); }
+
+        .kra-section { margin-top: 1rem; }
+        .kra-title { font-size: 0.85rem; font-weight: 600; color: var(--rich-black); margin: 0.8rem 0 0.5rem 0; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border-color); }
+        .kra-items { display: flex; flex-direction: column; gap: 0.5rem; }
+        .kra-item { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; }
+        .kra-name { flex: 2; }
+        .kra-rating { width: 100px; text-align: center; }
+        .progress-bar { flex: 1; height: 6px; background: var(--border-color); border-radius: 3px; overflow: hidden; margin-left: 0.5rem; }
+        .progress-fill { height: 100%; background: var(--secondary-green); border-radius: 3px; }
+
+        textarea { width: 100%; padding: 0.5rem; border: 2px solid var(--border-color); border-radius: 8px; resize: vertical; font-family: inherit; }
+
+        /* Toast Notification */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 0.5rem; }
+        .toast {
+            background: white; border-radius: 12px; padding: 1rem 1.5rem; box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            display: flex; align-items: center; gap: 0.8rem; min-width: 300px; animation: slideInRight 0.3s ease;
+            border-left: 4px solid var(--secondary-green);
+        }
+        .toast.success { border-left-color: var(--secondary-green); }
+        .toast i { color: var(--secondary-green); }
+        .toast-content { flex: 1; }
+        .toast-content h4 { font-size: 0.85rem; color: var(--rich-black); margin-bottom: 0.1rem; }
+        .toast-content p { font-size: 0.7rem; color: var(--text-secondary); }
+        .toast-close { background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 0.9rem; }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Mobile Overlay */
+        .mobile-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
+        .mobile-overlay.show { display: block; }
+
+        @media (max-width: 1200px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .detail-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; width: var(--sidebar-width) !important; }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .sidebar.collapsed { width: var(--sidebar-width) !important; }
+            .main-content { margin-left: 0 !important; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .filter-bar { flex-direction: column; align-items: stretch; }
+            .teacher-table { display: block; overflow-x: auto; }
+            .modal-content { width: 95%; }
+            .dropdown-menu { width: 290px; right: -20px; }
+            .toast-container { left: 10px; right: 10px; }
+            .toast { min-width: auto; }
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-area">
+                    <i class="fi fi-rr-graduation-cap"></i>
+                    <h2>Formify <span>School Head Portal</span></h2>
+                </div>
+                <button class="fold-btn" id="foldBtn" title="Toggle sidebar">
+                    <i class="fi fi-rr-angle-left"></i>
+                </button>
+            </div>
+            <br>
+            <div class="user-info">
+                <div class="user-avatar">MS</div>
+                <div class="user-details">
+                    <h4>Dr. Maria R. Santos</h4>
+                    <p>School Principal IV</p>
+                </div>
+            </div>
+
+<ul class="nav-menu">
+    <li class="nav-item"><a href="{% url 'heads-dashboard' %}" class="nav-link"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+    <li class="nav-item"><a href="{% url 'heads-school-performance' %}" class="nav-link active"><i class="fi fi-rr-chart-histogram"></i><span>School Performance</span></a></li>
+    <li class="nav-item"><a href="{% url 'heads-forms-compliance' %}" class="nav-link"><i class="fi fi-rr-document"></i><span>Forms Compliance</span></a></li>
+    <li class="nav-item"><a href="{% url 'heads-teacher-evaluation' %}" class="nav-link"><i class="fi fi-rr-presentation"></i><span>Teacher Evaluation</span></a></li>
+    <li class="nav-item"><a href="{% url 'heads-reports' %}" class="nav-link"><i class="fi fi-rr-chart-line-up"></i><span>Reports & Analytics</span></a></li>
+    <li class="nav-item"><a href="{% url 'heads-announcements' %}" class="nav-link"><i class="fi fi-rr-megaphone"></i><span>Announcements</span></a></li>
+    <li class="nav-item"><a href="{% url 'heads-messages' %}" class="nav-link"><i class="fi fi-rr-envelope"></i><span>Messages</span></a></li>
+    <li class="nav-item"><a href="{% url 'heads-user-management' %}" class="nav-link"><i class="fi fi-rr-users-gear"></i><span>User Management</span></a></li>
+    <li class="nav-item"><a href="{% url 'heads-settings' %}" class="nav-link"><i class="fi fi-rr-settings"></i><span>Settings</span></a></li>
+</ul>
+
+            <ul class="nav-menu nav-footer">
+                <li class="nav-item"><a href="{% url 'logout' %}" class="nav-link"><i class="fi fi-rr-sign-out"></i><span>Logout</span></a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content" id="mainContent">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="welcome">
+                    <h1 id="greetingText">Teacher Performance Management</h1>
+                    <p>PMES | Multi-Year Performance Management and Evaluation System (SY 2025-2026 to 2027-2028)</p>
+                </div>
+                <div class="top-bar-actions">
+                    <div class="date-display"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
+                    <div class="notification-dropdown">
+                        <button class="notification-badge" id="notificationBtn">
+                            <i class="fi fi-rr-bell"></i>
+                            <span class="badge-count" id="notifCount">3</span>
+                        </button>
+                        <div class="dropdown-menu" id="notificationDropdown">
+                            <div class="dropdown-header"><span>Notifications</span><span style="font-size:0.7rem; opacity:0.7;">3 unread</span></div>
+                            <div class="notification-list" id="notificationList"></div>
+                            <div class="dropdown-footer"><a id="markAllRead">Mark all as read</a></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Poro Greeting Banner -->
+            <div class="poro-greeting">
+                <div class="poro-greeting-content">
+                    <div class="character-icon">
+                        <img src="../../shared/poro/Poro.png" alt="Poro" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'fi fi-rr-smile\' style=\'font-size:1.8rem; color:white;\'></i>';">
+                    </div>
+                    <div class="poro-message">
+                        <h3>Teacher Evaluation Center</h3>
+                        <p id="poroMessage">48 teachers evaluated. Average rating: 4.2/5.0. 6 IPCRF still pending submission.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card" onclick="showToast('Total Teachers', '48 teachers: 45 full-time, 3 part-time across all departments.')"><div class="stat-icon green"><i class="fi fi-rr-presentation"></i></div><div class="stat-info"><h3>Total Teachers</h3><div class="value" id="totalTeachers">48</div><div class="sub">Full-time:45 | Part-time:3</div></div></div>
+                <div class="stat-card" onclick="showToast('Average Rating', 'Overall average PMES rating is 4.2 out of 5.0 across all career stages.')"><div class="stat-icon blue"><i class="fi fi-rr-star"></i></div><div class="stat-info"><h3>Avg Performance Rating</h3><div class="value" id="avgRating">4.2</div><div class="sub">Out of 5 (PMES Scale)</div></div></div>
+                <div class="stat-card" onclick="showToast('Observations Done', '112 classroom observations completed this school year.')"><div class="stat-icon orange"><i class="fi fi-rr-calendar-check"></i></div><div class="stat-info"><h3>Classroom Obs Done</h3><div class="value" id="obsDone">112</div><div class="sub">This school year</div></div></div>
+                <div class="stat-card" onclick="showToast('IPCRF Submitted', '42 out of 48 teachers have submitted their IPCRF.')"><div class="stat-icon purple"><i class="fi fi-rr-document"></i></div><div class="stat-info"><h3>IPCRF Submitted</h3><div class="value" id="ipcrfSubmitted">42</div><div class="sub">Out of 48 teachers</div></div></div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <div class="filter-group"><label>Career Stage:</label><select id="careerFilter"><option value="all">All Stages</option><option value="beginning">Beginning</option><option value="proficient">Proficient</option><option value="highly">Highly Proficient</option><option value="distinguished">Distinguished</option></select></div>
+                <div class="filter-group"><label>Rating Period:</label><select id="periodFilter"><option value="Q3" selected>Quarter 3 2025-2026</option><option value="Q2">Quarter 2 2025-2026</option><option value="Q1">Quarter 1 2025-2026</option><option value="EoSY">End of School Year 2024-2025</option></select></div>
+                <div class="filter-group"><label>Department:</label><select id="deptFilter"><option value="all">All Departments</option><option value="science">Science</option><option value="math">Mathematics</option><option value="english">English</option><option value="filipino">Filipino</option><option value="ap">Araling Panlipunan</option></select></div>
+                <div class="filter-group">
+                    <button class="btn-primary" onclick="filterTeachers()"><i class="fi fi-rr-filter"></i> Apply Filters</button>
+                    <button class="btn-outline" onclick="exportToExcel()"><i class="fi fi-rr-file-spreadsheet"></i> Export</button>
+                    <button class="btn-outline" onclick="printReport()"><i class="fi fi-rr-print"></i> Print</button>
+                </div>
+            </div>
+
+            <!-- Teacher Evaluation Table -->
+            <div class="teacher-container">
+                <div class="section-header"><h2><i class="fi fi-rr-presentation"></i> Teacher Performance Matrix (PMES)</h2><span class="view-all" onclick="exportToExcel()">Export</span></div>
+                <div style="overflow-x: auto;">
+                    <table class="teacher-table" id="teacherTable">
+                        <thead><tr><th>Teacher</th><th>Department</th><th>Career Stage</th><th>IPCRF Rating</th><th>COT Rating</th><th>e-SAT Status</th><th>Overall Rating</th></tr></thead>
+                        <tbody id="teacherTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teacher Detail Modal -->
+    <div id="teacherDetailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3 id="modalTeacherName">Teacher Details</h3><button class="modal-close" onclick="closeDetailModal()">&times;</button></div>
+            <div class="modal-body">
+                <p id="modalTeacherInfo" style="margin-bottom: 1rem; color: var(--text-secondary);"></p>
+                <div id="modalDetailGrid" class="detail-grid"></div>
+                <div id="modalKraPerformance"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="openFeedbackModal()"><i class="fi fi-rr-comment"></i> Give Feedback</button>
+                <button class="btn-outline" onclick="openScheduleObsModal()"><i class="fi fi-rr-calendar"></i> Schedule COT</button>
+                <button class="btn-primary" onclick="generateReport()"><i class="fi fi-rr-download"></i> Generate Report</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedbackModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>Provide Feedback</h3><button class="modal-close" onclick="closeFeedbackModal()">&times;</button></div>
+            <div class="modal-body">
+                <p><strong>Teacher:</strong> <span id="feedbackTeacherName"></span></p>
+                <label>Feedback / Recommendation:</label>
+                <textarea id="feedbackMessage" rows="4"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="closeFeedbackModal()">Cancel</button>
+                <button class="btn-primary" onclick="sendFeedback()">Send Feedback</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule Observation Modal -->
+    <div id="scheduleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>Schedule Classroom Observation</h3><button class="modal-close" onclick="closeScheduleModal()">&times;</button></div>
+            <div class="modal-body">
+                <p><strong>Teacher:</strong> <span id="scheduleTeacherName"></span></p>
+                <div style="margin-bottom: 1rem;"><label>Date:</label><input type="date" id="scheduleDate" style="width:100%; padding:0.5rem; border:2px solid var(--border-color); border-radius:8px;"></div>
+                <div style="margin-bottom: 1rem;"><label>Time:</label><input type="time" id="scheduleTime" style="width:100%; padding:0.5rem; border:2px solid var(--border-color); border-radius:8px;"></div>
+                <div style="margin-bottom: 1rem;"><label>Subject / Class:</label><input type="text" id="scheduleSubject" placeholder="e.g., Mathematics - Grade 7 STEM A" style="width:100%; padding:0.5rem; border:2px solid var(--border-color); border-radius:8px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="closeScheduleModal()">Cancel</button>
+                <button class="btn-primary" onclick="scheduleObservation()">Schedule</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ========== SIDEBAR FOLD FUNCTIONALITY ==========
+            const sidebar = document.getElementById('sidebar');
+            const foldBtn = document.getElementById('foldBtn');
+            const mainContent = document.getElementById('mainContent');
+            const mobileOverlay = document.getElementById('mobileOverlay');
+            let sidebarCollapsed = false;
+
+            function updateSidebarState() {
+                const isMobile = window.innerWidth <= 768;
+                if (isMobile) {
+                    sidebar.classList.remove('collapsed');
+                    sidebarCollapsed = false;
+                    foldBtn.querySelector('i').className = 'fi fi-rr-angle-left';
+                    if (!sidebar.classList.contains('mobile-open')) mobileOverlay.classList.remove('show');
+                } else {
+                    sidebar.classList.remove('mobile-open');
+                    mobileOverlay.classList.remove('show');
+                    if (sidebarCollapsed) { sidebar.classList.add('collapsed'); foldBtn.querySelector('i').className = 'fi fi-rr-angle-right'; }
+                    else { sidebar.classList.remove('collapsed'); foldBtn.querySelector('i').className = 'fi fi-rr-angle-left'; }
+                }
+                adjustMainMargin();
+            }
+
+            function adjustMainMargin() {
+                if (window.innerWidth <= 768) mainContent.style.marginLeft = '0';
+                else mainContent.style.marginLeft = sidebar.classList.contains('collapsed') ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)';
+            }
+
+            function toggleSidebar() {
+                if (window.innerWidth <= 768) {
+                    const isOpen = sidebar.classList.toggle('mobile-open');
+                    if (isOpen) mobileOverlay.classList.add('show'); else mobileOverlay.classList.remove('show');
+                } else {
+                    sidebarCollapsed = !sidebarCollapsed;
+                    if (sidebarCollapsed) { sidebar.classList.add('collapsed'); foldBtn.querySelector('i').className = 'fi fi-rr-angle-right'; }
+                    else { sidebar.classList.remove('collapsed'); foldBtn.querySelector('i').className = 'fi fi-rr-angle-left'; }
+                    adjustMainMargin();
+                }
+            }
+
+            foldBtn.addEventListener('click', toggleSidebar);
+            mobileOverlay.addEventListener('click', () => { sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('show'); });
+            window.addEventListener('resize', updateSidebarState);
+
+            // ========== NOTIFICATIONS ==========
+            const notifications = [
+                { id: 1, title: "IPCRF Pending", message: "6 teachers have not yet submitted their IPCRF for Q3. Deadline approaching.", time: "1 hour ago", unread: true, type: "ipcrf" },
+                { id: 2, title: "COT Scheduled", message: "Classroom observation for Bautista, Liza scheduled on April 10.", time: "3 hours ago", unread: true, type: "cot" },
+                { id: 3, title: "Low Performance Alert", message: "Villanueva, Paul rated below 3.0. Schedule developmental intervention.", time: "1 day ago", unread: true, type: "alert" }
+            ];
+
+            function renderNotifications() {
+                const container = document.getElementById('notificationList');
+                document.getElementById('notifCount').textContent = notifications.filter(n => n.unread).length;
+                container.innerHTML = notifications.map(n => `
+                    <div class="notification-item ${n.unread ? 'unread' : ''}" data-id="${n.id}">
+                        <div class="notification-icon"><i class="fi fi-rr-${n.type==='ipcrf'?'document':(n.type==='cot'?'calendar-check':'triangle-warning')}"></i></div>
+                        <div class="notification-content"><div class="notification-title">${n.title}</div><div class="notification-message">${n.message}</div><div class="notification-time">${n.time}</div></div>
+                    </div>
+                `).join('');
+                document.querySelectorAll('.notification-item').forEach(item => {
+                    item.addEventListener('click', function(e) { e.stopPropagation(); const id = parseInt(this.dataset.id); const notif = notifications.find(n => n.id === id); if (notif && notif.unread) { notif.unread = false; renderNotifications(); } });
+                });
+            }
+
+            document.getElementById('notificationBtn').addEventListener('click', e => { e.stopPropagation(); document.getElementById('notificationDropdown').classList.toggle('show'); });
+            document.getElementById('markAllRead').addEventListener('click', e => { e.preventDefault(); notifications.forEach(n => n.unread = false); renderNotifications(); });
+            document.addEventListener('click', e => { if (!e.target.closest('.notification-dropdown')) document.getElementById('notificationDropdown').classList.remove('show'); });
+
+            // ========== NAVIGATION ==========
+            window.navigateTo = function(url) { window.location.href = url; };
+
+            // ========== DYNAMIC GREETING ==========
+            function updateGreeting() {
+                const hour = new Date().getHours();
+                let greeting = 'Good morning';
+                if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
+                if (hour >= 17 || hour < 5) greeting = 'Good evening';
+                document.getElementById('greetingText').innerHTML = `${greeting}, Dr. Santos!`;
+            }
+
+            function updateDateTime() { document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }); }
+
+            // ========== TOAST NOTIFICATION ==========
+            window.showToast = function(title, message) {
+                const container = document.getElementById('toastContainer');
+                const toast = document.createElement('div');
+                toast.className = 'toast success';
+                toast.innerHTML = `<i class="fi fi-rr-check-circle"></i><div class="toast-content"><h4>${title}</h4><p>${message}</p></div><button class="toast-close" onclick="this.parentElement.remove()">&times;</button>`;
+                container.appendChild(toast);
+                setTimeout(() => { if (toast.parentElement) toast.remove(); }, 4000);
+            };
+
+            // ========== TEACHER DATA ==========
+            const teachersData = [
+                { id: 1, name: "Dela Cruz, Juan", dept: "Mathematics", career: "Proficient", ipcrf: 4.5, cot: 4.2, satStatus: "Completed", overall: 4.4, email: "juan.delacruz@deped.gov.ph", yearsExp: 8, lastObs: "2026-03-15", kra: { content: 4.3, diversity: 4.1, environment: 4.5, community: 4.2, behavioral: 4.6 } },
+                { id: 2, name: "Santos, Maria", dept: "Science", career: "Highly Proficient", ipcrf: 4.8, cot: 4.9, satStatus: "Completed", overall: 4.9, email: "maria.santos@deped.gov.ph", yearsExp: 15, lastObs: "2026-03-20", kra: { content: 4.9, diversity: 4.8, environment: 5.0, community: 4.7, behavioral: 4.8 } },
+                { id: 3, name: "Reyes, Ana", dept: "English", career: "Beginning", ipcrf: 3.5, cot: 3.2, satStatus: "Pending", overall: 3.4, email: "ana.reyes@deped.gov.ph", yearsExp: 2, lastObs: "2026-03-10", kra: { content: 3.4, diversity: 3.2, environment: 3.6, community: 3.3, behavioral: 3.5 } },
+                { id: 4, name: "Gomez, Roberto", dept: "Mathematics", career: "Proficient", ipcrf: 4.2, cot: 4.0, satStatus: "Completed", overall: 4.1, email: "roberto.gomez@deped.gov.ph", yearsExp: 10, lastObs: "2026-03-18", kra: { content: 4.1, diversity: 4.0, environment: 4.3, community: 4.0, behavioral: 4.2 } },
+                { id: 5, name: "Bautista, Liza", dept: "Filipino", career: "Distinguished", ipcrf: 4.9, cot: 5.0, satStatus: "Completed", overall: 5.0, email: "liza.bautista@deped.gov.ph", yearsExp: 20, lastObs: "2026-03-25", kra: { content: 5.0, diversity: 4.9, environment: 5.0, community: 4.9, behavioral: 5.0 } },
+                { id: 6, name: "Rivera, Carlos", dept: "Araling Panlipunan", career: "Proficient", ipcrf: 3.8, cot: 3.6, satStatus: "In Progress", overall: 3.7, email: "carlos.rivera@deped.gov.ph", yearsExp: 6, lastObs: "2026-03-05", kra: { content: 3.7, diversity: 3.5, environment: 3.9, community: 3.6, behavioral: 3.8 } },
+                { id: 7, name: "Torres, Maricel", dept: "Science", career: "Highly Proficient", ipcrf: 4.6, cot: 4.7, satStatus: "Completed", overall: 4.7, email: "maricel.torres@deped.gov.ph", yearsExp: 12, lastObs: "2026-03-22", kra: { content: 4.7, diversity: 4.6, environment: 4.8, community: 4.5, behavioral: 4.7 } },
+                { id: 8, name: "Villanueva, Paul", dept: "Mathematics", career: "Beginning", ipcrf: 3.2, cot: 3.0, satStatus: "Pending", overall: 3.1, email: "paul.villanueva@deped.gov.ph", yearsExp: 1, lastObs: "2026-03-08", kra: { content: 3.2, diversity: 3.0, environment: 3.3, community: 3.1, behavioral: 3.2 } }
+            ];
+
+            let selectedTeacher = null;
+
+            function renderTeacherTable() {
+                const careerFilter = document.getElementById('careerFilter').value;
+                const deptFilter = document.getElementById('deptFilter').value;
+                let filtered = teachersData;
+                if (careerFilter !== 'all') filtered = filtered.filter(t => t.career.toLowerCase().includes(careerFilter.toLowerCase()));
+                if (deptFilter !== 'all') filtered = filtered.filter(t => t.dept.toLowerCase() === deptFilter.toLowerCase());
+                const tbody = document.getElementById('teacherTableBody');
+                tbody.innerHTML = filtered.map(t => {
+                    let ratingClass = t.overall >= 4.5 ? 'status-exceeds' : (t.overall >= 3.0 ? 'status-meets' : 'status-below');
+                    let satStatusClass = t.satStatus === 'Completed' ? 'status-exceeds' : (t.satStatus === 'In Progress' ? 'status-meets' : 'status-below');
+                    return `<tr onclick="openTeacherDetail(${t.id})"><td><strong>${t.name}</strong></td><td>${t.dept}</td><td>${t.career}</td><td>${t.ipcrf.toFixed(1)}</td><td>${t.cot.toFixed(1)}</td><td><span class="status-badge ${satStatusClass}">${t.satStatus}</span></td><td><span class="status-badge ${ratingClass}">${t.overall.toFixed(1)}</span></td></tr>`;
+                }).join('');
+            }
+
+            window.openTeacherDetail = function(id) {
+                selectedTeacher = teachersData.find(t => t.id === id);
+                if (!selectedTeacher) return;
+                document.getElementById('modalTeacherName').innerText = selectedTeacher.name;
+                document.getElementById('modalTeacherInfo').innerHTML = `${selectedTeacher.dept} Department | ${selectedTeacher.career} Teacher | ${selectedTeacher.yearsExp} years experience | Last COT: ${selectedTeacher.lastObs}`;
+                document.getElementById('modalDetailGrid').innerHTML = `
+                    <div class="detail-card"><h4>IPCRF Rating</h4><p>${selectedTeacher.ipcrf.toFixed(1)} / 5.0</p></div>
+                    <div class="detail-card"><h4>COT Rating</h4><p>${selectedTeacher.cot.toFixed(1)} / 5.0</p></div>
+                    <div class="detail-card"><h4>e-SAT Status</h4><p>${selectedTeacher.satStatus}</p></div>
+                    <div class="detail-card"><h4>Years Experience</h4><p>${selectedTeacher.yearsExp} years</p></div>
+                `;
+                const kraMap = [
+                    { name: "Content Knowledge & Pedagogy", value: selectedTeacher.kra.content },
+                    { name: "Diversity of Learners & Assessment", value: selectedTeacher.kra.diversity },
+                    { name: "Learning Environment", value: selectedTeacher.kra.environment },
+                    { name: "Community Linkages & Engagement", value: selectedTeacher.kra.community },
+                    { name: "Core Behavioral Competencies", value: selectedTeacher.kra.behavioral }
+                ];
+                document.getElementById('modalKraPerformance').innerHTML = `
+                    <div class="kra-section"><div class="kra-title">PPST-aligned Performance Indicators</div><div class="kra-items">
+                        ${kraMap.map(k => `<div class="kra-item"><span class="kra-name">${k.name}</span><span class="kra-rating">${k.value.toFixed(1)}/5.0</span><div class="progress-bar"><div class="progress-fill" style="width: ${k.value * 20}%;"></div></div></div>`).join('')}
+                    </div></div>`;
+                document.getElementById('teacherDetailModal').classList.add('active');
+            };
+
+            window.closeDetailModal = function() { document.getElementById('teacherDetailModal').classList.remove('active'); selectedTeacher = null; };
+            window.filterTeachers = function() { renderTeacherTable(); showToast('Filters Applied', 'Teacher list updated based on selected filters.'); };
+
+            window.openFeedbackModal = function() {
+                if (!selectedTeacher) return;
+                document.getElementById('feedbackTeacherName').innerText = selectedTeacher.name;
+                document.getElementById('feedbackMessage').value = '';
+                document.getElementById('feedbackModal').classList.add('active');
+            };
+            window.closeFeedbackModal = function() { document.getElementById('feedbackModal').classList.remove('active'); };
+            window.sendFeedback = function() {
+                const msg = document.getElementById('feedbackMessage').value;
+                if (!msg) { showToast('Required', 'Please enter feedback before sending.', 'warning'); return; }
+                showToast('Feedback Sent', `Feedback sent to ${selectedTeacher.name}.`);
+                closeFeedbackModal();
+            };
+
+            window.openScheduleObsModal = function() {
+                if (!selectedTeacher) return;
+                document.getElementById('scheduleTeacherName').innerText = selectedTeacher.name;
+                document.getElementById('scheduleDate').value = '';
+                document.getElementById('scheduleTime').value = '';
+                document.getElementById('scheduleSubject').value = '';
+                document.getElementById('scheduleModal').classList.add('active');
+            };
+            window.closeScheduleModal = function() { document.getElementById('scheduleModal').classList.remove('active'); };
+            window.scheduleObservation = function() {
+                const date = document.getElementById('scheduleDate').value;
+                const time = document.getElementById('scheduleTime').value;
+                if (!date || !time) { showToast('Required', 'Please select date and time.', 'warning'); return; }
+                showToast('COT Scheduled', `Classroom observation scheduled for ${selectedTeacher.name} on ${date} at ${time}.`);
+                closeScheduleModal();
+            };
+
+            window.generateReport = function() {
+                if (!selectedTeacher) return;
+                const content = `<div style="font-family: Arial; padding: 2rem;"><h2 style="color: #5EA173;">Teacher Performance Evaluation Report</h2><p><strong>Teacher:</strong> ${selectedTeacher.name}</p><p><strong>Department:</strong> ${selectedTeacher.dept}</p><p><strong>Career Stage:</strong> ${selectedTeacher.career}</p><p><strong>IPCRF:</strong> ${selectedTeacher.ipcrf.toFixed(1)}/5.0 | <strong>COT:</strong> ${selectedTeacher.cot.toFixed(1)}/5.0 | <strong>Overall:</strong> ${selectedTeacher.overall.toFixed(1)}/5.0</p><hr><p><em>Generated from Formify LIS - School Head Portal</em></p></div>`;
+                html2pdf().set({ margin: [0.5,0.5,0.5,0.5], filename: `Teacher_Evaluation_${selectedTeacher.name.replace(/ /g, '_')}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } }).from(content).save();
+                showToast('Report Generated', `PDF report for ${selectedTeacher.name} downloaded.`);
+            };
+
+            window.exportToExcel = function() { showToast('Export Complete', 'Teacher evaluation data exported as CSV.'); };
+            window.printReport = function() { window.print(); };
+
+            document.getElementById('careerFilter').addEventListener('change', filterTeachers);
+            document.getElementById('deptFilter').addEventListener('change', filterTeachers);
+
+            function updateStats() {
+                document.getElementById('totalTeachers').innerText = teachersData.length;
+                document.getElementById('avgRating').innerText = (teachersData.reduce((sum, t) => sum + t.overall, 0) / teachersData.length).toFixed(1);
+                document.getElementById('obsDone').innerText = teachersData.length * 14;
+                document.getElementById('ipcrfSubmitted').innerText = teachersData.filter(t => t.satStatus === 'Completed').length;
+            }
+
+            updateSidebarState();
+            updateGreeting();
+            updateDateTime();
+            renderNotifications();
+            renderTeacherTable();
+            updateStats();
+            setInterval(updateDateTime, 1000);
+            setInterval(updateGreeting, 60000);
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,930 @@
+{% extends 'admin/base.html' %}
+{% load static %}
+
+{% block title %}{{ school.school_name }}{% endblock %}
+{% block page_title %}{{ school.school_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ========== LAYOUT ========== */
+    .detail-layout {
+        display: grid;
+        grid-template-columns: 380px 1fr;
+        gap: 1.5rem;
+        align-items: start;
+    }
+    @media (max-width: 1024px) { .detail-layout { grid-template-columns: 1fr; } }
+
+    /* ========== INACTIVE ALERT ========== */
+    .alert-banner {
+        background: linear-gradient(135deg, #fffbf8, var(--warning-light));
+        border: 1px solid rgba(230,81,0,0.2);
+        border-left: 4px solid var(--warning);
+        border-radius: var(--radius-md);
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+        box-shadow: var(--shadow-xs);
+    }
+    .alert-banner-content {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-size: 0.82rem;
+        color: var(--gray-700);
+    }
+    .alert-banner-content i { color: var(--warning); font-size: 1rem; }
+    .alert-banner-content strong { font-weight: 700; }
+    .btn-activate {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.45rem 1rem;
+        border-radius: 20px;
+        font-size: 0.73rem;
+        font-weight: 600;
+        border: none;
+        background: var(--warning);
+        color: white;
+        cursor: pointer;
+        font-family: inherit;
+        text-decoration: none;
+        transition: var(--transition);
+    }
+    .btn-activate:hover {
+        background: #bf4400;
+        box-shadow: 0 4px 15px rgba(230,81,0,0.3);
+    }
+
+    /* ========== SIDEBAR CARDS ========== */
+    .sidebar-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+    .info-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--gray-200);
+    }
+    .info-card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid var(--gray-100);
+    }
+    .info-card-header-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius-xs);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .info-card-header-icon.primary-icon { background: var(--primary-light); color: var(--primary); }
+    .info-card-header-icon.success-icon { background: var(--success-light); color: var(--success); }
+    .info-card-header-icon.warning-icon { background: var(--warning-light); color: var(--warning); }
+    .info-card-header h6 {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin: 0;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.55rem 0;
+        border-bottom: 1px solid var(--gray-100);
+        font-size: 0.78rem;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label {
+        color: var(--gray-500);
+        font-weight: 500;
+        flex-shrink: 0;
+    }
+    .info-value {
+        color: var(--gray-700);
+        font-weight: 600;
+        text-align: right;
+        word-break: break-word;
+        max-width: 55%;
+    }
+    .info-value code {
+        background: var(--gray-100);
+        padding: 0.15rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.72rem;
+        color: var(--primary);
+    }
+
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.2rem 0.7rem;
+        border-radius: 20px;
+        font-size: 0.68rem;
+        font-weight: 600;
+    }
+    .status-pill.active-pill { background: var(--success-light); color: var(--success); }
+    .status-pill.inactive-pill { background: #f5f5f5; color: #9e9e9e; }
+    .status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+    }
+    .status-dot.dot-active { background: var(--success); }
+    .status-dot.dot-inactive { background: #bdbdbd; }
+
+    /* ========== STATS MINI CARDS ========== */
+    .stats-mini-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+    @media (max-width: 480px) { .stats-mini-grid { grid-template-columns: 1fr; } }
+    .stat-mini-card {
+        background: var(--gray-50);
+        border-radius: var(--radius-md);
+        padding: 1.1rem 0.75rem;
+        text-align: center;
+        border: 1px solid var(--gray-200);
+        transition: var(--transition);
+    }
+    .stat-mini-card:hover {
+        box-shadow: var(--shadow-sm);
+        transform: translateY(-2px);
+    }
+    .stat-mini-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius-xs);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 0.4rem;
+        font-size: 0.85rem;
+    }
+    .stat-mini-icon.purple-icon { background: var(--purple-light); color: var(--purple); }
+    .stat-mini-icon.info-icon { background: var(--info-light); color: var(--info); }
+    .stat-mini-icon.success-icon { background: var(--success-light); color: var(--success); }
+    .stat-mini-icon.warning-icon-bg { background: var(--warning-light); color: var(--warning); }
+    .stat-mini-value {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: var(--gray-700);
+        line-height: 1.1;
+    }
+    .stat-mini-label {
+        font-size: 0.65rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+        margin-top: 0.15rem;
+    }
+
+    /* ========== ACTION BUTTONS ========== */
+    .action-btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+    }
+    .btn-action {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.6rem 1rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: 2px solid transparent;
+        background: white;
+        transition: var(--transition);
+        font-family: inherit;
+        text-decoration: none;
+    }
+    .btn-action.primary-btn {
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+    .btn-action.primary-btn:hover {
+        background: var(--primary);
+        color: white;
+        box-shadow: 0 4px 15px rgba(18,52,153,0.25);
+    }
+    .btn-action.success-btn {
+        border-color: var(--success);
+        color: var(--success);
+    }
+    .btn-action.success-btn:hover {
+        background: var(--success);
+        color: white;
+        box-shadow: 0 4px 15px rgba(46,125,50,0.25);
+    }
+    .btn-action.info-btn {
+        border-color: var(--info);
+        color: var(--info);
+    }
+    .btn-action.info-btn:hover {
+        background: var(--info);
+        color: white;
+        box-shadow: 0 4px 15px rgba(21,101,192,0.25);
+    }
+    .btn-action.warning-btn {
+        border-color: var(--warning);
+        color: var(--warning);
+    }
+    .btn-action.warning-btn:hover {
+        background: var(--warning);
+        color: white;
+        box-shadow: 0 4px 15px rgba(230,81,0,0.25);
+    }
+
+    /* ========== TABS ========== */
+    .tab-nav {
+        display: flex;
+        gap: 0.25rem;
+        background: var(--gray-100);
+        padding: 0.35rem;
+        border-radius: var(--radius-md);
+        margin-bottom: 1.25rem;
+        flex-wrap: wrap;
+    }
+    .tab-btn {
+        flex: 1;
+        min-width: 100px;
+        padding: 0.65rem 0.8rem;
+        border: none;
+        background: transparent;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--gray-500);
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        font-family: inherit;
+        white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--gray-700); }
+    .tab-btn.active-tab {
+        background: white;
+        color: var(--primary);
+        box-shadow: var(--shadow-sm);
+    }
+    .tab-count {
+        font-size: 0.63rem;
+        padding: 0.13rem 0.5rem;
+        border-radius: 20px;
+        background: var(--gray-200);
+        font-weight: 700;
+    }
+    .tab-btn.active-tab .tab-count {
+        background: var(--primary-light);
+    }
+
+    .tab-panel {
+        display: none;
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+    }
+    .tab-panel.active-panel { display: block; }
+
+    /* ========== PRINCIPAL CARD ========== */
+    .principal-card {
+        background: var(--primary-gradient);
+        color: white;
+        border-radius: var(--radius-md);
+        padding: 1.5rem;
+        margin: 1.25rem;
+        box-shadow: 0 6px 24px rgba(18,52,153,0.25);
+    }
+    .principal-card-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    .principal-card h5 {
+        font-size: 1rem;
+        font-weight: 700;
+        margin: 0 0 0.3rem;
+    }
+    .principal-meta {
+        font-size: 0.75rem;
+        opacity: 0.85;
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+    .principal-meta span { display: flex; align-items: center; gap: 0.4rem; }
+    .principal-meta i { width: 16px; text-align: center; font-size: 0.7rem; }
+    .principal-divider {
+        border: none;
+        border-top: 1px solid rgba(255,255,255,0.25);
+        margin: 1rem 0;
+    }
+    .principal-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.7rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .btn-view-principal {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.4rem 0.9rem;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        background: rgba(255,255,255,0.2);
+        color: white;
+        text-decoration: none;
+        transition: var(--transition);
+    }
+    .btn-view-principal:hover {
+        background: rgba(255,255,255,0.35);
+        color: white;
+    }
+
+    /* ========== TABLE INSIDE PANEL ========== */
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.78rem;
+    }
+    .data-table thead th {
+        text-align: left;
+        padding: 0.7rem 1rem;
+        border-bottom: 2px solid var(--gray-200);
+        color: var(--gray-500);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.65rem;
+        letter-spacing: 0.6px;
+        background: var(--gray-50);
+        white-space: nowrap;
+    }
+    .data-table tbody td {
+        padding: 0.65rem 1rem;
+        border-bottom: 1px solid var(--gray-100);
+        color: var(--gray-700);
+        vertical-align: middle;
+    }
+    .data-table tbody tr {
+        transition: var(--transition);
+    }
+    .data-table tbody tr:hover {
+        background: var(--primary-light);
+    }
+    .data-table tbody tr:last-child td { border-bottom: none; }
+
+    .badge-table {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.2rem 0.65rem;
+        border-radius: 20px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .badge-table.info-badge { background: var(--info-light); color: var(--info); }
+    .badge-table.success-badge { background: var(--success-light); color: var(--success); }
+    .badge-table.secondary-badge { background: #f5f5f5; color: #9e9e9e; }
+    .badge-table.warning-badge { background: var(--warning-light); color: var(--warning); }
+
+    .btn-set-current {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.3rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.68rem;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1.5px solid var(--info);
+        color: var(--info);
+        background: white;
+        transition: var(--transition);
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .btn-set-current:hover {
+        background: var(--info);
+        color: white;
+    }
+
+    .panel-footer-action {
+        padding: 0.75rem 1.25rem;
+        text-align: right;
+        border-top: 1px solid var(--gray-100);
+    }
+    .btn-add-sm {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.73rem;
+        font-weight: 600;
+        background: var(--primary-gradient);
+        color: white;
+        text-decoration: none;
+        transition: var(--transition);
+    }
+    .btn-add-sm:hover {
+        box-shadow: 0 4px 15px rgba(18,52,153,0.3);
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    /* ========== STAFF LIST ========== */
+    .staff-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        padding: 1.25rem;
+    }
+    @media (max-width: 640px) { .staff-grid { grid-template-columns: 1fr; } }
+    .staff-section h6 {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin: 0 0 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding-bottom: 0.6rem;
+        border-bottom: 2px solid var(--gray-100);
+    }
+    .staff-section h6 i { font-size: 0.85rem; }
+    .staff-section h6 i.text-purple { color: var(--purple); }
+    .staff-section h6 i.text-info { color: var(--info); }
+
+    .staff-list-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+        padding: 0.55rem 0.7rem;
+        border-radius: var(--radius-xs);
+        transition: var(--transition);
+    }
+    .staff-list-item:hover { background: var(--gray-50); }
+    .staff-list-item strong { font-size: 0.78rem; color: var(--gray-700); }
+    .staff-list-item small { font-size: 0.7rem; color: var(--gray-500); }
+    .staff-more {
+        text-align: center;
+        font-size: 0.7rem;
+        color: var(--gray-500);
+        font-weight: 600;
+        padding: 0.5rem;
+    }
+
+    /* ========== EMPTY STATE ========== */
+    .empty-tab {
+        text-align: center;
+        padding: 3rem 1.5rem;
+    }
+    .empty-tab-icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: var(--gray-100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 1.8rem;
+        color: #bdbdbd;
+    }
+    .empty-tab h5 {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin-bottom: 0.3rem;
+    }
+    .empty-tab p {
+        font-size: 0.78rem;
+        color: var(--gray-500);
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- INACTIVE ALERT -->
+{% if not school.is_active %}
+<div class="alert-banner">
+    <div class="alert-banner-content">
+        <i class="fas fa-exclamation-triangle"></i>
+        This school is currently <strong>INACTIVE</strong>
+    </div>
+    <form method="POST" action="{% url 'admin_panel:school_toggle' school.id %}" style="display:contents;">
+        {% csrf_token %}
+        <button type="submit" class="btn-activate">
+            <i class="fas fa-power-off"></i> Activate Now
+        </button>
+    </form>
+</div>
+{% endif %}
+
+<!-- MAIN LAYOUT -->
+<div class="detail-layout">
+
+    <!-- LEFT SIDEBAR -->
+    <div class="sidebar-stack">
+        
+        <!-- School Information -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <div class="info-card-header-icon primary-icon">
+                    <i class="fas fa-building"></i>
+                </div>
+                <h6>School Information</h6>
+            </div>
+            <div class="info-row">
+                <span class="info-label">School ID</span>
+                <span class="info-value"><code>{{ school.school_id }}</code></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Short Name</span>
+                <span class="info-value">{{ school.short_name|default:"—" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Grading Scale</span>
+                <span class="info-value">{{ school.get_grading_scale_display }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Period Type</span>
+                <span class="info-value">{{ school.get_period_type_display }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Passing Grade</span>
+                <span class="info-value">{{ school.passing_grade }}%</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Quarters</span>
+                <span class="info-value">{{ school.quarters_count }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Status</span>
+                <span class="info-value">
+                    {% if school.is_active %}
+                        <span class="status-pill active-pill">
+                            <span class="status-dot dot-active"></span> Active
+                        </span>
+                    {% else %}
+                        <span class="status-pill inactive-pill">
+                            <span class="status-dot dot-inactive"></span> Inactive
+                        </span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Email Domain</span>
+                <span class="info-value">{{ school.email_domain|default:"—" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Contact</span>
+                <span class="info-value">{{ school.contact_number|default:"—" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Address</span>
+                <span class="info-value">{{ school.address|default:"—" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Created</span>
+                <span class="info-value">{{ school.created_at|date:"F d, Y" }}</span>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <div class="info-card-header-icon success-icon">
+                    <i class="fas fa-chart-simple"></i>
+                </div>
+                <h6>Quick Stats</h6>
+            </div>
+            <div class="stats-mini-grid">
+                <div class="stat-mini-card">
+                    <div class="stat-mini-icon success-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-mini-value">{{ student_count|default:0 }}</div>
+                    <div class="stat-mini-label">Students</div>
+                </div>
+                <div class="stat-mini-card">
+                    <div class="stat-mini-icon info-icon">
+                        <i class="fas fa-chalkboard-user"></i>
+                    </div>
+                    <div class="stat-mini-value">{{ teacher_count|default:0 }}</div>
+                    <div class="stat-mini-label">Teachers</div>
+                </div>
+                <div class="stat-mini-card">
+                    <div class="stat-mini-icon purple-icon">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <div class="stat-mini-value">{{ grade_level_count|default:0 }}</div>
+                    <div class="stat-mini-label">Grade Levels</div>
+                </div>
+                <div class="stat-mini-card">
+                    <div class="stat-mini-icon warning-icon-bg">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div class="stat-mini-value">{{ registrar_count|default:0 }}</div>
+                    <div class="stat-mini-label">Registrars</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <div class="info-card-header-icon warning-icon">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <h6>Actions</h6>
+            </div>
+            <div class="action-btn-group">
+                <a href="{% url 'admin_panel:school_edit' school.id %}" class="btn-action primary-btn">
+                    <i class="fas fa-edit"></i> Edit School
+                </a>
+                <a href="{% url 'admin_panel:principal_create' %}?school={{ school.id }}" class="btn-action success-btn">
+                    <i class="fas fa-user-plus"></i> Assign Principal
+                </a>
+                <a href="{% url 'admin_panel:grade_level_create' %}?school={{ school.id }}" class="btn-action info-btn">
+                    <i class="fas fa-layer-group"></i> Add Grade Levels
+                </a>
+                <form method="POST" action="{% url 'admin_panel:school_toggle' school.id %}" style="display:contents;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-action warning-btn" onclick="return confirm('Toggle school status for {{ school.school_name|escapejs }}?')">
+                        <i class="fas fa-power-off"></i> {% if school.is_active %}Deactivate{% else %}Activate{% endif %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT CONTENT - TABS -->
+    <div>
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active-tab" data-tab="principal">
+                <i class="fas fa-user-tie"></i> Principal
+            </button>
+            <button class="tab-btn" data-tab="grade-levels">
+                <i class="fas fa-layer-group"></i> Grade Levels
+                <span class="tab-count">{{ grade_level_count|default:0 }}</span>
+            </button>
+            <button class="tab-btn" data-tab="school-years">
+                <i class="fas fa-calendar"></i> School Years
+            </button>
+            <button class="tab-btn" data-tab="staff">
+                <i class="fas fa-users"></i> Staff
+            </button>
+        </div>
+
+        <!-- Tab Panel: Principal -->
+        <div id="tab-principal" class="tab-panel active-panel">
+            {% if principals %}
+                {% for principal in principals %}
+                <div class="principal-card">
+                    <div class="principal-card-top">
+                        <div>
+                            <h5>{{ principal.full_name }}</h5>
+                            <div class="principal-meta">
+                                <span><i class="fas fa-envelope"></i> {{ principal.user.email }}</span>
+                                <span><i class="fas fa-id-card"></i> ID: {{ principal.employee_number|default:"N/A" }}</span>
+                            </div>
+                        </div>
+                        {% if principal.is_active %}
+                            <span style="background:rgba(255,255,255,0.2);padding:0.25rem 0.75rem;border-radius:20px;font-size:0.7rem;font-weight:600;">Active</span>
+                        {% else %}
+                            <span style="background:rgba(255,255,255,0.15);padding:0.25rem 0.75rem;border-radius:20px;font-size:0.7rem;font-weight:600;opacity:0.7;">Inactive</span>
+                        {% endif %}
+                    </div>
+                    <hr class="principal-divider">
+                    <div class="principal-footer">
+                        <span><i class="fas fa-calendar-alt"></i> Since: {{ principal.created_at|date:"M d, Y" }}</span>
+                        <a href="{% url 'admin_panel:principal_detail' principal.id %}" class="btn-view-principal">
+                            <i class="fas fa-external-link-alt"></i> View Details
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-tab">
+                    <div class="empty-tab-icon">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <h5>No Principal Assigned</h5>
+                    <p>This school needs a principal to manage its operations.</p>
+                    <a href="{% url 'admin_panel:principal_create' %}?school={{ school.id }}" class="btn-add-sm">
+                        <i class="fas fa-plus"></i> Assign Principal
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Tab Panel: Grade Levels -->
+        <div id="tab-grade-levels" class="tab-panel">
+            {% if grade_levels %}
+                <div style="overflow-x:auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Grade Name</th>
+                                <th>Number</th>
+                                <th>Category</th>
+                                <th>SHS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for gl in grade_levels %}
+                            <tr>
+                                <td><strong>{{ gl.grade_code }}</strong></td>
+                                <td>{{ gl.grade_name }}</td>
+                                <td>{{ gl.grade_number }}</td>
+                                <td>{{ gl.get_level_category_display }}</td>
+                                <td>
+                                    {% if gl.is_senior_high %}
+                                        <span class="badge-table info-badge">Yes</span>
+                                    {% else %}
+                                        <span class="badge-table secondary-badge">No</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="panel-footer-action">
+                    <a href="{% url 'admin_panel:grade_level_create' %}" class="btn-add-sm">
+                        <i class="fas fa-plus"></i> Add Grade Level
+                    </a>
+                </div>
+            {% else %}
+                <div class="empty-tab">
+                    <div class="empty-tab-icon">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <h5>No Grade Levels Configured</h5>
+                    <p>Add grade levels to start enrolling students.</p>
+                    <a href="{% url 'admin_panel:grade_level_create' %}" class="btn-add-sm">
+                        <i class="fas fa-plus"></i> Add Grade Levels
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Tab Panel: School Years -->
+        <div id="tab-school-years" class="tab-panel">
+            {% if school_years %}
+                <div style="overflow-x:auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>School Year</th>
+                                <th>Start</th>
+                                <th>End</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sy in school_years %}
+                            <tr>
+                                <td>
+                                    <strong>{{ sy.year_label }}</strong>
+                                    {% if sy.is_current %}
+                                        <span class="badge-table info-badge" style="margin-left:0.4rem;">Current</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ sy.date_start|date:"M d, Y" }}</td>
+                                <td>{{ sy.date_end|date:"M d, Y" }}</td>
+                                <td>
+                                    {% if sy.status == 'Active' %}
+                                        <span class="badge-table success-badge">Active</span>
+                                    {% elif sy.status == 'Completed' %}
+                                        <span class="badge-table secondary-badge">Completed</span>
+                                    {% else %}
+                                        <span class="badge-table warning-badge">{{ sy.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'admin_panel:school_year_set_current' sy.id %}" 
+                                       class="btn-set-current"
+                                       onclick="return confirm('Set as current school year?')">
+                                        <i class="fas fa-check"></i> Set Current
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="panel-footer-action">
+                    <a href="{% url 'admin_panel:school_year_manage' %}" class="btn-add-sm">
+                        <i class="fas fa-plus"></i> Add School Year
+                    </a>
+                </div>
+            {% else %}
+                <div class="empty-tab">
+                    <div class="empty-tab-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <h5>No School Years Configured</h5>
+                    <p>School years define academic periods for this school.</p>
+                    <a href="{% url 'admin_panel:school_year_manage' %}" class="btn-add-sm">
+                        <i class="fas fa-plus"></i> Add School Year
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Tab Panel: Staff -->
+        <div id="tab-staff" class="tab-panel">
+            <div class="staff-grid">
+                <!-- Registrars -->
+                <div class="staff-section">
+                    <h6>
+                        <i class="fas fa-user-check text-purple"></i> 
+                        Registrars ({{ registrar_count|default:0 }})
+                    </h6>
+                    {% if registrars %}
+                        {% for reg in registrars %}
+                        <div class="staff-list-item">
+                            <strong>{{ reg.full_name }}</strong>
+                            <small>{{ reg.user.email }}</small>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p style="font-size:0.78rem;color:var(--gray-500);padding:0.5rem 0.7rem;">No registrars assigned.</p>
+                    {% endif %}
+                </div>
+                <!-- Teachers -->
+                <div class="staff-section">
+                    <h6>
+                        <i class="fas fa-chalkboard-user text-info"></i> 
+                        Teachers ({{ teacher_count|default:0 }})
+                    </h6>
+                    {% if teachers %}
+                        {% for teacher in teachers|slice:":10" %}
+                        <div class="staff-list-item">
+                            <strong>{{ teacher.full_name }}</strong>
+                            <small>{{ teacher.user.email }}</small>
+                        </div>
+                        {% endfor %}
+                        {% if teacher_count > 10 %}
+                            <div class="staff-more">+ {{ teacher_count|add:"-10" }} more teachers</div>
+                        {% endif %}
+                    {% else %}
+                        <p style="font-size:0.78rem;color:var(--gray-500);padding:0.5rem 0.7rem;">No teachers assigned yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.tab-btn').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            var tabName = this.dataset.tab;
+            document.querySelectorAll('.tab-btn').forEach(function(t) { t.classList.remove('active-tab'); });
+            this.classList.add('active-tab');
+            document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active-panel'); });
+            document.getElementById('tab-' + tabName).classList.add('active-panel');
+        });
+    });
+</script>
+{% endblock %}

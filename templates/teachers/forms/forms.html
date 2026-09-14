@@ -1,0 +1,565 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Forms — Formify LIS</title>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI','Century Gothic',sans-serif}
+    :root{--rich-black:#00072D;--dark-blue:#051650;--caribbean-blue:#123499;--secondary-green:#5EA173;--green-dark:#4a8a5e;--gray-bg:#f5f7fb;--border-color:#e9ecef;--text-primary:#2d3748;--text-secondary:#718096;--text-light:#a0aec0;--sidebar-width:280px;--sidebar-collapsed-width:80px;--radius-sm:8px;--radius-md:14px;--radius-lg:20px;--radius-xl:28px;--shadow-sm:0 2px 10px rgba(0,0,0,.05);--shadow-md:0 8px 25px rgba(0,0,0,.1);--toast-success:#28a745;--toast-error:#dc3545;--toast-warning:#ffc107;--toast-info:#17a2b8}
+    body{background:var(--gray-bg);min-height:100vh}
+    .layout{display:flex;min-height:100vh}
+    .sidebar{width:var(--sidebar-width);background:linear-gradient(180deg,var(--rich-black),var(--dark-blue));color:#fff;position:fixed;height:100vh;overflow-y:auto;overflow-x:hidden;transition:width .3s;z-index:100;display:flex;flex-direction:column}
+    .sidebar.collapsed{width:var(--sidebar-collapsed-width)}
+    .sidebar.collapsed .sb-logo-text,.sidebar.collapsed .user-details,.sidebar.collapsed .nav-link span{display:none}
+    .sidebar.collapsed .sb-header{justify-content:center;padding:1.5rem .5rem}
+    .sidebar.collapsed .sb-logo{display:none}
+    .sidebar.collapsed .user-info{justify-content:center;padding:.8rem;margin:0 .5rem 1.5rem}
+    .sidebar.collapsed .nav-link{justify-content:center;padding:.85rem 0;gap:0}
+    .sidebar.collapsed .fold-btn{margin:0 auto}
+    .sidebar::-webkit-scrollbar{width:4px}
+    .sidebar::-webkit-scrollbar-thumb{background:var(--secondary-green);border-radius:4px}
+    .sb-header{display:flex;align-items:center;justify-content:space-between;padding:1.5rem;border-bottom:1px solid rgba(255,255,255,.1)}
+    .sb-logo{display:flex;align-items:center;gap:.8rem}
+    .sb-logo i{font-size:1.8rem;color:var(--secondary-green)}
+    .sb-logo-text h2{font-size:1rem;font-weight:700}
+    .sb-logo-text span{font-size:.65rem;opacity:.6;display:block}
+    .fold-btn{background:rgba(255,255,255,.1);border:none;color:#fff;cursor:pointer;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:background .2s;flex-shrink:0}
+    .fold-btn:hover{background:rgba(255,255,255,.25)}
+    .user-info{display:flex;align-items:center;gap:.8rem;padding:.9rem;margin:1rem 1rem 1.5rem;background:rgba(255,255,255,.1);border-radius:12px;overflow:hidden;white-space:nowrap}
+    .user-avatar{width:42px;height:42px;background:var(--secondary-green);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:var(--rich-black);flex-shrink:0}
+    .user-details h4{font-size:.85rem;font-weight:600}
+    .user-details p{font-size:.65rem;opacity:.65}
+    .nav-menu{list-style:none;padding:0 .75rem;flex:1}
+    .nav-item{margin-bottom:.2rem}
+    .nav-link{display:flex;align-items:center;gap:.9rem;padding:.7rem 1rem;color:rgba(255,255,255,.8);text-decoration:none;border-radius:10px;font-size:.875rem;transition:all .25s;white-space:nowrap;overflow:hidden}
+    .nav-link:hover{background:rgba(94,161,115,.2);color:#fff}
+    .nav-link.active{background:var(--secondary-green);color:var(--rich-black);font-weight:600}
+    .nav-link i{width:20px;font-size:1rem;text-align:center;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center}
+    .nav-footer{margin-top:auto;padding:1rem .75rem;border-top:1px solid rgba(255,255,255,.1)}
+    .main{flex:1;margin-left:var(--sidebar-width);padding:1.5rem;transition:margin-left .3s;min-height:100vh}
+    .sidebar.collapsed~.main{margin-left:var(--sidebar-collapsed-width)}
+    .top-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;background:#fff;padding:1rem 1.5rem;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);margin-bottom:1.5rem}
+    .page-title h1{font-size:1.25rem;color:var(--rich-black);font-weight:700}
+    .page-title p{font-size:.78rem;color:var(--text-secondary);display:flex;align-items:center;gap:.4rem;margin-top:.2rem}
+    .top-actions{display:flex;align-items:center;gap:.8rem}
+    .date-chip{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--text-secondary);background:var(--gray-bg);padding:.35rem .75rem;border-radius:8px}
+    .notif-wrap{position:relative}
+    .notif-btn{background:none;border:none;padding:.35rem;cursor:pointer;display:flex;align-items:center;border-radius:8px;transition:background .2s}
+    .notif-btn:hover{background:var(--gray-bg)}
+    .notif-btn i{font-size:1.2rem;color:var(--text-primary)}
+    .notif-count{position:absolute;top:-4px;right:-6px;background:#dc3545;color:#fff;font-size:.55rem;padding:.1rem .35rem;border-radius:10px;min-width:16px;text-align:center;font-weight:700}
+    .notif-count.zero{background:#adb5bd}
+    .notif-dropdown{position:absolute;top:44px;right:0;width:340px;background:#fff;border-radius:var(--radius-lg);box-shadow:0 12px 32px rgba(0,0,0,.18);z-index:300;display:none;overflow:hidden;border:1px solid var(--border-color)}
+    .notif-dropdown.open{display:block;animation:fadeDown .2s ease}
+    @keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+    .notif-head{padding:.8rem 1.2rem;background:var(--gray-bg);border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.82rem;color:var(--rich-black)}
+    .notif-list{max-height:340px;overflow-y:auto}
+    .notif-item{display:flex;gap:.7rem;padding:.8rem 1.2rem;border-bottom:1px solid var(--border-color);cursor:pointer;transition:background .2s}
+    .notif-item:hover{background:var(--gray-bg)}
+    .notif-item.unread{background:rgba(94,161,115,.05);border-left:3px solid var(--secondary-green)}
+    .notif-icon{width:32px;height:32px;background:rgba(94,161,115,.12);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--secondary-green);font-size:.8rem}
+    .notif-body .notif-title{font-size:.78rem;font-weight:600;color:var(--rich-black)}
+    .notif-body .notif-msg{font-size:.7rem;color:var(--text-secondary);line-height:1.4}
+    .notif-body .notif-time{font-size:.62rem;color:var(--text-light);margin-top:.2rem}
+    .notif-foot{padding:.6rem;text-align:center;border-top:1px solid var(--border-color);background:var(--gray-bg)}
+    .notif-foot a{color:var(--secondary-green);font-size:.72rem;font-weight:600;cursor:pointer}
+    .poro-banner{background:linear-gradient(135deg,#f0f9f0,#e8f5e9);border:1px solid rgba(94,161,115,.3);border-radius:var(--radius-xl);padding:1rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+    .poro-left{display:flex;align-items:center;gap:1rem}
+    .poro-icon{width:50px;height:50px;background:var(--secondary-green);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;box-shadow:0 4px 12px rgba(94,161,115,.3);animation:bounce 2s ease infinite}
+    .poro-icon img{width:100%;height:100%;object-fit:cover}
+    @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+    .poro-msg h3{font-size:1rem;color:var(--rich-black);font-weight:700;margin-bottom:.2rem}
+    .poro-msg p{font-size:.75rem;color:var(--text-secondary)}
+    .forms-tally{background:var(--secondary-green);color:#fff;padding:.6rem 1.2rem;border-radius:30px;font-weight:700;font-size:.82rem;display:flex;align-items:center;gap:.6rem;white-space:nowrap}
+    .context-bar{background:#fff;border-radius:var(--radius-md);padding:.9rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem;box-shadow:var(--shadow-sm)}
+    .ctx-selectors{display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+    .ctx-group{display:flex;align-items:center;gap:.4rem}
+    .ctx-group label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);white-space:nowrap}
+    .ctx-group select{padding:.4rem 1.8rem .4rem .7rem;border:2px solid var(--border-color);border-radius:8px;font-size:.82rem;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right .5rem center;appearance:none;cursor:pointer;outline:none;transition:border-color .2s}
+    .ctx-group select:focus{border-color:var(--secondary-green)}
+    .ctx-actions{display:flex;gap:.6rem}
+    .btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1rem;border-radius:var(--radius-sm);font-size:.8rem;font-weight:600;cursor:pointer;border:none;transition:all .2s;white-space:nowrap;text-decoration:none}
+    .btn-green{background:var(--secondary-green);color:#fff}
+    .btn-green:hover{background:var(--green-dark);transform:translateY(-1px)}
+    .btn-outline{background:transparent;border:2px solid var(--border-color);color:var(--text-primary)}
+    .btn-outline:hover{border-color:var(--secondary-green);color:var(--secondary-green);background:rgba(94,161,115,.05)}
+    .btn-sm{padding:.35rem .8rem;font-size:.75rem}
+    .btn-danger{background:#dc3545;color:#fff}
+    .btn-danger:hover{background:#c82333}
+    .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+    .readiness-bar{background:#fff;border-radius:var(--radius-md);padding:.9rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;box-shadow:var(--shadow-sm)}
+    .readiness-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);white-space:nowrap}
+    .readiness-items{display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;flex:1}
+    .readiness-item{display:flex;align-items:center;gap:.4rem;font-size:.75rem;cursor:pointer}
+    .readiness-item:hover .r-label{color:var(--secondary-green)}
+    .r-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .r-dot.ok{background:#28a745}.r-dot.warn{background:#ffc107}.r-dot.err{background:#dc3545}
+    .r-label{color:var(--text-primary)}
+    .r-badge{background:#dc3545;color:#fff;font-size:.6rem;padding:.05rem .35rem;border-radius:10px;font-weight:700}
+    .correction-alert{background:#fff3cd;border:1px solid #ffc107;border-radius:var(--radius-md);padding:.8rem 1.2rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:.8rem;flex-wrap:wrap}
+    .correction-alert .ca-left{display:flex;align-items:center;gap:.6rem;color:#856404;font-size:.82rem;font-weight:500}
+    .btn-warning{background:#856404;color:#fff}
+    .btn-warning:hover{background:#6a4e03}
+    .forms-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+    .forms-section-header h2{font-size:1rem;font-weight:700;color:var(--rich-black);display:flex;align-items:center;gap:.4rem}
+    .forms-section-header h2 i{color:var(--secondary-green)}
+    .forms-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.2rem;margin-bottom:2rem}
+    @media(max-width:1400px){.forms-grid{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:1100px){.forms-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:600px){.forms-grid{grid-template-columns:1fr}}
+    .form-card{background:#fff;border-radius:var(--radius-lg);padding:1.3rem;border:1.5px solid var(--border-color);box-shadow:var(--shadow-sm);cursor:pointer;transition:all .25s;display:flex;flex-direction:column}
+    .form-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--secondary-green)}
+    .form-card.is-locked{opacity:.55;cursor:not-allowed}
+    .form-card.is-locked:hover{transform:none;box-shadow:var(--shadow-sm);border-color:var(--border-color)}
+    .fc-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.9rem}
+    .fc-icon{width:44px;height:44px;background:var(--gray-bg);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--secondary-green)}
+    .fc-code{font-size:1.1rem;font-weight:800;color:var(--rich-black);letter-spacing:-.3px}
+    .fc-name{font-size:.75rem;color:var(--text-secondary);line-height:1.4;margin-bottom:.9rem;flex:1}
+    .fc-footer{display:flex;align-items:center;justify-content:space-between;padding-top:.8rem;border-top:1px solid var(--border-color);margin-top:auto}
+    .fc-msg{font-size:.62rem;color:var(--text-light);margin-top:.4rem;display:flex;align-items:center;gap:.3rem}
+    .pill{padding:.22rem .65rem;border-radius:20px;font-size:.65rem;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+    .pill-completed{background:#d4edda;color:#155724}.pill-submitted{background:#cce5ff;color:#004085}
+    .pill-ready{background:#fff3cd;color:#856404}.pill-partial{background:#ffeaa7;color:#6c5200}
+    .pill-pending,.pill-not-started{background:#f5f5f5;color:var(--text-secondary)}
+    .pill-locked{background:#f8d7da;color:#721c24}.pill-returned{background:#fce4ec;color:#c62828}
+    .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 2rem;text-align:center}
+    .empty i{font-size:2.5rem;color:var(--text-light);margin-bottom:.8rem;opacity:.6}
+    .empty h3{font-size:.9rem;font-weight:600;color:var(--text-secondary);margin-bottom:.3rem}
+    .empty p{font-size:.75rem;color:var(--text-light);max-width:280px;line-height:1.5}
+    .card{background:#fff;border-radius:var(--radius-lg);padding:1.3rem 1.5rem;box-shadow:var(--shadow-sm);margin-bottom:1.5rem}
+    .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+    .card-header h2{font-size:1rem;font-weight:700;color:var(--rich-black);display:flex;align-items:center;gap:.4rem}
+    .card-header h2 i{color:var(--secondary-green)}
+    table{width:100%;border-collapse:collapse}
+    th{text-align:left;padding:.7rem .6rem;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--border-color)}
+    td{padding:.7rem .6rem;border-bottom:1px solid var(--border-color);font-size:.8rem;color:var(--text-primary)}
+    tr:last-child td{border-bottom:none}tr:hover td{background:var(--gray-bg)}
+    .tbl-actions{display:flex;gap:.4rem}
+    .icon-btn{width:28px;height:28px;border-radius:6px;background:var(--gray-bg);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:.8rem;transition:all .2s}
+    .icon-btn:hover{background:var(--secondary-green);color:#fff}
+    .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(4px);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem}
+    .modal-overlay.open{display:flex}
+    .modal{background:#fff;border-radius:var(--radius-xl);width:100%;max-width:580px;box-shadow:0 24px 60px rgba(0,0,0,.22);animation:modalIn .28s cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column;max-height:90vh}
+    .modal.modal-lg{max-width:800px}.modal.modal-sm{max-width:420px}
+    @keyframes modalIn{from{opacity:0;transform:translateY(-16px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+    .modal-header{padding:1.2rem 1.5rem 1rem;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+    .modal-header h2{font-size:1.05rem;font-weight:700;color:var(--rich-black);display:flex;align-items:center;gap:.5rem}
+    .modal-header h2 i{color:var(--secondary-green)}
+    .modal-close{background:none;border:none;cursor:pointer;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-light);font-size:1rem;transition:all .2s}
+    .modal-close:hover{background:var(--gray-bg);color:var(--text-primary)}
+    .modal-body{padding:1.3rem 1.5rem;overflow-y:auto;flex:1}
+    .modal-footer{padding:.9rem 1.5rem 1.2rem;border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;gap:.7rem;flex-shrink:0;flex-wrap:wrap}
+    .workflow-chain{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin:1rem 0}
+    .wf-step{display:flex;align-items:center;gap:.35rem;padding:.3rem .7rem;border-radius:20px;font-size:.68rem;font-weight:600}
+    .wf-step.done{background:#d4edda;color:#155724}.wf-step.active{background:var(--secondary-green);color:#fff}
+    .wf-step.future{background:var(--gray-bg);color:var(--text-secondary)}.wf-arrow{color:var(--text-light);font-size:.75rem}
+    .data-source-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin:1rem 0}
+    .ds-item{background:var(--gray-bg);border-radius:var(--radius-sm);padding:.6rem .8rem;font-size:.75rem;cursor:pointer;transition:all .2s;border:1.5px solid transparent;position:relative}
+    .ds-item:hover{background:rgba(94,161,115,.08);border-color:rgba(94,161,115,.3)}
+    .ds-item strong{display:flex;align-items:center;gap:.4rem;color:var(--rich-black);font-size:.8rem;margin-bottom:.1rem}
+    .ds-item .ds-expand-icon{margin-left:auto;font-size:.65rem;transition:transform .25s;color:var(--text-light)}
+    .ds-item.expanded .ds-expand-icon{transform:rotate(180deg)}
+    .ds-item .ds-detail{max-height:0;overflow:hidden;transition:max-height .3s ease,margin-top .3s ease,padding-top .3s ease;margin-top:0;padding-top:0;border-top:1px solid transparent}
+    .ds-item.expanded .ds-detail{max-height:200px;margin-top:.5rem;padding-top:.5rem;border-top-color:var(--border-color)}
+    .ds-detail-row{display:flex;align-items:center;justify-content:space-between;padding:.25rem 0;font-size:.72rem;color:var(--text-secondary)}
+    .ds-detail-row .ds-status{font-size:.65rem;font-weight:600;padding:.1rem .45rem;border-radius:10px}
+    .ds-status.complete{background:#d4edda;color:#155724}.ds-status.partial{background:#fff3cd;color:#856404}.ds-status.missing{background:#f8d7da;color:#721c24}
+    .ds-fix-link{display:inline-block;margin-top:.35rem;font-size:.68rem;color:var(--secondary-green);font-weight:600;cursor:pointer}
+    .ds-fix-link:hover{text-decoration:underline}
+    .wizard-steps{display:flex;gap:.5rem;margin-bottom:1.5rem;justify-content:center}
+    .ws-step{display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:var(--text-secondary)}
+    .ws-num{width:26px;height:26px;border-radius:50%;background:var(--border-color);color:var(--text-secondary);display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700}
+    .ws-step.active .ws-num{background:var(--secondary-green);color:#fff}.ws-step.active{color:var(--rich-black);font-weight:600}
+    .ws-divider{height:1px;width:30px;background:var(--border-color)}
+    .form-check-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+    .check-item{display:flex;align-items:center;gap:.6rem;padding:.6rem .8rem;border:1.5px solid var(--border-color);border-radius:var(--radius-sm);cursor:pointer;transition:all .2s}
+    .check-item.checked{border-color:var(--secondary-green);background:rgba(94,161,115,.06)}
+    .check-item input{width:15px;height:15px;accent-color:var(--secondary-green)}
+    .check-item label{font-size:.8rem;font-weight:600;cursor:pointer}
+    .validation-row{display:flex;align-items:center;gap:.8rem;padding:.6rem 0;border-bottom:1px solid var(--border-color);font-size:.8rem}
+    .validation-row:last-child{border-bottom:none}
+    .val-icon.ok{color:#28a745}.val-icon.warn{color:#ffc107}.val-icon.err{color:#dc3545}
+    .form-row{margin-bottom:1rem}
+    .form-row label{display:block;font-size:.75rem;font-weight:700;color:var(--text-primary);margin-bottom:.4rem}
+    .form-row input,.form-row select,.form-row textarea{width:100%;padding:.7rem .9rem;border:2px solid var(--border-color);border-radius:var(--radius-sm);font-size:.85rem;font-family:inherit;outline:none;transition:border-color .2s}
+    .form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--secondary-green)}
+    .form-row textarea{min-height:90px;resize:vertical}
+    .form-row.two-col{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+    .sf1-preview-table{width:100%;border-collapse:collapse;font-size:.75rem}
+    .sf1-preview-table th{background:var(--gray-bg);position:sticky;top:0;z-index:1}
+    .sf1-preview-table td,.sf1-preview-table th{padding:.5rem .6rem;border:1px solid var(--border-color)}
+    .sf1-preview-table .sf1-lrn{font-family:monospace;font-size:.7rem}
+    .sf9-layout{display:grid;grid-template-columns:220px 1fr;gap:1rem;height:480px}
+    .sf9-nav{border-right:1px solid var(--border-color);overflow-y:auto;padding-right:.5rem}
+    .sf9-student{display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;border-radius:var(--radius-sm);cursor:pointer;transition:background .2s;margin-bottom:.2rem}
+    .sf9-student:hover{background:var(--gray-bg)}
+    .sf9-student.active{background:rgba(94,161,115,.1);border-left:3px solid var(--secondary-green)}
+    .sf9-student .s-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .sf9-student .s-dot.pass{background:#28a745}.sf9-student .s-dot.warn{background:#ffc107}.sf9-student .s-dot.fail{background:#dc3545}
+    .sf9-student .s-name{font-size:.78rem;font-weight:500;color:var(--text-primary)}
+    .sf9-preview{overflow-y:auto;background:var(--gray-bg);border-radius:var(--radius-md);padding:1.5rem;display:flex;align-items:center;justify-content:center}
+    .rc-card{background:#fff;border-radius:var(--radius-md);padding:1.5rem;width:100%;max-width:360px;text-align:center;box-shadow:var(--shadow-sm)}
+    .rc-name{font-size:.95rem;font-weight:700;color:var(--rich-black);margin-bottom:.2rem}
+    .rc-lrn{font-size:.68rem;color:var(--text-secondary);margin-bottom:.8rem}
+    .rc-avg{font-size:2.5rem;font-weight:800;margin-bottom:.2rem}
+    .rc-avg.pass{color:#28a745}.rc-avg.fail{color:#dc3545}
+    .rc-status{font-size:.75rem;font-weight:600;margin-bottom:1rem}
+    .rc-subject-list{text-align:left;margin-bottom:1rem}
+    .rc-subject-row{display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border-color);font-size:.72rem}
+    .rc-subject-row .subj-grade{font-weight:700}
+    .rc-remarks{width:100%;min-height:60px;border:1.5px solid var(--border-color);border-radius:8px;padding:.5rem;font-size:.75rem;resize:vertical;outline:none;font-family:inherit}
+    .rc-remarks:focus{border-color:var(--secondary-green)}
+    .toast-container{position:fixed;top:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.6rem;max-width:380px}
+    .toast{padding:.9rem 1.2rem;border-radius:var(--radius-md);color:#fff;font-size:.82rem;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.18);animation:slideInRight .35s ease;display:flex;align-items:flex-start;gap:.7rem;cursor:pointer}
+    .toast.success{background:var(--toast-success)}.toast.error{background:var(--toast-error)}
+    .toast.warning{background:var(--toast-warning);color:#333}.toast.info{background:var(--toast-info)}
+    @keyframes slideInRight{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+    @keyframes slideOutRight{from{transform:translateX(0);opacity:1}to{transform:translateX(120%);opacity:0}}
+    .toast.removing{animation:slideOutRight .3s ease forwards}
+    .confirm-icon{font-size:2.5rem;margin-bottom:.5rem;text-align:center}
+    .confirm-msg{text-align:center;font-size:.88rem;color:var(--text-primary);margin-bottom:.3rem;line-height:1.5}
+    .confirm-sub{text-align:center;font-size:.72rem;color:var(--text-light);margin-bottom:1rem}
+    .mobile-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;display:none}
+    .mobile-overlay.show{display:block}
+    @media(max-width:768px){
+        .sidebar{transform:translateX(-100%);transition:transform .3s;width:var(--sidebar-width)!important}
+        .sidebar.mobile-open{transform:translateX(0)}
+        .main{margin-left:0!important;padding:1rem}
+        .forms-grid{grid-template-columns:1fr}
+        .form-check-grid{grid-template-columns:1fr}.data-source-grid{grid-template-columns:1fr}
+        .sf9-layout{grid-template-columns:1fr;height:auto}
+        .sf9-nav{border-right:none;border-bottom:1px solid var(--border-color);max-height:180px;padding-bottom:.5rem}
+        .modal{max-width:100%;border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+        .modal-overlay{align-items:flex-end}
+        .notif-dropdown{width:290px;right:-10px}
+        .toast-container{left:1rem;right:1rem;max-width:none}
+    }
+    </style>
+</head>
+<body>
+<div class="toast-container" id="toastContainer"></div>
+<div class="mobile-overlay" id="mobileOverlay"></div>
+<div class="layout">
+
+<div class="sidebar" id="sidebar">
+    <div class="sb-header">
+        <div class="sb-logo"><i class="fi fi-rr-graduation-cap"></i><div class="sb-logo-text"><h2>Formify</h2><span>Learner Information System</span></div></div>
+        <button class="fold-btn" id="foldBtn"><i class="fi fi-rr-angle-small-left" id="foldIcon"></i></button>
+    </div>
+    <div class="user-info">
+        <div class="user-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+        <div class="user-details"><h4>{{ request.user.get_full_name }}</h4><p>Teacher</p></div>
+    </div>
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="{% url 'teachers-dashboard' %}" class="nav-link"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-classes' %}" class="nav-link"><i class="fi fi-rr-presentation"></i><span>My Classes</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-grades' %}" class="nav-link"><i class="fi fi-rr-pencil"></i><span>Grade Encoding</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-attendance' %}" class="nav-link"><i class="fi fi-rr-calendar-check"></i><span>Attendance</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-forms' %}" class="nav-link active"><i class="fi fi-rr-document"></i><span>School Forms</span></a></li>
+            <li class="nav-item"><a href="/teachers/reports/" class="nav-link"><i class="fi fi-rr-chart-line-up"></i><span>Reports</span></a></li>
+            <li class="nav-item"><a href="/teachers/schedule/" class="nav-link"><i class="fi fi-rr-calendar"></i><span>Schedule</span></a></li>
+        </ul>
+    <ul class="nav-menu nav-footer">
+        <li class="nav-item">
+            <form method="POST" action="{% url 'signout' %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="nav-link" style="width:100%;background:none;border:none;cursor:pointer;"><i class="fas fa-sign-out-alt"></i><span>Logout</span></button>
+            </form>
+        </li>
+    </ul>
+</div>
+
+<div class="main" id="mainContent">
+    <div class="top-bar">
+        <div class="page-title"><h1>School Forms</h1><p><i class="fi fi-rr-document"></i><strong>{{ selected_section }}</strong>&nbsp;·&nbsp;{{ quarter_name }}&nbsp;·&nbsp;{{ current_sy }}</p></div>
+        <div class="top-actions">
+            <div class="date-chip"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
+            <div class="notif-wrap">
+                <button class="notif-btn" id="notifBtn"><i class="fi fi-rr-bell"></i><span class="notif-count {% if not form_notifications %}zero{% endif %}" id="notifCount">{{ form_notifications|length }}</span></button>
+                <div class="notif-dropdown" id="notifDropdown">
+                    <div class="notif-head"><span>Form Notifications</span><span style="font-size:.7rem;opacity:.65;">{{ form_notifications|length }} unread</span></div>
+                    <div class="notif-list">
+                        {% if form_notifications %}
+                            {% for n in form_notifications %}
+                            <div class="notif-item unread"><div class="notif-icon"><i class="fi fi-rr-bell"></i></div><div class="notif-body"><div class="notif-title">{{ n.title }}</div><div class="notif-msg">{{ n.message|truncatechars:90 }}</div><div class="notif-time">{{ n.created_at|timesince }} ago</div></div></div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty" style="min-height:120px;padding:1.5rem;"><i class="fi fi-rr-bell" style="font-size:1.8rem;margin-bottom:.5rem;"></i><p style="margin:0;">No form notifications</p></div>
+                        {% endif %}
+                    </div>
+                    <div class="notif-foot"><a id="markAllRead">Mark all as read</a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="poro-banner">
+        <div class="poro-left">
+            <div class="poro-icon"><img src="{% static 'shared/poro/Poro.png' %}" alt="Poro" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fi fi-rr-smile\' style=\'font-size:1.6rem;color:#fff;\'></i>';"></div>
+            <div class="poro-msg">
+                <h3>Forms Center — {{ selected_section }}</h3>
+                <p>{% if not has_data %}No class assignments yet. Contact the Registrar to set up your teaching load.{% elif total_completed == total_forms and total_forms > 0 %}🎉 All {{ total_forms }} forms complete for {{ quarter_name }}!{% elif total_completed > 0 %}{{ total_completed }} of {{ total_forms }} forms completed for {{ quarter_name }}.{% if readiness.grades.missing %} {{ readiness.grades.missing }} grade{{ readiness.grades.missing|pluralize }} still need finalization.{% endif %}{% else %}Select a form below to begin your {{ quarter_name }} compliance.{% endif %}</p>
+            </div>
+        </div>
+        <div class="forms-tally"><i class="fi fi-rr-check-circle"></i>{{ total_completed }} / {{ total_forms }} Complete</div>
+    </div>
+
+    <form class="context-bar" method="GET" id="ctxForm">
+        <div class="ctx-selectors">
+            <div class="ctx-group"><label><i class="fi fi-rr-calendar"></i> SY</label><select name="school_year" onchange="document.getElementById('ctxForm').submit()">{% for sy in available_sy %}<option value="{{ sy.id }}" {% if sy.id == current_sy_id %}selected{% endif %}>{{ sy.label }}</option>{% endfor %}</select></div>
+            <div class="ctx-group"><label>Quarter</label><select name="quarter" onchange="document.getElementById('ctxForm').submit()">{% for q in quarter_options %}<option value="{{ q.label }}" {% if q.label == quarter_label %}selected{% endif %}>{{ q.name }}{% if q.is_current %} ●{% endif %}{% if q.is_locked %} 🔒{% endif %}</option>{% endfor %}</select></div>
+            <div class="ctx-group"><label>Section</label><select name="section_id" onchange="document.getElementById('ctxForm').submit()">{% if classes_data %}{% for cls in classes_data %}<option value="{{ cls.section_id }}" {% if cls.section_id == selected_section_id %}selected{% endif %}>{{ cls.section_name }} ({{ cls.student_count }}){% if cls.is_advisory %} ⭐{% endif %}</option>{% endfor %}{% else %}<option value="">— No classes assigned —</option>{% endif %}</select></div>
+        </div>
+        <div class="ctx-actions">
+            <button type="button" class="btn btn-outline btn-sm" id="bulkGenBtn" {% if not has_data %}disabled{% endif %}><i class="fi fi-rr-layers"></i> Bulk Generate</button>
+            <button type="button" class="btn btn-green btn-sm" id="previewSF1Btn" {% if not has_data %}disabled{% endif %}><i class="fi fi-rr-eye"></i> Preview SF1</button>
+        </div>
+    </form>
+
+    {% if has_data and readiness %}
+    <div class="readiness-bar">
+        <span class="readiness-label">Data Health</span>
+        <div class="readiness-items">
+            {% if readiness.students %}<div class="readiness-item" title="Student Records"><span class="r-dot {% if readiness.students.status == 'complete' %}ok{% elif readiness.students.status == 'warning' %}warn{% else %}err{% endif %}"></span><span class="r-label">Students: {{ readiness.students.complete }}/{{ readiness.students.total }}</span></div>{% endif %}
+            {% if readiness.lrn %}<div class="readiness-item" title="LRN completeness"><span class="r-dot {% if readiness.lrn.status == 'complete' %}ok{% else %}warn{% endif %}"></span><span class="r-label">LRNs: {{ readiness.lrn.complete }}/{{ readiness.lrn.total }}</span>{% if readiness.lrn.missing > 0 %}<span class="r-badge">{{ readiness.lrn.missing }} missing</span>{% endif %}</div>{% endif %}
+            {% if readiness.grades %}<div class="readiness-item" title="Grades finalized"><span class="r-dot {% if readiness.grades.status == 'complete' %}ok{% elif readiness.grades.status == 'warning' %}warn{% else %}err{% endif %}"></span><span class="r-label">Grades: {{ readiness.grades.complete }}/{{ readiness.grades.total }}</span>{% if readiness.grades.missing > 0 %}<span class="r-badge">{{ readiness.grades.missing }} pending</span>{% endif %}</div>{% endif %}
+            {% if readiness.attendance %}<div class="readiness-item" title="Attendance days recorded"><span class="r-dot {% if readiness.attendance.status == 'complete' %}ok{% else %}warn{% endif %}"></span><span class="r-label">Attendance: {{ readiness.attendance.days_recorded }} days</span></div>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if pending_corrections %}
+    <div class="correction-alert"><div class="ca-left"><i class="fi fi-rr-triangle-warning" style="font-size:1.1rem;"></i><strong>{{ pending_corrections|length }}</strong>&nbsp;correction request{{ pending_corrections|length|pluralize }} pending with Registrar</div><button class="btn btn-warning btn-sm" id="correctionBtn"><i class="fi fi-rr-eye"></i> View</button></div>
+    {% endif %}
+
+    <div class="forms-section-header"><h2><i class="fi fi-rr-document"></i> DepEd School Forms</h2><span style="font-size:.75rem;color:var(--text-secondary);">{{ total_forms }} form{{ total_forms|pluralize }} · SF6, SF7, SF8 managed by Registrar</span></div>
+
+    <div class="forms-grid">
+        {% if forms_status %}
+            {% for form in forms_status %}
+            <div class="form-card {% if form.is_locked %}is-locked{% endif %}" data-form-id="{{ form.id }}" data-form-code="{{ form.code }}" data-form-name="{{ form.name }}" data-form-icon="{{ form.icon }}" data-status="{{ form.status }}" data-status-text="{{ form.status_text }}" data-locked="{{ form.is_locked|yesno:'true,false' }}" onclick="openFormDetail(this)">
+                <div class="fc-header"><div class="fc-icon"><i class="fi {{ form.icon }}"></i></div>{% if form.is_locked %}<i class="fi fi-rr-lock" style="color:var(--text-light);font-size:.8rem;"></i>{% else %}<i class="fi fi-rr-arrow-small-right" style="color:var(--text-light);font-size:.9rem;"></i>{% endif %}</div>
+                <div class="fc-code">{{ form.code }}</div><div class="fc-name">{{ form.name }}</div>
+                <div class="fc-footer"><span class="pill pill-{{ form.status_class }}">{{ form.status_text }}</span></div>
+                {% if form.status_message %}<div class="fc-msg"><i class="fi fi-rr-info"></i> {{ form.status_message }}</div>{% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div style="grid-column:1/-1;"><div class="empty"><i class="fi fi-rr-folder-open"></i><h3>No Forms Available</h3><p>{% if not has_data %}Forms appear once the Registrar assigns you a class and configures the school year.{% else %}Form data will appear once the school year and sections are configured.{% endif %}</p></div></div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h2><i class="fi fi-rr-time-past"></i> Recent Form Activity</h2></div>
+        {% if recent_submissions %}
+        <table><thead><tr><th>Form</th><th>Section</th><th>Quarter</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+            {% for sub in recent_submissions %}
+            <tr><td><strong>{{ sub.form_code }}</strong> — {{ sub.form_name|truncatechars:30 }}</td><td>{{ sub.section }}</td><td>{{ sub.quarter }}</td><td>{{ sub.date }}</td><td><span class="pill pill-{{ sub.status_class }}">{{ sub.status }}</span></td><td><div class="tbl-actions"><button class="icon-btn" title="View" onclick="showToast('Viewing {{ sub.form_code }} details…','info')"><i class="fi fi-rr-eye"></i></button><button class="icon-btn" title="Download" onclick="showToast('Download started for {{ sub.form_code }}','success')"><i class="fi fi-rr-download"></i></button>{% if sub.status_class == 'returned' %}<button class="icon-btn" title="Fix & Resubmit" style="background:#fce4ec;color:#c62828;" onclick="showToast('Opening {{ sub.form_code }} for revision…','warning')"><i class="fi fi-rr-refresh"></i></button>{% endif %}</div></td></tr>
+            {% endfor %}
+        </tbody></table>
+        {% else %}<div class="empty"><i class="fi fi-rr-time-past"></i><h3>No Recent Activity</h3><p>Form submissions will appear here once you begin the compliance workflow.</p></div>{% endif %}
+    </div>
+</div>
+</div>
+
+<!-- MODALS (same as before, unchanged from your last version) -->
+<!-- Form Detail, Bulk Wizard, Discrepancy, SF9, SF1, Corrections, Confirmation -->
+
+<div class="modal-overlay" id="formDetailModal">
+    <div class="modal"><div class="modal-header"><h2><i class="fi fi-rr-document" id="detailIcon"></i> <span id="detailTitle"></span></h2><button class="modal-close" onclick="closeModal('formDetailModal')"><i class="fi fi-rr-cross-small"></i></button></div><div class="modal-body"><p style="font-size:.78rem;color:var(--text-secondary);margin-bottom:.3rem;" id="detailContext"></p><div style="margin-bottom:1rem;" id="detailStatusWrap"></div><div class="workflow-chain" id="workflowChain"></div><h4 style="font-size:.78rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin:.8rem 0 .5rem;">Data Sources <span style="font-weight:400;text-transform:none;font-size:.7rem;">(click to expand)</span></h4><div class="data-source-grid" id="dataSources"></div></div><div class="modal-footer" id="detailFooter"></div></div>
+</div>
+
+<!-- BULK WIZARD MODAL -->
+<div class="modal-overlay" id="bulkModal">
+    <div class="modal modal-lg"><div class="modal-header"><h2><i class="fi fi-rr-layers"></i> Bulk Form Generation</h2><button class="modal-close" onclick="closeModal('bulkModal')"><i class="fi fi-rr-cross-small"></i></button></div><div class="modal-body"><div class="wizard-steps" id="wizardSteps"><div class="ws-step active" data-step="1"><div class="ws-num">1</div> Select Forms</div><div class="ws-divider"></div><div class="ws-step" data-step="2"><div class="ws-num">2</div> Validate Data</div><div class="ws-divider"></div><div class="ws-step" data-step="3"><div class="ws-num">3</div> Generate</div></div><div id="wizardStep1"><p style="font-size:.82rem;color:var(--text-secondary);margin-bottom:1rem;">Select forms for <strong id="bulkSection">{{ selected_section }}</strong> — <strong>{{ quarter_name }}</strong>.</p><div class="form-check-grid" id="bulkFormChecks"></div></div><div id="wizardStep2" style="display:none;"><p style="font-size:.82rem;color:var(--text-secondary);margin-bottom:1rem;">Scanning selected forms…</p><div id="validationResults"></div></div><div id="wizardStep3" style="display:none;"><p style="font-size:.82rem;color:var(--text-secondary);margin-bottom:1rem;">Choose output format.</p><div style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:1rem;"><label style="display:flex;align-items:center;gap:.7rem;font-size:.85rem;cursor:pointer;"><input type="radio" name="output" value="zip" checked> Download as ZIP</label><label style="display:flex;align-items:center;gap:.7rem;font-size:.85rem;cursor:pointer;"><input type="radio" name="output" value="combined"> Combined PDF</label><label style="display:flex;align-items:center;gap:.7rem;font-size:.85rem;cursor:pointer;"><input type="radio" name="output" value="archive"> Archive Only</label></div><label style="display:flex;align-items:center;gap:.7rem;font-size:.82rem;cursor:pointer;"><input type="checkbox" id="notifyHead"> Notify School Head</label></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('bulkModal')" id="wizardCancelBtn">Cancel</button><button class="btn btn-outline" id="wizardBackBtn" style="display:none;" onclick="wizardBack()">← Back</button><button class="btn btn-green" id="wizardNextBtn" onclick="wizardNext()">Next Step →</button></div></div>
+</div>
+
+<!-- DISCREPANCY MODAL -->
+<div class="modal-overlay" id="discrepancyModal">
+    <div class="modal"><div class="modal-header"><h2><i class="fi fi-rr-triangle-warning"></i> Flag Data Discrepancy</h2><button class="modal-close" onclick="closeModal('discrepancyModal')"><i class="fi fi-rr-cross-small"></i></button></div><div class="modal-body"><div style="background:#f0f9f0;border-radius:var(--radius-sm);padding:.8rem 1rem;margin-bottom:1rem;font-size:.75rem;color:var(--text-secondary);"><strong style="color:var(--secondary-green);">📋 Purpose:</strong> Teachers cannot directly edit student master data (LRN, name, birth date, guardian info, enrollment status). If you spot an error in any school form, use this to formally request a correction from the Registrar. This creates an auditable record for DepEd compliance.</div><div class="form-row"><label>Student</label><select id="discStudentSelect"><option value="">— Select student —</option>{% for st in section_students %}<option value="{{ st.lrn }}" data-lrn="{{ st.lrn }}" data-name="{{ st.name }}" data-sex="{{ st.sex }}" data-birth="{{ st.birth_date }}" data-guardian="{{ st.guardian }}">{{ st.name }} (LRN: {{ st.lrn }})</option>{% endfor %}</select></div><div class="form-row"><label>Field to Correct</label><select id="discField" onchange="populateCurrentValue()"><option value="">— Select field —</option><option value="lrn">LRN</option><option value="first_name">First Name</option><option value="last_name">Last Name</option><option value="sex">Sex</option><option value="birth_date">Birth Date</option><option value="guardian_name">Guardian Name</option><option value="enrollment_status">Enrollment Status</option><option value="other">Other</option></select></div><div class="form-row two-col"><div><label>Current Value</label><input type="text" id="discCurrent" readonly placeholder="Auto-filled" style="background:var(--gray-bg);"></div><div><label>Proposed Value</label><input type="text" id="discProposed" placeholder="Enter correct value"></div></div><div class="form-row"><label>Justification <span style="color:#dc3545;">*</span></label><textarea id="discJustification" placeholder="Explain why this correction is needed…"></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('discrepancyModal')">Cancel</button><button class="btn btn-green" onclick="submitDiscrepancy()"><i class="fi fi-rr-paper-plane"></i> Send to Registrar</button></div></div>
+</div>
+
+<!-- SF9 MODAL -->
+<div class="modal-overlay" id="sf9Modal">
+    <div class="modal modal-lg"><div class="modal-header"><h2><i class="fi fi-rr-id-card"></i> SF9 Report Card Preview</h2><button class="modal-close" onclick="closeModal('sf9Modal')"><i class="fi fi-rr-cross-small"></i></button></div><div class="modal-body" style="padding:1rem 1.2rem;">{% if section_students %}<div class="sf9-layout"><div class="sf9-nav" id="sf9Nav">{% for st in section_students %}<div class="sf9-student {% if forloop.first %}active{% endif %}" data-lrn="{{ st.lrn }}" data-name="{{ st.name }}" data-index="{{ forloop.counter0 }}" onclick="selectSf9Student(this, {{ forloop.counter0 }})"><span class="s-dot pass" id="sDot{{ forloop.counter0 }}"></span><span class="s-name">{{ st.name }}</span></div>{% endfor %}</div><div class="sf9-preview"><div class="rc-card"><p style="font-size:.65rem;color:var(--text-secondary);margin-bottom:.3rem;">LEARNER PROGRESS REPORT CARD</p><div class="rc-name" id="rcName">{{ section_students.0.name }}</div><div class="rc-lrn" id="rcLrn">LRN: {{ section_students.0.lrn }}</div><div class="rc-avg pass" id="rcAvg">—</div><div class="rc-status" id="rcStatus" style="color:#28a745;">General Average</div><div class="rc-subject-list" id="rcSubjectList"><p style="font-size:.7rem;color:var(--text-light);text-align:center;">Select a student to load grades</p></div><p style="font-size:.68rem;color:var(--text-secondary);margin-bottom:.5rem;">Teacher's Remarks</p><textarea class="rc-remarks" id="rcRemarks" placeholder="Enter remarks…"></textarea></div></div></div>{% else %}<div class="empty"><i class="fi fi-rr-users"></i><h3>No Students Found</h3><p>Enrollment data not available.</p></div>{% endif %}</div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('sf9Modal')">Close</button><button class="btn btn-outline" onclick="showToast('Printing all SF9…','info')"><i class="fi fi-rr-print"></i> Print All</button><button class="btn btn-green" onclick="confirmCertifyAll()"><i class="fi fi-rr-check-circle"></i> Certify All</button></div></div>
+</div>
+
+<!-- SF1 MODAL -->
+<div class="modal-overlay" id="sf1PreviewModal">
+    <div class="modal modal-lg"><div class="modal-header"><h2><i class="fi fi-rr-users"></i> SF1 — School Register</h2><button class="modal-close" onclick="closeModal('sf1PreviewModal')"><i class="fi fi-rr-cross-small"></i></button></div><div class="modal-body" style="max-height:65vh;overflow-y:auto;"><p style="font-size:.78rem;color:var(--text-secondary);margin-bottom:1rem;"><strong>{{ selected_section }}</strong> · {{ quarter_name }} · {{ current_sy }} · {{ section_students|length }} students</p>{% if section_students %}<table class="sf1-preview-table"><thead><tr><th>#</th><th>LRN</th><th>Name</th><th>Sex</th><th>Birth Date</th><th>Guardian</th></tr></thead><tbody>{% for st in section_students %}<tr><td>{{ forloop.counter }}</td><td class="sf1-lrn">{{ st.lrn }}</td><td>{{ st.name }}</td><td>{{ st.sex }}</td><td>{{ st.birth_date }}</td><td>{{ st.guardian }}</td></tr>{% endfor %}</tbody></table>{% else %}<div class="empty"><i class="fi fi-rr-users"></i><h3>No Students</h3></div>{% endif %}</div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('sf1PreviewModal')">Close</button><button class="btn btn-outline" onclick="showToast('Printing SF1…','info')"><i class="fi fi-rr-print"></i> Print</button><button class="btn btn-green" onclick="confirmCertify('SF1')"><i class="fi fi-rr-check-circle"></i> Certify & Submit</button></div></div>
+</div>
+
+<!-- CORRECTIONS MODAL -->
+<div class="modal-overlay" id="correctionsModal">
+    <div class="modal modal-lg"><div class="modal-header"><h2><i class="fi fi-rr-triangle-warning"></i> Pending Corrections</h2><button class="modal-close" onclick="closeModal('correctionsModal')"><i class="fi fi-rr-cross-small"></i></button></div><div class="modal-body">{% if pending_corrections %}<table><thead><tr><th>Field</th><th>Current</th><th>Proposed</th><th>Date</th><th>Status</th></tr></thead><tbody>{% for c in pending_corrections %}<tr><td><strong>{{ c.entity_type }}</strong><br><small>{{ c.field }}</small></td><td style="color:var(--text-secondary);">{{ c.current }}</td><td style="color:var(--secondary-green);font-weight:600;">{{ c.proposed }}</td><td>{{ c.date }}</td><td><span class="pill pill-ready">Pending</span></td></tr>{% endfor %}</tbody></table>{% else %}<div class="empty"><i class="fi fi-rr-check-circle"></i><h3>No Pending Corrections</h3></div>{% endif %}</div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('correctionsModal')">Close</button></div></div>
+</div>
+
+<!-- CONFIRMATION MODAL -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal modal-sm"><div class="modal-body" style="text-align:center;padding:2rem 1.5rem 1rem;"><div class="confirm-icon" id="confirmIcon">⚠️</div><div class="confirm-msg" id="confirmMsg">Are you sure?</div><div class="confirm-sub" id="confirmSub"></div></div><div class="modal-footer" style="justify-content:center;border-top:none;padding-top:0;"><button class="btn btn-outline" onclick="closeModal('confirmModal')">Cancel</button><button class="btn btn-green" id="confirmActionBtn">Confirm</button></div></div>
+</div>
+
+
+<script>
+(function() {'use strict';
+
+const HAS_DATA = {{ has_data|yesno:"true,false" }};
+const QUARTER = '{{ quarter_name|escapejs }}';
+const SECTION = '{{ selected_section|escapejs }}';
+const SY = '{{ current_sy|escapejs }}';
+const FORMS_DATA = [{% for f in forms_status %}{id:{{ f.id|default:0 }},code:'{{ f.code|escapejs }}',name:'{{ f.name|escapejs }}',icon:'{{ f.icon|escapejs }}',status:'{{ f.status|escapejs }}',statusText:'{{ f.status_text|escapejs }}',statusClass:'{{ f.status_class|escapejs }}',msg:'{{ f.status_message|escapejs }}',locked:{{ f.is_locked|yesno:"true,false"}}},{% endfor %}];
+const SECTION_STUDENTS = [{% for st in section_students %}{lrn:'{{ st.lrn|escapejs }}',name:'{{ st.name|escapejs }}',sex:'{{ st.sex|escapejs }}',birth:'{{ st.birth_date|escapejs }}',guardian:'{{ st.guardian|escapejs }}'},{% endfor %}];
+const DS_STATS = JSON.parse('{{ data_source_stats_json|escapejs }}' || '{}');
+const URL_CERTIFY_FORM = "{% url 'teachers-certify-form' %}";
+const URL_SUBMIT_CORRECTION = "{% url 'teachers-submit-correction' %}";
+const URL_CLASSES = "{% url 'teachers-classes' %}";
+const URL_GRADES = "{% url 'teachers-grades' %}";
+const URL_ATTENDANCE = "{% url 'teachers-attendance' %}";
+const FORM_DATA_SOURCES = {SF1:[['Enrollment Records','Students with status Enrolled'],['Student Master','LRN, personal info, addresses'],['Guardian Info','Primary contact details'],['Section Assignment','Grade level & section']],SF2:[['Attendance Records','Daily status per student'],['Attendance Summary','Monthly aggregates'],['Enrollment','Active students in section']],SF3:[['Book Inventory','Textbook issuance records'],['Enrollment','Students per section']],SF4:[['Enrollment History','Status change events'],['Transfer Records','In/out transfer details']],SF5:[['Promotion Recommendations','Teacher recommendations'],['Final Grades','End-of-year computed grades'],['Enrollment','Active learners']],SF9:[['Grade Components','WW, PT, QA raw scores'],['Quarterly Grades','Transmuted grades per subject'],['Honor Records','Awards and recognition'],['Attendance Summary','Days present/absent']],SF10:[['SF10 History','Permanent record — Registrar-owned'],['Student Master','Lifetime academic record'],['Enrollment','All years attended']]};
+const FORM_WORKFLOW = {SF1:['System Auto-Fill','Teacher Review','Registrar Validate','School Head Approve','Locked'],SF2:['Teacher Records Daily','Teacher Certifies Monthly','Registrar Audits','Archived'],SF3:['Teacher Records','Teacher Certifies','Registrar Archives'],SF4:['System Auto-Detects','Registrar Processes','School Head Approves'],SF5:['Teacher Recommends','Teacher Certifies','Registrar Validates','School Head Approves','Locked'],SF9:['Teacher Previews','Teacher Certifies','Registrar Prints','Distributed'],SF10:['System Generates','Registrar Certifies','Locked Permanently']};
+
+function showToast(m,t='info',d=4000){const c=document.getElementById('toastContainer');const i={success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};const e=document.createElement('div');e.className=`toast ${t}`;e.innerHTML=`<span>${i[t]||'ℹ️'}</span><span>${m}</span>`;e.addEventListener('click',()=>{if(!e.classList.contains('removing')){e.classList.add('removing');setTimeout(()=>{if(e.parentNode)e.remove()},300)}});c.appendChild(e);setTimeout(()=>{if(!e.classList.contains('removing')){e.classList.add('removing');setTimeout(()=>{if(e.parentNode)e.remove()},300)}},d)}
+window.showToast=showToast;
+
+let confirmCb=null;
+function showConfirm(m,s,fn,ic='⚠️'){document.getElementById('confirmIcon').textContent=ic;document.getElementById('confirmMsg').textContent=m;document.getElementById('confirmSub').textContent=s||'';confirmCb=fn;document.getElementById('confirmActionBtn').onclick=()=>{closeModal('confirmModal');if(confirmCb)confirmCb();confirmCb=null};openModal('confirmModal')}
+window.showConfirm=showConfirm;
+
+const sidebar=document.getElementById('sidebar'),foldBtn=document.getElementById('foldBtn'),foldIcon=document.getElementById('foldIcon'),main=document.getElementById('mainContent'),mobileOv=document.getElementById('mobileOverlay');
+let collapsed=false;
+function adjustMargin(){if(window.innerWidth>768)main.style.marginLeft=collapsed?'var(--sidebar-collapsed-width)':'var(--sidebar-width)';else main.style.marginLeft='0'}
+foldBtn.addEventListener('click',()=>{if(window.innerWidth<=768){const o=sidebar.classList.toggle('mobile-open');mobileOv.classList.toggle('show',o)}else{collapsed=!collapsed;sidebar.classList.toggle('collapsed',collapsed);foldIcon.className=collapsed?'fi fi-rr-angle-small-right':'fi fi-rr-angle-small-left';adjustMargin()}});
+mobileOv.addEventListener('click',()=>{sidebar.classList.remove('mobile-open');mobileOv.classList.remove('show')});
+window.addEventListener('resize',adjustMargin);adjustMargin();
+document.getElementById('currentDate').textContent=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+
+const notifBtn=document.getElementById('notifBtn'),notifDropdown=document.getElementById('notifDropdown');
+notifBtn.addEventListener('click',e=>{e.stopPropagation();notifDropdown.classList.toggle('open')});
+document.addEventListener('click',e=>{if(!e.target.closest('.notif-wrap'))notifDropdown.classList.remove('open')});
+document.getElementById('markAllRead')?.addEventListener('click',()=>{document.querySelectorAll('.notif-item.unread').forEach(el=>el.classList.remove('unread'));document.getElementById('notifCount').textContent='0';document.getElementById('notifCount').className='notif-count zero';notifDropdown.classList.remove('open');showToast('All notifications marked as read','success')});
+
+function openModal(id){document.getElementById(id).classList.add('open');document.body.style.overflow='hidden'}
+function closeModal(id){document.getElementById(id).classList.remove('open');document.body.style.overflow=''}
+window.openModal=openModal;window.closeModal=closeModal;
+document.querySelectorAll('.modal-overlay').forEach(ov=>{ov.addEventListener('click',e=>{if(e.target===ov)closeModal(ov.id)})});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>closeModal(m.id))});
+
+function toggleDsItem(el){document.querySelectorAll('.ds-item.expanded').forEach(i=>{if(i!==el)i.classList.remove('expanded')});el.classList.toggle('expanded')}
+window.toggleDsItem=toggleDsItem;
+
+function fixDataSource(n){closeModal('formDetailModal');const r={'Enrollment Records':URL_CLASSES,'Student Master':URL_CLASSES,'Guardian Info':URL_CLASSES,'Attendance Records':URL_ATTENDANCE,'Attendance Summary':URL_ATTENDANCE,'Grade Components':URL_GRADES,'Quarterly Grades':URL_GRADES,'Final Grades':URL_GRADES,'Promotion Recommendations':URL_GRADES};const u=r[n]||URL_CLASSES;showToast(`Redirecting to fix "${n}"…`,'info',2000);setTimeout(()=>{window.location.href=u},800)}
+window.fixDataSource=fixDataSource;
+
+function getDsDetails(title){const m={'Enrollment Records':{status:DS_STATS.enrollment_status||'complete',count:DS_STATS.enrollment_count||'—',note:DS_STATS.enrollment_note||'Available'},'Student Master':{status:DS_STATS.lrn_status||'complete',count:DS_STATS.lrn_count||'—',note:DS_STATS.lrn_note||'Available'},'Guardian Info':{status:DS_STATS.guardian_status||'complete',count:DS_STATS.guardian_count||'—',note:DS_STATS.guardian_note||'Available'},'Section Assignment':{status:'complete',count:'1/1',note:'Assigned to '+SECTION},'Attendance Records':{status:DS_STATS.attendance_status||'complete',count:DS_STATS.attendance_count||'—',note:DS_STATS.attendance_note||'Available'},'Attendance Summary':{status:DS_STATS.attendance_status||'complete',count:DS_STATS.attendance_count||'—',note:DS_STATS.attendance_note||'Available'},'Grade Components':{status:DS_STATS.grades_status||'complete',count:DS_STATS.grades_count||'—',note:DS_STATS.grades_note||'Available'},'Quarterly Grades':{status:DS_STATS.grades_status||'complete',count:DS_STATS.grades_count||'—',note:DS_STATS.grades_note||'Available'},'Final Grades':{status:DS_STATS.grades_status||'complete',count:DS_STATS.grades_count||'—',note:DS_STATS.grades_note||'Available'},'Promotion Recommendations':{status:DS_STATS.promo_status||'complete',count:DS_STATS.promo_count||'—',note:DS_STATS.promo_note||'Available'},'Honor Records':{status:DS_STATS.grades_status||'complete',count:DS_STATS.grades_count||'—',note:DS_STATS.grades_note||'Available'},'Enrollment History':{status:DS_STATS.enrollment_status||'complete',count:DS_STATS.enrollment_count||'—',note:DS_STATS.enrollment_note||'Available'},'Transfer Records':{status:'complete',count:'0',note:'No transfer activity'},'Book Inventory':{status:'complete',count:'—',note:'Managed by Librarian'},'SF10 History':{status:'complete',count:'—',note:'Registrar managed'}};return m[title]||{status:'complete',count:'—',note:'Available'}}
+
+function openFormDetail(card){if(card.dataset.locked==='true'){showToast('This form is locked. Contact the Registrar.','warning');return}const code=card.dataset.formCode,name=card.dataset.formName,icon=card.dataset.formIcon,status=card.dataset.status,stText=card.dataset.statusText;const scM={completed:'completed',submitted:'submitted',ready:'ready',partial:'partial',returned:'returned',locked:'locked',not_started:'not-started'};const sc=scM[status]||'pending';document.getElementById('detailIcon').className=`fi ${icon}`;document.getElementById('detailTitle').textContent=`${code} — ${name}`;document.getElementById('detailContext').textContent=`${SECTION} · ${QUARTER} · ${SY}`;document.getElementById('detailStatusWrap').innerHTML=`<span class="pill pill-${sc}">${stText}</span>`;const wf=FORM_WORKFLOW[code]||['System','Teacher','Registrar','Approved'];const wfEl=document.getElementById('workflowChain');wfEl.innerHTML='';const sM={completed:wf.length-1,submitted:2,returned:1,ready:1,partial:1,not_started:0};const aI=sM[status]??0;wf.forEach((s,i)=>{if(i>0)wfEl.insertAdjacentHTML('beforeend','<span class="wf-arrow">→</span>');const cl=i<aI?'done':i===aI?'active':'future';const ic=cl==='done'?'<i class="fi fi-rr-check-circle"></i> ':'';wfEl.insertAdjacentHTML('beforeend',`<span class="wf-step ${cl}">${ic}${s}</span>`)});const ds=FORM_DATA_SOURCES[code]||[];const dsEl=document.getElementById('dataSources');dsEl.innerHTML=ds.map(([t,d])=>{const det=getDsDetails(t);const pc=det.status==='complete'?'completed':det.status==='partial'?'ready':'pending';return`<div class="ds-item" onclick="toggleDsItem(this)"><strong>${t}<span class="pill pill-${pc}" style="font-size:.6rem;margin-left:.3rem;">${det.status}</span><i class="fi fi-rr-angle-small-down ds-expand-icon"></i></strong><span>${d}</span><div class="ds-detail"><div class="ds-detail-row"><span>Records</span><span class="ds-status ${det.status}">${det.count}</span></div><div class="ds-detail-row"><span>Status</span><span>${det.note}</span></div>${det.status!=='complete'?`<a class="ds-fix-link" onclick="event.stopPropagation();fixDataSource('${t}')"><i class="fi fi-rr-pencil"></i> Fix missing data →</a>`:''}</div></div>`}).join('');const footer=document.getElementById('detailFooter');let btns=`<button class="btn btn-outline" onclick="closeModal('formDetailModal')">Close</button>`;if(status==='ready'||status==='partial'){btns+=`<button class="btn btn-outline" onclick="openModal('discrepancyModal');closeModal('formDetailModal');"><i class="fi fi-rr-triangle-warning"></i> Flag Discrepancy</button>`;if(code==='SF9'){btns+=`<button class="btn btn-green" onclick="openModal('sf9Modal');closeModal('formDetailModal');"><i class="fi fi-rr-eye"></i> Preview SF9</button>`}else{btns+=`<button class="btn btn-green" onclick="confirmCertify('${code}')"><i class="fi fi-rr-check-circle"></i> Certify & Submit</button>`}}else if(status==='submitted'){btns+=`<button class="btn btn-outline" disabled><i class="fi fi-rr-time-past"></i> Under Review</button>`}else if(status==='returned'){btns+=`<button class="btn btn-outline" onclick="openModal('discrepancyModal');closeModal('formDetailModal');"><i class="fi fi-rr-triangle-warning"></i> Flag Discrepancy</button>`;btns+=`<button class="btn btn-green" onclick="confirmCertify('${code}')"><i class="fi fi-rr-refresh"></i> Fix & Resubmit</button>`}else if(status==='completed'){btns+=`<button class="btn btn-green" onclick="showToast('Downloading ${code} PDF…','success')"><i class="fi fi-rr-download"></i> Download PDF</button>`}else if(code==='SF10'){btns+=`<button class="btn btn-outline" disabled style="opacity:.5;"><i class="fi fi-rr-lock"></i> View Only — Registrar</button>`}else{btns+=`<button class="btn btn-green" disabled style="opacity:.5;"><i class="fi fi-rr-hourglass"></i> No Data Yet</button>`}footer.innerHTML=btns;openModal('formDetailModal')}
+window.openFormDetail=openFormDetail;
+
+function confirmCertify(code){const isR=FORMS_DATA.find(f=>f.code===code)?.status==='returned';showConfirm(`${isR?'Re-certify':'Certify'} ${code}?`,`You are about to ${isR?'re-certify and resubmit':'certify and submit'} ${code} to the Registrar.`,()=>certifyForm(code),'📋')}
+window.confirmCertify=confirmCertify;
+
+function certifyForm(code){const p=new URLSearchParams(window.location.search);const fd=FORMS_DATA.find(f=>f.code===code);if(!fd){showToast('Form not found.','error');return}let sId=p.get('section_id')||'';if(!sId){const sel=document.querySelector('select[name="section_id"]');if(sel&&sel.value)sId=sel.value}if(!sId){showToast('No section selected.','error');return}const csrf=document.querySelector('input[name="csrfmiddlewaretoken"]')?.value;if(!csrf){showToast('CSRF token missing.','error');return}const pf=document.createElement('form');pf.method='POST';pf.action=URL_CERTIFY_FORM;pf.style.display='none';const fields={'csrfmiddlewaretoken':csrf,'form_id':fd.id,'section_id':sId,'school_year':p.get('school_year')||'','quarter':p.get('quarter')||'Q3'};for(const[k,v]of Object.entries(fields)){const inp=document.createElement('input');inp.type='hidden';inp.name=k;inp.value=v;pf.appendChild(inp)}document.body.appendChild(pf);showToast(`Submitting ${code}…`,'info',1500);setTimeout(()=>pf.submit(),500)}
+window.certifyForm=certifyForm;
+
+let ws=1;const sf=new Set();
+document.getElementById('bulkGenBtn')?.addEventListener('click',()=>{ws=1;sf.clear();buildW1();updateWU();openModal('bulkModal')});
+function buildW1(){const g=document.getElementById('bulkFormChecks');const av=FORMS_DATA.filter(f=>!f.locked&&f.status!=='not_started');if(!av.length){g.innerHTML='<p style="font-size:.82rem;color:var(--text-secondary);grid-column:1/-1;">No forms ready.</p>';return}g.innerHTML=av.map(f=>`<div class="check-item ${sf.has(f.code)?'checked':''}" data-code="${f.code}" onclick="toggleFC(this,'${f.code}')"><input type="checkbox" ${sf.has(f.code)?'checked':''} onclick="event.stopPropagation()"><label>${f.code} — ${f.name.substring(0,28)}…</label></div>`).join('');av.forEach(f=>sf.add(f.code));g.querySelectorAll('.check-item').forEach(el=>{el.classList.add('checked');el.querySelector('input').checked=true})}
+function toggleFC(el,code){const chk=el.querySelector('input');if(sf.has(code)){sf.delete(code);el.classList.remove('checked');chk.checked=false}else{sf.add(code);el.classList.add('checked');chk.checked=true}}
+window.toggleFC=toggleFC;
+function buildW2(){const c=[...sf];const r=document.getElementById('validationResults');r.innerHTML=c.map(code=>{const f=FORMS_DATA.find(x=>x.code===code);const h=f?.msg;const i=h?'<span class="val-icon warn">⚠️</span>':'<span class="val-icon ok">✅</span>';return`<div class="validation-row">${i}<strong>${code}</strong> — ${h||'No issues found'}</div>`}).join('')||'<p style="font-size:.82rem;color:var(--text-secondary);">No forms selected.</p>'}
+function wizardNext(){if(ws===1){ws=2;buildW2()}else if(ws===2){ws=3}else if(ws===3){closeModal('bulkModal');showToast(`Generating ${sf.size} form(s)…`,'success',5000);return}updateWU()}
+function wizardBack(){if(ws>1){ws--;updateWU()}}
+function updateWU(){['wizardStep1','wizardStep2','wizardStep3'].forEach((id,i)=>{document.getElementById(id).style.display=ws===i+1?'block':'none'});document.querySelectorAll('.ws-step').forEach(el=>{el.classList.toggle('active',parseInt(el.dataset.step)===ws)});document.getElementById('wizardBackBtn').style.display=ws>1?'inline-flex':'none';document.getElementById('wizardNextBtn').textContent=ws===3?'🚀 Generate Forms':'Next Step →'}
+window.wizardNext=wizardNext;window.wizardBack=wizardBack;
+
+document.getElementById('previewSF1Btn')?.addEventListener('click',()=>{if(HAS_DATA)openModal('sf1PreviewModal')});
+
+let cIdx=0;
+function selectSf9Student(el,idx){cIdx=idx;document.querySelectorAll('.sf9-student').forEach(s=>s.classList.remove('active'));el.classList.add('active');const st=SECTION_STUDENTS[idx];document.getElementById('rcName').textContent=st.name;document.getElementById('rcLrn').textContent=`LRN: ${st.lrn}`;document.getElementById('rcRemarks').value='';loadSf9Grades(st.lrn)}
+window.selectSf9Student=selectSf9Student;
+
+function loadSf9Grades(lrn){const le=document.getElementById('rcSubjectList'),ae=document.getElementById('rcAvg'),se=document.getElementById('rcStatus'),de=document.getElementById('sDot'+cIdx);le.innerHTML='<p style="font-size:.7rem;color:var(--text-light);text-align:center;">Loading…</p>';ae.textContent='…';ae.className='rc-avg';const csrf=document.querySelector('input[name="csrfmiddlewaretoken"]')?.value;if(csrf){fetch("{% url 'teachers-sf9-grades' %}",{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrf},body:JSON.stringify({lrn:lrn})}).then(r=>r.json()).then(d=>{if(d.success){renderSf9(d.subjects,d.average,d.passed,le,ae,se,de)}else{renderSf9Fallback(le,ae,se,de)}}).catch(()=>renderSf9Fallback(le,ae,se,de))}else{renderSf9Fallback(le,ae,se,de)}}
+function renderSf9(subjects,avg,passed,le,ae,se,de){le.innerHTML=subjects.map(s=>`<div class="rc-subject-row"><span>${s.name}</span><span class="subj-grade" style="color:${s.grade>=75?'#28a745':'#dc3545'}">${s.grade}</span></div>`).join('');ae.textContent=avg;ae.className=`rc-avg ${passed?'pass':'fail'}`;se.textContent=passed?'PASSED':'FAILED — Needs Intervention';se.style.color=passed?'#28a745':'#dc3545';if(de)de.className=`s-dot ${passed?'pass':'fail'}`}
+function renderSf9Fallback(le,ae,se,de){const subs=[{name:'No grade data',grade:'—'}];renderSf9(subs,0,false,le,ae,se,de);ae.textContent='N/A';se.textContent='Grades not yet available'}
+window.loadSf9Grades=loadSf9Grades;
+
+function confirmCertifyAll() {
+    showConfirm(
+        'Certify All SF9 Report Cards?',
+        `You are about to certify all ${SECTION_STUDENTS.length} report cards in ${SECTION} and submit them to the Registrar. This cannot be undone.`,
+        () => certifyAllSF9(),
+        '📋'
+    );
+}
+window.confirmCertifyAll = confirmCertifyAll;
+
+function certifyAllSF9() {
+    const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value;
+    if (!csrfToken) { showToast('CSRF token missing.', 'error'); return; }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Get section_id from URL or dropdown
+    let sectionId = urlParams.get('section_id') || '';
+    if (!sectionId) {
+        const sel = document.querySelector('select[name="section_id"]');
+        if (sel && sel.value) sectionId = sel.value;
+    }
+    if (!sectionId) { showToast('No section selected.', 'error'); return; }
+
+    // Get school_year from URL or dropdown
+    let schoolYearId = urlParams.get('school_year') || '';
+    if (!schoolYearId) {
+        const sel = document.querySelector('select[name="school_year"]');
+        if (sel && sel.value) schoolYearId = sel.value;
+    }
+
+    const sf9Form = FORMS_DATA.find(f => f.code === 'SF9');
+    if (!sf9Form) { showToast('SF9 form not found.', 'error'); return; }
+
+    const postForm = document.createElement('form');
+    postForm.method = 'POST';
+    postForm.action = URL_CERTIFY_FORM;
+    postForm.style.display = 'none';
+    
+    const fields = {
+        'csrfmiddlewaretoken': csrfToken,
+        'form_id': sf9Form.id,
+        'section_id': sectionId,
+        'school_year': schoolYearId,
+        'quarter': urlParams.get('quarter') || 'Q3',
+        'certify_all_sf9': 'true',
+    };
+    
+    for (const [name, value] of Object.entries(fields)) {
+        const input = document.createElement('input');
+        input.type = 'hidden'; input.name = name; input.value = value;
+        postForm.appendChild(input);
+    }
+    
+    document.body.appendChild(postForm);
+    closeModal('sf9Modal');
+    showToast(`Submitting all ${SECTION_STUDENTS.length} SF9 report cards to Registrar…`, 'info', 2000);
+    setTimeout(() => postForm.submit(), 500);
+}
+window.certifyAllSF9 = certifyAllSF9;
+
+
+function populateCurrentValue(){const f=document.getElementById('discField').value;const o=document.getElementById('discStudentSelect').selectedOptions[0];const c=document.getElementById('discCurrent');if(!o||!o.value){c.value='';return}const m={lrn:o.dataset.lrn,first_name:o.dataset.name?.split(',')[1]?.trim()||'',last_name:o.dataset.name?.split(',')[0]?.trim()||'',sex:o.dataset.sex,birth_date:o.dataset.birth,guardian_name:o.dataset.guardian};c.value=m[f]||''}
+window.populateCurrentValue=populateCurrentValue;
+
+function submitDiscrepancy(){const stu=document.getElementById('discStudentSelect').value;const fld=document.getElementById('discField').value;const prop=document.getElementById('discProposed').value.trim();const just=document.getElementById('discJustification').value.trim();if(!stu||!fld||!prop||!just){showToast('Please fill in all required fields.','warning');return}const csrf=document.querySelector('input[name="csrfmiddlewaretoken"]')?.value;if(!csrf){showToast('CSRF token missing.','error');return}fetch(URL_SUBMIT_CORRECTION,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrf},body:JSON.stringify({student_lrn:stu,field:fld,current_value:document.getElementById('discCurrent').value,proposed_value:prop,justification:just})}).then(r=>r.json()).then(d=>{if(d.success){closeModal('discrepancyModal');showToast('Correction request sent.','success',5000);['discStudentSelect','discField','discCurrent','discProposed','discJustification'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''})}else{showToast(d.error||'Failed.','error')}}).catch(()=>showToast('Network error.','error'))}
+window.submitDiscrepancy=submitDiscrepancy;
+
+document.getElementById('correctionBtn')?.addEventListener('click',()=>openModal('correctionsModal'));
+
+if(SECTION_STUDENTS.length>0){setTimeout(()=>loadSf9Grades(SECTION_STUDENTS[0].lrn),200)}
+
+})();
+</script>
+</body>
+</html>

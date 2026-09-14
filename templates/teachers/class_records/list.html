@@ -1,0 +1,173 @@
+{% extends 'teachers/base.html' %}
+{% load static %}
+
+{% block title %}Class Records{% endblock %}
+{% block subtitle %}My Class Records — {{ current_sy.year_label|default:"Current SY" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .expand-icon { transition: transform 0.2s; cursor: pointer; }
+    .expand-icon.open { transform: rotate(90deg); }
+    .student-row { display: none; background: #fafbfc; }
+    .student-row.open { display: table-row; }
+    .student-name-cell { padding-left: 2rem !important; }
+    .grade-badge { display: inline-block; width: 38px; text-align: center; padding: 2px 0; border-radius: 6px; font-weight: 700; font-size: 0.75rem; }
+    .grade-badge.pass { background: #d4edda; color: #155724; }
+    .grade-badge.fail { background: #f8d7da; color: #721c24; }
+    .grade-badge.pending { background: #e9ecef; color: #6c757d; }
+    .clickable-row { cursor: pointer; transition: background 0.15s; }
+    .clickable-row:hover { background: #f0f4ff; }
+    .summary-strip { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .summary-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #6c757d; }
+    .summary-item .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .summary-item .dot.green { background: #5EA173; }
+    .summary-item .dot.orange { background: #f39c12; }
+    .summary-item .dot.red { background: #dc3545; }
+    .summary-item strong { color: #1a1a2e; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 style="margin:0;"><i class="fi fi-rr-folder"></i> My Class Records</h3>
+    </div>
+    <div style="display:flex;gap:0.5rem;">
+        <a href="{% url 'teachers:upload_class_record' %}?download_template=1" class="btn-outline btn-sm">
+            <i class="fi fi-rr-download"></i> Template
+        </a>
+        <a href="{% url 'teachers:upload_class_record' %}" class="btn-primary">
+            <i class="fi fi-rr-upload"></i> Upload Grades
+        </a>
+    </div>
+</div>
+
+{% if assignments %}
+<!-- Summary Strip -->
+<div class="summary-strip">
+    <div class="summary-item"><span class="dot green"></span> <strong>{{ assignments|length }}</strong> Classes</div>
+    <div class="summary-item"><span class="dot orange"></span> <strong>{{ total_students|default:0 }}</strong> Total Students</div>
+</div>
+
+{% for item in assignments %}
+<!-- Class Card -->
+<div class="card" style="margin-bottom:1.5rem;">
+    <!-- Class Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.8rem;">
+        <div>
+            <div style="font-size:0.95rem;font-weight:700;color:#1a1a2e;">
+                {{ item.section.section_name }}
+                <span style="font-size:0.7rem;color:#6c757d;font-weight:400;margin-left:0.5rem;">
+                    {{ item.section.grade_level.grade_name }}
+                </span>
+            </div>
+            <div style="font-size:0.78rem;color:#6c757d;">
+                {{ item.subject.subject_name }} ({{ item.subject.subject_code }})
+            </div>
+        </div>
+        <div style="display:flex;gap:0.8rem;align-items:center;">
+            <!-- Quarter Stats -->
+            {% for qs in item.quarter_stats %}
+            <div style="text-align:center;padding:0.3rem 0.6rem;border-radius:8px;background:{% if qs.complete %}#d4edda{% elif qs.done > 0 %}#fff3cd{% else %}#f8f9fa{% endif %};">
+                <div style="font-size:0.6rem;font-weight:600;color:#6c757d;">{{ qs.quarter }}</div>
+                <div style="font-size:0.85rem;font-weight:700;color:{% if qs.complete %}#155724{% elif qs.done > 0 %}#856404{% else %}#6c757d{% endif %};">
+                    {{ qs.done }}/{{ qs.total }}
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Expand Button -->
+            <button class="btn-outline btn-sm expand-btn" onclick="toggleStudents(this, 'students-{{ forloop.counter }}')">
+                <i class="fi fi-rr-angle-down expand-icon"></i> Students
+            </button>
+            
+            <a href="{% url 'teachers:upload_class_record' %}" class="btn-outline btn-sm">
+                <i class="fi fi-rr-upload"></i>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Student List (hidden by default) -->
+    <div id="students-{{ forloop.counter }}" class="student-list" style="display:none;margin-top:1rem;border-top:1px solid #e8ecf1;padding-top:0.8rem;">
+        {% if item.students %}
+        <div class="table-responsive">
+            <table style="font-size:0.78rem;width:100%;">
+                <thead>
+                    <tr>
+                        <th style="width:40px;">#</th>
+                        <th>Student Name</th>
+                        {% for q in quarters %}
+                        <th style="width:70px;text-align:center;">{{ q.quarter_label }}</th>
+                        {% endfor %}
+                        <th style="width:80px;text-align:center;">Final</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in item.students %}
+                    <tr>
+                        <td style="color:#adb5bd;">{{ forloop.counter }}</td>
+                        <td>
+                            <strong>{{ student.last_name }}</strong>, {{ student.first_name }}
+                            <span style="font-size:0.65rem;color:#adb5bd;margin-left:0.3rem;">{{ student.lrn }}</span>
+                        </td>
+                        {% for grade in student.quarter_grades %}
+                        <td style="text-align:center;">
+                            {% if grade is not None %}
+                            <span class="grade-badge {% if grade >= 75 %}pass{% else %}fail{% endif %}">
+                                {{ grade }}
+                            </span>
+                            {% else %}
+                            <span class="grade-badge pending">—</span>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                        <td style="text-align:center;">
+                            {% if student.final_grade %}
+                            <span class="grade-badge {% if student.final_grade >= 75 %}pass{% else %}fail{% endif %}">
+                                {{ student.final_grade }}
+                            </span>
+                            {% else %}
+                            <span class="grade-badge pending">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="text-align:center;color:#adb5bd;padding:1rem;">No students enrolled in this section.</p>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+
+{% else %}
+<div class="card" style="text-align:center;padding:3rem;">
+    <i class="fi fi-rr-folder-open" style="font-size:3rem;color:#a0aec0;opacity:0.4;"></i>
+    <h5 style="color:#6c757d;margin-top:1rem;">No Class Assignments Yet</h5>
+    <p style="color:#a0aec0;">Contact your registrar to be assigned to sections.</p>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleStudents(btn, containerId) {
+    var container = document.getElementById(containerId);
+    var icon = btn.querySelector('.expand-icon');
+    
+    if (container.style.display === 'none') {
+        container.style.display = 'block';
+        icon.classList.add('open');
+        btn.innerHTML = '<i class="fi fi-rr-angle-up expand-icon open"></i> Hide';
+    } else {
+        container.style.display = 'none';
+        icon.classList.remove('open');
+        btn.innerHTML = '<i class="fi fi-rr-angle-down expand-icon"></i> Students';
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,672 @@
+{% extends 'admin/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Admin Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ========== STAT CARDS ========== */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+    @media (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 640px) { .stats-grid { grid-template-columns: 1fr; } }
+
+    .stat-card {
+        background: white;
+        border-radius: var(--radius-md);
+        padding: 1.5rem 1.25rem;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--gray-200);
+        transition: var(--transition);
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+    }
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        transition: var(--transition);
+    }
+    .stat-card:hover::before { width: 6px; }
+    .stat-card.primary-accent::before { background: var(--primary); }
+    .stat-card.success-accent::before { background: var(--success); }
+    .stat-card.info-accent::before { background: var(--info); }
+    .stat-card.warning-accent::before { background: var(--warning); }
+
+    .stat-icon-wrapper {
+        width: 54px;
+        height: 54px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: var(--transition);
+        color: white;
+        font-size: 1.3rem;
+    }
+    .stat-card:hover .stat-icon-wrapper { transform: scale(1.08) rotate(-3deg); }
+    .stat-icon-wrapper.primary-bg { background: var(--primary-gradient); box-shadow: 0 4px 15px rgba(18,52,153,0.35); }
+    .stat-icon-wrapper.success-bg { background: var(--success-gradient); box-shadow: 0 4px 15px rgba(46,125,50,0.35); }
+    .stat-icon-wrapper.info-bg { background: var(--info-gradient); box-shadow: 0 4px 15px rgba(21,101,192,0.35); }
+    .stat-icon-wrapper.warning-bg { background: var(--warning-gradient); box-shadow: 0 4px 15px rgba(230,81,0,0.35); }
+
+    .stat-content { flex: 1; min-width: 0; }
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1.1;
+        color: var(--gray-700);
+        transition: var(--transition);
+    }
+    .stat-card.primary-accent:hover .stat-value { color: var(--primary); }
+    .stat-card.success-accent:hover .stat-value { color: var(--success); }
+    .stat-card.info-accent:hover .stat-value { color: var(--info); }
+    .stat-card.warning-accent:hover .stat-value { color: var(--warning); }
+
+    .stat-label {
+        font-size: 0.73rem;
+        font-weight: 600;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 0.2rem;
+    }
+    .stat-sub {
+        font-size: 0.65rem;
+        color: #adb5bd;
+        margin-top: 0.3rem;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    .stat-sub i { font-size: 0.45rem; }
+
+    /* ========== ALERT CARDS ========== */
+    .alerts-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+    @media (max-width: 768px) { .alerts-row { grid-template-columns: 1fr; } }
+
+    .alert-card {
+        background: white;
+        border-radius: var(--radius-md);
+        padding: 1.2rem 1.5rem;
+        box-shadow: var(--shadow-xs);
+        border: 1px solid var(--gray-200);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        transition: var(--transition);
+        cursor: pointer;
+    }
+    .alert-card:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+    .alert-card.warning-alert {
+        border-left: 4px solid var(--warning);
+        background: linear-gradient(135deg, #fffbf8, var(--warning-light));
+    }
+    .alert-card.info-alert {
+        border-left: 4px solid var(--info);
+        background: linear-gradient(135deg, #f8faff, var(--info-light));
+    }
+
+    .alert-content {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        flex: 1;
+        min-width: 0;
+    }
+    .alert-icon-circle {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 1rem;
+    }
+    .alert-card.warning-alert .alert-icon-circle { background: var(--warning-light); color: var(--warning); }
+    .alert-card.info-alert .alert-icon-circle { background: var(--info-light); color: var(--info); }
+
+    .alert-text { font-size: 0.82rem; color: var(--gray-700); line-height: 1.5; }
+    .alert-text strong { font-weight: 700; }
+
+    .alert-action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 1.2rem;
+        border-radius: 20px;
+        font-size: 0.73rem;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        white-space: nowrap;
+        text-decoration: none;
+        transition: var(--transition);
+    }
+    .alert-card.warning-alert .alert-action-btn { background: var(--warning); color: white; }
+    .alert-card.warning-alert .alert-action-btn:hover { background: #bf4400; transform: translateY(-1px); }
+    .alert-card.info-alert .alert-action-btn { background: var(--info); color: white; }
+    .alert-card.info-alert .alert-action-btn:hover { background: #0d47a1; transform: translateY(-1px); }
+
+    /* ========== QUICK ACTIONS ========== */
+    .quick-actions-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--gray-200);
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+    .quick-actions-header {
+        padding: 1.2rem 1.5rem;
+        border-bottom: 2px solid var(--gray-100);
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    .quick-actions-header i { color: var(--primary); font-size: 1rem; }
+    .quick-actions-header h3 {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin: 0;
+    }
+    .quick-actions-body {
+        padding: 1.5rem;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+    }
+    @media (max-width: 768px) { .quick-actions-body { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .quick-actions-body { grid-template-columns: 1fr; } }
+
+    .action-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 1.3rem 1rem;
+        border-radius: var(--radius-md);
+        border: 2px dashed var(--gray-300);
+        background: var(--gray-50);
+        cursor: pointer;
+        text-decoration: none;
+        transition: var(--transition);
+        color: var(--gray-700);
+    }
+    .action-btn:hover {
+        border-style: solid;
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-md);
+    }
+    .action-btn.primary-action:hover {
+        border-color: var(--primary);
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+    .action-btn.success-action:hover {
+        border-color: var(--success);
+        background: var(--success-light);
+        color: var(--success);
+    }
+    .action-btn.info-action:hover {
+        border-color: var(--info);
+        background: var(--info-light);
+        color: var(--info);
+    }
+    .action-btn.warning-action:hover {
+        border-color: var(--warning);
+        background: var(--warning-light);
+        color: var(--warning);
+    }
+
+    .action-icon-circle {
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        transition: var(--transition);
+    }
+    .action-btn:hover .action-icon-circle { transform: scale(1.1); }
+    .action-btn.primary-action .action-icon-circle { background: var(--primary-light); color: var(--primary); }
+    .action-btn.success-action .action-icon-circle { background: var(--success-light); color: var(--success); }
+    .action-btn.info-action .action-icon-circle { background: var(--info-light); color: var(--info); }
+    .action-btn.warning-action .action-icon-circle { background: var(--warning-light); color: var(--warning); }
+
+    .action-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-align: center;
+        line-height: 1.3;
+    }
+
+    /* ========== TABLES GRID ========== */
+    .tables-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+    @media (max-width: 1024px) { .tables-grid { grid-template-columns: 1fr; } }
+
+    .table-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+    }
+    .table-card-header {
+        padding: 1.2rem 1.5rem;
+        border-bottom: 2px solid var(--gray-100);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .table-card-header h3 {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .table-card-header h3 i { color: var(--primary); font-size: 0.9rem; }
+    .badge-count {
+        font-size: 0.65rem;
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-weight: 600;
+        background: var(--primary-light);
+        color: var(--primary);
+        white-space: nowrap;
+    }
+
+    .table-wrapper { overflow-x: auto; }
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.78rem;
+    }
+    .data-table thead th {
+        text-align: left;
+        padding: 0.75rem 1rem;
+        border-bottom: 2px solid var(--gray-200);
+        color: var(--gray-500);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.65rem;
+        letter-spacing: 0.6px;
+        background: var(--gray-50);
+        white-space: nowrap;
+    }
+    .data-table tbody td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--gray-100);
+        color: var(--gray-700);
+        vertical-align: middle;
+    }
+    .data-table tbody tr {
+        transition: var(--transition);
+    }
+    .data-table tbody tr:hover {
+        background: var(--primary-light);
+    }
+    .data-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    .data-table tbody tr td:first-child { font-weight: 600; }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.3rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.68rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .status-badge.active-badge { background: var(--success-light); color: var(--success); }
+    .status-badge.inactive-badge { background: #f5f5f5; color: #9e9e9e; }
+    .status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .status-dot.dot-active { background: var(--success); }
+    .status-dot.dot-inactive { background: #bdbdbd; }
+
+    .view-link-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.4rem 0.85rem;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-decoration: none;
+        background: var(--primary-light);
+        color: var(--primary);
+        transition: var(--transition);
+    }
+    .view-link-btn:hover {
+        background: var(--primary);
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 2.5rem 1rem;
+        color: var(--gray-500);
+    }
+    .empty-state i {
+        font-size: 2.2rem;
+        display: block;
+        margin-bottom: 0.5rem;
+        opacity: 0.4;
+    }
+    .empty-state p {
+        font-size: 0.8rem;
+        margin: 0;
+        font-weight: 500;
+    }
+
+    /* ========== PULSE ANIMATION ========== */
+    @keyframes subtlePulse {
+        0%, 100% { box-shadow: var(--shadow-md); }
+        50% { box-shadow: 0 4px 22px rgba(18,52,153,0.12); }
+    }
+    .stat-card { animation: subtlePulse 3.5s ease-in-out infinite; }
+    .stat-card:nth-child(1) { animation-delay: 0s; }
+    .stat-card:nth-child(2) { animation-delay: 0.6s; }
+    .stat-card:nth-child(3) { animation-delay: 1.2s; }
+    .stat-card:nth-child(4) { animation-delay: 1.8s; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- STATS CARDS -->
+<div class="stats-grid">
+    <div class="stat-card primary-accent">
+        <div class="stat-icon-wrapper primary-bg">
+            <i class="fas fa-building"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">{{ total_schools }}</div>
+            <div class="stat-label">Active Schools</div>
+            {% if total_inactive_schools > 0 %}
+            <div class="stat-sub">
+                <i class="fas fa-circle"></i> {{ total_inactive_schools }} inactive
+            </div>
+            {% else %}
+            <div class="stat-sub">
+                <i class="fas fa-circle"></i> All active
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="stat-card success-accent">
+        <div class="stat-icon-wrapper success-bg">
+            <i class="fas fa-user-tie"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">{{ total_principals }}</div>
+            <div class="stat-label">Principals</div>
+            <div class="stat-sub">
+                <i class="fas fa-circle"></i> System-wide
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card info-accent">
+        <div class="stat-icon-wrapper info-bg">
+            <i class="fas fa-chalkboard-user"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">{{ total_teachers }}</div>
+            <div class="stat-label">Teachers</div>
+            <div class="stat-sub">
+                <i class="fas fa-circle"></i> Registered educators
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card warning-accent">
+        <div class="stat-icon-wrapper warning-bg">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">{{ total_students }}</div>
+            <div class="stat-label">Students</div>
+            <div class="stat-sub">
+                <i class="fas fa-circle"></i> Enrolled learners
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ALERTS -->
+{% if schools_without_principal > 0 or schools_without_sy > 0 %}
+<div class="alerts-row">
+    {% if schools_without_principal > 0 %}
+    <div class="alert-card warning-alert" onclick="window.location.href='{% url 'admin_panel:principal_create' %}'">
+        <div class="alert-content">
+            <div class="alert-icon-circle">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="alert-text">
+                <strong>{{ schools_without_principal }} school{{ schools_without_principal|pluralize }}</strong> 
+                ha{{ schools_without_principal|pluralize:"s,ve" }} no principal assigned
+            </div>
+        </div>
+        <a href="{% url 'admin_panel:principal_create' %}" class="alert-action-btn">
+            <i class="fas fa-user-plus"></i> Assign Now
+        </a>
+    </div>
+    {% endif %}
+
+    {% if schools_without_sy > 0 %}
+    <div class="alert-card info-alert" onclick="window.location.href='{% url 'admin_panel:school_year_manage' %}'">
+        <div class="alert-content">
+            <div class="alert-icon-circle">
+                <i class="fas fa-calendar"></i>
+            </div>
+            <div class="alert-text">
+                <strong>{{ schools_without_sy }} school{{ schools_without_sy|pluralize }}</strong> 
+                ha{{ schools_without_sy|pluralize:"s,ve" }} no school year configured
+            </div>
+        </div>
+        <a href="{% url 'admin_panel:school_year_manage' %}" class="alert-action-btn">
+            <i class="fas fa-calendar-plus"></i> Configure
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- QUICK ACTIONS -->
+<div class="quick-actions-card">
+    <div class="quick-actions-header">
+        <i class="fas fa-bolt"></i>
+        <h3>Quick Actions</h3>
+    </div>
+    <div class="quick-actions-body">
+        <a href="{% url 'admin_panel:school_create' %}" class="action-btn primary-action">
+            <div class="action-icon-circle">
+                <i class="fas fa-plus"></i>
+            </div>
+            <span class="action-label">New School</span>
+        </a>
+        <a href="{% url 'admin_panel:principal_create' %}" class="action-btn success-action">
+            <div class="action-icon-circle">
+                <i class="fas fa-user-plus"></i>
+            </div>
+            <span class="action-label">New Principal</span>
+        </a>
+        <a href="{% url 'admin_panel:school_year_manage' %}" class="action-btn info-action">
+            <div class="action-icon-circle">
+                <i class="fas fa-calendar-plus"></i>
+            </div>
+            <span class="action-label">Add School Year</span>
+        </a>
+        <a href="{% url 'admin_panel:grade_level_create' %}" class="action-btn warning-action">
+            <div class="action-icon-circle">
+                <i class="fas fa-layer-group"></i>
+            </div>
+            <span class="action-label">Add Grade Levels</span>
+        </a>
+    </div>
+</div>
+
+<!-- RECENT DATA TABLES -->
+<div class="tables-grid">
+    <!-- Recent Schools -->
+    <div class="table-card">
+        <div class="table-card-header">
+            <h3><i class="fas fa-building"></i> Recently Added Schools</h3>
+            {% if recent_schools %}
+            <span class="badge-count">{{ recent_schools|length }} record{{ recent_schools|length|pluralize }}</span>
+            {% endif %}
+        </div>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>School Name</th>
+                        <th>Grading Scale</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for school in recent_schools %}
+                    <tr>
+                        <td>{{ school.school_name }}</td>
+                        <td>{{ school.grading_scale|default:"N/A" }}</td>
+                        <td>
+                            {% if school.is_active %}
+                            <span class="status-badge active-badge">
+                                <span class="status-dot dot-active"></span> Active
+                            </span>
+                            {% else %}
+                            <span class="status-badge inactive-badge">
+                                <span class="status-dot dot-inactive"></span> Inactive
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'admin_panel:school_detail' school.id %}" class="view-link-btn">
+                                View <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4">
+                            <div class="empty-state">
+                                <i class="fas fa-building"></i>
+                                <p>No schools added yet</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Principals -->
+    <div class="table-card">
+        <div class="table-card-header">
+            <h3><i class="fas fa-user-tie"></i> Recently Added Principals</h3>
+            {% if recent_principals %}
+            <span class="badge-count">{{ recent_principals|length }} record{{ recent_principals|length|pluralize }}</span>
+            {% endif %}
+        </div>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>School</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for principal in recent_principals %}
+                    <tr>
+                        <td>{{ principal.full_name }}</td>
+                        <td>{{ principal.school_name|default:"—" }}</td>
+                        <td>
+                            {% if principal.is_active %}
+                            <span class="status-badge active-badge">
+                                <span class="status-dot dot-active"></span> Active
+                            </span>
+                            {% else %}
+                            <span class="status-badge inactive-badge">
+                                <span class="status-dot dot-inactive"></span> Inactive
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'admin_panel:principal_detail' principal.id %}" class="view-link-btn">
+                                View <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4">
+                            <div class="empty-state">
+                                <i class="fas fa-user-tie"></i>
+                                <p>No principals added yet</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}  

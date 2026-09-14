@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Audit Trail - Formify Admin Portal</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'AvantGarde', 'Century Gothic', sans-serif;
+        }
+
+        :root {
+            --rich-black: #00072D;
+            --dark-blue: #051650;
+            --secondary-green: #5EA173;
+            --gray-bg: #f5f7fb;
+            --border-color: #e9ecef;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --sidebar-width: 280px;
+            --danger-red: #dc3545;
+            --warning-orange: #f39c12;
+            --success-green: #28a745;
+            --info-blue: #17a2b8;
+            --audit-purple: #6f42c1;
+        }
+
+        body {
+            background: var(--gray-bg);
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar-header i { font-size: 2rem; color: var(--secondary-green); }
+        .sidebar-header h2 { font-size: 1.1rem; font-weight: 600; }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin: 0 1rem 1.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+        }
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: var(--secondary-green);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--rich-black);
+        }
+        .user-details h4 { font-size: 0.9rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+
+        .nav-menu { list-style: none; padding: 0 0.75rem; }
+        .nav-item { margin-bottom: 0.25rem; }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+        .nav-link i { width: 22px; }
+
+        .nav-footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .welcome h1 { font-size: 1.3rem; color: var(--rich-black); }
+        .welcome p { color: var(--text-secondary); font-size: 0.8rem; }
+        .top-bar-actions { display: flex; align-items: center; gap: 1rem; }
+        .date-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            background: var(--gray-bg);
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+        .stat-icon.blue { background: rgba(18,52,153,0.1); color: #123499; }
+        .stat-icon.green { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .stat-icon.orange { background: rgba(243,156,18,0.1); color: var(--warning-orange); }
+        .stat-icon.purple { background: rgba(111,66,193,0.1); color: var(--audit-purple); }
+        .stat-info h3 { font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); }
+        .stat-info .value { font-size: 1.5rem; font-weight: 700; color: var(--rich-black); }
+        .stat-info .sub { font-size: 0.65rem; color: var(--text-secondary); }
+
+        /* Filter Bar */
+        .filter-bar {
+            background: white;
+            border-radius: 16px;
+            padding: 0.8rem 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .filter-group { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+        .filter-group label { font-size: 0.8rem; color: var(--text-secondary); }
+        select, input {
+            padding: 0.4rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+            font-size: 0.8rem;
+        }
+        .search-input { width: 200px; }
+        .btn-primary {
+            background: var(--secondary-green);
+            color: white;
+            border: none;
+            padding: 0.4rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            padding: 0.4rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        /* Audit Table */
+        .audit-container {
+            background: white;
+            border-radius: 20px;
+            padding: 1.2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            overflow-x: auto;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .section-header h2 {
+            font-size: 1rem;
+            color: var(--rich-black);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .section-header h2 i { color: var(--secondary-green); }
+
+        .audit-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .audit-table th, .audit-table td {
+            text-align: left;
+            padding: 0.8rem 0.5rem;
+            font-size: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .audit-table th {
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+        }
+        .audit-table th:hover { color: var(--secondary-green); }
+        .audit-table tbody tr { transition: background 0.2s; cursor: pointer; }
+        .audit-table tbody tr:hover { background: rgba(94,161,115,0.05); }
+
+        .action-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .action-create { background: #d4edda; color: #155724; }
+        .action-update { background: #cfe2ff; color: #084298; }
+        .action-delete { background: #f8d7da; color: #721c24; }
+        .action-login { background: #e3f0ff; color: #2D6AFF; }
+        .action-access { background: #fff3cd; color: #856404; }
+
+        /* Blockchain Hash Style */
+        .blockchain-hash {
+            font-family: 'Courier New', monospace;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+        .blockchain-hash:hover { color: var(--secondary-green); }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .pagination-controls { display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; }
+        .page-btn {
+            background: var(--gray-bg);
+            border: 1px solid var(--border-color);
+            padding: 0.3rem 0.7rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .page-btn.active { background: var(--secondary-green); color: white; border-color: var(--secondary-green); }
+        .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .rows-select { padding: 0.3rem; border: 2px solid var(--border-color); border-radius: 6px; }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: modalSlideIn 0.3s ease;
+        }
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: white;
+        }
+        .modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; }
+        .modal-body { padding: 1.5rem; }
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+        .detail-row { display: flex; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); }
+        .detail-label { width: 130px; font-weight: 600; font-size: 0.8rem; color: var(--rich-black); }
+        .detail-value { flex: 1; font-size: 0.8rem; }
+
+        .menu-toggle {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: var(--secondary-green);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 1200px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .menu-toggle { display: block; }
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .filter-bar { flex-direction: column; align-items: stretch; }
+            .audit-table { min-width: 800px; }
+        }
+    </style>
+</head>
+<body>
+    <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-shield-alt"></i>
+                <h2>Formify <br><span>Admin Portal</span></h2>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar">SA</div>
+                <div class="user-details">
+                    <h4>System Admin</h4>
+                    <p>Super Administrator</p>
+                </div>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="../dashboard/index.html" class="nav-link"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li class="nav-item"><a href="../detection/index.html" class="nav-link"><i class="fas fa-robot"></i> AI Anomaly Detection</a></li>
+                <li class="nav-item"><a href="../anomalyLogs/index.html" class="nav-link"><i class="fas fa-exclamation-triangle"></i> Anomaly Logs</a></li>
+                <li class="nav-item"><a href="../modelTraining/index.html" class="nav-link"><i class="fas fa-brain"></i> AI Model Training</a></li>
+                <li class="nav-item"><a href="../monitoring/index.html" class="nav-link"><i class="fas fa-chart-line"></i> System Monitoring</a></li>
+                <li class="nav-item"><a href="../auditTrail/index.html" class="nav-link active"><i class="fas fa-history"></i> Audit Trail</a></li>
+                <li class="nav-item"><a href="../security/index.html" class="nav-link"><i class="fas fa-shield-alt"></i> Security</a></li>
+                <li class="nav-item"><a href="../settings/index.html" class="nav-link"><i class="fas fa-cog"></i> Settings</a></li>            </ul>
+                <ul class="nav-menu nav-footer">
+                    <li class="nav-item"><a href="#" class="nav-link"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="top-bar">
+                <div class="welcome">
+                    <h1>Audit Trail</h1>
+                    <p>Immutable, blockchain-verified record of all system actions</p>
+                </div>
+                <div class="top-bar-actions">
+                    <div class="date-display"><i class="fas fa-calendar"></i><span id="currentDate"></span></div>
+                    <button class="btn-outline" onclick="verifyBlockchain()"><i class="fas fa-link"></i> Verify Chain</button>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-database"></i></div><div class="stat-info"><h3>Total Records</h3><div class="value" id="totalRecords">0</div><div class="sub">All time</div></div></div>
+                <div class="stat-card"><div class="stat-icon green"><i class="fas fa-calendar-day"></i></div><div class="stat-info"><h3>Last 24 Hours</h3><div class="value" id="last24h">0</div><div class="sub">New actions</div></div></div>
+                <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-user-clock"></i></div><div class="stat-info"><h3>Unique Actors</h3><div class="value" id="uniqueActors">0</div><div class="sub">This month</div></div></div>
+                <div class="stat-card"><div class="stat-icon purple"><i class="fas fa-fingerprint"></i></div><div class="stat-info"><h3>Blockchain Integrity</h3><div class="value">Verified</div><div class="sub">100% intact</div></div></div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label>Action Type:</label>
+                    <select id="actionFilter">
+                        <option value="all">All Actions</option>
+                        <option value="CREATE">CREATE</option>
+                        <option value="UPDATE">UPDATE</option>
+                        <option value="DELETE">DELETE</option>
+                        <option value="LOGIN">LOGIN</option>
+                        <option value="ACCESS">ACCESS</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>User Role:</label>
+                    <select id="roleFilter">
+                        <option value="all">All Roles</option>
+                        <option value="Admin">Admin</option>
+                        <option value="School Head">School Head</option>
+                        <option value="Registrar">Registrar</option>
+                        <option value="Teacher">Teacher</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Date Range:</label>
+                    <input type="date" id="dateFrom"> to <input type="date" id="dateTo">
+                </div>
+                <div class="filter-group">
+                    <input type="text" class="search-input" id="searchInput" placeholder="Search user, action, details..." onkeyup="filterAndPaginate()">
+                </div>
+                <div class="filter-group">
+                    <button class="btn-primary" onclick="filterAndPaginate()">Apply</button>
+                    <button class="btn-outline" onclick="exportAuditTrail()"><i class="fas fa-download"></i> Export</button>
+                    <button class="btn-outline" onclick="clearFilters()">Clear</button>
+                </div>
+            </div>
+
+            <!-- Audit Trail Table -->
+            <div class="audit-container">
+                <div class="section-header">
+                    <h2><i class="fas fa-history"></i> Immutable Audit Log</h2>
+                    <span class="view-all" id="recordCount">0 records</span>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="audit-table" id="auditTable">
+                        <thead>
+                            <tr>
+                                <th onclick="sortBy('id')">ID <i class="fas fa-sort"></i></th>
+                                <th onclick="sortBy('timestamp')">Timestamp <i class="fas fa-sort"></i></th>
+                                <th>User</th>
+                                <th>Role</th>
+                                <th>Action</th>
+                                <th>Resource</th>
+                                <th>IP Address</th>
+                                <th>Blockchain Hash</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="paginationControls" class="pagination"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audit Detail Modal -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-info-circle"></i> Audit Record Details</h2>
+                <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="detailModalBody"></div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="closeDetailModal()">Close</button>
+                <button class="btn-primary" onclick="verifyRecord()">Verify on Blockchain</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Generate mock audit records (blockchain-verified)
+        const generateHash = (id, timestamp, user, action) => {
+            return `0x${Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
+        };
+
+        let auditRecords = [];
+        const users = [
+            { name: "System Admin", role: "Admin" },
+            { name: "Maria Santos", role: "School Head" },
+            { name: "Maria Rivera", role: "Registrar" },
+            { name: "Juan Dela Cruz", role: "Teacher" },
+            { name: "Ana Reyes", role: "Teacher" },
+            { name: "Roberto Gomez", role: "Teacher" }
+        ];
+        
+        const actions = ["CREATE", "UPDATE", "DELETE", "LOGIN", "ACCESS"];
+        const resources = [
+            "Student Record", "Grade Entry", "SF1 Form", "SF5 Form", "SF9 Form", "SF10 Form", 
+            "User Account", "Transfer Request", "Announcement", "Teacher Evaluation", "Report"
+        ];
+
+        // Generate 250 audit records
+        for (let i = 1; i <= 250; i++) {
+            const user = users[Math.floor(Math.random() * users.length)];
+            const action = actions[Math.floor(Math.random() * actions.length)];
+            const resource = resources[Math.floor(Math.random() * resources.length)];
+            const timestamp = new Date(Date.now() - Math.random() * 30 * 24 * 3600000);
+            const details = {
+                recordId: `REC-${String(i).padStart(6, '0')}`,
+                changes: action === "UPDATE" ? "Field: grade_score from 85 to 92" : null,
+                reason: action === "DELETE" ? "Student transferred to other school" : null
+            };
+            const prevHash = i === 1 ? "0x0000000000000000000000000000000000000000000000000000000000000000" : generateHash(i-1, timestamp, user.name, action);
+            
+            auditRecords.push({
+                id: i,
+                timestamp: timestamp.toISOString().slice(0, 19).replace('T', ' '),
+                user: user.name,
+                role: user.role,
+                action: action,
+                resource: resource,
+                details: details,
+                ipAddress: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
+                blockchainHash: generateHash(i, timestamp, user.name, action),
+                prevHash: prevHash
+            });
+        }
+        
+        // Sort by timestamp descending (most recent first)
+        auditRecords.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        let currentPage = 1;
+        let rowsPerPage = 15;
+        let currentSort = { column: 'timestamp', direction: 'desc' };
+        let currentDetailRecord = null;
+
+        function updateStats() {
+            const total = auditRecords.length;
+            const last24h = auditRecords.filter(r => {
+                const recordDate = new Date(r.timestamp);
+                const dayAgo = new Date();
+                dayAgo.setDate(dayAgo.getDate() - 1);
+                return recordDate >= dayAgo;
+            }).length;
+            const uniqueActors = new Set(auditRecords.map(r => r.user)).size;
+            document.getElementById('totalRecords').innerText = total;
+            document.getElementById('last24h').innerText = last24h;
+            document.getElementById('uniqueActors').innerText = uniqueActors;
+        }
+
+        function getFilteredRecords() {
+            let filtered = [...auditRecords];
+            const actionFilter = document.getElementById('actionFilter').value;
+            const roleFilter = document.getElementById('roleFilter').value;
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            if (actionFilter !== 'all') filtered = filtered.filter(r => r.action === actionFilter);
+            if (roleFilter !== 'all') filtered = filtered.filter(r => r.role === roleFilter);
+            if (dateFrom) filtered = filtered.filter(r => r.timestamp >= dateFrom);
+            if (dateTo) filtered = filtered.filter(r => r.timestamp <= dateTo + ' 23:59:59');
+            if (searchTerm) {
+                filtered = filtered.filter(r => 
+                    r.user.toLowerCase().includes(searchTerm) || 
+                    r.action.toLowerCase().includes(searchTerm) ||
+                    r.resource.toLowerCase().includes(searchTerm) ||
+                    r.ipAddress.includes(searchTerm)
+                );
+            }
+            
+            // Sort
+            filtered.sort((a, b) => {
+                let aVal = a[currentSort.column];
+                let bVal = b[currentSort.column];
+                if (currentSort.column === 'timestamp') {
+                    aVal = new Date(aVal);
+                    bVal = new Date(bVal);
+                }
+                if (aVal < bVal) return currentSort.direction === 'asc' ? -1 : 1;
+                if (aVal > bVal) return currentSort.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+            return filtered;
+        }
+
+        function getActionBadge(action) {
+            const classes = {
+                'CREATE': 'action-create',
+                'UPDATE': 'action-update', 
+                'DELETE': 'action-delete',
+                'LOGIN': 'action-login',
+                'ACCESS': 'action-access'
+            };
+            return `<span class="action-badge ${classes[action]}">${action}</span>`;
+        }
+
+        function renderTable() {
+            const filtered = getFilteredRecords();
+            const totalFiltered = filtered.length;
+            const totalPages = Math.ceil(totalFiltered / rowsPerPage);
+            if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
+            const start = (currentPage - 1) * rowsPerPage;
+            const paginated = filtered.slice(start, start + rowsPerPage);
+            document.getElementById('recordCount').innerHTML = `${totalFiltered} records (${totalFiltered} total)`;
+            
+            const tbody = document.getElementById('auditTableBody');
+            if (paginated.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem;">No audit records found</td></tr>';
+            } else {
+                tbody.innerHTML = paginated.map(record => `
+                    <tr onclick="viewRecordDetail(${record.id})">
+                        <td>${record.id}</td>
+                        <td>${record.timestamp}</td>
+                        <td><strong>${record.user}</strong></td>
+                        <td>${record.role}</td>
+                        <td>${getActionBadge(record.action)}</td>
+                        <td>${record.resource}</td>
+                        <td>${record.ipAddress}</td>
+                        <td><span class="blockchain-hash" onclick="event.stopPropagation(); copyHash('${record.blockchainHash}')">${record.blockchainHash.substring(0, 16)}...</span></td>
+                    </tr>
+                `).join('');
+            }
+            renderPagination(totalFiltered);
+        }
+
+        function renderPagination(totalFiltered) {
+            const totalPages = Math.ceil(totalFiltered / rowsPerPage);
+            const container = document.getElementById('paginationControls');
+            if (totalPages <= 1 && totalFiltered <= rowsPerPage) { container.innerHTML = ''; return; }
+            let html = `<div><select class="rows-select" id="rowsSelect" onchange="changeRowsPerPage()">
+                            <option value="10" ${rowsPerPage===10?'selected':''}>10 rows</option>
+                            <option value="15" ${rowsPerPage===15?'selected':''}>15 rows</option>
+                            <option value="25" ${rowsPerPage===25?'selected':''}>25 rows</option>
+                            <option value="50" ${rowsPerPage===50?'selected':''}>50 rows</option>
+                            <option value="100" ${rowsPerPage===100?'selected':''}>100 rows</option>
+                        </select></div>
+                        <div class="pagination-controls">
+                            <button class="page-btn" onclick="goToPage(1)" ${currentPage===1?'disabled':''}>First</button>
+                            <button class="page-btn" onclick="goToPage(${currentPage-1})" ${currentPage===1?'disabled':''}>Prev</button>`;
+            for (let i = Math.max(1, currentPage-2); i <= Math.min(totalPages, currentPage+2); i++) {
+                html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goToPage(${i})">${i}</button>`;
+            }
+            html += `<button class="page-btn" onclick="goToPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>Next</button>
+                        <button class="page-btn" onclick="goToPage(${totalPages})" ${currentPage===totalPages?'disabled':''}>Last</button>
+                        <span style="font-size:0.7rem;">Page ${currentPage} of ${totalPages}</span>
+                    </div>`;
+            container.innerHTML = html;
+        }
+
+        function changeRowsPerPage() { rowsPerPage = parseInt(document.getElementById('rowsSelect').value); currentPage = 1; renderTable(); }
+        function goToPage(page) { currentPage = page; renderTable(); }
+        function filterAndPaginate() { currentPage = 1; renderTable(); }
+        function clearFilters() {
+            document.getElementById('actionFilter').value = 'all';
+            document.getElementById('roleFilter').value = 'all';
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            document.getElementById('searchInput').value = '';
+            filterAndPaginate();
+        }
+
+        function sortBy(column) {
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'desc';
+            }
+            renderTable();
+        }
+
+        function viewRecordDetail(id) {
+            currentDetailRecord = auditRecords.find(r => r.id === id);
+            if (!currentDetailRecord) return;
+            const modalBody = document.getElementById('detailModalBody');
+            modalBody.innerHTML = `
+                <div class="detail-row"><div class="detail-label">Record ID</div><div class="detail-value">#${currentDetailRecord.id}</div></div>
+                <div class="detail-row"><div class="detail-label">Timestamp</div><div class="detail-value">${currentDetailRecord.timestamp}</div></div>
+                <div class="detail-row"><div class="detail-label">User</div><div class="detail-value">${currentDetailRecord.user} (${currentDetailRecord.role})</div></div>
+                <div class="detail-row"><div class="detail-label">Action</div><div class="detail-value">${currentDetailRecord.action}</div></div>
+                <div class="detail-row"><div class="detail-label">Resource</div><div class="detail-value">${currentDetailRecord.resource}</div></div>
+                <div class="detail-row"><div class="detail-label">IP Address</div><div class="detail-value">${currentDetailRecord.ipAddress}</div></div>
+                ${currentDetailRecord.details.recordId ? `<div class="detail-row"><div class="detail-label">Affected Record</div><div class="detail-value">${currentDetailRecord.details.recordId}</div></div>` : ''}
+                ${currentDetailRecord.details.changes ? `<div class="detail-row"><div class="detail-label">Changes</div><div class="detail-value">${currentDetailRecord.details.changes}</div></div>` : ''}
+                ${currentDetailRecord.details.reason ? `<div class="detail-row"><div class="detail-label">Reason</div><div class="detail-value">${currentDetailRecord.details.reason}</div></div>` : ''}
+                <div class="detail-row"><div class="detail-label">Previous Hash</div><div class="detail-value"><code style="font-size:0.7rem;">${currentDetailRecord.prevHash}</code></div></div>
+                <div class="detail-row"><div class="detail-label">Blockchain Hash</div><div class="detail-value"><code style="font-size:0.7rem;">${currentDetailRecord.blockchainHash}</code></div></div>
+            `;
+            document.getElementById('detailModal').classList.add('active');
+        }
+
+        function closeDetailModal() { document.getElementById('detailModal').classList.remove('active'); currentDetailRecord = null; }
+        
+        function verifyRecord() {
+            if (currentDetailRecord) {
+                alert(`🔗 Blockchain Verification\n\nRecord #${currentDetailRecord.id}\nHash: ${currentDetailRecord.blockchainHash}\nPrevious Hash: ${currentDetailRecord.prevHash}\n\nStatus: ✓ Verified\nTimestamp: ${new Date().toISOString()}\nThe blockchain has not been tampered with.`);
+            }
+        }
+
+        function verifyBlockchain() {
+            alert(`🔗 Full Blockchain Integrity Check\n\nTotal Records: ${auditRecords.length}\nChain Status: ✓ INTACT\nLast Verified: ${new Date().toISOString()}\n\nAll cryptographic hashes are valid. No tampering detected.`);
+        }
+
+        function copyHash(hash) {
+            navigator.clipboard.writeText(hash);
+            alert('Hash copied to clipboard.');
+        }
+
+        function exportAuditTrail() {
+            const filtered = getFilteredRecords();
+            let csv = "ID,Timestamp,User,Role,Action,Resource,IP Address,Blockchain Hash,Previous Hash\n";
+            filtered.forEach(r => {
+                csv += `${r.id},${r.timestamp},${r.user},${r.role},${r.action},${r.resource},${r.ipAddress},${r.blockchainHash},${r.prevHash}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `audit_trail_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        }
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+        function updateDateTime() { document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }); }
+
+        document.getElementById('actionFilter').addEventListener('change', filterAndPaginate);
+        document.getElementById('roleFilter').addEventListener('change', filterAndPaginate);
+        document.getElementById('dateFrom').addEventListener('change', filterAndPaginate);
+        document.getElementById('dateTo').addEventListener('change', filterAndPaginate);
+
+        updateStats();
+        renderTable();
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+    </script>
+</body>
+</html>

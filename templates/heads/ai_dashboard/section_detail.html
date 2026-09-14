@@ -1,0 +1,733 @@
+{% extends 'heads/base.html' %}
+{% load static %}
+
+{% block title %}AI Analysis: {{ section.section_name }} - {{ subject.subject_name }}{% endblock %}
+
+{% block subtitle %}{{ school_year.year_label }} • Grade {{ section.grade_level.grade_name }} — {{ section.section_name }} • {{ subject.subject_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --rich-black: #1a1a2e;
+        --secondary-green: #5EA173;
+        --caribbean-blue: #123499;
+        --danger-red: #dc3545;
+        --warning-orange: #f39c12;
+        --text-primary: #2d3436;
+        --text-secondary: #636e72;
+        --border-color: #e0e0e0;
+        --gray-bg: #f8f9fa;
+        --card-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        --card-shadow-hover: 0 8px 24px rgba(0,0,0,0.1);
+        --success-bg: rgba(94,161,115,0.1);
+        --success-text: #2d6a4f;
+        --danger-bg: rgba(220,53,69,0.1);
+        --danger-text: #c92a2a;
+        --info-bg: rgba(18,52,153,0.1);
+        --info-text: #0b2b7a;
+    }
+
+    /* ===== BREADCRUMB ===== */
+    .breadcrumb-wrapper { margin-bottom: 1rem; }
+    .breadcrumb { display: flex; align-items: center; gap: 0.5rem; list-style: none; padding: 0; font-size: 0.78rem; flex-wrap: wrap; }
+    .breadcrumb li { display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); }
+    .breadcrumb li a { color: var(--secondary-green); text-decoration: none; font-weight: 500; transition: color 0.2s; }
+    .breadcrumb li a:hover { color: var(--caribbean-blue); }
+    .breadcrumb li:not(:last-child)::after { content: '/'; color: var(--border-color); margin-left: 0.5rem; }
+    .breadcrumb li.active { color: var(--text-primary); font-weight: 600; }
+
+    /* ===== PAGE HEADER ===== */
+    .page-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; background: white; border-radius: 20px; padding: 1.5rem; box-shadow: var(--card-shadow); }
+    .page-header-info h1 { font-size: 1.3rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.3rem; font-weight: 700; }
+    .page-header-info h1 i { color: var(--secondary-green); font-size: 1.4rem; background: rgba(94,161,115,0.1); padding: 0.6rem; border-radius: 12px; }
+    .page-header-info .meta { font-size: 0.78rem; color: var(--text-secondary); display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .page-header-info .meta span { display: flex; align-items: center; gap: 0.3rem; }
+    .category-badge-large { font-size: 0.8rem; padding: 0.5rem 1rem; border-radius: 25px; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; white-space: nowrap; }
+    .category-badge-large.excellence { background: rgba(94,161,115,0.12); color: var(--secondary-green); border: 2px solid rgba(94,161,115,0.2); }
+    .category-badge-large.standard { background: rgba(18,52,153,0.1); color: var(--caribbean-blue); border: 2px solid rgba(18,52,153,0.15); }
+    .category-badge-large.intervention { background: rgba(220,53,69,0.08); color: var(--danger-red); border: 2px solid rgba(220,53,69,0.15); }
+
+    /* ===== DO 31 PROFICIENCY REFERENCE ===== */
+    .do31-reference-card { background: white; border-radius: 20px; box-shadow: var(--card-shadow); margin-bottom: 1.5rem; overflow: hidden; }
+    .do31-reference-header { padding: 0.8rem 1.5rem; border-bottom: 1px solid var(--border-color); font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem; background: rgba(94,161,115,0.03); }
+    .do31-reference-header i { color: var(--secondary-green); }
+    .do31-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; padding: 1rem 1.2rem; text-align: center; }
+    .do31-level { padding: 0.6rem 0.4rem; border-radius: 10px; transition: transform 0.2s; }
+    .do31-level:hover { transform: translateY(-2px); }
+    .do31-level.beginning { background: rgba(220,53,69,0.08); border: 1px solid rgba(220,53,69,0.15); }
+    .do31-level.developing { background: rgba(243,156,18,0.08); border: 1px solid rgba(243,156,18,0.15); }
+    .do31-level.approaching { background: rgba(23,162,184,0.08); border: 1px solid rgba(23,162,184,0.15); }
+    .do31-level.proficient { background: rgba(94,161,115,0.08); border: 1px solid rgba(94,161,115,0.15); }
+    .do31-level.advanced { background: rgba(18,52,153,0.08); border: 1px solid rgba(18,52,153,0.15); }
+    .do31-abbr { font-size: 1.1rem; font-weight: 800; margin-bottom: 0.1rem; }
+    .do31-label { font-size: 0.6rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.3px; }
+    .do31-range { font-size: 0.7rem; font-weight: 700; margin-top: 0.2rem; }
+    .beginning .do31-abbr, .beginning .do31-range { color: var(--danger-red); }
+    .developing .do31-abbr, .developing .do31-range { color: var(--warning-orange); }
+    .approaching .do31-abbr, .approaching .do31-range { color: #17a2b8; }
+    .proficient .do31-abbr, .proficient .do31-range { color: var(--secondary-green); }
+    .advanced .do31-abbr, .advanced .do31-range { color: var(--caribbean-blue); }
+
+    /* ===== INFO CARDS ===== */
+    .info-row-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .info-card { background: white; border-radius: 20px; box-shadow: var(--card-shadow); overflow: hidden; height: 100%; }
+    .info-card-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; background: rgba(94,161,115,0.03); }
+    .info-card-header i { color: var(--secondary-green); }
+    .info-card-body { padding: 1.2rem 1.5rem; }
+    .info-row { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px dashed var(--border-color); }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: var(--text-secondary); font-size: 0.75rem; }
+    .info-value { font-weight: 600; font-size: 0.85rem; color: var(--rich-black); }
+    .performance-metrics { display: flex; justify-content: space-around; text-align: center; gap: 0.5rem; }
+    .metric-item { flex: 1; padding: 0.5rem; background: var(--gray-bg); border-radius: 12px; }
+    .metric-label { font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+    .metric-value { font-size: 1.3rem; font-weight: 800; line-height: 1.2; }
+    .metric-value.positive { color: var(--secondary-green); }
+    .metric-value.negative { color: var(--danger-red); }
+    .metric-sub { font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.2rem; }
+
+    /* ===== PERFORMANCE SUMMARY CARDS ===== */
+    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .summary-card { background: white; border-radius: 20px; padding: 1.3rem; text-align: center; box-shadow: var(--card-shadow); transition: all 0.3s; position: relative; overflow: hidden; }
+    .summary-card:hover { transform: translateY(-3px); box-shadow: var(--card-shadow-hover); }
+    .summary-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; }
+    .summary-card.avg::before { background: linear-gradient(90deg, #5EA173, #7dbb8f); }
+    .summary-card.passing::before { background: linear-gradient(90deg, #123499, #667eea); }
+    .summary-card.atrisk::before { background: linear-gradient(90deg, #dc3545, #e74c3c); }
+    .summary-card.excellent::before { background: linear-gradient(90deg, #f39c12, #f1c40f); }
+    .summary-card .label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-secondary); font-weight: 600; margin-bottom: 0.5rem; }
+    .summary-card .value { font-size: 2rem; font-weight: 800; letter-spacing: -1px; line-height: 1; }
+    .summary-card .sub { font-size: 0.68rem; color: var(--text-secondary); margin-top: 0.3rem; }
+
+    /* ===== EMPTY STATE ===== */
+    .empty-state-container { text-align: center; padding: 2.5rem 1.5rem; animation: fadeInUp 0.5s ease; }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .empty-state-icon { font-size: 3rem; margin-bottom: 0.8rem; opacity: 0.5; }
+    .empty-state-title { font-weight: 700; color: var(--rich-black); font-size: 1rem; margin-bottom: 0.4rem; }
+    .empty-state-message { font-size: 0.8rem; color: var(--text-secondary); max-width: 450px; margin: 0 auto 1.2rem; line-height: 1.6; }
+    .empty-state-steps { background: rgba(18,52,153,0.04); border-radius: 12px; padding: 1rem; text-align: left; max-width: 400px; margin: 0 auto; border-left: 3px solid var(--caribbean-blue); }
+    .empty-state-steps ul { list-style: none; padding: 0; margin: 0.3rem 0 0 0; font-size: 0.72rem; color: var(--text-secondary); }
+    .empty-state-steps ul li { padding: 0.15rem 0; }
+
+    /* ===== HISTORICAL TABLE ===== */
+    .historical-card { background: white; border-radius: 20px; box-shadow: var(--card-shadow); margin-bottom: 1.5rem; overflow: hidden; }
+    .historical-card-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); }
+    .historical-card-header h6 { font-size: 0.85rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 0.5rem; }
+    .historical-table { width: 100%; font-size: 0.78rem; border-collapse: collapse; }
+    .historical-table th { padding: 0.8rem 1rem; background: var(--gray-bg); text-align: left; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); }
+    .historical-table td { padding: 0.7rem 1rem; border-bottom: 1px solid var(--border-color); }
+    .trend-up { color: var(--secondary-green); font-weight: 600; }
+    .trend-down { color: var(--danger-red); font-weight: 600; }
+    .trend-neutral { color: var(--text-secondary); }
+
+    /* ===== AI RECOMMENDATION CARD ===== */
+    .ai-recommendation-card { background: white; border-radius: 20px; margin-bottom: 1.5rem; box-shadow: var(--card-shadow); overflow: hidden; border-left: 5px solid transparent; transition: border-color 0.3s; }
+    .ai-recommendation-card.intervention { border-left-color: var(--danger-red); }
+    .ai-recommendation-card.excellence { border-left-color: var(--secondary-green); }
+    .ai-recommendation-card.standard { border-left-color: var(--caribbean-blue); }
+    .ai-recommendation-header { padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.8rem; }
+    .ai-recommendation-header-left { display: flex; align-items: center; gap: 1rem; }
+    .poro-ai-icon { width: 48px; height: 48px; background: linear-gradient(135deg, #5EA173, #7dbb8f); border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 15px rgba(94,161,115,0.35); overflow: hidden; animation: poroPulse 2.5s ease infinite; }
+    @keyframes poroPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+    .poro-ai-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .ai-recommendation-header h5 { font-size: 0.95rem; color: var(--rich-black); font-weight: 700; margin: 0; }
+    .ai-recommendation-header .ai-subtitle { font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.15rem; }
+    .confidence-badge { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.4rem 1rem; border-radius: 20px; font-size: 0.73rem; font-weight: 600; display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
+
+    /* ===== AI GENERATING STATE ===== */
+    .ai-generating { text-align: center; padding: 2.5rem 1.5rem; animation: fadeInUp 0.4s ease; }
+    .generating-pulse { display: flex; align-items: center; gap: 1.2rem; justify-content: center; margin-bottom: 1.2rem; }
+    .small-pulse { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; animation: poroThink 1.4s ease-in-out infinite; }
+    .small-pulse img { width: 100%; height: 100%; object-fit: cover; }
+    @keyframes poroThink { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+    .generating-text { text-align: left; }
+    .generating-label { font-weight: 700; font-size: 0.92rem; color: var(--rich-black); display: block; margin-bottom: 0.2rem; }
+    .generating-sub { font-size: 0.72rem; color: var(--text-secondary); display: block; line-height: 1.4; }
+    .progress-dots { display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.5rem; }
+    .progress-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border-color); transition: all 0.35s ease; }
+    .progress-dot.active { background: var(--secondary-green); width: 14px; height: 14px; box-shadow: 0 0 8px rgba(94,161,115,0.5); }
+    .progress-dot.done { background: var(--secondary-green); opacity: 0.6; }
+    .generating-hint { margin-top: 0.8rem; font-size: 0.68rem; color: var(--text-secondary); }
+
+    /* ===== AI LOADED STATE ===== */
+    .ai-recommendation-body { padding: 1.5rem; animation: fadeInUp 0.5s ease; }
+    .ai-summary { background: linear-gradient(135deg, #f0f9f0, #e8f5e9); border-radius: 14px; padding: 1.2rem; margin-bottom: 1.2rem; border: 1px solid rgba(94,161,115,0.2); font-size: 0.85rem; color: var(--text-primary); line-height: 1.7; display: flex; align-items: flex-start; gap: 0.7rem; }
+    .ai-summary i { color: var(--secondary-green); font-size: 1rem; margin-top: 0.15rem; flex-shrink: 0; }
+    .insight-section { margin-bottom: 1rem; }
+    .insight-section h6 { font-size: 0.8rem; font-weight: 700; color: var(--rich-black); margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.4rem; }
+    .insight-section .content { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.7; padding-left: 0.2rem; }
+
+    /* ===== AI FALLBACK STATE ===== */
+    .ai-fallback { padding: 1rem 1.2rem; background: rgba(243,156,18,0.05); border-radius: 12px; margin-bottom: 1rem; border-left: 4px solid var(--warning-orange); }
+    .ai-fallback .fallback-icon { color: var(--warning-orange); font-size: 1.2rem; margin-bottom: 0.3rem; }
+
+    /* ===== CHART CARDS ===== */
+    .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+    .chart-card { background: white; border-radius: 20px; box-shadow: var(--card-shadow); overflow: hidden; }
+    .chart-card-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); }
+    .chart-card-header h6 { font-size: 0.85rem; color: var(--rich-black); font-weight: 700; margin: 0; display: flex; align-items: center; gap: 0.5rem; }
+    .chart-card-header h6 i { color: var(--secondary-green); }
+    .chart-card-body { padding: 1.2rem; }
+    .chart-card-body canvas { max-height: 260px; }
+
+    /* ===== STUDENT TABLE ===== */
+    .student-table-card { background: white; border-radius: 20px; box-shadow: var(--card-shadow); overflow: hidden; margin-bottom: 1.5rem; }
+    .student-table-header { padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+    .student-table-header h5 { font-size: 0.95rem; color: var(--rich-black); font-weight: 700; margin: 0; display: flex; align-items: center; gap: 0.5rem; }
+    .student-table-header h5 i { color: var(--secondary-green); }
+    .table-controls { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+    .table-search-box { position: relative; min-width: 200px; }
+    .table-search-box input { width: 100%; padding: 0.5rem 0.8rem 0.5rem 2.2rem; border: 2px solid var(--border-color); border-radius: 20px; font-size: 0.73rem; background: var(--gray-bg); transition: all 0.2s; font-family: inherit; }
+    .table-search-box input:focus { outline: none; border-color: var(--secondary-green); box-shadow: 0 0 0 3px rgba(94,161,115,0.1); }
+    .table-search-box i { position: absolute; left: 0.7rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 0.75rem; }
+    .filter-select { padding: 0.5rem 2rem 0.5rem 1rem; border: 2px solid var(--border-color); border-radius: 20px; font-size: 0.73rem; background: var(--gray-bg); font-family: inherit; cursor: pointer; }
+    .btn-export { padding: 0.5rem 1rem; border: 2px solid var(--border-color); border-radius: 20px; background: white; font-size: 0.73rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.4rem; }
+    .btn-export:hover { border-color: var(--secondary-green); color: var(--secondary-green); background: rgba(94,161,115,0.05); }
+    .student-count-badge { font-size: 0.7rem; padding: 0.2rem 0.7rem; border-radius: 20px; font-weight: 600; background: var(--info-bg); color: var(--info-text); white-space: nowrap; }
+    .student-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+    .student-table th { text-align: left; padding: 0.75rem 1rem; background: var(--gray-bg); color: var(--text-secondary); font-weight: 700; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 0.8px; border-bottom: 2px solid var(--border-color); cursor: pointer; user-select: none; white-space: nowrap; }
+    .student-table th:hover { background: #e9ecef; }
+    .student-table th .sort-indicator { margin-left: 0.3rem; font-size: 0.6rem; opacity: 0.35; }
+    .student-table th.sorted .sort-indicator { opacity: 1; color: var(--secondary-green); }
+    .student-table td { padding: 0.7rem 1rem; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
+    .student-table tbody tr { transition: background 0.2s; }
+    .student-table tbody tr:hover { background: var(--gray-bg); }
+    .student-table tbody tr.row-danger { background: rgba(220,53,69,0.03); }
+    .student-table tbody tr.row-success { background: rgba(94,161,115,0.03); }
+    .badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.65rem; border-radius: 20px; font-size: 0.65rem; font-weight: 600; white-space: nowrap; }
+    .badge-danger { background: var(--danger-bg); color: var(--danger-text); }
+    .badge-success { background: var(--success-bg); color: var(--success-text); }
+    .badge-info { background: var(--info-bg); color: var(--info-text); }
+    .badge-warning { background: rgba(243,156,18,0.1); color: #b45309; }
+    .lrn-text { font-family: 'Courier New', monospace; font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 0.5px; }
+    .prediction-grade { font-weight: 700; color: var(--caribbean-blue); background: rgba(18,52,153,0.06); padding: 0.2rem 0.55rem; border-radius: 12px; font-size: 0.73rem; }
+    .recommendation-cell { max-width: 260px; }
+    .student-recommendation { font-size: 0.7rem; color: var(--text-secondary); }
+
+    /* ===== BACK BUTTON ===== */
+    .btn-back { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.55rem 1.2rem; border: 2px solid var(--border-color); border-radius: 10px; background: white; color: var(--text-primary); font-size: 0.8rem; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.3s; font-family: inherit; }
+    .btn-back:hover { border-color: var(--secondary-green); color: var(--secondary-green); background: rgba(94,161,115,0.03); }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 992px) {
+        .summary-grid { grid-template-columns: repeat(2, 1fr); }
+        .chart-row { grid-template-columns: 1fr; }
+        .info-row-grid { grid-template-columns: 1fr; }
+        .do31-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 768px) {
+        .summary-grid { grid-template-columns: 1fr; }
+        .do31-grid { grid-template-columns: repeat(2, 1fr); }
+        .page-header { flex-direction: column; }
+        .category-badge-large { align-self: flex-start; }
+        .ai-recommendation-header { flex-direction: column; align-items: flex-start; }
+        .student-table-header { flex-direction: column; align-items: flex-start; }
+        .table-search-box { width: 100%; }
+        .student-table { font-size: 0.68rem; }
+        .student-table th, .student-table td { padding: 0.5rem 0.6rem; }
+        .generating-pulse { flex-direction: column; text-align: center; }
+        .generating-text { text-align: center; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- BREADCRUMB -->
+<div class="breadcrumb-wrapper">
+    <ol class="breadcrumb">
+        <li><a href="{% url 'heads-ai-dashboard' %}"><i class="fi fi-rr-dashboard"></i> AI Dashboard</a></li>
+        <li class="active">{{ section.section_name }} — {{ subject.subject_name }}</li>
+    </ol>
+</div>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+    <div class="page-header-info">
+        <h1>
+            <i class="fi fi-rr-chalkboard-user"></i>
+            {{ section.section_name }}
+        </h1>
+        <div class="meta">
+            <span><i class="fi fi-rr-calendar"></i> {{ school_year.year_label }}</span>
+            <span><i class="fi fi-rr-graduation-cap"></i> Grade {{ section.grade_level.grade_name }}</span>
+            <span><i class="fi fi-rr-book"></i> {{ subject.subject_name }}</span>
+            <span><i class="fi fi-rr-flag"></i> {{ quarter.quarter_label }}</span>
+        </div>
+    </div>
+    <div>
+        <span class="category-badge-large {{ category.category|lower }}">
+            <i class="{{ category.icon }}"></i>
+            {{ category.label }}
+        </span>
+    </div>
+</div>
+
+<!-- DO 31 PROFICIENCY REFERENCE -->
+<div class="do31-reference-card">
+    <div class="do31-reference-header">
+        <i class="fi fi-rr-bookmark"></i> DepEd DO 31, s. 2020 — Proficiency Levels & Numerical Equivalents
+    </div>
+    <div class="do31-grid">
+        <div class="do31-level beginning">
+            <div class="do31-abbr">B</div>
+            <div class="do31-label">Beginning</div>
+            <div class="do31-range">74% & below</div>
+        </div>
+        <div class="do31-level developing">
+            <div class="do31-abbr">D</div>
+            <div class="do31-label">Developing</div>
+            <div class="do31-range">75–79%</div>
+        </div>
+        <div class="do31-level approaching">
+            <div class="do31-abbr">AP</div>
+            <div class="do31-label">Approaching Proficiency</div>
+            <div class="do31-range">80–84%</div>
+        </div>
+        <div class="do31-level proficient">
+            <div class="do31-abbr">P</div>
+            <div class="do31-label">Proficient</div>
+            <div class="do31-range">85–89%</div>
+        </div>
+        <div class="do31-level advanced">
+            <div class="do31-abbr">A</div>
+            <div class="do31-label">Advanced</div>
+            <div class="do31-range">90% & above</div>
+        </div>
+    </div>
+</div>
+
+{% if total_students > 0 and avg_grade > 0 %}
+<!-- SECTION INFO & PERFORMANCE SUMMARY -->
+<div class="info-row-grid">
+    <div class="info-card">
+        <div class="info-card-header"><i class="fi fi-rr-info"></i> Section Information</div>
+        <div class="info-card-body">
+            <div class="info-row"><span class="info-label">Adviser:</span><span class="info-value">{% if section.adviser %}{{ section.adviser.get_full_name|default:section.adviser.username }}{% else %}<em style="color:var(--text-secondary);">Not assigned</em>{% endif %}</span></div>
+            <div class="info-row"><span class="info-label">Room:</span><span class="info-value">{{ section.room|default:"Not assigned" }}</span></div>
+            <div class="info-row"><span class="info-label">Subject Teacher:</span><span class="info-value">{% if subject_teacher %}{{ subject_teacher.get_full_name|default:subject_teacher.username }}{% else %}<em style="color:var(--text-secondary);">Not assigned</em>{% endif %}</span></div>
+            <div class="info-row"><span class="info-label">Schedule:</span><span class="info-value">{{ subject.subject_name }} — {{ quarter.quarter_label }}</span></div>
+            <div class="info-row"><span class="info-label">School Year:</span><span class="info-value">{{ school_year.year_label }}</span></div>
+        </div>
+    </div>
+    <div class="info-card">
+        <div class="info-card-header"><i class="fi fi-rr-chart-line"></i> Performance Summary</div>
+        <div class="info-card-body">
+            <div class="performance-metrics">
+                <div class="metric-item"><div class="metric-label">Class Rank</div><div class="metric-value">{{ class_rank|default:"N/A" }}</div><div class="metric-sub">of {{ total_sections }} sections</div></div>
+                <div class="metric-item"><div class="metric-label">vs Grade Level</div><div class="metric-value {% if vs_grade_level > 0 %}positive{% elif vs_grade_level < 0 %}negative{% endif %}">{% if vs_grade_level > 0 %}+{% endif %}{{ vs_grade_level|default:"0" }}%</div><div class="metric-sub">vs grade avg</div></div>
+                <div class="metric-item"><div class="metric-label">Improvement</div><div class="metric-value {% if improvement > 0 %}positive{% elif improvement < 0 %}negative{% endif %}">{% if improvement > 0 %}+{% endif %}{{ improvement|default:"0" }}%</div><div class="metric-sub">from last qtr</div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SUMMARY CARDS -->
+<div class="summary-grid">
+    <div class="summary-card avg">
+        <div class="label">Average Grade</div>
+        <div class="value" style="{% if avg_grade >= 90 %}color:var(--secondary-green);{% elif avg_grade >= 75 %}color:var(--caribbean-blue);{% else %}color:var(--danger-red);{% endif %}">{{ avg_grade }}%</div>
+        <div class="sub">Class average</div>
+    </div>
+    <div class="summary-card passing">
+        <div class="label">Passing Rate</div>
+        <div class="value" style="{% if passing_rate >= 90 %}color:var(--secondary-green);{% elif passing_rate >= 75 %}color:var(--caribbean-blue);{% else %}color:var(--danger-red);{% endif %}">{{ passing_rate }}%</div>
+        <div class="sub">{{ total_students }} total students</div>
+    </div>
+    <div class="summary-card atrisk">
+        <div class="label">Beginning (B)</div>
+        <div class="value" style="color:var(--danger-red);">{{ at_risk_count }}</div>
+        <div class="sub">74% & below</div>
+    </div>
+    <div class="summary-card excellent">
+        <div class="label">Advanced (A)</div>
+        <div class="value" style="color:var(--caribbean-blue);">{{ excellent_rate }}%</div>
+        <div class="sub">90% & above</div>
+    </div>
+</div>
+
+{% else %}
+<!-- EMPTY STATE -->
+<div class="empty-state-container" style="background:white;border-radius:20px;box-shadow:var(--card-shadow);margin-bottom:1.5rem;">
+    <div class="empty-state-icon"><i class="fi fi-rr-graduation-cap" style="color:var(--secondary-green);"></i></div>
+    <div class="empty-state-title"><strong>No Grades Available Yet</strong></div>
+    <div class="empty-state-message">Grades for <strong>{{ subject.subject_name }}</strong> in <strong>{{ quarter.quarter_label }}</strong> have not been submitted or processed for <strong>{{ section.section_name }}</strong>.</div>
+    <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:1rem;">
+        <div style="background:var(--gray-bg);border-radius:12px;padding:1rem 1.5rem;text-align:center;min-width:120px;"><div style="font-size:1.5rem;font-weight:800;color:var(--caribbean-blue);">{{ total_students }}</div><div style="font-size:0.68rem;color:var(--text-secondary);">Enrolled</div></div>
+        <div style="background:var(--gray-bg);border-radius:12px;padding:1rem 1.5rem;text-align:center;min-width:120px;"><div style="font-size:1.5rem;font-weight:800;color:var(--warning-orange);"><i class="fi fi-rr-clock"></i></div><div style="font-size:0.68rem;color:var(--text-secondary);">Pending</div></div>
+        <div style="background:var(--gray-bg);border-radius:12px;padding:1rem 1.5rem;text-align:center;min-width:120px;"><div style="font-size:1.5rem;font-weight:800;color:var(--secondary-green);">{{ quarter.quarter_label }}</div><div style="font-size:0.68rem;color:var(--text-secondary);">Quarter</div></div>
+    </div>
+    <div class="empty-state-steps">
+        <strong style="font-size:0.78rem;"><i class="fi fi-rr-info" style="color:var(--caribbean-blue);"></i> Next Steps:</strong>
+        <ul><li>• Verify the class assignment for this subject-section</li><li>• Check if the subject teacher has submitted grades</li><li>• Ensure grade components are properly configured</li></ul>
+    </div>
+</div>
+{% endif %}
+
+{% if total_students > 0 and avg_grade > 0 %}
+<!-- HISTORICAL TABLE -->
+<div class="historical-card">
+    <div class="historical-card-header"><h6><i class="fi fi-rr-chart-histogram"></i> Historical Performance</h6></div>
+    <div class="table-responsive"><table class="historical-table"><thead><tr><th>Quarter</th><th>Average Grade</th><th>Passing Rate</th><th>Excellent Rate</th><th>At-Risk</th><th>Change</th></tr></thead><tbody id="historicalTableBody"></tbody></table></div>
+</div>
+
+<!-- AI RECOMMENDATION CARD -->
+<div class="ai-recommendation-card {{ category.category|lower }}" id="aiRecommendationCard">
+    <div class="ai-recommendation-header">
+        <div class="ai-recommendation-header-left">
+            <div class="poro-ai-icon" id="poroIcon">
+                <img src="{% static 'shared/poro/Poro.png' %}" alt="Poro AI" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\'font-size:1.5rem;color:white;\'><i class=\'fi fi-rr-robot\'></i></span>';">
+            </div>
+            <div>
+                <h5>🤖 Poro AI Analysis</h5>
+                <div class="ai-subtitle">{{ total_students }} students • {{ subject.subject_name }} • {{ quarter.quarter_label }} • DO 31 Proficiency</div>
+            </div>
+        </div>
+        <span class="confidence-badge" id="aiConfidenceBadge">
+            <i class="fi fi-rr-shield-check"></i>
+            Confidence: <span id="confidenceValue">—</span>%
+        </span>
+    </div>
+    <div id="aiRecommendationBody">
+        <!-- STATE 1: GENERATING -->
+        <div id="aiGeneratingState" class="ai-generating">
+            <div class="generating-pulse">
+                <div class="poro-ai-icon small-pulse">
+                    <img src="{% static 'shared/poro/Poro.png' %}" alt="Poro thinking" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fi fi-rr-robot\' style=\'font-size:1.3rem;color:white;\'></i>';">
+                </div>
+                <div class="generating-text">
+                    <span class="generating-label"><strong>Poro AI is analyzing proficiency levels...</strong></span>
+                    <span class="generating-sub">Reviewing <strong>{{ total_students }} student{{ total_students|pluralize }}</strong> • Applying DO 31 descriptors • Crafting level-appropriate recommendations</span>
+                </div>
+            </div>
+            <div class="progress-dots" id="progressDots"><span class="progress-dot active"></span><span class="progress-dot"></span><span class="progress-dot"></span></div>
+            <div class="generating-hint"><em>Analyzing Beginning (74%↓) through Advanced (90%+) levels... This takes 3–8 seconds.</em></div>
+        </div>
+        <!-- STATE 2: LOADED -->
+        <div id="aiLoadedState" style="display:none;">
+            <div class="ai-recommendation-body">
+                <div class="ai-summary"><i class="fi fi-rr-quote-right"></i><span id="aiSummary"></span></div>
+                <div class="insight-section"><h6><i class="fi fi-rr-bulb" style="color:var(--warning-orange);"></i> What the Data Shows</h6><div class="content" id="aiInsights"></div></div>
+                <div class="insight-section"><h6><i class="fi fi-rr-clipboard-list-check" style="color:var(--caribbean-blue);"></i> Recommended Actions</h6><div class="content" id="aiRecommendations"></div></div>
+            </div>
+        </div>
+        <!-- STATE 3: FALLBACK -->
+        <div id="aiFallbackState" style="display:none;">
+            <div class="ai-recommendation-body">
+                <div class="ai-fallback">
+                    <div class="fallback-icon"><i class="fi fi-rr-exclamation-triangle"></i></div>
+                    <strong style="color:var(--rich-black);">Default Recommendations Applied</strong>
+                    <p style="font-size:0.78rem;color:var(--text-secondary);margin:0.4rem 0;">AI analysis encountered an issue. Rule-based recommendations based on DO 31 proficiency levels are shown below.</p>
+                    <div class="ai-summary" style="margin-top:0.8rem;background:rgba(243,156,18,0.05);"><i class="fi fi-rr-quote-right"></i><span id="fallbackSummary"></span></div>
+                    <div class="insight-section"><h6><i class="fi fi-rr-bulb" style="color:var(--warning-orange);"></i> Key Insights</h6><div class="content" id="fallbackInsights"></div></div>
+                    <div class="insight-section"><h6><i class="fi fi-rr-clipboard-list-check" style="color:var(--caribbean-blue);"></i> Principal Actions</h6><div class="content" id="fallbackRecommendations"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CHARTS -->
+<div class="chart-row">
+    <div class="chart-card"><div class="chart-card-header"><h6><i class="fi fi-rr-chart-histogram"></i> Grade Distribution (DO 31)</h6></div><div class="chart-card-body"><canvas id="distributionChart"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-header"><h6><i class="fi fi-rr-chart-line-up"></i> Trend Analysis</h6></div><div class="chart-card-body"><canvas id="trendChart"></canvas></div></div>
+</div>
+
+<!-- STUDENT TABLE -->
+<div class="student-table-card">
+    <div class="student-table-header">
+        <h5><i class="fi fi-rr-users"></i> Student Performance & DO 31 Proficiency</h5>
+        <div class="table-controls">
+            <div class="table-search-box"><i class="fi fi-rr-search"></i><input type="text" id="studentSearch" placeholder="Search name or LRN..." onkeyup="filterStudents()"></div>
+            <select id="statusFilter" onchange="filterByStatus()" class="filter-select">
+                <option value="all">All Students</option>
+                <option value="beginning">⚠️ Beginning (B)</option>
+                <option value="developing">🔶 Developing (D)</option>
+                <option value="approaching">🔷 Approaching (AP)</option>
+                <option value="proficient">✅ Proficient (P)</option>
+                <option value="advanced">🏆 Advanced (A)</option>
+            </select>
+            <button class="btn-export" onclick="exportStudentData()"><i class="fi fi-rr-download"></i> Export</button>
+            <span class="student-count-badge" id="studentCount">{{ student_grades|length }} students</span>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="student-table" id="studentTable">
+            <thead><tr><th data-column="lrn" onclick="sortStudentTable('lrn', this)">LRN <span class="sort-indicator">↕</span></th><th data-column="name" onclick="sortStudentTable('name', this)">Student Name <span class="sort-indicator">↕</span></th><th data-column="grade" onclick="sortStudentTable('grade', this)">Grade <span class="sort-indicator">↕</span></th><th data-column="level" onclick="sortStudentTable('level', this)">DO 31 Level <span class="sort-indicator">↕</span></th><th>Recommendation</th></tr></thead>
+            <tbody id="studentTableBody">
+                {% for student in student_grades %}
+                <tr class="{% if student.proficiency_level == 'BEGINNING' %}row-danger{% elif student.proficiency_level == 'ADVANCED' %}row-success{% endif %}"
+                    data-lrn="{{ student.student.lrn|default:'' }}"
+                    data-name="{{ student.student.last_name|lower }}, {{ student.student.first_name|lower }}"
+                    data-grade="{{ student.grade }}"
+                    data-level="{{ student.proficiency_level }}">
+                    <td><span class="lrn-text">{{ student.student.lrn|default:"N/A" }}</span></td>
+                    <td><strong>{{ student.student.last_name }}, {{ student.student.first_name }}</strong>{% if student.student.middle_name %} <span style="color:var(--text-secondary);font-size:0.7rem;">{{ student.student.middle_name|slice:":1" }}.</span>{% endif %}</td>
+                    <td><span style="font-weight:700;{% if student.grade >= 90 %}color:var(--secondary-green);{% elif student.grade >= 75 %}color:var(--caribbean-blue);{% else %}color:var(--danger-red);{% endif %}">{{ student.grade }}%</span></td>
+                    <td>
+                        {% if student.proficiency_level == 'BEGINNING' %}<span class="badge badge-danger">B — Beginning</span>
+                        {% elif student.proficiency_level == 'DEVELOPING' %}<span class="badge badge-warning">D — Developing</span>
+                        {% elif student.proficiency_level == 'APPROACHING PROFICIENCY' %}<span class="badge badge-info">AP — Approaching</span>
+                        {% elif student.proficiency_level == 'PROFICIENT' %}<span class="badge badge-success">P — Proficient</span>
+                        {% elif student.proficiency_level == 'ADVANCED' %}<span class="badge badge-success">A — Advanced</span>
+                        {% else %}<span class="badge badge-info">{{ student.letter_grade }}</span>{% endif %}
+                    </td>
+                    <td class="recommendation-cell">
+                        <span class="student-recommendation">
+                            {% if student.proficiency_level == 'BEGINNING' %}⚠️ Remediate prerequisite skills • Daily monitoring
+                            {% elif student.proficiency_level == 'DEVELOPING' %}🔶 Provide scaffolding • Guided practice
+                            {% elif student.proficiency_level == 'APPROACHING PROFICIENCY' %}🔷 Reduce guidance gradually • Peer support
+                            {% elif student.proficiency_level == 'PROFICIENT' %}✅ Push to independent transfer • Enrichment
+                            {% elif student.proficiency_level == 'ADVANCED' %}🏆 Automatic & flexible transfer • Peer mentoring
+                            {% else %}📚 Continue support{% endif %}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr id="emptyStudentRow"><td colspan="5"><div class="empty-state-container"><i class="fi fi-rr-user-graduate" style="font-size:2rem;opacity:0.4;"></i><div class="empty-state-title">No Students Found</div><div class="empty-state-message">No enrolled students found.</div></div></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- BACK -->
+<div style="margin-top:1rem;margin-bottom:2rem;">
+    <a href="{% url 'heads-ai-dashboard' %}" class="btn-back"><i class="fi fi-rr-arrow-left"></i> Back to AI Dashboard</a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    "use strict";
+
+    // ===== CSRF TOKEN HELPER =====
+    function getCSRF() {
+        var name = 'csrftoken';
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var c = cookies[i].trim();
+            if (c.indexOf(name + '=') === 0) return decodeURIComponent(c.substring(name.length + 1));
+        }
+        return '';
+    }
+
+    // ===== AI LOADING STATE MANAGEMENT =====
+    var genState = document.getElementById('aiGeneratingState');
+    var loadedState = document.getElementById('aiLoadedState');
+    var fallbackState = document.getElementById('aiFallbackState');
+    var confidenceEl = document.getElementById('confidenceValue');
+    var progressDots = document.querySelectorAll('#progressDots .progress-dot');
+    var dotInterval;
+    var hasGrades = {{ has_grades|yesno:"true,false" }};
+
+    function startDotAnimation() {
+        var current = 0;
+        dotInterval = setInterval(function() {
+            progressDots.forEach(function(d, i) {
+                if (i === current) { d.classList.add('active'); d.classList.remove('done'); }
+                else if (i < current) { d.classList.add('done'); d.classList.remove('active'); }
+                else { d.classList.remove('active', 'done'); }
+            });
+            current = (current + 1) % progressDots.length;
+        }, 800);
+    }
+
+    function stopDotAnimation() {
+        if (dotInterval) clearInterval(dotInterval);
+        progressDots.forEach(function(d) { d.classList.add('done'); });
+    }
+
+    function showLoadedState(data) {
+        stopDotAnimation();
+        if (genState) genState.style.display = 'none';
+        if (fallbackState) fallbackState.style.display = 'none';
+        if (loadedState) {
+            document.getElementById('aiSummary').textContent = data.summary;
+            document.getElementById('aiInsights').textContent = data.insights;
+            document.getElementById('aiRecommendations').textContent = data.recommendations;
+            if (confidenceEl) confidenceEl.textContent = data.confidence || 85;
+            loadedState.style.display = 'block';
+            loadedState.style.animation = 'fadeInUp 0.5s ease';
+        }
+    }
+
+    function showFallbackState(data) {
+        stopDotAnimation();
+        if (genState) genState.style.display = 'none';
+        if (loadedState) loadedState.style.display = 'none';
+        if (fallbackState) {
+            document.getElementById('fallbackSummary').textContent = data.summary || 'Analysis based on available data.';
+            document.getElementById('fallbackInsights').textContent = data.insights || 'No additional insights available.';
+            document.getElementById('fallbackRecommendations').textContent = data.recommendations || 'Continue monitoring student progress.';
+            if (confidenceEl) confidenceEl.textContent = '75';
+            fallbackState.style.display = 'block';
+        }
+    }
+
+    // Fetch AI recommendation via AJAX
+    if (hasGrades) {
+        if (genState) genState.style.display = 'block';
+        if (loadedState) loadedState.style.display = 'none';
+        if (fallbackState) fallbackState.style.display = 'none';
+        startDotAnimation();
+
+        var aiUrl = '{% url "ai-section-recommendation" section_id=section.id subject_id=subject.id quarter_id=quarter.id %}';
+
+        fetch(aiUrl, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCSRF()
+            }
+        })
+        .then(function(resp) {
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            return resp.json();
+        })
+        .then(function(data) {
+            if (data.success) {
+                showLoadedState(data);
+            } else {
+                showFallbackState(data);
+            }
+        })
+        .catch(function(err) {
+            console.error('[AI] Fetch error:', err);
+            showFallbackState({
+                summary: 'AI analysis could not be generated at this time.',
+                insights: 'The system encountered an issue connecting to the AI service. Default rule-based analysis is shown instead.',
+                recommendations: 'Schedule a follow-up review and coordinate with the subject teacher for targeted interventions.'
+            });
+        });
+    } else {
+        // No grades — show fallback immediately
+        if (genState) genState.style.display = 'none';
+        if (loadedState) loadedState.style.display = 'none';
+        if (fallbackState) {
+            document.getElementById('fallbackSummary').textContent = 'No grade data available for this section-subject-quarter combination.';
+            document.getElementById('fallbackInsights').textContent = 'Please ensure teachers have submitted grades for this quarter.';
+            document.getElementById('fallbackRecommendations').textContent = 'Verify GradeComponent records or coordinate with the subject teacher.';
+            fallbackState.style.display = 'block';
+        }
+        if (confidenceEl) confidenceEl.textContent = '0';
+    }
+
+    // ===== HISTORICAL TABLE =====
+    var historicalData = {{ historical_data|default:'[]'|safe }};
+    var historicalTable = document.getElementById('historicalTableBody');
+    if (historicalData.length > 0 && historicalTable) {
+        historicalTable.innerHTML = '';
+        historicalData.forEach(function(q) {
+            var changeHtml = q.change > 0 ? '<span class="trend-up">+' + q.change + '% ▲</span>' :
+                             q.change < 0 ? '<span class="trend-down">' + q.change + '% ▼</span>' :
+                             '<span class="trend-neutral">0% →</span>';
+            var row = document.createElement('tr');
+            row.innerHTML = '<td><strong>' + q.quarter + '</strong></td><td>' + q.avg_grade + '%</td><td>' + q.passing_rate + '%</td><td>' + q.excellent_rate + '%</td><td>' + q.at_risk_count + '</td><td>' + changeHtml + '</td>';
+            historicalTable.appendChild(row);
+        });
+    } else if (historicalTable) {
+        historicalTable.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text-secondary);">No historical data available</td></tr>';
+    }
+
+    // ===== GRADE DISTRIBUTION CHART =====
+    var distCanvas = document.getElementById('distributionChart');
+    if (distCanvas) {
+        var distCtx = distCanvas.getContext('2d');
+        var distributionData = {{ grade_distribution|default:"[0, 0, 0, 0, 0]"|safe }};
+        new Chart(distCtx, {
+            type: 'bar',
+            data: {
+                labels: ['≤74% (B)', '75-79% (D)', '80-84% (AP)', '85-89% (P)', '≥90% (A)'],
+                datasets: [{
+                    label: 'Students',
+                    data: distributionData,
+                    backgroundColor: ['rgba(220,53,69,0.65)', 'rgba(243,156,18,0.65)', 'rgba(23,162,184,0.65)', 'rgba(94,161,115,0.65)', 'rgba(18,52,153,0.65)'],
+                    borderColor: ['#dc3545', '#f39c12', '#17a2b8', '#5EA173', '#123499'],
+                    borderWidth: 2, borderRadius: 8, borderSkipped: false
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        });
+    }
+
+    // ===== TREND CHART =====
+    var trendCanvas = document.getElementById('trendChart');
+    if (trendCanvas) {
+        var trendCtx = trendCanvas.getContext('2d');
+        var trendData = {{ trend_data|default:"[]"|safe }};
+        var trendLabels = {{ trend_labels|default:"[]"|safe }};
+        if (trendData.length > 0) {
+            new Chart(trendCtx, {
+                type: 'line',
+                data: { labels: trendLabels, datasets: [{ label: 'Average', data: trendData, borderColor: '#5EA173', backgroundColor: 'rgba(94,161,115,0.08)', fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#5EA173', borderWidth: 2.5 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 50, max: 100, ticks: { callback: function(v) { return v + '%'; } } } } }
+            });
+        } else {
+            trendCanvas.parentElement.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-secondary);"><i class="fi fi-rr-chart-line-up" style="font-size:2rem;opacity:0.4;"></div>';
+        }
+    }
+
+    // ===== STUDENT TABLE =====
+    var allRows = Array.from(document.querySelectorAll('#studentTableBody tr:not(#emptyStudentRow)'));
+
+    window.filterStudents = function() {
+        var search = (document.getElementById('studentSearch').value || '').toLowerCase();
+        var status = document.getElementById('statusFilter').value;
+        var count = 0;
+        allRows.forEach(function(r) {
+            var lrn = (r.getAttribute('data-lrn') || '').toLowerCase();
+            var name = (r.getAttribute('data-name') || '').toLowerCase();
+            var level = r.getAttribute('data-level') || '';
+            var matchSearch = lrn.includes(search) || name.includes(search);
+            var matchStatus = status === 'all' || level.toLowerCase().includes(status);
+            if (matchSearch && matchStatus) { r.style.display = ''; count++; }
+            else { r.style.display = 'none'; }
+        });
+        document.getElementById('studentCount').textContent = count + ' students';
+    };
+
+    window.filterByStatus = function() { filterStudents(); };
+
+    window.sortStudentTable = function(col, th) {
+        document.querySelectorAll('.student-table th').forEach(function(t) { t.classList.remove('sorted'); });
+        th.classList.add('sorted');
+        var dir = th.getAttribute('data-direction') === 'asc' ? 'desc' : 'asc';
+        th.setAttribute('data-direction', dir);
+        var tbody = document.getElementById('studentTableBody');
+        var rows = Array.from(tbody.querySelectorAll('tr:not(#emptyStudentRow)'));
+        var levelOrder = { 'BEGINNING': 0, 'DEVELOPING': 1, 'APPROACHING PROFICIENCY': 2, 'PROFICIENT': 3, 'ADVANCED': 4 };
+        rows.sort(function(a, b) {
+            var va, vb;
+            if (col === 'lrn') { va = (a.getAttribute('data-lrn') || '').replace(/\D/g, ''); vb = (b.getAttribute('data-lrn') || '').replace(/\D/g, ''); }
+            else if (col === 'name') { va = a.getAttribute('data-name') || ''; vb = b.getAttribute('data-name') || ''; return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
+            else if (col === 'grade') { va = parseFloat(a.getAttribute('data-grade')) || 0; vb = parseFloat(b.getAttribute('data-grade')) || 0; }
+            else if (col === 'level') { va = levelOrder[a.getAttribute('data-level')] || 0; vb = levelOrder[b.getAttribute('data-level')] || 0; }
+            else return 0;
+            return dir === 'asc' ? va - vb : vb - va;
+        });
+        rows.forEach(function(r) { tbody.appendChild(r); });
+    };
+
+    window.exportStudentData = function() {
+        var rows = document.querySelectorAll('#studentTableBody tr:not(#emptyStudentRow)');
+        var csv = '\uFEFFLRN,Student Name,Grade,DO 31 Level,Recommendation\n';
+        rows.forEach(function(r) {
+            if (r.style.display === 'none') return;
+            var cells = r.querySelectorAll('td');
+            var row = [];
+            for (var i = 0; i < 5; i++) row.push('"' + (cells[i] ? cells[i].innerText.trim().replace(/"/g, '""') : '') + '"');
+            csv += row.join(',') + '\n';
+        });
+        var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'student_proficiency_{{ section.section_name }}_{{ subject.subject_code }}.csv';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    };
+})();
+</script>
+{% endblock %}

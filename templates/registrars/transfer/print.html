@@ -1,0 +1,119 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transfer Request #{{ transfer.id }} - Formify LIS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #2d3748; max-width: 800px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #5EA173; padding-bottom: 20px; }
+        .header h1 { font-size: 20px; color: #00072D; margin-bottom: 5px; }
+        .header h2 { font-size: 14px; color: #5EA173; font-weight: 600; }
+        .header p { font-size: 11px; color: #718096; margin-top: 5px; }
+        .section { margin-bottom: 25px; }
+        .section-title { font-size: 13px; font-weight: 700; color: #00072D; border-bottom: 1px solid #e9ecef; padding-bottom: 8px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        .row { display: flex; padding: 6px 0; font-size: 12px; border-bottom: 1px dotted #e9ecef; }
+        .label { width: 160px; font-weight: 600; color: #4a5568; flex-shrink: 0; }
+        .value { flex: 1; color: #2d3748; }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .badge-pending { background: #fff3cd; color: #856404; }
+        .badge-documents_requested { background: #cce5ff; color: #004085; }
+        .badge-documents_released { background: #d4edda; color: #155724; }
+        .badge-rejected { background: #f8d7da; color: #721c24; }
+        .badge-incoming { background: rgba(18,52,153,0.1); color: #123499; }
+        .badge-outgoing { background: rgba(243,156,18,0.1); color: #f39c12; }
+        .signature-area { margin-top: 50px; display: flex; justify-content: space-between; }
+        .sig-block { text-align: center; width: 200px; }
+        .sig-line { border-top: 1px solid #2d3748; margin-top: 40px; padding-top: 5px; font-size: 11px; color: #718096; }
+        .footer { margin-top: 40px; text-align: center; font-size: 10px; color: #a0aec0; border-top: 1px solid #e9ecef; padding-top: 15px; }
+        @media print {
+            body { padding: 20px; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="margin-bottom:20px; text-align:right;">
+        <button onclick="window.print()" style="background:#5EA173;color:white;border:none;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;">
+            🖨️ Print This Page
+        </button>
+        <button onclick="window.close()" style="background:#e9ecef;color:#2d3748;border:none;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;margin-left:10px;">
+            Close
+        </button>
+    </div>
+
+    <div class="header">
+        {% if school_profile %}
+            <h1>{{ school_profile.school_name }}</h1>
+            <p>{{ school_profile.school_address|default:'' }}</p>
+        {% else %}
+            <h1>Formify LIS</h1>
+        {% endif %}
+        <h2>STUDENT TRANSFER REQUEST</h2>
+        <p>Request #{{ transfer.id }} | Date: {{ today|date:"F d, Y" }}</p>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Student Information</div>
+        <div class="row"><div class="label">LRN:</div><div class="value">{{ transfer.student.lrn|default:'—' }}</div></div>
+        <div class="row"><div class="label">Student Name:</div><div class="value"><strong>{{ transfer.student.full_name }}</strong></div></div>
+        <div class="row"><div class="label">Grade Level:</div><div class="value">{{ transfer.grade_level_at_transfer|default:'N/A' }}</div></div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Transfer Details</div>
+        <div class="row">
+            <div class="label">Transfer Type:</div>
+            <div class="value">
+                <span class="badge {% if transfer.transfer_type == 'INCOMING' %}badge-incoming{% else %}badge-outgoing{% endif %}">
+                    {{ transfer.get_transfer_type_display }}
+                </span>
+            </div>
+        </div>
+        <div class="row"><div class="label">From School:</div><div class="value">{{ transfer.from_school_name|default:'N/A' }}</div></div>
+        <div class="row"><div class="label">From Address:</div><div class="value">{{ transfer.from_school_address|default:'N/A' }}</div></div>
+        <div class="row"><div class="label">To School:</div><div class="value">{{ transfer.to_school_name|default:'N/A' }}</div></div>
+        <div class="row"><div class="label">To Address:</div><div class="value">{{ transfer.to_school_address|default:'N/A' }}</div></div>
+        <div class="row"><div class="label">Request Date:</div><div class="value">{{ transfer.transfer_date_requested|date:"F d, Y"|default:'N/A' }}</div></div>
+        <div class="row">
+            <div class="label">Status:</div>
+            <div class="value">
+                <span class="badge badge-{{ transfer.status|lower }}">
+                    {{ transfer.get_status_display }}
+                </span>
+            </div>
+        </div>
+        <div class="row"><div class="label">Reason:</div><div class="value">{{ transfer.reason|default:'—' }}</div></div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Document Status</div>
+        {% if transfer.status == 'Documents_Released' %}
+            <div class="row"><div class="label">Documents Released:</div><div class="value" style="color:#155724;">✅ Yes</div></div>
+        {% elif transfer.status == 'Documents_Requested' %}
+            <div class="row"><div class="label">Documents Requested:</div><div class="value" style="color:#004085;">⏳ Pending submission</div></div>
+        {% else %}
+            <div class="row"><div class="label">Documents:</div><div class="value">Not yet processed</div></div>
+        {% endif %}
+    </div>
+
+    <div class="signature-area">
+        <div class="sig-block">
+            <div class="sig-line">Requested By</div>
+        </div>
+        <div class="sig-block">
+            <div class="sig-line">Processed By (Registrar)</div>
+        </div>
+        <div class="sig-block">
+            <div class="sig-line">School Head Approval</div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>This is a computer-generated document from Formify LIS. | Generated on {{ today|date:"F d, Y" }}</p>
+        <p>Transfer Request #{{ transfer.id }} | School Year: {{ transfer.student.enrollments.first.school_year|default:'N/A' }}</p>
+    </div>
+</body>
+</html>

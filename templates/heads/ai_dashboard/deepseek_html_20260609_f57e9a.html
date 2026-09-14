@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARMS - Capstone Presentation</title>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-bold-rounded/css/uicons-bold-rounded.css">
+    <style>
+        :root {
+            --primary: #123499;
+            --primary-light: #e8eeff;
+            --success: #2E7D32;
+            --success-light: #e8f5e9;
+            --danger: #C62828;
+            --danger-light: #ffebee;
+            --warning: #E65100;
+            --warning-light: #fff3e0;
+            --purple: #6A1B9A;
+            --gray-50: #f8f9fa;
+            --gray-100: #f0f4f8;
+            --gray-200: #e8ecf1;
+            --gray-500: #6c757d;
+            --gray-700: #1a1a2e;
+            --gray-900: #0a0a1a;
+            --radius: 16px;
+            --shadow: 0 4px 20px rgba(0,0,0,0.08);
+            --shadow-lg: 0 12px 40px rgba(0,0,0,0.15);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .slide-container {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px 80px;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+            pointer-events: none;
+        }
+        .slide.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .slide-content {
+            max-width: 1100px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #667eea, #5EA173);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.2;
+        }
+        h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: #fff;
+        }
+        h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+        .subtitle {
+            font-size: 1.1rem;
+            color: #a0aec0;
+            margin-bottom: 2rem;
+        }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+        .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; }
+
+        .card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+        .card:hover { background: rgba(255,255,255,0.08); transform: translateY(-2px); }
+
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            text-align: center;
+            border-top: 3px solid transparent;
+        }
+        .stat-card.blue { border-top-color: #667eea; }
+        .stat-card.green { border-top-color: #5EA173; }
+        .stat-card.orange { border-top-color: #f39c12; }
+        .stat-card.red { border-top-color: #dc3545; }
+        .stat-card .value { font-size: 2.5rem; font-weight: 800; }
+        .stat-card .label { font-size: 0.8rem; color: #a0aec0; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.3rem; }
+        .stat-card.blue .value { color: #667eea; }
+        .stat-card.green .value { color: #5EA173; }
+        .stat-card.orange .value { color: #f39c12; }
+        .stat-card.red .value { color: #dc3545; }
+
+        .feature-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1.2rem;
+        }
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+        .feature-icon.purple { background: rgba(102,126,234,0.2); color: #667eea; }
+        .feature-icon.green { background: rgba(94,161,115,0.2); color: #5EA173; }
+        .feature-icon.orange { background: rgba(243,156,18,0.2); color: #f39c12; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        th {
+            text-align: left;
+            padding: 0.8rem 1rem;
+            background: rgba(102,126,234,0.2);
+            color: #667eea;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.5px;
+        }
+        td {
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        tr:hover td { background: rgba(255,255,255,0.03); }
+
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.7rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .badge-success { background: rgba(94,161,115,0.2); color: #5EA173; }
+        .badge-info { background: rgba(102,126,234,0.2); color: #667eea; }
+        .badge-warning { background: rgba(243,156,18,0.2); color: #f39c12; }
+        .badge-danger { background: rgba(220,53,69,0.2); color: #dc3545; }
+
+        .code-block {
+            background: rgba(0,0,0,0.4);
+            border-radius: 12px;
+            padding: 1.2rem 1.5rem;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #5EA173;
+            margin: 1rem 0;
+            border: 1px solid rgba(94,161,115,0.3);
+        }
+
+        .nav-controls {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            z-index: 100;
+        }
+        .nav-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        .nav-btn:hover { background: rgba(255,255,255,0.15); border-color: #667eea; }
+
+        .page-indicator {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            color: #a0aec0;
+            z-index: 100;
+        }
+
+        @media (max-width: 768px) {
+            .slide { padding: 30px; }
+            h1 { font-size: 1.8rem; }
+            h2 { font-size: 1.4rem; }
+            .grid-2, .grid-3, .grid-4, .grid-5 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="slide-container" id="slideContainer">
+
+    <!-- SLIDE 1: TITLE -->
+    <div class="slide active" data-slide="1">
+        <div class="slide-content" style="text-align:center;">
+            <div style="font-size:4rem;margin-bottom:1rem;">
+                <i class="fi fi-rr-graduation-cap" style="color:#667eea;"></i>
+            </div>
+            <h1>AI-Enabled Academic Records<br>Management System</h1>
+            <p class="subtitle">with Predictive Analytics and School Performance Prediction<br>for Private Schools</p>
+            <div style="margin-top:2rem;color:#a0aec0;">
+                <p><strong>Your Name</strong> | Capstone Project | 2026</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: THE PROBLEM -->
+    <div class="slide" data-slide="2">
+        <div class="slide-content">
+            <h2>The Problem</h2>
+            <p class="subtitle">Private secondary schools face three critical challenges</p>
+            <div class="grid-3">
+                <div class="card">
+                    <div class="feature-icon purple" style="margin-bottom:1rem;">
+                        <i class="fi fi-rr-document"></i>
+                    </div>
+                    <h3>Manual Record-Keeping</h3>
+                    <p style="color:#a0aec0;">Errors, delays in grade processing, and lost academic records due to paper-based systems</p>
+                </div>
+                <div class="card">
+                    <div class="feature-icon orange" style="margin-bottom:1rem;">
+                        <i class="fi fi-rr-exclamation-triangle"></i>
+                    </div>
+                    <h3>No Early Warning System</h3>
+                    <p style="color:#a0aec0;">Teachers discover failing students at the end of quarter — too late for meaningful intervention</p>
+                </div>
+                <div class="card">
+                    <div class="feature-icon green" style="margin-bottom:1rem;">
+                        <i class="fi fi-rr-chart-histogram"></i>
+                    </div>
+                    <h3>Decisions Without Data</h3>
+                    <p style="color:#a0aec0;">School heads make critical decisions based on intuition rather than analytics</p>
+                </div>
+            </div>
+            <div style="text-align:center;margin-top:2rem;">
+                <span class="badge badge-success" style="font-size:1rem;padding:0.5rem 1.5rem;">Our system solves all three</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: WHAT WE BUILT -->
+    <div class="slide" data-slide="3">
+        <div class="slide-content">
+            <h2>ARMS: What We Built</h2>
+            <div class="grid-2">
+                <div>
+                    <h3 style="color:#5EA173;">Core Modules</h3>
+                    <div class="feature-row"><span class="feature-icon green"><i class="fi fi-rr-user-add"></i></span><div><strong>Enrollment Management</strong><p style="color:#a0aec0;font-size:0.85rem;">Student registration, section assignment, grade level tracking</p></div></div>
+                    <div class="feature-row"><span class="feature-icon green"><i class="fi fi-rr-chart-histogram"></i></span><div><strong>Grade Processing</strong><p style="color:#a0aec0;font-size:0.85rem;">Grade entry, computation, transmutation, quarterly reports</p></div></div>
+                    <div class="feature-row"><span class="feature-icon green"><i class="fi fi-rr-calendar-check"></i></span><div><strong>Attendance Tracking</strong><p style="color:#a0aec0;font-size:0.85rem;">Daily attendance, SF2 reports, intervention triggers</p></div></div>
+                </div>
+                <div>
+                    <h3 style="color:#667eea;">AI/ML Intelligence</h3>
+                    <div class="feature-row"><span class="feature-icon purple"><i class="fi fi-rr-brain"></i></span><div><strong>4 Machine Learning Algorithms</strong><p style="color:#a0aec0;font-size:0.85rem;">XGBoost, Random Forest, K-Means, Linear Regression</p></div></div>
+                    <div class="feature-row"><span class="feature-icon purple"><i class="fi fi-rr-chart-arrow"></i></span><div><strong>Grade Prediction</strong><p style="color:#a0aec0;font-size:0.85rem;">99.62% accuracy predicting Q4 grades from Q1-Q3</p></div></div>
+                    <div class="feature-row"><span class="feature-icon purple"><i class="fi fi-rr-user-alert"></i></span><div><strong>At-Risk Detection</strong><p style="color:#a0aec0;font-size:0.85rem;">100% recall identifying failing students early</p></div></div>
+                    <div class="feature-row"><span class="feature-icon purple"><i class="fi fi-rr-robot"></i></span><div><strong>Poro AI Assistant</strong><p style="color:#a0aec0;font-size:0.85rem;">Local LLM generates recommendations and remarks</p></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 4: DEPED DO 31 -->
+    <div class="slide" data-slide="4">
+        <div class="slide-content">
+            <h2>DepEd DO 31, s. 2020 Compliance</h2>
+            <p class="subtitle">Proficiency Levels & KPUP Cognitive Discipline Tracking</p>
+            <div class="grid-5">
+                <div class="stat-card green">
+                    <div class="value">A</div>
+                    <div class="label">Advanced</div>
+                    <div style="font-size:0.75rem;color:#a0aec0;">90-100%</div>
+                    <div style="font-size:0.7rem;color:#a0aec0;margin-top:0.3rem;">Exceeds core requirements</div>
+                </div>
+                <div class="stat-card blue">
+                    <div class="value">P</div>
+                    <div class="label">Proficient</div>
+                    <div style="font-size:0.75rem;color:#a0aec0;">85-89%</div>
+                    <div style="font-size:0.7rem;color:#a0aec0;margin-top:0.3rem;">Transfers independently</div>
+                </div>
+                <div class="stat-card" style="border-top-color:#17a2b8;">
+                    <div class="value" style="color:#17a2b8;">AP</div>
+                    <div class="label">Approaching Prof.</div>
+                    <div style="font-size:0.75rem;color:#a0aec0;">80-84%</div>
+                    <div style="font-size:0.7rem;color:#a0aec0;margin-top:0.3rem;">Transfers with guidance</div>
+                </div>
+                <div class="stat-card orange">
+                    <div class="value">D</div>
+                    <div class="label">Developing</div>
+                    <div style="font-size:0.75rem;color:#a0aec0;">75-79%</div>
+                    <div style="font-size:0.7rem;color:#a0aec0;margin-top:0.3rem;">Needs help throughout</div>
+                </div>
+                <div class="stat-card red">
+                    <div class="value">B</div>
+                    <div class="label">Beginning</div>
+                    <div style="font-size:0.75rem;color:#a0aec0;">74% and below</div>
+                    <div style="font-size:0.7rem;color:#a0aec0;margin-top:0.3rem;">Prerequisites not met</div>
+                </div>
+            </div>
+            <div style="text-align:center;margin-top:2rem;color:#a0aec0;">
+                <p>System auto-classifies every student and generates level-appropriate AI recommendations</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 5: THE 4 ALGORITHMS -->
+    <div class="slide" data-slide="5">
+        <div class="slide-content">
+            <h2>Four Machine Learning Algorithms</h2>
+            <table>
+                <thead>
+                    <tr><th>Algorithm</th><th>Purpose</th><th>Accuracy/Metric</th><th>Research Basis</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong style="color:#667eea;">XGBoost</strong></td>
+                        <td>Predict final grades from Q1-Q3 data</td>
+                        <td><span class="badge badge-success">99.62%</span></td>
+                        <td>Educational Data Mining</td>
+                    </tr>
+                    <tr>
+                        <td><strong style="color:#5EA173;">Random Forest</strong></td>
+                        <td>Identify at-risk students early</td>
+                        <td><span class="badge badge-success">100% Recall</span></td>
+                        <td>Early Warning Systems</td>
+                    </tr>
+                    <tr>
+                        <td><strong style="color:#f39c12;">K-Means</strong></td>
+                        <td>Group students by performance patterns</td>
+                        <td><span class="badge badge-info">4 Clusters</span></td>
+                        <td>Learner Segmentation</td>
+                    </tr>
+                    <tr>
+                        <td><strong style="color:#17a2b8;">Linear Regression</strong></td>
+                        <td>Detect improving or declining trends</td>
+                        <td><span class="badge badge-info">R-squared</span></td>
+                        <td>Learning Analytics</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="text-align:center;margin-top:1.5rem;color:#a0aec0;">
+                <p>Validated on real data: <strong>316 students, 4,180 grade records</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 6: ARCHITECTURE -->
+    <div class="slide" data-slide="6">
+        <div class="slide-content" style="text-align:center;">
+            <h2>System Architecture</h2>
+            <div style="display:flex;flex-direction:column;gap:1rem;max-width:600px;margin:0 auto;">
+                <div class="card" style="background:rgba(102,126,234,0.15);border-color:rgba(102,126,234,0.3);">
+                    <i class="fi fi-rr-user-tie" style="color:#667eea;"></i>
+                    <strong>School Head Dashboard</strong>
+                    <p style="color:#a0aec0;font-size:0.8rem;">AI Analysis, Recommendations, KPUP Overview</p>
+                </div>
+                <div style="text-align:center;color:#667eea;"><i class="fi fi-rr-arrow-down"></i></div>
+                <div class="card" style="background:rgba(94,161,115,0.15);border-color:rgba(94,161,115,0.3);">
+                    <i class="fi fi-rr-brain" style="color:#5EA173;"></i>
+                    <strong>AI Engine</strong>
+                    <p style="color:#a0aec0;font-size:0.8rem;">XGBoost | Random Forest | K-Means | Linear Regression | Ollama LLM</p>
+                </div>
+                <div style="text-align:center;color:#667eea;"><i class="fi fi-rr-arrow-down"></i></div>
+                <div class="card" style="background:rgba(243,156,18,0.15);border-color:rgba(243,156,18,0.3);">
+                    <i class="fi fi-rr-database" style="color:#f39c12;"></i>
+                    <strong>Data Layer</strong>
+                    <p style="color:#a0aec0;font-size:0.8rem;">Students | Grades | Attendance | Enrollment | Forms</p>
+                </div>
+                <div style="text-align:center;color:#667eea;"><i class="fi fi-rr-arrow-down"></i></div>
+                <div class="card">
+                    <i class="fi fi-rr-server" style="color:#a0aec0;"></i>
+                    <strong>Django 6.0 + SQLite/PostgreSQL + Chart.js</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 7: LIVE DEMO -->
+    <div class="slide" data-slide="7">
+        <div class="slide-content" style="text-align:center;">
+            <h2>Live Demonstration</h2>
+            <p class="subtitle">System walkthrough</p>
+            <div class="grid-2" style="text-align:left;">
+                <div class="card">
+                    <i class="fi fi-rr-dashboard" style="color:#667eea;font-size:1.5rem;"></i>
+                    <h3>AI Dashboard</h3>
+                    <p style="color:#a0aec0;font-size:0.85rem;">KPUP cognitive discipline overview with radar charts and proficiency distribution</p>
+                </div>
+                <div class="card">
+                    <i class="fi fi-rr-chart-line-up" style="color:#5EA173;font-size:1.5rem;"></i>
+                    <h3>Section Detail</h3>
+                    <p style="color:#a0aec0;font-size:0.85rem;">AI analysis card with predictions, insights, and actionable recommendations</p>
+                </div>
+                <div class="card">
+                    <i class="fi fi-rr-users" style="color:#f39c12;font-size:1.5rem;"></i>
+                    <h3>Student Table</h3>
+                    <p style="color:#a0aec0;font-size:0.85rem;">Individual predictions, proficiency levels, and personalized AI remarks</p>
+                </div>
+                <div class="card">
+                    <i class="fi fi-rr-robot" style="color:#17a2b8;font-size:1.5rem;"></i>
+                    <h3>Poro AI</h3>
+                    <p style="color:#a0aec0;font-size:0.85rem;">AI-generated DO 31 aligned analysis and recommendations</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 8: TRAINING -->
+    <div class="slide" data-slide="8">
+        <div class="slide-content" style="text-align:center;">
+            <h2>Model Training</h2>
+            <p class="subtitle">One command trains everything</p>
+            <div class="code-block">
+                python manage.py train_ml_models --model all
+            </div>
+            <div style="text-align:left;max-width:600px;margin:1.5rem auto;">
+                <div class="feature-row"><span class="feature-icon purple"><i class="fi fi-rr-download"></i></span><div><strong>Loads 4,180 grade records</strong><p style="color:#a0aec0;">from the database</p></div></div>
+                <div class="feature-row"><span class="feature-icon green"><i class="fi fi-rr-broom"></i></span><div><strong>Preprocesses & normalizes</strong><p style="color:#a0aec0;">data for training</p></div></div>
+                <div class="feature-row"><span class="feature-icon orange"><i class="fi fi-rr-gym"></i></span><div><strong>Trains all 4 models</strong><p style="color:#a0aec0;">XGBoost, Random Forest, K-Means, Linear Regression</p></div></div>
+                <div class="feature-row"><span class="feature-icon purple"><i class="fi fi-rr-save"></i></span><div><strong>Saves to disk</strong><p style="color:#a0aec0;">for real-time inference</p></div></div>
+            </div>
+            <p style="color:#a0aec0;">Training time: under 30 seconds on standard hardware</p>
+        </div>
+    </div>
+
+    <!-- SLIDE 9: RESULTS -->
+    <div class="slide" data-slide="9">
+        <div class="slide-content">
+            <h2>Before vs. After ARMS</h2>
+            <table>
+                <thead>
+                    <tr><th>Aspect</th><th style="color:#dc3545;">Before</th><th style="color:#5EA173;">After ARMS</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Problem Detection</td><td style="color:#dc3545;">End of quarter</td><td style="color:#5EA173;">As early as Q1</td></tr>
+                    <tr><td>Decision Making</td><td style="color:#dc3545;">Gut feel / intuition</td><td style="color:#5EA173;">AI-powered recommendations</td></tr>
+                    <tr><td>Report Cards</td><td style="color:#dc3545;">Generic remarks</td><td style="color:#5EA173;">AI-generated DO 31 remarks</td></tr>
+                    <tr><td>At-Risk Tracking</td><td style="color:#dc3545;">Manual or none</td><td style="color:#5EA173;">Automatic flagging</td></tr>
+                    <tr><td>Performance Trends</td><td style="color:#dc3545;">Not tracked</td><td style="color:#5EA173;">Real-time analysis</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SLIDE 10: ACCURACY -->
+    <div class="slide" data-slide="10">
+        <div class="slide-content">
+            <h2>Model Validation Results</h2>
+            <div class="grid-3">
+                <div class="stat-card green">
+                    <div class="label">XGBoost Accuracy</div>
+                    <div class="value">99.62%</div>
+                    <div style="color:#a0aec0;font-size:0.8rem;">R-squared: 0.9962</div>
+                    <div style="color:#a0aec0;font-size:0.8rem;">MAE: 1.42%</div>
+                </div>
+                <div class="stat-card blue">
+                    <div class="label">Random Forest Recall</div>
+                    <div class="value">100%</div>
+                    <div style="color:#a0aec0;font-size:0.8rem;">Precision: 98.5%</div>
+                    <div style="color:#a0aec0;font-size:0.8rem;">F1-Score: 99.2%</div>
+                </div>
+                <div class="stat-card orange">
+                    <div class="label">K-Means Clusters</div>
+                    <div class="value">4</div>
+                    <div style="color:#a0aec0;font-size:0.8rem;">Silhouette: 0.72</div>
+                    <div style="color:#a0aec0;font-size:0.8rem;">Distinct groups</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 11: SCHOOL SEGREGATION -->
+    <div class="slide" data-slide="11">
+        <div class="slide-content" style="text-align:center;">
+            <h2>Multi-School Architecture</h2>
+            <div class="grid-2" style="max-width:700px;margin:1rem auto;">
+                <div class="card" style="border-color:rgba(102,126,234,0.4);">
+                    <i class="fi fi-rr-school" style="font-size:2rem;color:#667eea;"></i>
+                    <h3>School A</h3>
+                    <p style="color:#a0aec0;font-size:0.8rem;">Principal A | Teachers | Students</p>
+                    <span class="badge badge-info">Data A Only</span>
+                </div>
+                <div class="card" style="border-color:rgba(94,161,115,0.4);">
+                    <i class="fi fi-rr-school" style="font-size:2rem;color:#5EA173;"></i>
+                    <h3>School B</h3>
+                    <p style="color:#a0aec0;font-size:0.8rem;">Principal B | Teachers | Students</p>
+                    <span class="badge badge-success">Data B Only</span>
+                </div>
+            </div>
+            <p style="color:#a0aec0;margin-top:1rem;">Complete data isolation — each principal sees only their school</p>
+        </div>
+    </div>
+
+    <!-- SLIDE 12: GRADING SYSTEMS -->
+    <div class="slide" data-slide="12">
+        <div class="slide-content">
+            <h2>Dynamic Grading Systems Per School</h2>
+            <table>
+                <thead>
+                    <tr><th>System</th><th>Period</th><th>Legal Basis</th><th>Used By</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>DepEd JHS</strong></td><td>Quarterly</td><td>DO 31, s. 2020</td><td>Grades 7-10</td></tr>
+                    <tr><td><strong>DepEd SHS</strong></td><td>Semestral</td><td>DO 31, s. 2020</td><td>Grades 11-12</td></tr>
+                    <tr><td><strong>DepEd Integrated</strong></td><td>Quarterly + Semestral</td><td>DO 31, s. 2020</td><td>Grades 7-12</td></tr>
+                    <tr><td><strong>CHED Standard</strong></td><td>Semestral</td><td>CMO 14, s. 2019</td><td>College</td></tr>
+                    <tr><td><strong>CHED Trimester</strong></td><td>Trimester</td><td>CMO 14, s. 2019</td><td>College</td></tr>
+                    <tr><td><strong>TESDA Competency</strong></td><td>Modular</td><td>COC/NC Guidelines</td><td>Tech-Voc</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SLIDE 13: ASSESSMENT MODULE -->
+    <div class="slide" data-slide="13">
+        <div class="slide-content">
+            <h2>Built-in Quiz & Assessment System</h2>
+            <div class="grid-2">
+                <div class="card">
+                    <h3 style="color:#667eea;"><i class="fi fi-rr-chalkboard-user"></i> Teacher Side</h3>
+                    <div style="color:#a0aec0;font-size:0.85rem;line-height:2;">
+                        <i class="fi fi-rr-check" style="color:#5EA173;"></i> Create quizzes with dynamic items<br>
+                        <i class="fi fi-rr-check" style="color:#5EA173;"></i> Set points, passing score, time limits<br>
+                        <i class="fi fi-rr-check" style="color:#5EA173;"></i> Auto-randomized questions & choices<br>
+                        <i class="fi fi-rr-check" style="color:#5EA173;"></i> One-click share via access code
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 style="color:#5EA173;"><i class="fi fi-rr-user"></i> Student Side</h3>
+                    <div style="color:#a0aec0;font-size:0.85rem;line-height:2;">
+                        <i class="fi fi-rr-check" style="color:#5EA173;"></i> Login with Full Name or Gmail<br>
+                        <i class="fi fi-rr-check" style="color:#5EA173;"></i> Randomized question & choice order<br>
+                        <i class="fi fi-rr-check" style="color:#5EA173;"></i> Instant scoring on submission<br>
+                        <i class="fi fi-rr-check" style="color:#5EA173;"></i> Results with pass/fail display
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 14: TECH STACK -->
+    <div class="slide" data-slide="14">
+        <div class="slide-content">
+            <h2>Technology Stack</h2>
+            <table>
+                <thead>
+                    <tr><th>Layer</th><th>Technology</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Backend</strong></td><td>Django 6.0 (Python)</td></tr>
+                    <tr><td><strong>Frontend</strong></td><td>HTML5, CSS3, JavaScript, Chart.js</td></tr>
+                    <tr><td><strong>AI/ML</strong></td><td>Scikit-learn, XGBoost, Ollama (Local LLM)</td></tr>
+                    <tr><td><strong>Database</strong></td><td>SQLite (Dev) / PostgreSQL (Production)</td></tr>
+                    <tr><td><strong>AI Assistant</strong></td><td>Poro AI — Qwen 2.5 1.5B via Ollama</td></tr>
+                    <tr><td><strong>Visualization</strong></td><td>Chart.js — Radar, Doughnut, Bar Charts</td></tr>
+                    <tr><td><strong>Authentication</strong></td><td>Django Auth + Role-Based Access Control</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SLIDE 15: SUMMARY -->
+    <div class="slide" data-slide="15">
+        <div class="slide-content">
+            <h2>What We Built — Summary</h2>
+            <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+                <span class="badge badge-success" style="font-size:0.85rem;padding:0.5rem 1rem;"><i class="fi fi-rr-check"></i> Complete LIS</span>
+                <span class="badge badge-success" style="font-size:0.85rem;padding:0.5rem 1rem;"><i class="fi fi-rr-check"></i> DepEd DO 31 KPUP</span>
+                <span class="badge badge-success" style="font-size:0.85rem;padding:0.5rem 1rem;"><i class="fi fi-rr-check"></i> 4 AI/ML Algorithms</span>
+                <span class="badge badge-success" style="font-size:0.85rem;padding:0.5rem 1rem;"><i class="fi fi-rr-check"></i> 99.62% Accuracy</span>
+                <span class="badge badge-success" style="font-size:0.85rem;padding:0.5rem 1rem;"><i class="fi fi-rr-check"></i> 100% At-Risk Recall</span>
+                <span class="badge badge-success" style="font-size:0.85rem;padding:0.5rem 1rem;"><i class="fi fi-rr-check"></i> AI Recommendations</span>
+                <span class="badge badge-success" style="font-size:0.85rem;padding:0.5rem 1rem;"><i class="fi fi-rr-check"></i> Multi-School</span>
+                <span class="badge badge-success" style="font-size:0.85rem;padding:0.5rem 1rem;"><i class="fi fi-rr-check"></i> Dynamic Grading</span>
+                <span class="badge badge-success" style="font-size:0.85rem;padding:0.5rem 1rem;"><i class="fi fi-rr-check"></i> Quiz Module</span>
+                <span class="badge badge-success" style="font-size:0.85rem;padding:0.5rem 1rem;"><i class="fi fi-rr-check"></i> Poro AI Assistant</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 16: THANK YOU -->
+    <div class="slide" data-slide="16">
+        <div class="slide-content" style="text-align:center;">
+            <div style="font-size:5rem;margin-bottom:1rem;color:#667eea;">
+                <i class="fi fi-rr-graduation-cap"></i>
+            </div>
+            <h1>Thank You</h1>
+            <p class="subtitle">Ready for Your Questions</p>
+            <div style="margin-top:2rem;color:#a0aec0;">
+                <p>Contact Information</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Navigation -->
+<div class="page-indicator" id="pageIndicator">1 / 16</div>
+<div class="nav-controls">
+    <button class="nav-btn" onclick="prevSlide()" title="Previous">
+        <i class="fi fi-rr-arrow-left"></i>
+    </button>
+    <button class="nav-btn" onclick="nextSlide()" title="Next">
+        <i class="fi fi-rr-arrow-right"></i>
+    </button>
+</div>
+
+<script>
+var currentSlide = 1;
+var totalSlides = 16;
+
+function showSlide(n) {
+    var slides = document.querySelectorAll('.slide');
+    slides.forEach(function(s) { s.classList.remove('active'); });
+    currentSlide = ((n - 1) % totalSlides + totalSlides) % totalSlides + 1;
+    document.querySelector('.slide[data-slide="' + currentSlide + '"]').classList.add('active');
+    document.getElementById('pageIndicator').textContent = currentSlide + ' / ' + totalSlides;
+}
+
+function nextSlide() { showSlide(currentSlide + 1); }
+function prevSlide() { showSlide(currentSlide - 1); }
+
+// Keyboard navigation
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); prevSlide(); }
+    if (e.key === 'Home') { e.preventDefault(); showSlide(1); }
+    if (e.key === 'End') { e.preventDefault(); showSlide(totalSlides); }
+});
+</script>
+
+</body>
+</html>

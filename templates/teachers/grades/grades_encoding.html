@@ -1,0 +1,839 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grade Encoding - Formify LIS</title>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Your existing CSS - keep as is */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', 'Century Gothic', sans-serif; }
+        :root {
+            --rich-black: #00072D; --dark-blue: #051650; --caribbean-blue: #123499;
+            --secondary-green: #5EA173; --gray-bg: #f5f7fa; --border-color: #e9ecef;
+            --text-primary: #2d3748; --text-secondary: #718096;
+            --warning-bg: #fff3cd; --warning-text: #856404;
+            --success-bg: #d4edda; --success-text: #155724;
+            --danger-bg: #f8d7da; --danger-text: #721c24;
+            --sidebar-width: 280px; --sidebar-collapsed-width: 80px;
+        }
+        body { background: var(--gray-bg); min-height: 100vh; }
+        .dashboard { display: flex; min-height: 100vh; }
+        .sidebar { width: var(--sidebar-width); background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%); color: white; position: fixed; height: 100vh; overflow-y: auto; overflow-x: hidden; transition: width 0.3s; z-index: 100; display: flex; flex-direction: column; }
+        .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
+        .sidebar.collapsed .sidebar-header h2,
+        .sidebar.collapsed .user-details,
+        .sidebar.collapsed .nav-link span { display: none; }
+        .sidebar.collapsed .sidebar-header { justify-content: center; padding: 1.5rem 0.5rem; }
+        .sidebar.collapsed .user-info { justify-content: center; padding: 0.8rem; margin: 0 0.5rem 1.5rem; }
+        .sidebar.collapsed .nav-link { justify-content: center; padding: 0.85rem 0; gap: 0; }
+        .sidebar.collapsed .nav-link i { margin: 0; }
+        .sidebar.collapsed .user-avatar { margin: 0; }
+        .sidebar.collapsed .fold-btn { margin: 0 auto; }
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
+        .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .logo-area { display: flex; align-items: center; gap: 1rem; overflow: hidden; }
+        .sidebar-header i.fi { font-size: 2rem; color: var(--secondary-green); display: inline-flex; align-items: center; }
+        .sidebar-header h2 { font-size: 1.1rem; font-weight: 600; line-height: 1.3; }
+        .sidebar-header h2 span { font-size: 0.7rem; opacity: 0.7; display: block; }
+        .fold-btn { background: rgba(255,255,255,0.1); border: none; color: white; cursor: pointer; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .fold-btn:hover { background: rgba(255,255,255,0.25); }
+        .user-info { display: flex; align-items: center; gap: 1rem; padding: 1rem; margin: 1rem 1rem 1.5rem; background: rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; }
+        .user-avatar { width: 45px; height: 45px; background: var(--secondary-green); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 700; color: var(--rich-black); flex-shrink: 0; }
+        .user-details h4 { font-size: 0.9rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+        .nav-menu { list-style: none; padding: 0 0.75rem; flex: 1; }
+        .nav-item { margin-bottom: 0.25rem; }
+        .nav-link { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; color: rgba(255,255,255,0.8); text-decoration: none; border-radius: 10px; font-size: 0.9rem; cursor: pointer; white-space: nowrap; overflow: hidden; }
+        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+        .nav-link i.fi { width: 22px; font-size: 1.1rem; text-align: center; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+        .nav-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; }
+        .main-content { flex: 1; margin-left: var(--sidebar-width); padding: 1.5rem; transition: margin-left 0.3s; min-height: 100vh; }
+        .sidebar.collapsed ~ .main-content { margin-left: var(--sidebar-collapsed-width); }
+        .top-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; background: white; padding: 1rem 1.5rem; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .page-title h1 { font-size: 1.3rem; color: var(--rich-black); }
+        .page-title p { color: var(--text-secondary); font-size: 0.8rem; }
+        .top-bar-actions { display: flex; align-items: center; gap: 1.5rem; }
+        .date-display { display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.85rem; }
+        .poro-greeting { background: linear-gradient(135deg, #f0f9f0, #e8f5e9); border-radius: 20px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(94,161,115,0.3); flex-wrap: wrap; gap: 1rem; }
+        .poro-greeting-content { display: flex; align-items: center; gap: 1rem; }
+        .character-icon { width: 50px; height: 50px; background: var(--secondary-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(94,161,115,0.3); animation: bounce 2s ease infinite; overflow: hidden; }
+        .character-icon img { width: 100%; height: 100%; object-fit: cover; }
+        @keyframes bounce { 0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)} }
+        .poro-message h3 { font-size: 1rem; color: var(--rich-black); }
+        .poro-message p { font-size: 0.75rem; color: var(--text-secondary); }
+        .grade-stats { background: var(--secondary-green); color: white; padding: 0.7rem 1.5rem; border-radius: 30px; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 0.8rem; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: white; border-radius: 16px; padding: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 0.8rem; transition: transform 0.2s; cursor: pointer; }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-icon { width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .stat-icon.blue { background: rgba(18,52,153,0.1); color: var(--caribbean-blue); }
+        .stat-icon.green { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .stat-icon.orange { background: rgba(255,193,7,0.1); color: #ffc107; }
+        .stat-icon.red { background: rgba(220,53,69,0.1); color: #dc3545; }
+        .stat-content h3 { font-size: 1.3rem; color: var(--rich-black); }
+        .stat-content p { color: var(--text-secondary); font-size: 0.7rem; }
+        .class-selector { background: white; border-radius: 16px; padding: 1.2rem; margin-bottom: 1.5rem; display: flex; align-items: flex-end; gap: 1rem; flex-wrap: wrap; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .selector-item { display: flex; flex-direction: column; gap: 0.35rem; }
+        .selector-item label { font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+        select { padding: 0.5rem 2.2rem 0.5rem 0.8rem; border: 2px solid var(--border-color); border-radius: 8px; background: white; font-size: 0.85rem; cursor: pointer; outline: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.5rem center; min-width: 150px; }
+        select:focus { border-color: var(--secondary-green); }
+        .btn-primary { background: var(--secondary-green); color: white; padding: 0.55rem 1.3rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 0.4rem; transition: background 0.2s; white-space: nowrap; }
+        .btn-primary:hover { background: #4d8f62; }
+        .btn-outline { background: transparent; border: 2px solid var(--border-color); color: var(--text-primary); padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; transition: all 0.2s; white-space: nowrap; }
+        .btn-outline:hover { border-color: var(--secondary-green); color: var(--secondary-green); }
+        .btn-icon { padding: 0.5rem 1rem; border: none; border-radius: 8px; background: var(--gray-bg); color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 0.4rem; font-size: 0.72rem; font-weight: 600; transition: all 0.3s; white-space: nowrap; }
+        .btn-icon:hover:not(:disabled) { background: var(--secondary-green); color: white; }
+        .btn-icon:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-icon.accent { background: var(--caribbean-blue); color: white; }
+        .btn-icon.accent:hover:not(:disabled) { background: #0d2b8a; }
+        .grade-sheet { background: white; border-radius: 20px; padding: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow-x: auto; }
+        .grade-sheet-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 0.8rem; }
+        .grade-sheet-header h2 { font-size: 1rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+        .semester-pill { font-size: 0.7rem; background: var(--secondary-green); color: white; padding: 0.15rem 0.6rem; border-radius: 12px; font-weight: 600; white-space: nowrap; }
+        .grade-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .table-container { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border-color); }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        th { text-align: left; padding: 0.7rem 0.6rem; color: var(--text-secondary); font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid var(--border-color); background: var(--gray-bg); position: sticky; top: 0; }
+        td { padding: 0.65rem 0.6rem; border-bottom: 1px solid var(--border-color); vertical-align: middle; font-size: 0.82rem; }
+        tr:hover td { background: rgba(94,161,115,0.03); }
+        tr:last-child td { border-bottom: none; }
+        .student-info { display: flex; align-items: center; gap: 0.6rem; }
+        .student-avatar { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; color: white; flex-shrink: 0; }
+        .student-name { font-weight: 600; color: var(--rich-black); font-size: 0.82rem; }
+        .lrn { color: var(--text-secondary); font-size: 0.7rem; font-family: monospace; }
+        .quarter-grade { font-weight: 600; color: var(--rich-black); font-size: 0.85rem; }
+        .final-grade { font-weight: 700; color: var(--rich-black); font-size: 0.95rem; }
+        .status-badge { padding: 0.25rem 0.65rem; border-radius: 20px; font-size: 0.68rem; font-weight: 600; display: inline-block; }
+        .status-badge.passed { background: var(--success-bg); color: var(--success-text); }
+        .status-badge.failed { background: var(--danger-bg); color: var(--danger-text); }
+        .status-badge.incomplete { background: var(--warning-bg); color: var(--warning-text); }
+        .sheet-footer { margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; color: var(--text-secondary); flex-wrap: wrap; gap: 0.5rem; }
+        .completion-badge { background: var(--secondary-green); color: white; padding: 0.2rem 0.8rem; border-radius: 20px; font-weight: 600; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 24px; width: 100%; max-width: 750px; max-height: 90vh; display: flex; flex-direction: column; animation: modalSlideIn 0.3s ease; }
+        @keyframes modalSlideIn { from{opacity:0;transform:translateY(-30px)}to{opacity:1;transform:translateY(0)} }
+        .modal-header { padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .modal-header h2 { font-size: 1rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
+        .modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--text-secondary); padding: 0.2rem; border-radius: 6px; }
+        .modal-close:hover { background: var(--gray-bg); color: var(--text-primary); }
+        .modal-body { padding: 1.5rem; overflow-y: auto; flex: 1; }
+        .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.5rem; flex-shrink: 0; }
+        .modal-instruction { background: #f0f9f0; border: 1px solid rgba(94,161,115,0.3); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+        .modal-instruction .step { display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.6rem; font-size: 0.78rem; color: var(--text-primary); }
+        .modal-instruction .step:last-child { margin-bottom: 0; }
+        .modal-instruction .step-num { background: var(--secondary-green); color: white; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; flex-shrink: 0; }
+        .drag-area { border: 2px dashed var(--border-color); border-radius: 16px; padding: 2rem; text-align: center; margin-bottom: 1rem; transition: all 0.3s; cursor: pointer; }
+        .drag-area:hover, .drag-area.drag-over { border-color: var(--secondary-green); background: rgba(94,161,115,0.05); }
+        .drag-area i { font-size: 2.5rem; color: var(--secondary-green); opacity: 0.6; margin-bottom: 0.5rem; display: block; }
+        .drag-area h4 { font-size: 0.9rem; margin-bottom: 0.25rem; color: var(--rich-black); }
+        .drag-area p { font-size: 0.7rem; color: var(--text-secondary); }
+        .upload-option { transition: all 0.2s; border: 2px solid var(--secondary-green); border-radius: 14px; padding: 1.2rem; text-align: center; cursor: pointer; margin-top: 0.5rem; background: rgba(94,161,115,0.03); }
+        .upload-option:hover { border-color: #4d8f62; background: rgba(94,161,115,0.08); }
+        .upload-option h4 { font-size: 0.85rem; margin: 0.3rem 0 0.1rem; color: var(--rich-black); }
+        .upload-option p { font-size: 0.65rem; color: var(--text-secondary); }
+        .preview-table-container { max-height: 350px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 1rem; }
+        .preview-table { width: 100%; border-collapse: collapse; min-width: 500px; }
+        .preview-table th { background: var(--gray-bg); padding: 0.6rem 0.5rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); border-bottom: 2px solid var(--border-color); position: sticky; top: 0; z-index: 1; }
+        .preview-table td { padding: 0.5rem; border-bottom: 1px solid var(--border-color); font-size: 0.78rem; vertical-align: middle; }
+        .preview-table tr:hover td { background: rgba(94,161,115,0.03); }
+        .preview-table .preview-grade-input { width: 70px; padding: 0.4rem; border: 2px solid var(--border-color); border-radius: 8px; text-align: center; font-weight: 600; font-size: 0.78rem; transition: all 0.2s; }
+        .preview-table .preview-grade-input:focus { outline: none; border-color: var(--secondary-green); box-shadow: 0 0 0 3px rgba(94,161,115,0.1); }
+        .preview-table .preview-grade-input.empty-field { border-color: #ffc107; background: #fffdf5; }
+        .preview-table .match-badge { font-size: 0.6rem; padding: 0.15rem 0.5rem; border-radius: 20px; font-weight: 600; display: inline-block; }
+        .preview-table .match-badge.matched { background: var(--success-bg); color: var(--success-text); }
+        .preview-table .match-badge.not-found { background: var(--danger-bg); color: var(--danger-text); }
+        .preview-summary { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; padding: 0.8rem; background: var(--gray-bg); border-radius: 12px; }
+        .preview-summary-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--text-secondary); }
+        .preview-summary-item strong { color: var(--rich-black); }
+        .preview-summary-item.matched-count strong { color: var(--secondary-green); }
+        .preview-summary-item.not-found-count strong { color: #dc3545; }
+        .preview-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1rem; text-align: center; }
+        .preview-empty i { font-size: 2.5rem; color: #dc3545; opacity: 0.6; margin-bottom: 0.8rem; display: block; }
+        .preview-empty h4 { font-size: 0.9rem; color: var(--rich-black); margin-bottom: 0.3rem; }
+        .preview-empty p { font-size: 0.75rem; color: var(--text-secondary); max-width: 350px; line-height: 1.5; }
+        .loading-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border-color); border-top-color: var(--secondary-green); border-radius: 50%; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 0.5rem; }
+        .toast { background: white; border-radius: 12px; padding: 1rem 1.5rem; box-shadow: 0 8px 25px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 0.8rem; min-width: 300px; animation: slideInRight 0.3s ease; border-left: 4px solid var(--secondary-green); }
+        .toast.error { border-left-color: #dc3545; }
+        .toast.error i { color: #dc3545; }
+        .toast i { color: var(--secondary-green); font-size: 1.1rem; }
+        .toast-content h4 { font-size: 0.85rem; color: var(--rich-black); }
+        .toast-content p { font-size: 0.7rem; color: var(--text-secondary); }
+        .toast-close { background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 0.9rem; margin-left: auto; }
+        @keyframes slideInRight { from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1} }
+        .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; }
+        .loading-spinner-large { width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.3); border-top-color: var(--secondary-green); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .loading-text { color: white; font-size: 0.9rem; background: rgba(0,0,0,0.7); padding: 0.5rem 1rem; border-radius: 20px; }
+        .mobile-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
+        .mobile-overlay.show { display: block; }
+        .empty-container { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem 1.5rem; text-align: center; min-height: 180px; }
+        .empty-icon { font-size: 2.5rem; color: #a0aec0; margin-bottom: 0.8rem; opacity: 0.6; }
+        .empty-title { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); }
+        .empty-message { font-size: 0.75rem; color: #a0aec0; max-width: 280px; line-height: 1.5; }
+        @media (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); width: var(--sidebar-width) !important; }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .main-content { margin-left: 0 !important; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .class-selector { flex-direction: column; align-items: stretch; }
+            .grade-actions { flex-direction: column; }
+            .toast-container { left: 10px; right: 10px; }
+            .toast { min-width: auto; }
+        }
+    </style>
+</head>
+<body>
+<div class="mobile-overlay" id="mobileOverlay"></div>
+<div class="toast-container" id="toastContainer"></div>
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner-large"></div>
+    <div class="loading-text">Loading...</div>
+</div>
+
+<div class="dashboard">
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <i class="fi fi-rr-graduation-cap"></i>
+                <h2>Formify <span>Learner Information System</span></h2>
+            </div>
+            <button class="fold-btn" id="foldBtn"><i class="fi fi-rr-angle-left"></i></button>
+        </div>
+        <div class="user-info">
+            <div class="user-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+            <div class="user-details">
+                <h4>{{ request.user.get_full_name }}</h4>
+                <p>Teacher</p>
+            </div>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="{% url 'teachers-dashboard' %}" class="nav-link"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-classes' %}" class="nav-link"><i class="fi fi-rr-presentation"></i><span>My Classes</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-grades' %}" class="nav-link active"><i class="fi fi-rr-pencil"></i><span>Grade Encoding</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-attendance' %}" class="nav-link"><i class="fi fi-rr-calendar-check"></i><span>Attendance</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-forms' %}" class="nav-link"><i class="fi fi-rr-document"></i><span>School Forms</span></a></li>
+            <li class="nav-item"><a href="/teachers/reports/" class="nav-link"><i class="fi fi-rr-chart-line-up"></i><span>Reports</span></a></li>
+            <li class="nav-item"><a href="/teachers/schedule/" class="nav-link"><i class="fi fi-rr-calendar"></i><span>Schedule</span></a></li>
+        </ul>
+        <ul class="nav-menu nav-footer">
+            <li class="nav-item"><a href="{% url 'signout' %}" class="nav-link"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></li>
+        </ul>
+    </div>
+
+    <div class="main-content" id="mainContent">
+        <div class="top-bar">
+            <div class="page-title">
+                <h1>Grade Encoding</h1>
+                <p>Encode and manage student grades for the {{ semester_label }}</p>
+            </div>
+            <div class="top-bar-actions">
+                <div class="date-display"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
+            </div>
+        </div>
+
+        <div class="poro-greeting">
+            <div class="poro-greeting-content">
+                <div class="character-icon">
+                    <img src="{% static 'shared/poro/Poro.png' %}" alt="Poro"
+                         onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fi fi-rr-smile\' style=\'font-size:1.8rem;color:white;\'></i>';">
+                </div>
+                <div class="poro-message">
+                    <h3>Poro, your grading buddy!</h3>
+                    <p id="poroMessage"></p>
+                </div>
+            </div>
+            <div class="grade-stats"><i class="fi fi-rr-star"></i><span>{{ pending_count }}</span> Pending</div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon blue"><i class="fi fi-rr-users"></i></div>
+                <div class="stat-content"><h3>{{ total_students }}</h3><p>Students in Class</p></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green"><i class="fi fi-rr-check-circle"></i></div>
+                <div class="stat-content"><h3>{{ completed_count }}</h3><p>Completed</p></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon orange"><i class="fi fi-rr-hourglass"></i></div>
+                <div class="stat-content"><h3>{{ pending_count }}</h3><p>Pending</p></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon red"><i class="fi fi-rr-exclamation"></i></div>
+                <div class="stat-content"><h3>{{ failing_count }}</h3><p>At Risk (&lt;75)</p></div>
+            </div>
+        </div>
+
+        <div class="class-selector">
+            <div class="selector-item">
+                <label>School Year</label>
+                <select name="sy" id="sySelect">
+                    <option value="2025-2026" selected>2025-2026</option>
+                </select>
+            </div>
+            <div class="selector-item">
+                <label>Semester</label>
+                <select name="quarter" id="quarterSelect">
+                    <option value="Q1" {% if quarter_label == 'Q1' or quarter_label == 'Q2' %}selected{% endif %}>1st Semester (Q1–Q2)</option>
+                    <option value="Q3" {% if quarter_label == 'Q3' or quarter_label == 'Q4' %}selected{% endif %}>2nd Semester (Q3–Q4)</option>
+                </select>
+            </div>
+            <div class="selector-item">
+                <label>Class</label>
+                <select name="class_id" id="classSelect">
+                    {% for cls in classes_data %}
+                    <option value="{{ cls.section_id }}"
+                        {% if cls.section_id == selected_section_id %}selected{% endif %}>
+                        {{ cls.grade_name }} – {{ cls.section_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="selector-item">
+                <label>Subject</label>
+                <select name="subject_id" id="subjectSelect">
+                    {% for cls in classes_data %}
+                        {% if cls.section_id == selected_section_id %}
+                            {% for subj in cls.subjects %}
+                            <option value="{{ subj.subject_id }}"
+                                {% if subj.subject_id == selected_subject_id %}selected{% endif %}>
+                                {{ subj.subject_name }}
+                            </option>
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="grade-sheet">
+            <div class="grade-sheet-header">
+                <h2>
+                    <i class="fi fi-rr-chart-histogram"></i>
+                    Grade Sheet —
+                    <span style="font-weight:400;color:var(--text-secondary);">{{ selected_section }}</span>
+                    &nbsp;
+                    <span style="font-weight:400;color:var(--text-secondary);font-size:0.85rem;">({{ selected_subject }})</span>
+                    &nbsp;
+                    <span class="semester-pill">{{ semester_label }}</span>
+                </h2>
+                <div class="grade-actions">
+                    <button class="btn-icon accent" id="generateCorBtn">
+                        <i class="fi fi-rr-certificate"></i> Generate CoR
+                    </button>
+                    <button class="btn-icon" id="importExcelBtn">
+                        <i class="fi fi-rr-file-upload"></i> Import Excel
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="gradeTable">
+                    <thead>
+                        <tr>
+                            <th>LRN</th>
+                            <th>Student</th>
+                            <th>{{ first_quarter_label }} Grade</th>
+                            <th>{{ second_quarter_label }} Grade</th>
+                            <th>Final Grade</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gradeTableBody">
+                        {% if grade_sheet_data %}
+                            {% for student in grade_sheet_data %}
+                            <tr data-enrollment-id="{{ student.enrollment_id }}">
+                                <td class="lrn">{{ student.lrn }}</td>
+                                <td>
+                                    <div class="student-info">
+                                        <div class="student-avatar" style="background:{{ student.color }};">{{ student.initials }}</div>
+                                        <span class="student-name">{{ student.name }}</span>
+                                    </div>
+                                </td>
+                                <td class="quarter-grade">{{ student.first_grade|default:'—' }}</td>
+                                <td class="quarter-grade">{{ student.second_grade|default:'—' }}</td>
+                                <td class="final-grade">{{ student.final_grade|default:'—' }}</td>
+                                <td><span class="status-badge {{ student.status_class }}">{{ student.status_text }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6">
+                                    <div class="empty-container">
+                                        <i class="fi fi-rr-users empty-icon"></i>
+                                        <div class="empty-title">No Students Found</div>
+                                        <div class="empty-message">Select a class and subject to begin.</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="sheet-footer">
+                <div>
+                    <i class="fi fi-rr-info"></i>
+                    Final Grade = Average of {{ first_quarter_label }} and {{ second_quarter_label }}
+                </div>
+                <div class="completion-badge">{{ completion_rate }}% Complete</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODALS -->
+<div id="importModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fi fi-rr-file-upload"></i> Import Grades from Excel</h2>
+            <button class="modal-close" onclick="closeImportModal()"><i class="fi fi-rr-cross-small"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-instruction">
+                <div class="step"><span class="step-num">1</span><span><strong>Download</strong> the Semestral Grade Template below.</span></div>
+                <div class="step"><span class="step-num">2</span><span><strong>Fill in</strong> the grades in the Excel file and save it.</span></div>
+                <div class="step"><span class="step-num">3</span><span><strong>Drag &amp; drop</strong> your completed Excel file here to import.</span></div>
+            </div>
+            <div class="drag-area" id="dragArea">
+                <i class="fi fi-rr-file-excel"></i>
+                <h4>Drag &amp; Drop Excel File Here</h4>
+                <p>or click to browse — upload your completed Semestral Grade template</p>
+                <input type="file" id="excelFileInput" accept=".xlsx,.xls" style="display:none;">
+            </div>
+            <div class="upload-option" id="downloadTemplateBtn">
+                <i class="fi fi-rr-download"></i>
+                <h4>Download Semestral Grade Template</h4>
+                <p id="templateDescription">Two quarters + Final Grade format</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-outline" onclick="closeImportModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div id="previewModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fi fi-rr-file-check"></i> Review Imported Data</h2>
+            <button class="modal-close" onclick="closePreviewModal()"><i class="fi fi-rr-cross-small"></i></button>
+        </div>
+        <div class="modal-body" id="previewModalBody"></div>
+        <div class="modal-footer" id="previewModalFooter">
+            <button class="btn-outline" onclick="closePreviewModal()">Cancel</button>
+            <button class="btn-primary" id="submitImportBtn" onclick="submitImport()">
+                <i class="fi fi-rr-check-circle"></i> Submit Import
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+var _previewData = null;
+var _selectedFile = null;
+var _isImporting = false;
+
+// Sidebar
+(function () {
+    var sb = document.getElementById('sidebar'),
+        fb = document.getElementById('foldBtn'),
+        mc = document.getElementById('mainContent'),
+        mo = document.getElementById('mobileOverlay');
+    var collapsed = false;
+
+    function adjustMargin() {
+        if (!mc) return;
+        mc.style.marginLeft = window.innerWidth > 768
+            ? (collapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)')
+            : '0';
+    }
+
+    if (fb) fb.addEventListener('click', function () {
+        if (window.innerWidth <= 768) {
+            var open = sb.classList.toggle('mobile-open');
+            mo.classList.toggle('show', open);
+        } else {
+            collapsed = !collapsed;
+            sb.classList.toggle('collapsed', collapsed);
+            var icon = fb.querySelector('i');
+            if (icon) icon.className = collapsed ? 'fi fi-rr-angle-right' : 'fi fi-rr-angle-left';
+            adjustMargin();
+        }
+    });
+
+    if (mo) mo.addEventListener('click', function () {
+        sb.classList.remove('mobile-open');
+        mo.classList.remove('show');
+    });
+
+    window.addEventListener('resize', adjustMargin);
+    adjustMargin();
+})();
+
+document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric'
+});
+
+(function () {
+    var pc = {{ pending_count|default:0 }};
+    var el = document.getElementById('poroMessage');
+    if (el) el.innerHTML = pc > 0
+        ? '<strong>' + pc + '</strong> student(s) still need grades. Let\'s finish encoding!'
+        : 'All grades complete! 🎉 Great job, teacher!';
+})();
+
+var classSelect = document.getElementById('classSelect');
+var subjectSelect = document.getElementById('subjectSelect');
+var quarterSelect = document.getElementById('quarterSelect');
+var sySelect = document.getElementById('sySelect');
+
+// ✅ FIXED: Use classes_data_json instead of classes_data
+var classesData = [];
+try { 
+    classesData = JSON.parse('{{ classes_data_json|escapejs }}'); 
+} catch (e) { 
+    console.error('classes_data parse error:', e); 
+    classesData = []; 
+}
+
+function updateSubjects() {
+    if (!classSelect || !subjectSelect) return;
+    var selId = parseInt(classSelect.value);
+    var cls = classesData.find(function (c) { return c.section_id === selId; });
+    if (cls && cls.subjects && cls.subjects.length) {
+        subjectSelect.innerHTML = '';
+        cls.subjects.forEach(function (s) {
+            var o = document.createElement('option');
+            o.value = s.subject_id;
+            o.textContent = s.subject_name;
+            if (s.subject_id === {{ selected_subject_id|default:0 }}) o.selected = true;
+            subjectSelect.appendChild(o);
+        });
+    }
+}
+
+if (classSelect) {
+    classSelect.addEventListener('change', updateSubjects);
+    updateSubjects();
+}
+
+function autoRefresh() {
+    if (!classSelect || !subjectSelect || !quarterSelect) return;
+    var p = new URLSearchParams();
+    p.set('quarter', quarterSelect.value);
+    p.set('class_id', classSelect.value);
+    p.set('subject_id', subjectSelect.value);
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    window.location.href = '/teachers/grade-encoding/?' + p.toString();
+}
+
+if (classSelect) classSelect.addEventListener('change', autoRefresh);
+if (subjectSelect) subjectSelect.addEventListener('change', autoRefresh);
+if (quarterSelect) quarterSelect.addEventListener('change', autoRefresh);
+if (sySelect) sySelect.addEventListener('change', autoRefresh);
+
+function showToast(title, msg, type) {
+    type = type || 'success';
+    var c = document.getElementById('toastContainer');
+    var d = document.createElement('div');
+    d.className = 'toast ' + type;
+    var iconClass = type === 'error' ? 'cross-circle' : 'check-circle';
+    d.innerHTML = '<i class="fi fi-rr-' + iconClass + '"></i>'
+        + '<div class="toast-content"><h4>' + title + '</h4><p>' + msg + '</p></div>'
+        + '<button class="toast-close" onclick="this.parentElement.remove()">&times;</button>';
+    c.appendChild(d);
+    setTimeout(function () { if (d.parentElement) d.remove(); }, 5000);
+}
+
+document.getElementById('generateCorBtn').addEventListener('click', function (e) {
+    e.preventDefault();
+    if (!classSelect || !subjectSelect) { showToast('Error', 'Select class and subject first', 'error'); return; }
+    window.location.href = '/teachers/reports/?section_id=' + classSelect.value + '&subject_id=' + subjectSelect.value;
+});
+
+document.getElementById('importExcelBtn').addEventListener('click', function (e) {
+    e.preventDefault();
+    document.getElementById('importModal').classList.add('active');
+});
+
+document.getElementById('downloadTemplateBtn').addEventListener('click', function () {
+    if (!classSelect || !subjectSelect || !quarterSelect) {
+        showToast('Error', 'Select class and subject first', 'error'); return;
+    }
+    window.location.href = '/teachers/grade-encoding/export-excel/'
+        + '?section_id=' + classSelect.value
+        + '&subject_id=' + subjectSelect.value
+        + '&quarter=' + quarterSelect.value
+        + '&type=semestral';
+});
+
+function closeImportModal() {
+    document.getElementById('importModal').classList.remove('active');
+    _selectedFile = null;
+    _previewData = null;
+    document.getElementById('dragArea').classList.remove('drag-over');
+    document.getElementById('excelFileInput').value = '';
+}
+
+function closePreviewModal() {
+    document.getElementById('previewModal').classList.remove('active');
+}
+
+document.getElementById('importModal').addEventListener('click', function (e) { if (e.target === this) closeImportModal(); });
+document.getElementById('previewModal').addEventListener('click', function (e) { if (e.target === this) closePreviewModal(); });
+
+var dragArea = document.getElementById('dragArea');
+var fileInput = document.getElementById('excelFileInput');
+
+dragArea.addEventListener('dragover', function (e) { e.preventDefault(); dragArea.classList.add('drag-over'); });
+dragArea.addEventListener('dragleave', function () { dragArea.classList.remove('drag-over'); });
+dragArea.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dragArea.classList.remove('drag-over');
+    var f = e.dataTransfer.files;
+    if (f.length > 0 && (f[0].name.endsWith('.xlsx') || f[0].name.endsWith('.xls'))) {
+        _selectedFile = f[0];
+        parseExcelForPreview(_selectedFile);
+    } else {
+        showToast('Invalid File', 'Please select .xlsx or .xls', 'error');
+    }
+});
+dragArea.addEventListener('click', function () { fileInput.click(); });
+fileInput.addEventListener('change', function (e) {
+    if (e.target.files.length > 0) {
+        _selectedFile = e.target.files[0];
+        parseExcelForPreview(_selectedFile);
+    }
+});
+
+function parseExcelForPreview(file) {
+    if (!file || _isImporting) return;
+    if (!classSelect || !subjectSelect) { showToast('Error', 'Select class and subject first', 'error'); return; }
+
+    _isImporting = true;
+    document.getElementById('loadingOverlay').style.display = 'flex';
+
+    var fd = new FormData();
+    fd.append('excel_file', file);
+    fd.append('section_id', classSelect.value);
+    fd.append('subject_id', subjectSelect.value);
+
+    fetch('/teachers/grade-encoding/parse-excel/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        body: fd
+    })
+    .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    })
+    .then(function (data) {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        _isImporting = false;
+        if (data.success) {
+            _previewData = data;
+            closeImportModal();
+            renderPreviewModal(data);
+            document.getElementById('previewModal').classList.add('active');
+        } else {
+            showToast('Parse Failed', data.error || 'Could not read file', 'error');
+        }
+    })
+    .catch(function (e) {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        _isImporting = false;
+        showToast('Error', e.message, 'error');
+    });
+}
+
+function renderPreviewModal(data) {
+    var body = document.getElementById('previewModalBody');
+    var rows = data.rows || [];
+    var matchedCount = data.matched_count || 0;
+    var notFoundCount = data.not_found_count || 0;
+    var total = rows.length;
+    var detectedQuarters = data.detected_quarters || [];
+    var hasFinal = data.has_final || false;
+
+    _previewData = data;
+
+    if (total === 0 || matchedCount === 0) {
+        body.innerHTML = '<div class="preview-empty">'
+            + '<i class="fi fi-rr-search-alt"></i>'
+            + '<h4>No matching data found</h4>'
+            + '<p>No student names matched. Download the template first, fill it in, then re-upload.</p>'
+            + '</div>';
+        return;
+    }
+
+    var html = '<div class="preview-summary">'
+        + '<div class="preview-summary-item matched-count"><i class="fi fi-rr-check-circle"></i><span>Matched:</span> <strong>' + matchedCount + '</strong></div>'
+        + '<div class="preview-summary-item not-found-count"><i class="fi fi-rr-cross-circle"></i><span>Not Found:</span> <strong>' + notFoundCount + '</strong></div>'
+        + '<div class="preview-summary-item"><i class="fi fi-rr-list"></i><span>Total rows:</span> <strong>' + total + '</strong></div>'
+        + '<div class="preview-summary-item"><i class="fi fi-rr-calendar"></i><span>Semester:</span> <strong>' + (data.semester || 'Unknown') + '</strong></div>';
+    if (detectedQuarters.length) {
+        html += '<div class="preview-summary-item"><i class="fi fi-rr-chart-histogram"></i><span>Quarters:</span> <strong>' + detectedQuarters.join(' + ') + '</strong></div>';
+    }
+    html += '</div>';
+
+    var quarterHeaders = detectedQuarters.map(function (q) { return '<th>' + q + ' Grade</th>'; }).join('');
+    var finalHeader = hasFinal ? '<th>Final Grade</th>' : '';
+
+    html += '<div class="preview-table-container"><table class="preview-table"><thead><tr>'
+        + '<th>#</th><th>Student Name</th><th>Match</th>'
+        + quarterHeaders + finalHeader
+        + '</td></thead><tbody>';
+
+    rows.forEach(function (r, i) {
+        var matched = r.matched;
+        var eid = r.enrollment_id || '';
+        var name = (r.excel_name || 'Unknown').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        var badge = matched
+            ? '<span class="match-badge matched">✓ Matched</span>'
+            : '<span class="match-badge not-found">✗ Not Found</span>';
+        var rowStyle = matched ? '' : ' style="opacity:0.5;"';
+        var disabled = matched ? '' : ' disabled';
+
+        html += '<tr' + rowStyle + ' data-preview-index="' + i + '" data-enrollment-id="' + eid + '" data-matched="' + matched + '">';
+        html += '<td>' + (i + 1) + '</td><td>' + name + '</td><td>' + badge + '</td>';
+
+        detectedQuarters.forEach(function (q) {
+            var key = q.toLowerCase() + '_grade';
+            var grade = (r[key] !== null && r[key] !== undefined) ? r[key] : '';
+            var cls = grade === '' ? ' empty-field' : '';
+            html += '<td><input type="number" class="preview-grade-input' + cls + '" value="' + grade
+                + '" step="0.01" min="0" max="100" placeholder="—" data-field="' + key + '"' + disabled + '></td>';
+        });
+
+        if (hasFinal) {
+            var fg = (r.final_grade !== null && r.final_grade !== undefined) ? r.final_grade : '—';
+            html += '<td style="font-weight:700;">' + fg + '</td>';
+        }
+
+        html += '</tr>';
+    });
+
+    html += '</tbody></table></div>';
+    html += '<p style="font-size:0.7rem;color:var(--text-secondary);margin-top:0.5rem;">'
+        + '<i class="fi fi-rr-info"></i> '
+        + '<span style="background:#fffdf5;border:1px solid #ffc107;padding:0.1rem 0.4rem;border-radius:4px;">Highlighted</span>'
+        + ' = empty grade cell. Unmatched rows are skipped. You may edit grades before submitting.</p>';
+
+    body.innerHTML = html;
+}
+
+function submitImport() {
+    if (!_previewData || !_previewData.rows || _isImporting) return;
+
+    var detectedQuarters = _previewData.detected_quarters || [];
+    if (!detectedQuarters.length && _previewData.quarter_columns) {
+        detectedQuarters = Object.keys(_previewData.quarter_columns);
+    }
+
+    var importRows = [];
+    var errors = [];
+
+    _previewData.rows.forEach(function (rowData, index) {
+        if (!rowData.matched || !rowData.enrollment_id) return;
+
+        var enrollmentId = rowData.enrollment_id;
+        var rowObj = { enrollment_id: parseInt(enrollmentId) };
+        var hasGrade = false;
+
+        detectedQuarters.forEach(function (q) {
+            var key = q.toLowerCase() + '_grade';
+            var gradeValue = rowData[key];
+            
+            if (gradeValue !== null && gradeValue !== undefined && gradeValue !== '') {
+                var num = parseFloat(gradeValue);
+                if (!isNaN(num) && num >= 0 && num <= 100) {
+                    rowObj[key] = num;
+                    hasGrade = true;
+                }
+            }
+        });
+        
+        if (hasGrade) {
+            importRows.push(rowObj);
+        }
+    });
+
+    console.log('📤 Sending import data:');
+    console.log('   section_id:', classSelect ? classSelect.value : '');
+    console.log('   subject_id:', subjectSelect ? subjectSelect.value : '');
+    console.log('   rows count:', importRows.length);
+    console.log('   First 3 rows:', importRows.slice(0, 3));
+
+    if (importRows.length === 0) {
+        showToast('Nothing to Import', 'No valid grades found for matched students.', 'error');
+        return;
+    }
+
+    var sb = document.getElementById('submitImportBtn');
+    if (sb) { sb.disabled = true; sb.innerHTML = '<span class="loading-spinner"></span> Importing...'; }
+    _isImporting = true;
+    document.getElementById('loadingOverlay').style.display = 'flex';
+
+    fetch('/teachers/grade-encoding/import-excel/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            section_id: classSelect ? classSelect.value : '',
+            subject_id: subjectSelect ? subjectSelect.value : '',
+            rows: importRows,
+            file_name: _selectedFile ? _selectedFile.name : 'preview_import'
+        })
+    })
+    .then(function (r) {
+        if (!r.ok) return r.text().then(function (t) { throw new Error('HTTP ' + r.status + ': ' + t.substring(0, 200)); });
+        return r.json();
+    })
+    .then(function (data) {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        _isImporting = false;
+        if (sb) { sb.disabled = false; sb.innerHTML = '<i class="fi fi-rr-check-circle"></i> Submit Import'; }
+
+        console.log('📥 Import response:', data);
+
+        if (data.success) {
+            showToast('Import Successful', data.message || data.imported_count + ' students\' grades saved!');
+            closePreviewModal();
+            closeImportModal();
+            setTimeout(autoRefresh, 1500);
+        } else {
+            showToast('Import Failed', data.error || 'Unknown error', 'error');
+        }
+    })
+    .catch(function (err) {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        _isImporting = false;
+        if (sb) { sb.disabled = false; sb.innerHTML = '<i class="fi fi-rr-check-circle"></i> Submit Import'; }
+        showToast('Error', err.message, 'error');
+    });
+}
+
+function getCookie(name) {
+    var val = null;
+    if (document.cookie && document.cookie !== '') {
+        document.cookie.split(';').forEach(function (c) {
+            c = c.trim();
+            if (c.startsWith(name + '=')) val = decodeURIComponent(c.substring(name.length + 1));
+        });
+    }
+    return val;
+}
+</script>
+</body>
+</html>

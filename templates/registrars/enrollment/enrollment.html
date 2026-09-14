@@ -1,0 +1,604 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enrollment Management — Formify LIS Registrar</title>
+    
+    <!-- Flaticon UIcons Regular Rounded -->
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    
+    <style>
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
+        :root{
+            --rich-black:#00072D;--dark-blue:#051650;--caribbean-blue:#123499;
+            --secondary-green:#5EA173;--green-light:#7dbb8f;--green-bg:rgba(94,161,115,0.08);
+            --warning-orange:#f39c12;--danger-red:#dc3545;--gray-bg:#f5f7fb;
+            --border-color:#e9ecef;--text-primary:#2d3748;--text-secondary:#718096;
+            --text-light:#a0aec0;--sidebar-width:280px;--sidebar-collapsed-width:80px;
+            --radius-sm:8px;--radius-md:14px;--radius-lg:20px;--radius-xl:28px;
+            --shadow-sm:0 2px 10px rgba(0,0,0,.05);--shadow-md:0 8px 25px rgba(0,0,0,.1);
+            --shadow-lg:0 12px 32px rgba(0,0,0,.18);--transition:all 0.25s cubic-bezier(.4,0,.2,1)
+        }
+        body{background:var(--gray-bg);min-height:100vh;color:var(--text-primary)}
+        
+        /* ═══════════════ LAYOUT ═══════════════ */
+        .dashboard{display:flex;min-height:100vh}
+        
+        /* ═══════════════ SIDEBAR ═══════════════ */
+        .sidebar{width:var(--sidebar-width);background:linear-gradient(180deg,var(--rich-black),var(--dark-blue));color:#fff;position:fixed;height:100vh;overflow-y:auto;overflow-x:hidden;transition:width .3s;z-index:100;display:flex;flex-direction:column}
+        .sidebar.collapsed{width:var(--sidebar-collapsed-width)}
+        .sidebar.collapsed .sb-logo-text,.sidebar.collapsed .user-details,.sidebar.collapsed .nav-link span{display:none}
+        .sidebar.collapsed .sb-header{justify-content:center;padding:1.5rem .5rem}
+        .sidebar.collapsed .sb-logo{display:none}
+        .sidebar.collapsed .user-info{justify-content:center;padding:.8rem;margin:0 .5rem 1.5rem}
+        .sidebar.collapsed .nav-link{justify-content:center;padding:.85rem 0;gap:0}
+        .sidebar.collapsed .nav-link i{font-size:1.2rem;margin:0}
+        .sidebar.collapsed .fold-btn{margin:0 auto}
+        .sidebar::-webkit-scrollbar{width:4px}
+        .sidebar::-webkit-scrollbar-thumb{background:var(--secondary-green);border-radius:4px}
+        .sb-header{display:flex;align-items:center;justify-content:space-between;padding:1.5rem;border-bottom:1px solid rgba(255,255,255,.1)}
+        .sb-logo{display:flex;align-items:center;gap:.8rem;overflow:hidden}
+        .sb-logo i{font-size:1.8rem;color:var(--secondary-green);flex-shrink:0}
+        .sb-logo-text h2{font-size:1rem;font-weight:700;line-height:1.3}
+        .sb-logo-text span{font-size:.65rem;opacity:.6;display:block}
+        .fold-btn{background:rgba(255,255,255,.1);border:none;color:#fff;cursor:pointer;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:background .2s;flex-shrink:0}
+        .fold-btn:hover{background:rgba(255,255,255,.25)}
+        .user-info{display:flex;align-items:center;gap:.8rem;padding:.9rem;margin:1rem 1rem 1.5rem;background:rgba(255,255,255,.1);border-radius:12px;overflow:hidden;white-space:nowrap}
+        .user-avatar{width:42px;height:42px;background:var(--secondary-green);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:var(--rich-black);flex-shrink:0}
+        .user-details h4{font-size:.85rem;font-weight:600}
+        .user-details p{font-size:.65rem;opacity:.65}
+        .nav-menu{list-style:none;padding:0 .75rem;flex:1}
+        .nav-item{margin-bottom:.2rem}
+        .nav-link{display:flex;align-items:center;gap:.9rem;padding:.7rem 1rem;color:rgba(255,255,255,.8);text-decoration:none;border-radius:10px;font-size:.875rem;transition:var(--transition);white-space:nowrap;overflow:hidden}
+        .nav-link:hover{background:rgba(94,161,115,.2);color:#fff}
+        .nav-link.active{background:var(--secondary-green);color:var(--rich-black);font-weight:600}
+        .nav-link i{width:20px;font-size:1rem;text-align:center;flex-shrink:0}
+        .nav-footer{margin-top:auto;padding:1rem .75rem;border-top:1px solid rgba(255,255,255,.1)}
+        
+        /* ═══════════════ MAIN CONTENT ═══════════════ */
+        .main-content{flex:1;margin-left:var(--sidebar-width);padding:1.5rem;transition:margin-left .3s;min-height:100vh}
+        .sidebar.collapsed~.main-content{margin-left:var(--sidebar-collapsed-width)}
+        
+        /* ═══════════════ TOP BAR ═══════════════ */
+        .top-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;background:#fff;padding:1rem 1.5rem;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);margin-bottom:1.5rem}
+        .page-title h1{font-size:1.25rem;color:var(--rich-black);font-weight:700;display:flex;align-items:center;gap:.5rem}
+        .page-title h1 i{color:var(--secondary-green)}
+        .page-title p{font-size:.78rem;color:var(--text-secondary);margin-top:.2rem;display:flex;align-items:center;gap:.5rem}
+        .top-actions{display:flex;align-items:center;gap:.8rem}
+        .date-chip{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--text-secondary);background:var(--gray-bg);padding:.35rem .75rem;border-radius:8px}
+        .notif-wrap{position:relative}
+        .notif-btn{background:none;border:none;padding:.35rem;cursor:pointer;display:flex;align-items:center;border-radius:8px;transition:background .2s}
+        .notif-btn:hover{background:var(--gray-bg)}
+        .notif-btn i{font-size:1.2rem;color:var(--text-primary)}
+        .notif-count{position:absolute;top:-4px;right:-6px;background:#dc3545;color:#fff;font-size:.55rem;padding:.1rem .35rem;border-radius:10px;min-width:16px;text-align:center;font-weight:700}
+        .notif-count.zero{background:#adb5bd}
+        .notif-dropdown{position:absolute;top:44px;right:0;width:340px;background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);z-index:300;display:none;overflow:hidden;border:1px solid var(--border-color)}
+        .notif-dropdown.open{display:block;animation:fadeDown .2s ease}
+        @keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+        .notif-head{padding:.8rem 1.2rem;background:var(--gray-bg);border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.82rem;color:var(--rich-black)}
+        .notif-list{max-height:340px;overflow-y:auto}
+        .notif-item{display:flex;gap:.7rem;padding:.8rem 1.2rem;border-bottom:1px solid var(--border-color);cursor:pointer;transition:background .2s}
+        .notif-item:hover{background:var(--gray-bg)}
+        .notif-item.unread{background:rgba(94,161,115,.05);border-left:3px solid var(--secondary-green)}
+        .notif-icon{width:32px;height:32px;background:var(--green-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--secondary-green);font-size:.8rem}
+        .notif-body .notif-title{font-size:.78rem;font-weight:600;color:var(--rich-black)}
+        .notif-body .notif-msg{font-size:.7rem;color:var(--text-secondary);line-height:1.4}
+        .notif-body .notif-time{font-size:.62rem;color:var(--text-light);margin-top:.2rem}
+        .notif-foot{padding:.6rem;text-align:center;border-top:1px solid var(--border-color);background:var(--gray-bg)}
+        .notif-foot a{color:var(--secondary-green);font-size:.72rem;font-weight:600;cursor:pointer}
+        
+        /* ═══════════════ PORO BANNER ═══════════════ */
+        .poro-banner{background:linear-gradient(135deg,#f0f9f0,#e8f5e9);border:1px solid rgba(94,161,115,.3);border-radius:var(--radius-xl);padding:1rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+        .poro-left{display:flex;align-items:center;gap:1rem}
+        .poro-icon{width:50px;height:50px;background:var(--secondary-green);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;box-shadow:0 4px 12px rgba(94,161,115,.3);animation:bounce 2s ease infinite}
+        .poro-icon img{width:100%;height:100%;object-fit:cover}
+        @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+        .poro-msg h3{font-size:1rem;color:var(--rich-black);font-weight:700;margin-bottom:.2rem}
+        .poro-msg p{font-size:.75rem;color:var(--text-secondary)}
+        
+        /* ═══════════════ STATS GRID ═══════════════ */
+        .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+        .stat-card{background:#fff;padding:1.1rem;border-radius:var(--radius-lg);display:flex;align-items:center;gap:.9rem;box-shadow:var(--shadow-sm);border:2px solid transparent;transition:var(--transition);cursor:pointer}
+        .stat-card:hover{border-color:var(--secondary-green);transform:translateY(-2px);box-shadow:var(--shadow-md)}
+        .stat-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+        .stat-icon.blue{background:rgba(18,52,153,.1);color:var(--caribbean-blue)}
+        .stat-icon.green{background:var(--green-bg);color:var(--secondary-green)}
+        .stat-icon.orange{background:rgba(243,156,18,.1);color:var(--warning-orange)}
+        .stat-icon.red{background:rgba(220,53,69,.1);color:var(--danger-red)}
+        .stat-info h3{font-size:.68rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.15rem}
+        .stat-info .value{font-size:1.5rem;font-weight:800;color:var(--rich-black);line-height:1.2}
+        .stat-info .sub{font-size:.63rem;color:var(--text-secondary);margin-top:.1rem}
+        
+        /* ═══════════════ BUTTONS ═══════════════ */
+        .quick-actions{display:flex;gap:.8rem;margin-bottom:1.5rem;flex-wrap:wrap}
+        .btn{display:inline-flex;align-items:center;gap:.45rem;padding:.55rem 1.2rem;border-radius:var(--radius-sm);font-size:.82rem;font-weight:600;cursor:pointer;border:none;transition:var(--transition);white-space:nowrap;text-decoration:none}
+        .btn-green{background:var(--secondary-green);color:#fff}
+        .btn-green:hover{background:#4a8a5e;transform:translateY(-1px)}
+        .btn-outline{background:transparent;border:2px solid var(--border-color);color:var(--text-primary)}
+        .btn-outline:hover{border-color:var(--secondary-green);color:var(--secondary-green);background:var(--green-bg)}
+        .btn-warning{background:var(--warning-orange);color:#fff}
+        .btn-warning:hover{background:#e67e22;transform:translateY(-1px)}
+        .btn-danger{background:var(--danger-red);color:#fff}
+        .btn-danger:hover{background:#c82333}
+        .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+        
+        /* ═══════════════ TWO COLUMN ═══════════════ */
+        .two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem}
+        .card{background:#fff;border-radius:var(--radius-lg);padding:1.3rem 1.5rem;box-shadow:var(--shadow-sm)}
+        .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+        .card-header h2{font-size:1rem;font-weight:700;color:var(--rich-black);display:flex;align-items:center;gap:.4rem}
+        .card-header h2 i{color:var(--secondary-green)}
+        .view-all{color:var(--secondary-green);font-size:.75rem;font-weight:600;cursor:pointer;text-decoration:none}
+        .view-all:hover{text-decoration:underline}
+        
+        /* ═══════════════ ENROLLMENT ITEMS ═══════════════ */
+        .enrollment-item{display:flex;align-items:center;justify-content:space-between;padding:.8rem 0;border-bottom:1px solid var(--border-color)}
+        .enrollment-item:last-child{border-bottom:none}
+        .enrollment-info h4{font-size:.85rem;color:var(--rich-black);font-weight:600}
+        .enrollment-info p{font-size:.7rem;color:var(--text-secondary)}
+        
+        /* ═══════════════ PILLS/BADGES ═══════════════ */
+        .pill{padding:.22rem .65rem;border-radius:20px;font-size:.65rem;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+        .pill-enrolled,.pill-approved{background:#d4edda;color:#155724}
+        .pill-pending{background:#fff3cd;color:#856404}
+        .pill-review{background:#cce5ff;color:#004085}
+        .pill-rejected{background:#f8d7da;color:#721c24}
+        .pill-grade{background:var(--caribbean-blue);color:#fff}
+        
+        /* ═══════════════ GRADE DISTRIBUTION ═══════════════ */
+        .grade-dist{display:flex;flex-direction:column;gap:.75rem}
+        .grade-row{display:flex;align-items:center;gap:.8rem}
+        .grade-label{width:55px;font-size:.78rem;font-weight:700;color:var(--rich-black)}
+        .grade-bar-wrap{flex:1;height:10px;background:var(--gray-bg);border-radius:5px;overflow:hidden}
+        .grade-bar{height:100%;background:linear-gradient(90deg,var(--secondary-green),var(--green-light));border-radius:5px;transition:width .6s ease}
+        .grade-count{width:38px;font-size:.78rem;font-weight:600;color:var(--text-secondary);text-align:right}
+        
+        /* ═══════════════ FILTER BAR ═══════════════ */
+        .filter-bar{background:#fff;padding:.9rem 1.5rem;border-radius:var(--radius-lg);margin-bottom:1.5rem;box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem}
+        .search-box{display:flex;align-items:center;background:var(--gray-bg);padding:.4rem .8rem;border-radius:var(--radius-sm);min-width:280px;border:1.5px solid var(--border-color);transition:border-color .2s}
+        .search-box:focus-within{border-color:var(--secondary-green)}
+        .search-box i{color:var(--text-light);margin-right:.5rem;font-size:.85rem}
+        .search-box input{border:none;background:transparent;padding:.45rem 0;width:100%;outline:none;font-size:.85rem;color:var(--text-primary)}
+        .filter-group{display:flex;gap:.7rem;flex-wrap:wrap}
+        .filter-select{padding:.45rem 2rem .45rem .7rem;border:1.5px solid var(--border-color);border-radius:8px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right .5rem center;appearance:none;font-size:.8rem;color:var(--text-primary);cursor:pointer;outline:none;transition:border-color .2s}
+        .filter-select:focus{border-color:var(--secondary-green)}
+        
+        /* ═══════════════ TABLE ═══════════════ */
+        .table-wrap{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);overflow:hidden}
+        table{width:100%;border-collapse:collapse}
+        th{text-align:left;padding:.75rem 1.2rem;background:var(--gray-bg);color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--border-color)}
+        td{padding:.75rem 1.2rem;border-bottom:1px solid var(--border-color);font-size:.82rem;color:var(--text-primary)}
+        tbody tr{cursor:pointer;transition:background .2s}
+        tbody tr:hover td{background:var(--gray-bg)}
+        tr:last-child td{border-bottom:none}
+        .student-name{font-weight:600;color:var(--rich-black)}
+        .tbl-actions{display:flex;gap:.4rem;position:relative}
+        .icon-btn{width:30px;height:30px;border-radius:8px;background:var(--gray-bg);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:.8rem;transition:var(--transition)}
+        .icon-btn:hover{background:var(--secondary-green);color:#fff}
+        .icon-btn.danger:hover{background:var(--danger-red)}
+        
+        /* ═══════════════ DROPDOWN ═══════════════ */
+        .dropdown-wrap{position:relative;display:inline-block}
+        .dropdown-menu{display:none;position:absolute;right:0;top:100%;background:#fff;min-width:190px;box-shadow:var(--shadow-lg);border-radius:var(--radius-md);z-index:200;overflow:hidden;margin-top:.35rem;border:1px solid var(--border-color)}
+        .dropdown-menu.open{display:block;animation:fadeDown .2s ease}
+        .dropdown-menu a{display:flex;align-items:center;gap:.6rem;padding:.65rem 1rem;font-size:.78rem;color:var(--text-primary);text-decoration:none;cursor:pointer;transition:background .2s}
+        .dropdown-menu a:hover{background:var(--gray-bg);color:var(--secondary-green)}
+        .dropdown-menu a.text-danger{color:var(--danger-red)}
+        .dropdown-menu a.text-danger:hover{background:#fff5f5}
+        .dropdown-div{height:1px;background:var(--border-color);margin:.25rem 0}
+        
+        /* ═══════════════ BATCH UPLOAD ═══════════════ */
+        .upload-zone{border:2px dashed var(--border-color);border-radius:var(--radius-lg);padding:2rem;text-align:center;cursor:pointer;transition:var(--transition);background:var(--gray-bg)}
+        .upload-zone:hover{border-color:var(--secondary-green);background:var(--green-bg)}
+        .upload-zone.dragover{border-color:var(--secondary-green);background:rgba(94,161,115,.1)}
+        .upload-zone.has-file{border-color:var(--secondary-green);border-style:solid;background:var(--green-bg)}
+        .upload-zone i{font-size:2.2rem;color:var(--text-light);margin-bottom:.8rem;display:block}
+        .upload-zone h4{font-size:.9rem;color:var(--rich-black);font-weight:700;margin-bottom:.3rem}
+        .upload-zone p{font-size:.75rem;color:var(--text-secondary)}
+        .file-info{display:none;margin-top:1rem;padding:.8rem 1rem;background:#fff;border-radius:var(--radius-md);border:1px solid var(--border-color);align-items:center;gap:.8rem}
+        .file-info.show{display:flex}
+        .file-info i{font-size:1.4rem;color:var(--secondary-green)}
+        .file-details{flex:1;text-align:left}
+        .file-details strong{display:block;font-size:.82rem;color:var(--rich-black)}
+        .file-details span{font-size:.7rem;color:var(--text-secondary)}
+        .file-remove{cursor:pointer;color:var(--danger-red);font-size:1rem;padding:.2rem}
+        .upload-progress{display:none;margin-top:1rem}
+        .upload-progress.show{display:block}
+        .progress-bg{height:8px;background:var(--border-color);border-radius:4px;overflow:hidden}
+        .progress-fill{height:100%;background:var(--secondary-green);border-radius:4px;transition:width .4s ease;width:0%}
+        
+        /* ═══════════════ PAGINATION ═══════════════ */
+        .pagination{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.2rem;border-top:1px solid var(--border-color)}
+        .page-info{font-size:.78rem;color:var(--text-secondary)}
+        .page-controls{display:flex;gap:.4rem}
+        .page-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border-color);border-radius:8px;background:#fff;color:var(--text-primary);cursor:pointer;transition:var(--transition);font-size:.78rem;font-weight:600}
+        .page-btn:hover{background:var(--secondary-green);color:#fff;border-color:var(--secondary-green)}
+        .page-btn.active{background:var(--secondary-green);color:#fff;border-color:var(--secondary-green)}
+        
+        /* ═══════════════ MODAL ═══════════════ */
+        .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem}
+        .modal-overlay.open{display:flex}
+        .modal{background:#fff;border-radius:var(--radius-xl);width:100%;max-width:560px;box-shadow:0 24px 60px rgba(0,0,0,.22);animation:modalIn .28s cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column;max-height:90vh}
+        .modal-lg{max-width:680px}
+        @keyframes modalIn{from{opacity:0;transform:translateY(-16px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+        .modal-header{padding:1.2rem 1.5rem 1rem;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+        .modal-header h2{font-size:1.05rem;font-weight:700;color:var(--rich-black);display:flex;align-items:center;gap:.5rem}
+        .modal-header h2 i{color:var(--secondary-green)}
+        .modal-close{background:none;border:none;cursor:pointer;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-light);font-size:1.1rem;transition:var(--transition)}
+        .modal-close:hover{background:var(--gray-bg);color:var(--danger-red)}
+        .modal-body{padding:1.3rem 1.5rem;overflow-y:auto;flex:1}
+        .modal-footer{padding:.9rem 1.5rem 1.2rem;border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;gap:.7rem;flex-shrink:0}
+        .form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+        .form-group{margin-bottom:1rem}
+        .form-group label{display:block;font-size:.75rem;font-weight:700;color:var(--text-primary);margin-bottom:.35rem}
+        .form-group input,.form-group select{width:100%;padding:.65rem .85rem;border:2px solid var(--border-color);border-radius:var(--radius-sm);font-size:.85rem;font-family:inherit;outline:none;transition:border-color .2s}
+        .form-group input:focus,.form-group select:focus{border-color:var(--secondary-green)}
+        .detail-row{display:flex;padding:.6rem 0;border-bottom:1px solid var(--border-color)}
+        .detail-label{width:130px;font-weight:600;color:var(--rich-black);font-size:.82rem;flex-shrink:0}
+        .detail-value{flex:1;color:var(--text-primary);font-size:.82rem}
+        
+        /* ═══════════════ EMPTY STATE ═══════════════ */
+        .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 2rem;text-align:center}
+        .empty-state i{font-size:2.5rem;color:var(--text-light);margin-bottom:.8rem;opacity:.5}
+        .empty-state h4{font-size:.9rem;font-weight:600;color:var(--text-secondary);margin-bottom:.3rem}
+        .empty-state p{font-size:.75rem;color:var(--text-light);max-width:280px;line-height:1.5}
+        
+        /* ═══════════════ TOAST ═══════════════ */
+        .toast-container{position:fixed;top:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem}
+        .toast{padding:.75rem 1.2rem;border-radius:var(--radius-sm);color:#fff;font-size:.8rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.2);animation:toastIn .3s ease;max-width:380px;display:flex;align-items:center;gap:.6rem}
+        .toast.success{background:#28a745}
+        .toast.error{background:#dc3545}
+        .toast.warning{background:#f39c12;color:#000}
+        .toast.info{background:var(--caribbean-blue)}
+        @keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+        
+        /* ═══════════════ MOBILE ═══════════════ */
+        .mobile-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;display:none}
+        .mobile-overlay.show{display:block}
+        @media(max-width:1200px){.stats-grid{grid-template-columns:repeat(2,1fr)}.two-col{grid-template-columns:1fr}}
+        @media(max-width:768px){
+            .sidebar{transform:translateX(-100%);width:var(--sidebar-width)!important;transition:transform .3s}
+            .sidebar.mobile-open{transform:translateX(0)}
+            .main-content{margin-left:0!important;padding:1rem}
+            .stats-grid{grid-template-columns:1fr}
+            .form-row{grid-template-columns:1fr}
+            .modal{max-width:100%;border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+            .modal-overlay{align-items:flex-end}
+            .notif-dropdown{width:290px;right:-10px}
+            .filter-bar{flex-direction:column;align-items:stretch}
+            .search-box{width:100%;min-width:auto}
+        }
+    </style>
+</head>
+<body>
+<div class="mobile-overlay" id="mobileOverlay"></div>
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="dashboard">
+    <!-- ═══════════════ SIDEBAR ═══════════════ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sb-header">
+            <div class="sb-logo"><i class="fi fi-rr-graduation-cap"></i><div class="sb-logo-text"><h2>Formify</h2><span>Registrar Portal</span></div></div>
+            <button class="fold-btn" id="foldBtn"><i class="fi fi-rr-angle-small-left" id="foldIcon"></i></button>
+        </div>
+        <div class="user-info">
+            <div class="user-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+            <div class="user-details"><h4>{{ request.user.get_full_name }}</h4><p>School Registrar</p></div>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="{% url 'registrars:dashboard' %}" class="nav-link"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:student-records' %}" class="nav-link"><i class="fi fi-rr-user"></i><span>Student Records</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:enrollment-management' %}" class="nav-link active"><i class="fi fi-rr-file-invoice"></i><span>Enrollment</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:grade-validation' %}" class="nav-link"><i class="fi fi-rr-check-double"></i><span>Grade Validation</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:forms' %}" class="nav-link"><i class="fi fi-rr-folder-open"></i><span>School Forms</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:transfer-management' %}" class="nav-link"><i class="fi fi-rr-exchange-alt"></i><span>Transfer Requests</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:reports-analytics' %}" class="nav-link"><i class="fi fi-rr-chart-line-up"></i><span>Reports</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:section-schedule-management' %}" class="nav-link"><i class="fi fi-rr-calendar"></i><span>Sections & Schedule</span></a></li>
+        </ul>
+        <ul class="nav-menu nav-footer">
+            <li class="nav-item">
+                <form method="POST" action="{% url 'signout' %}" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-link" style="width:100%;background:none;border:none;cursor:pointer;"><i class="fi fi-rr-sign-out-alt"></i><span>Logout</span></button>
+                </form>
+            </li>
+        </ul>
+    </aside>
+
+    <!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+    <div class="main-content" id="mainContent">
+        <!-- TOP BAR -->
+        <div class="top-bar">
+            <div class="page-title">
+                <h1><i class="fi fi-rr-file-invoice"></i>Enrollment Management</h1>
+                <p><i class="fi fi-rr-calendar"></i> School Year {{ current_sy_label }} · Enrollment Period Open</p>
+            </div>
+            <div class="top-actions">
+                <div class="date-chip"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
+                <div class="notif-wrap">
+                    <button class="notif-btn" id="notifBtn"><i class="fi fi-rr-bell"></i><span class="notif-count zero" id="notifCount">0</span></button>
+                    <div class="notif-dropdown" id="notifDropdown">
+                        <div class="notif-head"><span>Notifications</span><span style="font-size:.7rem;opacity:.65;" id="notifUnreadLabel">0 unread</span></div>
+                        <div class="notif-list" id="notifList">
+                            <div class="empty-state" style="min-height:120px;padding:1.5rem;"><i class="fi fi-rr-bell" style="font-size:1.8rem;"></i><p style="margin:0;">No notifications yet</p></div>
+                        </div>
+                        <div class="notif-foot"><a onclick="markAllRead()">Mark all as read</a></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PORO BANNER -->
+        <div class="poro-banner">
+            <div class="poro-left">
+                <div class="poro-icon"><img src="{% static 'shared/poro/Poro.png' %}" alt="Poro" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fi fi-rr-smile\' style=\'font-size:1.6rem;color:#fff;\'></i>';"></div>
+                <div class="poro-msg"><h3>Enrollment Center</h3><p>Manage student enrollments, batch processing, and SF1 generation.</p></div>
+            </div>
+        </div>
+
+        <!-- STATS -->
+        <div class="stats-grid">
+            <div class="stat-card" onclick="showDetail('Total Enrolled','Active students across all grade levels.','#statTotal')">
+                <div class="stat-icon blue"><i class="fi fi-rr-users"></i></div>
+                <div class="stat-info"><h3>Total Enrolled</h3><div class="value" id="statTotal">—</div><div class="sub">Active students</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green"><i class="fi fi-rr-user-add"></i></div>
+                <div class="stat-info"><h3>New Enrollees</h3><div class="value" id="statNew">—</div><div class="sub">This school year</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon orange"><i class="fi fi-rr-hourglass"></i></div>
+                <div class="stat-info"><h3>Pending Approval</h3><div class="value" id="statPending">—</div><div class="sub">Requires review</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon red"><i class="fi fi-rr-stop"></i></div>
+                <div class="stat-info"><h3>Incomplete</h3><div class="value" id="statIncomplete">—</div><div class="sub">Missing requirements</div></div>
+            </div>
+        </div>
+
+        <!-- QUICK ACTIONS -->
+        <div class="quick-actions">
+            <button class="btn btn-green" onclick="openModal('enrollmentModal')"><i class="fi fi-rr-user-add"></i> New Enrollment</button>
+            <button class="btn btn-warning" onclick="document.getElementById('batchFileInput').click()"><i class="fi fi-rr-upload"></i> Batch Enrollment</button>
+            <button class="btn btn-outline" onclick="exportEnrollmentList()"><i class="fi fi-rr-download"></i> Export List</button>
+            <button class="btn btn-outline" onclick="printSF1()"><i class="fi fi-rr-print"></i> Print SF1</button>
+        </div>
+
+        <!-- TWO COLUMN -->
+        <div class="two-col">
+            <div class="card">
+                <div class="card-header"><h2><i class="fi fi-rr-clipboard-list"></i> Pending Enrollment Requests</h2><span class="view-all">Last 5</span></div>
+                <div id="pendingList"><div class="empty-state"><i class="fi fi-rr-spinner"></i><h4>Loading...</h4></div></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h2><i class="fi fi-rr-chart-pie-alt"></i> Enrollment by Grade Level</h2><span class="view-all">{{ current_sy_label }}</span></div>
+                <div class="grade-dist" id="gradeDistribution"><div class="empty-state"><i class="fi fi-rr-spinner"></i><h4>Loading...</h4></div></div>
+            </div>
+        </div>
+
+        <!-- BATCH UPLOAD -->
+        <div class="card" style="margin-bottom:1.5rem;">
+            <div class="card-header"><h2><i class="fi fi-rr-upload"></i> Batch Enrollment</h2><span class="view-all" onclick="downloadTemplate()">Download Template</span></div>
+            <div class="upload-zone" id="batchDropZone" onclick="document.getElementById('batchFileInput').click()">
+                <i class="fi fi-rr-cloud-upload-alt"></i>
+                <h4>Upload Enrollment CSV/Excel File</h4>
+                <p>Drag and drop your file here, or click to browse</p>
+                <p style="margin-top:.5rem;font-size:.7rem;color:var(--text-light);">Supported: .csv, .xlsx, .xls (Max 500 records)</p>
+            </div>
+            <input type="file" id="batchFileInput" accept=".csv,.xlsx,.xls" style="display:none;" onchange="handleFileSelect(event)">
+            <div class="file-info" id="fileInfo">
+                <i class="fi fi-rr-file-csv" id="fileIcon"></i>
+                <div class="file-details"><strong id="fileName">—</strong><span id="fileSize">—</span></div>
+                <span class="file-remove" onclick="removeFile()"><i class="fi fi-rr-cross-circle"></i></span>
+            </div>
+            <div class="upload-progress" id="uploadProgress">
+                <p style="font-size:.75rem;color:var(--text-secondary);margin-bottom:.5rem;">Uploading... <span id="uploadPercent">0%</span></p>
+                <div class="progress-bg"><div class="progress-fill" id="progressFill"></div></div>
+            </div>
+            <div style="margin-top:1rem;text-align:right;display:none;" id="batchActionBtns">
+                <button class="btn btn-outline" onclick="removeFile()" style="margin-right:.5rem;">Cancel</button>
+                <button class="btn btn-green" onclick="uploadBatchFile()"><i class="fi fi-rr-upload"></i> Process File</button>
+            </div>
+        </div>
+
+        <!-- FILTER BAR -->
+        <div class="filter-bar">
+            <div class="search-box"><i class="fi fi-rr-search"></i><input type="text" id="searchInput" placeholder="Search by name, LRN..." onkeyup="debounceFilter()"></div>
+            <div class="filter-group">
+                <select class="filter-select" id="filterGrade" onchange="loadEnrollments()">
+                    <option value="">All Grade Levels</option>
+                    {% for gl in grade_levels %}<option value="{{ gl.grade_name }}">{{ gl.grade_name }}</option>{% endfor %}
+                </select>
+                <select class="filter-select" id="filterStatus" onchange="loadEnrollments()">
+                    <option value="">All Status</option>
+                    <option value="Enrolled">Enrolled</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Rejected">Rejected</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- TABLE -->
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>LRN</th><th>Student Name</th><th>Grade</th><th>Section</th><th>Type</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+                <tbody id="enrollmentTableBody">
+                    <tr><td colspan="8"><div class="empty-state"><i class="fi fi-rr-spinner"></i><h4>Loading enrollment data...</h4></div></td></tr>
+                </tbody>
+            </table>
+            <div class="pagination">
+                <div class="page-info" id="paginationInfo">Showing 0 records</div>
+                <div class="page-controls" id="paginationControls"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ ENROLLMENT MODAL ═══════════════ -->
+<div class="modal-overlay" id="enrollmentModal">
+    <div class="modal modal-lg">
+        <div class="modal-header"><h2><i class="fi fi-rr-user-add"></i> New Enrollment</h2><button class="modal-close" onclick="closeModal('enrollmentModal')"><i class="fi fi-rr-cross-small"></i></button></div>
+        <div class="modal-body">
+            <div class="form-row">
+                <div class="form-group"><label>First Name *</label><input type="text" id="firstName" placeholder="Juan"></div>
+                <div class="form-group"><label>Last Name *</label><input type="text" id="lastName" placeholder="Dela Cruz"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Middle Name</label><input type="text" id="middleName" placeholder="Santos"></div>
+                <div class="form-group"><label>LRN</label><input type="text" id="lrn" placeholder="12-digit LRN"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Grade Level</label><select id="gradeLevel">{% for gl in grade_levels %}<option value="{{ gl.grade_name }}">{{ gl.grade_name }}</option>{% endfor %}</select></div>
+                <div class="form-group"><label>Enrollment Type</label><select id="enrollmentType"><option>New Student</option><option>Transferee</option><option>Balik-Aral</option><option>Old Student</option></select></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('enrollmentModal')">Cancel</button>
+            <button class="btn btn-green" onclick="submitEnrollment()" id="btnSubmitEnrollment"><i class="fi fi-rr-check-circle"></i> Enroll Student</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ VIEW DETAIL MODAL ═══════════════ -->
+<div class="modal-overlay" id="viewEnrollmentModal">
+    <div class="modal">
+        <div class="modal-header"><h2><i class="fi fi-rr-document"></i> Enrollment Details</h2><button class="modal-close" onclick="closeModal('viewEnrollmentModal')"><i class="fi fi-rr-cross-small"></i></button></div>
+        <div class="modal-body" id="viewEnrollmentBody"></div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('viewEnrollmentModal')">Close</button>
+            <button class="btn btn-green" id="modalApproveBtn" onclick="modalApprove()"><i class="fi fi-rr-check"></i> Approve</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){'use strict';
+
+// ═══════════════ SIDEBAR ═══════════════
+const sidebar=document.getElementById('sidebar'),foldBtn=document.getElementById('foldBtn'),foldIcon=document.getElementById('foldIcon'),mainContent=document.getElementById('mainContent'),mobileOverlay=document.getElementById('mobileOverlay');
+let collapsed=false;
+
+function adjustMargin(){mainContent.style.marginLeft=window.innerWidth>768?(collapsed?'var(--sidebar-collapsed-width)':'var(--sidebar-width)'):'0'}
+foldBtn.addEventListener('click',()=>{if(window.innerWidth<=768){const o=sidebar.classList.toggle('mobile-open');mobileOverlay.classList.toggle('show',o)}else{collapsed=!collapsed;sidebar.classList.toggle('collapsed',collapsed);foldIcon.className=collapsed?'fi fi-rr-angle-small-right':'fi fi-rr-angle-small-left';adjustMargin()}});
+mobileOverlay.addEventListener('click',()=>{sidebar.classList.remove('mobile-open');mobileOverlay.classList.remove('show')});
+window.addEventListener('resize',adjustMargin);adjustMargin();
+
+// ═══════════════ NOTIFICATIONS ═══════════════
+const notifBtn=document.getElementById('notifBtn'),notifDropdown=document.getElementById('notifDropdown');
+notifBtn.addEventListener('click',e=>{e.stopPropagation();notifDropdown.classList.toggle('open')});
+document.addEventListener('click',e=>{if(!e.target.closest('.notif-wrap'))notifDropdown.classList.remove('open')});
+
+// ═══════════════ MODALS ═══════════════
+window.openModal=function(id){const e=document.getElementById(id);if(e){e.classList.add('open');document.body.style.overflow='hidden'}};
+window.closeModal=function(id){const e=document.getElementById(id);if(e){e.classList.remove('open');document.body.style.overflow=''}};
+document.querySelectorAll('.modal-overlay').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov)closeModal(ov.id)}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>closeModal(m.id))});
+
+// ═══════════════ TOAST ═══════════════
+function showToast(msg,type='success'){const c=document.getElementById('toastContainer');if(!c)return;const t=document.createElement('div');t.className='toast '+type;const icons={success:'fi-rr-check-circle',error:'fi-rr-exclamation-circle',warning:'fi-rr-exclamation-triangle',info:'fi-rr-info-circle'};t.innerHTML='<i class="fi '+(icons[type]||icons.info)+'"></i> '+msg;c.appendChild(t);setTimeout(()=>{if(t.parentNode)t.remove()},4500);t.addEventListener('click',()=>t.remove())}window.showToast=showToast;
+
+// ═══════════════ CSRF ═══════════════
+function getCSRF(){const i=document.querySelector('input[name="csrfmiddlewaretoken"]');return i?i.value:''}
+function getCookie(n){let v=null;document.cookie.split(';').forEach(c=>{c=c.trim();if(c.substring(0,n.length+1)===(n+'='))v=decodeURIComponent(c.substring(n.length+1))});return v}
+
+// ═══════════════ DATA LOADING ═══════════════
+function loadEnrollments(){
+    const grade=document.getElementById('filterGrade').value,status=document.getElementById('filterStatus').value,search=document.getElementById('searchInput').value;
+    let url='/registrars/enrollment/list-data/?';if(grade)url+='grade_level='+encodeURIComponent(grade)+'&';if(status)url+='status='+encodeURIComponent(status)+'&';if(search)url+='search='+encodeURIComponent(search)+'&';
+    fetch(url).then(r=>r.json()).then(data=>{
+        if(data.success){window.enrollmentData=data.enrollments;window.gradeStats=data.grade_stats;window.pendingList=data.pending;renderAll();updateStats(data)}
+        else showToast(data.error||'Error loading data','error')
+    }).catch(()=>showToast('Network error','error'))
+}
+
+function updateStats(data){
+    document.getElementById('statTotal').textContent=data.enrollments.filter(e=>e.status==='Enrolled').length;
+    document.getElementById('statNew').textContent=data.enrollments.filter(e=>e.enrollment_type==='New Student').length;
+    document.getElementById('statPending').textContent=data.enrollments.filter(e=>e.status==='Pending').length;
+    document.getElementById('statIncomplete').textContent=data.enrollments.filter(e=>e.status==='Rejected').length
+}
+
+function renderAll(){renderTable(window.enrollmentData||[]);renderPending(window.pendingList||[]);renderGradeDist(window.gradeStats||[])}
+
+function renderTable(records){
+    const tbody=document.getElementById('enrollmentTableBody');
+    if(!records.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty-state"><i class="fi fi-rr-inbox"></i><h4>No enrollment records found</h4><p>Try adjusting filters or create a new enrollment.</p></div></td></tr>';document.getElementById('paginationInfo').textContent='Showing 0 records';return}
+    tbody.innerHTML=records.map(r=>'<tr onclick="if(!event.target.closest(\'.dropdown-wrap\')&&!event.target.closest(\'button\'))viewEnrollment('+r.id+')"><td style="font-size:.75rem;color:var(--text-secondary);">'+(r.lrn||'—')+'</td><td><span class="student-name">'+esc(r.name)+'</span></td><td><span class="pill pill-grade">'+esc(r.grade_level)+'</span></td><td>'+(r.section||'—')+'</td><td>'+esc(r.enrollment_type)+'</td><td><span class="pill pill-'+getStatusClass(r.status)+'">'+r.status+'</span></td><td>'+r.enrollment_date+'</td><td onclick="event.stopPropagation()"><div class="dropdown-wrap"><button class="icon-btn" onclick="toggleDropdown(event,this)"><i class="fi fi-rr-menu-dots-vertical"></i></button><div class="dropdown-menu"><a onclick="viewEnrollment('+r.id+')"><i class="fi fi-rr-search"></i> View Details</a>'+(r.status==='Pending'?'<a onclick="approveEnrollment('+r.id+')"><i class="fi fi-rr-check"></i> Approve</a>':'')+(r.status==='Pending'?'<a onclick="rejectEnrollment('+r.id+')" class="text-danger"><i class="fi fi-rr-cross"></i> Reject</a>':'')+'<div class="dropdown-div"></div><a onclick="printForm('+r.id+')"><i class="fi fi-rr-print"></i> Print</a></div></div></td></tr>').join('');
+    document.getElementById('paginationInfo').textContent='Showing '+records.length+' records'
+}
+
+function renderPending(pending){
+    const c=document.getElementById('pendingList');
+    if(!pending.length){c.innerHTML='<div class="empty-state"><i class="fi fi-rr-check-circle" style="color:var(--secondary-green);"></i><h4>No pending requests</h4><p>All enrollments have been processed.</p></div>';return}
+    c.innerHTML=pending.slice(0,5).map(r=>'<div class="enrollment-item"><div class="enrollment-info"><h4>'+esc(r.name)+'</h4><p>'+esc(r.grade_level)+' · '+esc(r.enrollment_type)+'</p></div><span class="pill pill-pending">Pending</span></div>').join('')
+}
+
+function renderGradeDist(stats){
+    const c=document.getElementById('gradeDistribution');
+    if(!stats.length){c.innerHTML='<div class="empty-state"><i class="fi fi-rr-chart-pie-alt" style="color:var(--text-light);"></i><h4>No data</h4></div>';return}
+    const max=Math.max(...stats.map(s=>s.count),1);
+    c.innerHTML=stats.map(s=>'<div class="grade-row"><span class="grade-label">'+esc(s.grade_name)+'</span><div class="grade-bar-wrap"><div class="grade-bar" style="width:'+(s.count/max*100)+'%;"></div></div><span class="grade-count">'+s.count+'</span></div>').join('')
+}
+
+function getStatusClass(s){const m={Enrolled:'enrolled',Pending:'pending',Approved:'approved',Rejected:'rejected','For Review':'review'};return m[s]||'pending'}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+// ═══════════════ DROPDOWN ═══════════════
+let openDropdown=null;
+window.toggleDropdown=function(e,btn){e.preventDefault();e.stopPropagation();const dd=btn.parentElement.querySelector('.dropdown-menu');if(openDropdown&&openDropdown!==dd)openDropdown.classList.remove('open');dd.classList.toggle('open');openDropdown=dd.classList.contains('open')?dd:null}
+document.addEventListener('click',()=>{if(openDropdown){openDropdown.classList.remove('open');openDropdown=null}})
+
+// ═══════════════ CRUD ═══════════════
+window.submitEnrollment=function(){
+    const fn=document.getElementById('firstName').value.trim(),ln=document.getElementById('lastName').value.trim();
+    if(!fn||!ln){showToast('First and last name are required','warning');return}
+    const btn=document.getElementById('btnSubmitEnrollment');btn.disabled=true;btn.innerHTML='<i class="fi fi-rr-spinner"></i> Enrolling...';
+    const fd=new FormData();fd.append('first_name',fn);fd.append('last_name',ln);fd.append('middle_name',document.getElementById('middleName').value);fd.append('lrn',document.getElementById('lrn').value);fd.append('grade_level',document.getElementById('gradeLevel').value);fd.append('enrollment_type',document.getElementById('enrollmentType').value);
+    fetch('/registrars/enrollment/create/',{method:'POST',body:fd,headers:{'X-CSRFToken':getCSRF()}}).then(r=>r.json()).then(d=>{btn.disabled=false;btn.innerHTML='<i class="fi fi-rr-check-circle"></i> Enroll Student';if(d.success){showToast('Enrollment submitted!');closeModal('enrollmentModal');loadEnrollments()}else showToast(d.error||'Error','error')}).catch(()=>{btn.disabled=false;btn.innerHTML='<i class="fi fi-rr-check-circle"></i> Enroll Student';showToast('Network error','error')})
+};
+
+let viewingId=null;
+window.viewEnrollment=function(id){fetch('/registrars/enrollment/'+id+'/detail-data/').then(r=>r.json()).then(data=>{if(data.success){viewingId=id;const s=data.data;document.getElementById('viewEnrollmentBody').innerHTML='<div class="detail-row"><div class="detail-label">LRN</div><div class="detail-value">'+(s.lrn||'—')+'</div></div><div class="detail-row"><div class="detail-label">Name</div><div class="detail-value"><strong>'+esc(s.name)+'</strong></div></div><div class="detail-row"><div class="detail-label">Grade Level</div><div class="detail-value">'+esc(s.grade_level)+'</div></div><div class="detail-row"><div class="detail-label">Section</div><div class="detail-value">'+(s.section||'—')+'</div></div><div class="detail-row"><div class="detail-label">Type</div><div class="detail-value">'+esc(s.enrollment_type)+'</div></div><div class="detail-row"><div class="detail-label">Status</div><div class="detail-value"><span class="pill pill-'+getStatusClass(s.status)+'">'+s.status+'</span></div></div><div class="detail-row"><div class="detail-label">Date</div><div class="detail-value">'+s.enrollment_date+'</div></div>';document.getElementById('modalApproveBtn').style.display=s.status==='Pending'?'inline-flex':'none';openModal('viewEnrollmentModal')}}).catch(()=>showToast('Error loading details','error'))};
+window.modalApprove=function(){if(viewingId){approveEnrollment(viewingId);closeModal('viewEnrollmentModal')}};
+
+window.approveEnrollment=function(id){if(!confirm('Approve this enrollment?'))return;fetch('/registrars/enrollment/'+id+'/approve/',{method:'POST',headers:{'X-CSRFToken':getCSRF()}}).then(r=>r.json()).then(d=>{if(d.success){showToast('Enrollment approved!');loadEnrollments()}else showToast(d.error||'Error','error')}).catch(()=>showToast('Network error','error'))};
+window.rejectEnrollment=function(id){if(!confirm('Reject this enrollment? This cannot be undone.'))return;fetch('/registrars/enrollment/'+id+'/approve/',{method:'POST',body:JSON.stringify({action:'reject'}),headers:{'Content-Type':'application/json','X-CSRFToken':getCSRF()}}).then(r=>r.json()).then(d=>{if(d.success){showToast('Enrollment rejected','warning');loadEnrollments()}else showToast(d.error||'Error','error')}).catch(()=>showToast('Network error','error'))};
+window.printForm=function(id){window.open('/registrars/enrollment/'+id+'/print/','_blank')};
+window.exportEnrollmentList=function(){window.open('/registrars/enrollment/export/','_blank')};
+window.printSF1=function(){window.open("{% url 'registrars:print-sf1' %}",'_blank')};
+window.downloadTemplate=function(){window.open('/registrars/enrollment/template/','_blank')};
+
+// ═══════════════ BATCH UPLOAD ═══════════════
+let batchFile=null;
+const dropZone=document.getElementById('batchDropZone'),fileInfo=document.getElementById('fileInfo'),uploadProgress=document.getElementById('uploadProgress'),batchBtns=document.getElementById('batchActionBtns');
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('dragover')});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('dragover');const files=e.dataTransfer.files;if(files.length>0){document.getElementById('batchFileInput').files=files;handleFileSelect({target:{files}})}});
+
+function handleFileSelect(e){const file=e.target.files[0];if(!file)return;const ext='.'+file.name.split('.').pop().toLowerCase();if(!['.csv','.xlsx','.xls'].includes(ext)){showToast('Invalid file type. Use .csv, .xlsx, or .xls','error');document.getElementById('batchFileInput').value='';return}batchFile=file;dropZone.classList.add('has-file');fileInfo.classList.add('show');batchBtns.style.display='block';document.getElementById('fileName').textContent=file.name;document.getElementById('fileSize').textContent=formatFileSize(file.size);document.getElementById('fileIcon').className=ext==='.csv'?'fi fi-rr-file-csv':'fi fi-rr-file-excel'}
+function removeFile(){batchFile=null;document.getElementById('batchFileInput').value='';dropZone.classList.remove('has-file');fileInfo.classList.remove('show');batchBtns.style.display='none';uploadProgress.classList.remove('show')}
+window.uploadBatchFile=function(){if(!batchFile){showToast('Select a file first','warning');return}const fd=new FormData();fd.append('file',batchFile);batchBtns.style.display='none';uploadProgress.classList.add('show');document.getElementById('progressFill').style.width='10%';document.getElementById('uploadPercent').textContent='10%';fetch('/registrars/enrollment/batch-upload/',{method:'POST',body:fd,headers:{'X-CSRFToken':getCSRF()}}).then(r=>{document.getElementById('progressFill').style.width='50%';document.getElementById('uploadPercent').textContent='50%';return r.json()}).then(d=>{document.getElementById('progressFill').style.width='100%';document.getElementById('uploadPercent').textContent='100%';if(d.success){showToast(d.message||'Processed '+d.count+' records!');removeFile();loadEnrollments()}else showToast(d.error||'Error','error')}).catch(()=>showToast('Network error','error')).finally(()=>setTimeout(()=>{uploadProgress.classList.remove('show');if(!batchFile)batchBtns.style.display='none'},1500))};
+function formatFileSize(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB'}
+
+// ═══════════════ FILTER DEBOUNCE ═══════════════
+let filterTimeout;function debounceFilter(){clearTimeout(filterTimeout);filterTimeout=setTimeout(loadEnrollments,400)}
+
+// ═══════════════ DATE & GREETING ═══════════════
+function updateDate(){const e=document.getElementById('currentDate');if(e)e.textContent=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}
+updateDate();setInterval(updateDate,60000);
+
+// ═══════════════ MARK ALL READ ═══════════════
+window.markAllRead=function(){fetch('/registrars/mark-notifications-read/',{method:'POST',headers:{'X-CSRFToken':getCSRF()}}).then(()=>{document.getElementById('notifCount').textContent='0';document.getElementById('notifCount').className='notif-count zero';document.getElementById('notifUnreadLabel').textContent='0 unread';document.getElementById('notifList').innerHTML='<div class="empty-state" style="min-height:120px;padding:1.5rem;"><i class="fi fi-rr-bell" style="font-size:1.8rem;"></i><p style="margin:0;">No notifications</p></div>';showToast('Notifications marked as read')})};
+
+// ═══════════════ KEYBOARD SHORTCUTS ═══════════════
+document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.key==='n'){e.preventDefault();openModal('enrollmentModal')}});
+
+// ═══════════════ INIT ═══════════════
+loadEnrollments();
+})();
+</script>
+</body>
+</html>

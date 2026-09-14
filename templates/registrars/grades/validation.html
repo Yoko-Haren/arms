@@ -1,0 +1,583 @@
+<!-- Save as: registrars/grades/validation.html -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grade Validation — Formify LIS Registrar</title>
+    
+    <!-- Flaticon UIcons Regular Rounded -->
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    
+    <!-- jsPDF for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
+        :root{
+            --rich-black:#00072D;--dark-blue:#051650;--caribbean-blue:#123499;
+            --secondary-green:#5EA173;--green-light:#7dbb8f;--green-bg:rgba(94,161,115,0.08);
+            --warning-orange:#f39c12;--danger-red:#dc3545;--success-green:#28a745;
+            --gray-bg:#f5f7fb;--border-color:#e9ecef;--text-primary:#2d3748;
+            --text-secondary:#718096;--text-light:#a0aec0;
+            --sidebar-width:280px;--sidebar-collapsed-width:80px;
+            --radius-sm:8px;--radius-md:14px;--radius-lg:20px;--radius-xl:28px;
+            --shadow-sm:0 2px 10px rgba(0,0,0,.05);--shadow-md:0 8px 25px rgba(0,0,0,.1);
+            --shadow-lg:0 12px 32px rgba(0,0,0,.18);--transition:all 0.25s cubic-bezier(.4,0,.2,1)
+        }
+        body{background:var(--gray-bg);min-height:100vh;color:var(--text-primary)}
+        
+        /* ═══════════════ LAYOUT ═══════════════ */
+        .dashboard{display:flex;min-height:100vh}
+        
+        /* ═══════════════ SIDEBAR ═══════════════ */
+        .sidebar{width:var(--sidebar-width);background:linear-gradient(180deg,var(--rich-black),var(--dark-blue));color:#fff;position:fixed;height:100vh;overflow-y:auto;overflow-x:hidden;transition:width .3s;z-index:100;display:flex;flex-direction:column}
+        .sidebar.collapsed{width:var(--sidebar-collapsed-width)}
+        .sidebar.collapsed .sb-logo-text,.sidebar.collapsed .user-details,.sidebar.collapsed .nav-link span{display:none}
+        .sidebar.collapsed .sb-header{justify-content:center;padding:1.5rem .5rem}
+        .sidebar.collapsed .sb-logo{display:none}
+        .sidebar.collapsed .user-info{justify-content:center;padding:.8rem;margin:0 .5rem 1.5rem}
+        .sidebar.collapsed .nav-link{justify-content:center;padding:.85rem 0;gap:0}
+        .sidebar.collapsed .nav-link i{font-size:1.2rem;margin:0}
+        .sidebar.collapsed .fold-btn{margin:0 auto}
+        .sidebar::-webkit-scrollbar{width:4px}
+        .sidebar::-webkit-scrollbar-thumb{background:var(--secondary-green);border-radius:4px}
+        .sb-header{display:flex;align-items:center;justify-content:space-between;padding:1.5rem;border-bottom:1px solid rgba(255,255,255,.1)}
+        .sb-logo{display:flex;align-items:center;gap:.8rem;overflow:hidden}
+        .sb-logo i{font-size:1.8rem;color:var(--secondary-green);flex-shrink:0}
+        .sb-logo-text h2{font-size:1rem;font-weight:700;line-height:1.3}
+        .sb-logo-text span{font-size:.65rem;opacity:.6;display:block}
+        .fold-btn{background:rgba(255,255,255,.1);border:none;color:#fff;cursor:pointer;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:background .2s;flex-shrink:0}
+        .fold-btn:hover{background:rgba(255,255,255,.25)}
+        .user-info{display:flex;align-items:center;gap:.8rem;padding:.9rem;margin:1rem 1rem 1.5rem;background:rgba(255,255,255,.1);border-radius:12px;overflow:hidden;white-space:nowrap}
+        .user-avatar{width:42px;height:42px;background:var(--secondary-green);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:var(--rich-black);flex-shrink:0}
+        .user-details h4{font-size:.85rem;font-weight:600}
+        .user-details p{font-size:.65rem;opacity:.65}
+        .nav-menu{list-style:none;padding:0 .75rem;flex:1}
+        .nav-item{margin-bottom:.2rem}
+        .nav-link{display:flex;align-items:center;gap:.9rem;padding:.7rem 1rem;color:rgba(255,255,255,.8);text-decoration:none;border-radius:10px;font-size:.875rem;transition:var(--transition);white-space:nowrap;overflow:hidden}
+        .nav-link:hover{background:rgba(94,161,115,.2);color:#fff}
+        .nav-link.active{background:var(--secondary-green);color:var(--rich-black);font-weight:600}
+        .nav-link i{width:20px;font-size:1rem;text-align:center;flex-shrink:0}
+        .nav-footer{margin-top:auto;padding:1rem .75rem;border-top:1px solid rgba(255,255,255,.1)}
+        
+        /* ═══════════════ MAIN CONTENT ═══════════════ */
+        .main-content{flex:1;margin-left:var(--sidebar-width);padding:1.5rem;transition:margin-left .3s;min-height:100vh}
+        .sidebar.collapsed~.main-content{margin-left:var(--sidebar-collapsed-width)}
+        
+        /* ═══════════════ TOP BAR ═══════════════ */
+        .top-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;background:#fff;padding:1rem 1.5rem;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);margin-bottom:1.5rem}
+        .page-title h1{font-size:1.25rem;color:var(--rich-black);font-weight:700;display:flex;align-items:center;gap:.5rem}
+        .page-title h1 i{color:var(--secondary-green)}
+        .page-title p{font-size:.78rem;color:var(--text-secondary);margin-top:.2rem}
+        .top-actions{display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+        .date-chip{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--text-secondary);background:var(--gray-bg);padding:.35rem .75rem;border-radius:8px}
+        .auto-refresh{display:flex;align-items:center;gap:.5rem;background:var(--gray-bg);padding:.35rem .75rem;border-radius:8px;font-size:.72rem;color:var(--text-secondary)}
+        .auto-refresh input[type="checkbox"]{width:15px;height:15px;cursor:pointer;accent-color:var(--secondary-green)}
+        .auto-refresh label{cursor:pointer;user-select:none}
+        .refresh-status{font-size:.68rem;color:var(--secondary-green);font-weight:600;min-width:90px}
+        
+        /* ═══════════════ PORO BANNER ═══════════════ */
+        .poro-banner{background:linear-gradient(135deg,#f0f9f0,#e8f5e9);border:1px solid rgba(94,161,115,.3);border-radius:var(--radius-xl);padding:1rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+        .poro-left{display:flex;align-items:center;gap:1rem}
+        .poro-icon{width:50px;height:50px;background:var(--secondary-green);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;box-shadow:0 4px 12px rgba(94,161,115,.3);animation:bounce 2s ease infinite}
+        .poro-icon img{width:100%;height:100%;object-fit:cover}
+        @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+        .poro-msg h3{font-size:1rem;color:var(--rich-black);font-weight:700;margin-bottom:.2rem}
+        .poro-msg p{font-size:.75rem;color:var(--text-secondary)}
+        
+        /* ═══════════════ STATS GRID ═══════════════ */
+        .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+        .stat-card{background:#fff;padding:1.1rem;border-radius:var(--radius-lg);display:flex;align-items:center;gap:.9rem;box-shadow:var(--shadow-sm);border:2px solid transparent;transition:var(--transition);cursor:pointer}
+        .stat-card:hover{border-color:var(--secondary-green);transform:translateY(-2px);box-shadow:var(--shadow-md)}
+        .stat-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+        .stat-icon.blue{background:rgba(18,52,153,.1);color:var(--caribbean-blue)}
+        .stat-icon.green{background:var(--green-bg);color:var(--secondary-green)}
+        .stat-icon.orange{background:rgba(243,156,18,.1);color:var(--warning-orange)}
+        .stat-icon.purple{background:rgba(128,0,128,.1);color:#9b59b6}
+        .stat-info h3{font-size:.68rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.15rem}
+        .stat-info .value{font-size:1.5rem;font-weight:800;color:var(--rich-black);line-height:1.2}
+        .stat-info .sub{font-size:.63rem;color:var(--text-secondary);margin-top:.1rem}
+        
+        /* ═══════════════ BUTTONS ═══════════════ */
+        .btn{display:inline-flex;align-items:center;gap:.45rem;padding:.5rem 1.1rem;border-radius:var(--radius-sm);font-size:.8rem;font-weight:600;cursor:pointer;border:none;transition:var(--transition);white-space:nowrap;text-decoration:none}
+        .btn-green{background:var(--secondary-green);color:#fff}
+        .btn-green:hover{background:#4a8a5e;transform:translateY(-1px)}
+        .btn-outline{background:transparent;border:2px solid var(--border-color);color:var(--text-primary)}
+        .btn-outline:hover{border-color:var(--secondary-green);color:var(--secondary-green);background:var(--green-bg)}
+        .btn-warning{background:var(--warning-orange);color:#fff}
+        .btn-warning:hover{background:#e67e22;transform:translateY(-1px)}
+        .btn-danger{background:var(--danger-red);color:#fff}
+        .btn-danger:hover{background:#c82333}
+        
+        /* ═══════════════ FILTER BAR ═══════════════ */
+        .filter-bar{background:#fff;padding:.9rem 1.5rem;border-radius:var(--radius-lg);margin-bottom:1.5rem;box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem}
+        .filter-group{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+        .filter-group label{font-size:.72rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+        .filter-select,.search-input{padding:.45rem 2rem .45rem .7rem;border:1.5px solid var(--border-color);border-radius:8px;font-size:.8rem;color:var(--text-primary);outline:none;transition:border-color .2s;appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right .5rem center;cursor:pointer}
+        .filter-select:focus,.search-input:focus{border-color:var(--secondary-green)}
+        .search-input{min-width:200px;background:#fff;padding:.45rem .7rem;appearance:auto}
+        
+        /* ═══════════════ EXPORT DROPDOWN ═══════════════ */
+        .export-wrap{position:relative}
+        .export-dropdown{display:none;position:absolute;right:0;top:100%;background:#fff;min-width:200px;box-shadow:var(--shadow-lg);border-radius:var(--radius-md);z-index:200;overflow:hidden;margin-top:.35rem;border:1px solid var(--border-color)}
+        .export-dropdown.open{display:block;animation:fadeDown .2s ease}
+        @keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+        .export-dropdown a{display:flex;align-items:center;gap:.6rem;padding:.65rem 1rem;font-size:.78rem;color:var(--text-primary);text-decoration:none;cursor:pointer;transition:background .2s}
+        .export-dropdown a:hover{background:var(--gray-bg);color:var(--secondary-green)}
+        
+        /* ═══════════════ TABLE ═══════════════ */
+        .table-wrap{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);overflow:hidden}
+        .table-header{display:flex;align-items:center;justify-content:space-between;padding:1.2rem 1.5rem;border-bottom:1px solid var(--border-color)}
+        .table-header h2{font-size:1rem;font-weight:700;color:var(--rich-black);display:flex;align-items:center;gap:.4rem}
+        .table-header h2 i{color:var(--secondary-green)}
+        .record-count{font-size:.75rem;color:var(--text-secondary)}
+        .table-scroll{overflow-x:auto}
+        table{width:100%;border-collapse:collapse;min-width:900px}
+        th{text-align:left;padding:.75rem 1rem;background:var(--gray-bg);color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--border-color);cursor:pointer;user-select:none;white-space:nowrap}
+        th:hover{color:var(--secondary-green)}
+        th .sort-icon{margin-left:.3rem;font-size:.6rem;opacity:.4}
+        th.sorted .sort-icon{opacity:1;color:var(--secondary-green)}
+        td{padding:.7rem 1rem;border-bottom:1px solid var(--border-color);font-size:.78rem;color:var(--text-primary);white-space:nowrap}
+        tbody tr{cursor:pointer;transition:background .2s}
+        tbody tr:hover td{background:var(--gray-bg)}
+        tr:last-child td{border-bottom:none}
+        .student-name{font-weight:600;color:var(--rich-black)}
+        .grade-value{font-weight:700}
+        
+        /* ═══════════════ PILLS ═══════════════ */
+        .pill{padding:.22rem .65rem;border-radius:20px;font-size:.65rem;font-weight:700;letter-spacing:.02em;white-space:nowrap;display:inline-block}
+        .pill-pending{background:#fff3cd;color:#856404}
+        .pill-approved{background:#d4edda;color:#155724}
+        .pill-returned{background:#f8d7da;color:#721c24}
+        
+        /* ═══════════════ DROPDOWN ACTIONS ═══════════════ */
+        .dropdown-wrap{position:relative;display:inline-block}
+        .dots-btn{background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:.3rem .4rem;border-radius:6px;transition:var(--transition);font-size:.85rem}
+        .dots-btn:hover{background:var(--gray-bg);color:var(--secondary-green)}
+        .dropdown-menu{display:none;position:absolute;right:0;top:100%;background:#fff;min-width:180px;box-shadow:var(--shadow-lg);border-radius:var(--radius-md);z-index:200;overflow:hidden;margin-top:.3rem;border:1px solid var(--border-color)}
+        .dropdown-menu.open{display:block;animation:fadeDown .2s ease}
+        .dropdown-menu a{display:flex;align-items:center;gap:.6rem;padding:.6rem 1rem;font-size:.75rem;color:var(--text-primary);text-decoration:none;cursor:pointer;transition:background .2s}
+        .dropdown-menu a:hover{background:var(--gray-bg);color:var(--secondary-green)}
+        .dropdown-menu a.text-danger{color:var(--danger-red)}
+        .dropdown-menu a.text-danger:hover{background:#fff5f5}
+        .dropdown-div{height:1px;background:var(--border-color);margin:.2rem 0}
+        
+        /* ═══════════════ PAGINATION ═══════════════ */
+        .pagination{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-top:1px solid var(--border-color);flex-wrap:wrap;gap:.8rem}
+        .page-info{font-size:.75rem;color:var(--text-secondary)}
+        .page-controls{display:flex;gap:.3rem;align-items:center}
+        .page-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border-color);border-radius:8px;background:#fff;color:var(--text-primary);cursor:pointer;transition:var(--transition);font-size:.75rem;font-weight:600}
+        .page-btn:hover:not(:disabled){background:var(--secondary-green);color:#fff;border-color:var(--secondary-green)}
+        .page-btn.active{background:var(--secondary-green);color:#fff;border-color:var(--secondary-green)}
+        .page-btn:disabled{opacity:.4;cursor:not-allowed}
+        
+        /* ═══════════════ MODAL ═══════════════ */
+        .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem}
+        .modal-overlay.open{display:flex}
+        .modal{background:#fff;border-radius:var(--radius-xl);width:100%;max-width:600px;box-shadow:0 24px 60px rgba(0,0,0,.22);animation:modalIn .28s cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column;max-height:90vh}
+        @keyframes modalIn{from{opacity:0;transform:translateY(-16px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+        .modal-header{padding:1.2rem 1.5rem 1rem;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+        .modal-header h2{font-size:1.05rem;font-weight:700;color:var(--rich-black);display:flex;align-items:center;gap:.5rem}
+        .modal-header h2 i{color:var(--secondary-green)}
+        .modal-close{background:none;border:none;cursor:pointer;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-light);font-size:1.1rem;transition:var(--transition)}
+        .modal-close:hover{background:var(--gray-bg);color:var(--danger-red)}
+        .modal-body{padding:1.3rem 1.5rem;overflow-y:auto;flex:1}
+        .modal-footer{padding:.9rem 1.5rem 1.2rem;border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;gap:.7rem;flex-shrink:0}
+        .detail-row{display:flex;padding:.55rem 0;border-bottom:1px solid var(--border-color)}
+        .detail-row:last-child{border-bottom:none}
+        .detail-label{width:140px;font-weight:600;color:var(--rich-black);font-size:.8rem;flex-shrink:0}
+        .detail-value{flex:1;color:var(--text-primary);font-size:.8rem}
+        .form-group{margin-bottom:1rem}
+        .form-group label{display:block;font-size:.75rem;font-weight:700;color:var(--text-primary);margin-bottom:.35rem}
+        .form-group textarea{width:100%;padding:.65rem .85rem;border:2px solid var(--border-color);border-radius:var(--radius-sm);font-size:.82rem;font-family:inherit;resize:vertical;min-height:80px;outline:none;transition:border-color .2s}
+        .form-group textarea:focus{border-color:var(--secondary-green)}
+        
+        /* ═══════════════ EMPTY STATE ═══════════════ */
+        .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 2rem;text-align:center}
+        .empty-state i{font-size:2.5rem;color:var(--text-light);margin-bottom:.8rem;opacity:.5}
+        .empty-state h4{font-size:.9rem;font-weight:600;color:var(--text-secondary);margin-bottom:.3rem}
+        .empty-state p{font-size:.75rem;color:var(--text-light);max-width:300px;line-height:1.5}
+        
+        /* ═══════════════ TOAST ═══════════════ */
+        .toast-container{position:fixed;top:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem}
+        .toast{padding:.75rem 1.2rem;border-radius:var(--radius-sm);color:#fff;font-size:.8rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.2);animation:toastIn .3s ease;max-width:380px;display:flex;align-items:center;gap:.6rem}
+        .toast.success{background:#28a745}
+        .toast.error{background:#dc3545}
+        .toast.warning{background:#f39c12;color:#000}
+        .toast.info{background:var(--caribbean-blue)}
+        @keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+        
+        /* ═══════════════ MOBILE ═══════════════ */
+        .mobile-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;display:none}
+        .mobile-overlay.show{display:block}
+        @media(max-width:1200px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+        @media(max-width:768px){
+            .sidebar{transform:translateX(-100%);width:var(--sidebar-width)!important;transition:transform .3s}
+            .sidebar.mobile-open{transform:translateX(0)}
+            .main-content{margin-left:0!important;padding:1rem}
+            .stats-grid{grid-template-columns:1fr}
+            .filter-bar{flex-direction:column;align-items:stretch}
+            .filter-group{flex-wrap:wrap}
+            .search-input{width:100%;min-width:auto}
+            .modal{max-width:100%;border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+            .modal-overlay{align-items:flex-end}
+        }
+    </style>
+</head>
+<body>
+<div class="mobile-overlay" id="mobileOverlay"></div>
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="dashboard">
+    <!-- ═══════════════ SIDEBAR ═══════════════ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sb-header">
+            <div class="sb-logo"><i class="fi fi-rr-graduation-cap"></i><div class="sb-logo-text"><h2>Formify</h2><span>Registrar Portal</span></div></div>
+            <button class="fold-btn" id="foldBtn"><i class="fi fi-rr-angle-small-left" id="foldIcon"></i></button>
+        </div>
+        <div class="user-info">
+            <div class="user-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+            <div class="user-details"><h4>{{ request.user.get_full_name }}</h4><p>School Registrar</p></div>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="{% url 'registrars:dashboard' %}" class="nav-link"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:student-records' %}" class="nav-link"><i class="fi fi-rr-user"></i><span>Student Records</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:enrollment-management' %}" class="nav-link"><i class="fi fi-rr-file-invoice"></i><span>Enrollment</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:grade-validation' %}" class="nav-link active"><i class="fi fi-rr-check-double"></i><span>Grade Validation</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:forms' %}" class="nav-link"><i class="fi fi-rr-folder-open"></i><span>School Forms</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:transfer-management' %}" class="nav-link"><i class="fi fi-rr-exchange-alt"></i><span>Transfer Requests</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:reports-analytics' %}" class="nav-link"><i class="fi fi-rr-chart-line-up"></i><span>Reports</span></a></li>
+            <li class="nav-item"><a href="{% url 'registrars:section-schedule-management' %}" class="nav-link"><i class="fi fi-rr-calendar"></i><span>Sections & Schedule</span></a></li>
+        </ul>
+        <ul class="nav-menu nav-footer">
+            <li class="nav-item">
+                <form method="POST" action="{% url 'signout' %}" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-link" style="width:100%;background:none;border:none;cursor:pointer;"><i class="fi fi-rr-sign-out-alt"></i><span>Logout</span></button>
+                </form>
+            </li>
+        </ul>
+    </aside>
+
+    <!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+    <div class="main-content" id="mainContent">
+        <!-- TOP BAR -->
+        <div class="top-bar">
+            <div class="page-title">
+                <h1><i class="fi fi-rr-check-double"></i>Grade Validation</h1>
+                <p>School Year {{ current_sy_label }} · Review and validate teacher-submitted grades</p>
+            </div>
+            <div class="top-actions">
+                <div class="auto-refresh">
+                    <input type="checkbox" id="autoRefreshToggle">
+                    <label for="autoRefreshToggle">Auto-refresh (30s)</label>
+                    <span class="refresh-status" id="autoRefreshStatus"></span>
+                </div>
+                <div class="date-chip"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
+            </div>
+        </div>
+
+        <!-- PORO BANNER -->
+        <div class="poro-banner">
+            <div class="poro-left">
+                <div class="poro-icon"><img src="{% static 'shared/poro/Poro.png' %}" alt="Poro" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fi fi-rr-smile\' style=\'font-size:1.6rem;color:#fff;\'></i>';"></div>
+                <div class="poro-msg"><h3>Grade Validation Center</h3><p>{{ pending_count }} grade submission{{ pending_count|pluralize }} pending review. Click any row to view details.</p></div>
+            </div>
+        </div>
+
+        <!-- STATS GRID -->
+        <div class="stats-grid">
+            <div class="stat-card" onclick="filterByStatus('pending')">
+                <div class="stat-icon blue"><i class="fi fi-rr-hourglass"></i></div>
+                <div class="stat-info"><h3>Pending Validation</h3><div class="value" id="pendingCount">{{ pending_count }}</div><div class="sub">Awaiting review</div></div>
+            </div>
+            <div class="stat-card" onclick="filterByStatus('approved')">
+                <div class="stat-icon green"><i class="fi fi-rr-check-circle"></i></div>
+                <div class="stat-info"><h3>Approved</h3><div class="value" id="approvedCount">{{ approved_count }}</div><div class="sub">This quarter</div></div>
+            </div>
+            <div class="stat-card" onclick="filterByStatus('rejected')">
+                <div class="stat-icon orange"><i class="fi fi-rr-exclamation-triangle"></i></div>
+                <div class="stat-info"><h3>Returned</h3><div class="value" id="rejectedCount">{{ returned_count }}</div><div class="sub">Need revision</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon purple"><i class="fi fi-rr-users"></i></div>
+                <div class="stat-info"><h3>Teachers</h3><div class="value" id="teacherCount">{{ teacher_count }}</div><div class="sub">With submissions</div></div>
+            </div>
+        </div>
+
+        <!-- FILTER BAR -->
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Grade</label>
+                <select class="filter-select" id="gradeFilter">
+                    <option value="">All Levels</option>
+                    {% for grade in grade_level_options %}
+                    <option value="{{ grade.id }}" {% if selected_grade_level == grade.id|stringformat:"s" %}selected{% endif %}>{{ grade.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Teacher</label>
+                <select class="filter-select" id="teacherFilter">
+                    <option value="">All Teachers</option>
+                    {% for teacher in teacher_options %}
+                    <option value="{{ teacher.id }}" {% if selected_teacher == teacher.id|stringformat:"s" %}selected{% endif %}>{{ teacher.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Quarter</label>
+                <select class="filter-select" id="quarterFilter">
+                    <option value="Q1" {% if selected_quarter == 'Q1' %}selected{% endif %}>Quarter 1</option>
+                    <option value="Q2" {% if selected_quarter == 'Q2' %}selected{% endif %}>Quarter 2</option>
+                    <option value="Q3" {% if selected_quarter == 'Q3' %}selected{% endif %}>Quarter 3</option>
+                    <option value="Q4" {% if selected_quarter == 'Q4' %}selected{% endif %}>Quarter 4</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Status</label>
+                <select class="filter-select" id="statusFilter">
+                    <option value="all" {% if selected_status == 'all' %}selected{% endif %}>All Status</option>
+                    <option value="pending" {% if selected_status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="approved" {% if selected_status == 'approved' %}selected{% endif %}>Approved</option>
+                    <option value="rejected" {% if selected_status == 'rejected' %}selected{% endif %}>Returned</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search student name, LRN..." value="{{ search_query }}">
+            </div>
+            <div class="filter-group" style="gap:.5rem;">
+                <button class="btn btn-green" onclick="applyFilters()"><i class="fi fi-rr-filter"></i> Apply</button>
+                <div class="export-wrap">
+                    <button class="btn btn-outline" onclick="toggleExportDropdown(event)"><i class="fi fi-rr-download"></i> Export</button>
+                    <div class="export-dropdown" id="exportDropdown">
+                        <a onclick="exportToCSV()"><i class="fi fi-rr-file-csv"></i> Export to CSV</a>
+                        <a onclick="exportToExcel()"><i class="fi fi-rr-file-excel"></i> Export to Excel (XLSX)</a>
+                        <a onclick="exportToPDF()"><i class="fi fi-rr-file-pdf"></i> Export to PDF</a>
+                        <div class="dropdown-div"></div>
+                        <a onclick="printReport()"><i class="fi fi-rr-print"></i> Print Report</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VALIDATION TABLE -->
+        <div class="table-wrap" id="reportContainer">
+            <div class="table-header">
+                <h2><i class="fi fi-rr-check-double"></i> Grade Submissions</h2>
+                <span class="record-count">{{ total_records }} records</span>
+            </div>
+            <div class="table-scroll">
+                <table id="validationTable">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable('lrn')">LRN <i class="fi fi-rr-arrow-small-down sort-icon"></i></th>
+                            <th onclick="sortTable('name')">Student Name <i class="fi fi-rr-arrow-small-down sort-icon"></i></th>
+                            <th onclick="sortTable('grade')">Grade Level <i class="fi fi-rr-arrow-small-down sort-icon"></i></th>
+                            <th onclick="sortTable('section')">Section <i class="fi fi-rr-arrow-small-down sort-icon"></i></th>
+                            <th onclick="sortTable('teacher')">Teacher <i class="fi fi-rr-arrow-small-down sort-icon"></i></th>
+                            <th onclick="sortTable('subject')">Subject <i class="fi fi-rr-arrow-small-down sort-icon"></i></th>
+                            <th onclick="sortTable('grade_val')">Final Grade <i class="fi fi-rr-arrow-small-down sort-icon"></i></th>
+                            <th onclick="sortTable('status')">Status <i class="fi fi-rr-arrow-small-down sort-icon"></i></th>
+                            <th onclick="sortTable('date')">Submitted <i class="fi fi-rr-arrow-small-down sort-icon"></i></th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="validationTableBody">
+                        {% if validation_items %}
+                            {% for item in validation_items %}
+                            <tr onclick="viewGradeDetails({{ item.id }})">
+                                <td style="font-size:.72rem;color:var(--text-secondary);">{{ item.lrn }}</td>
+                                <td><span class="student-name">{{ item.student_name }}</span></td>
+                                <td>Grade {{ item.grade_level|cut:"Grade " }}</td>
+                                <td>{{ item.section }}</td>
+                                <td>{{ item.teacher }}</td>
+                                <td>{{ item.subject }}</td>
+                                <td><span class="grade-value">{{ item.final_grade|floatformat:2 }}%</span></td>
+                                <td>
+                                    {% if item.status == 'Submitted' %}
+                                        <span class="pill pill-pending">Pending</span>
+                                    {% elif item.status == 'Validated' %}
+                                        <span class="pill pill-approved">Approved</span>
+                                    {% else %}
+                                        <span class="pill pill-returned">Returned</span>
+                                    {% endif %}
+                                </td>
+                                <td style="font-size:.72rem;color:var(--text-secondary);">{{ item.submitted_date }}</td>
+                                <td onclick="event.stopPropagation()">
+                                    <div class="dropdown-wrap">
+                                        <button class="dots-btn" onclick="toggleDropdown(event,this)"><i class="fi fi-rr-menu-dots-vertical"></i></button>
+                                        <div class="dropdown-menu">
+                                            <a onclick="viewGradeDetails({{ item.id }})"><i class="fi fi-rr-search"></i> View Details</a>
+                                            {% if item.status == 'Submitted' %}
+                                                <a onclick="quickApprove({{ item.id }})"><i class="fi fi-rr-check"></i> Quick Approve</a>
+                                                <a onclick="openRejectModal({{ item.id }})" class="text-danger"><i class="fi fi-rr-cross"></i> Reject</a>
+                                            {% endif %}
+                                            {% if item.status == 'Returned' %}
+                                                <a onclick="requestCorrection({{ item.id }})"><i class="fi fi-rr-undo-alt"></i> Request Correction</a>
+                                            {% endif %}
+                                            <div class="dropdown-div"></div>
+                                            <a onclick="printGradeRecord({{ item.id }})"><i class="fi fi-rr-print"></i> Print</a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="10">
+                                    <div class="empty-state">
+                                        <i class="fi fi-rr-check-circle" style="color:var(--secondary-green);"></i>
+                                        <h4>All Caught Up!</h4>
+                                        <p>No grade submissions match your current filters.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination" id="paginationControls">
+                <div class="page-info">Showing {{ validation_items|length }} of {{ total_records }} records</div>
+                <div class="page-controls" id="pageControls"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ GRADE DETAIL MODAL ═══════════════ -->
+<div class="modal-overlay" id="gradeModal">
+    <div class="modal">
+        <div class="modal-header"><h2><i class="fi fi-rr-document"></i> Grade Details</h2><button class="modal-close" onclick="closeModal('gradeModal')"><i class="fi fi-rr-cross-small"></i></button></div>
+        <div class="modal-body" id="gradeModalBody"></div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('gradeModal')">Close</button>
+            <button class="btn btn-green" id="approveBtn" style="display:none;" onclick="approveGrade()"><i class="fi fi-rr-check"></i> Approve</button>
+            <button class="btn btn-danger" id="rejectBtn" style="display:none;" onclick="openRejectModalFromDetails()"><i class="fi fi-rr-cross"></i> Reject</button>
+            <button class="btn btn-warning" id="correctionBtn" style="display:none;" onclick="requestCorrectionFromDetails()"><i class="fi fi-rr-undo-alt"></i> Request Correction</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ REJECT MODAL ═══════════════ -->
+<div class="modal-overlay" id="rejectModal">
+    <div class="modal">
+        <div class="modal-header"><h2><i class="fi fi-rr-cross-circle"></i> Reject Grade Submission</h2><button class="modal-close" onclick="closeModal('rejectModal')"><i class="fi fi-rr-cross-small"></i></button></div>
+        <div class="modal-body">
+            <div class="form-group"><label>Reason for Rejection *</label><textarea id="rejectReason" placeholder="Provide a reason for rejecting this grade submission..."></textarea></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('rejectModal')">Cancel</button>
+            <button class="btn btn-danger" onclick="confirmReject()"><i class="fi fi-rr-cross"></i> Confirm Rejection</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ CORRECTION MODAL ═══════════════ -->
+<div class="modal-overlay" id="correctionModal">
+    <div class="modal">
+        <div class="modal-header"><h2><i class="fi fi-rr-undo-alt"></i> Request Grade Correction</h2><button class="modal-close" onclick="closeModal('correctionModal')"><i class="fi fi-rr-cross-small"></i></button></div>
+        <div class="modal-body">
+            <div class="form-group"><label>Correction Note to Teacher *</label><textarea id="correctionNote" placeholder="Describe what needs to be corrected..."></textarea></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('correctionModal')">Cancel</button>
+            <button class="btn btn-warning" onclick="confirmCorrection()"><i class="fi fi-rr-paper-plane"></i> Send Correction Request</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){'use strict';
+
+// ═══════════════ SIDEBAR ═══════════════
+const sidebar=document.getElementById('sidebar'),foldBtn=document.getElementById('foldBtn'),foldIcon=document.getElementById('foldIcon'),mainContent=document.getElementById('mainContent'),mobileOverlay=document.getElementById('mobileOverlay');
+let collapsed=false;
+
+function adjustMargin(){mainContent.style.marginLeft=window.innerWidth>768?(collapsed?'var(--sidebar-collapsed-width)':'var(--sidebar-width)'):'0'}
+foldBtn.addEventListener('click',()=>{if(window.innerWidth<=768){const o=sidebar.classList.toggle('mobile-open');mobileOverlay.classList.toggle('show',o)}else{collapsed=!collapsed;sidebar.classList.toggle('collapsed',collapsed);foldIcon.className=collapsed?'fi fi-rr-angle-small-right':'fi fi-rr-angle-small-left';adjustMargin()}});
+mobileOverlay.addEventListener('click',()=>{sidebar.classList.remove('mobile-open');mobileOverlay.classList.remove('show')});
+window.addEventListener('resize',adjustMargin);adjustMargin();
+
+// ═══════════════ MODAL HELPERS ═══════════════
+function openModal(id){const e=document.getElementById(id);if(e){e.classList.add('open');document.body.style.overflow='hidden'}}
+function closeModal(id){const e=document.getElementById(id);if(e){e.classList.remove('open');document.body.style.overflow=''}}
+window.openModal=openModal;window.closeModal=closeModal;
+document.querySelectorAll('.modal-overlay').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov)closeModal(ov.id)}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>closeModal(m.id))});
+
+// ═══════════════ TOAST ═══════════════
+function showToast(msg,type='success'){const c=document.getElementById('toastContainer');if(!c)return;const t=document.createElement('div');t.className='toast '+type;const icons={success:'fi-rr-check-circle',error:'fi-rr-exclamation-circle',warning:'fi-rr-exclamation-triangle',info:'fi-rr-info-circle'};t.innerHTML='<i class="fi '+(icons[type]||icons.info)+'"></i> '+msg;c.appendChild(t);setTimeout(()=>{if(t.parentNode)t.remove()},4500);t.addEventListener('click',()=>t.remove())}window.showToast=showToast;
+
+// ═══════════════ DATE ═══════════════
+function updateDate(){const e=document.getElementById('currentDate');if(e)e.textContent=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}
+updateDate();setInterval(updateDate,60000);
+
+// ═══════════════ AUTO-REFRESH ═══════════════
+let refreshInterval=null,countdownInterval=null,countdown=30;
+const autoToggle=document.getElementById('autoRefreshToggle'),refreshStatus=document.getElementById('autoRefreshStatus');
+function startAutoRefresh(){stopAutoRefresh();countdown=30;refreshStatus.textContent='Refreshing in '+countdown+'s';countdownInterval=setInterval(()=>{countdown--;if(countdown>=0)refreshStatus.textContent='Refreshing in '+countdown+'s'},1000);refreshInterval=setInterval(()=>{if(document.visibilityState==='visible')location.reload()},30000)}
+function stopAutoRefresh(){if(refreshInterval){clearInterval(refreshInterval);refreshInterval=null}if(countdownInterval){clearInterval(countdownInterval);countdownInterval=null}refreshStatus.textContent=''}
+autoToggle.addEventListener('change',e=>{e.target.checked?startAutoRefresh():stopAutoRefresh()});
+
+// ═══════════════ CSRF ═══════════════
+function getCSRF(){const i=document.querySelector('input[name="csrfmiddlewaretoken"]');return i?i.value:''}
+function getCookie(n){let v=null;document.cookie.split(';').forEach(c=>{c=c.trim();if(c.substring(0,n.length+1)===(n+'='))v=decodeURIComponent(c.substring(n.length+1))});return v}
+
+// ═══════════════ FILTERS ═══════════════
+window.applyFilters=function(){const g=document.getElementById('gradeFilter').value,t=document.getElementById('teacherFilter').value,q=document.getElementById('quarterFilter').value,s=document.getElementById('statusFilter').value,search=document.getElementById('searchInput').value;let url="{% url 'registrars:grade-validation' %}?";if(g)url+='grade_level='+g+'&';if(t)url+='teacher_id='+t+'&';if(q)url+='quarter='+q+'&';if(s&&s!=='all')url+='status='+s+'&';if(search)url+='search='+encodeURIComponent(search)+'&';window.location.href=url};
+window.filterByStatus=function(s){document.getElementById('statusFilter').value=s;applyFilters()};
+
+// ═══════════════ DROPDOWNS ═══════════════
+let openDropdown=null;
+window.toggleDropdown=function(e,btn){e.preventDefault();e.stopPropagation();const dd=btn.parentElement.querySelector('.dropdown-menu');if(openDropdown&&openDropdown!==dd)openDropdown.classList.remove('open');dd.classList.toggle('open');openDropdown=dd.classList.contains('open')?dd:null};
+window.toggleExportDropdown=function(e){e.stopPropagation();document.getElementById('exportDropdown').classList.toggle('open')};
+document.addEventListener('click',()=>{if(openDropdown){openDropdown.classList.remove('open');openDropdown=null}document.getElementById('exportDropdown')?.classList.remove('open')});
+
+// ═══════════════ EXPORT FUNCTIONS ═══════════════
+function getTableData(){const t=document.getElementById('validationTable'),headers=[],rows=[];t.querySelectorAll('thead th').forEach((th,i)=>{if(i<9)headers.push(th.textContent.replace(/[▼▲]/g,'').trim())});t.querySelectorAll('tbody tr').forEach(row=>{if(row.querySelector('.empty-state'))return;const rd=[];row.querySelectorAll('td').forEach((td,i)=>{if(i<9){let txt=td.textContent.trim();if(i===7){const s=td.querySelector('.pill');if(s)txt=s.textContent}rd.push(txt)}});if(rd.length)rows.push(rd)});return{headers,rows}}
+
+window.exportToCSV=function(){const{headers,rows}=getTableData();if(!rows.length){showToast('No data to export','error');return}let csv='\uFEFF'+headers.join(',')+'\n';rows.forEach(r=>csv+=r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')+'\n');const b=new Blob([csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='grade_validation_'+new Date().toISOString().slice(0,10)+'.csv';a.click();showToast('CSV exported successfully')};
+
+window.exportToExcel=function(){const{headers,rows}=getTableData();if(!rows.length){showToast('No data to export','error');return}const ws=XLSX.utils.aoa_to_sheet([headers,...rows]),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Grade Validation');XLSX.writeFile(wb,'grade_validation_'+new Date().toISOString().slice(0,10)+'.xlsx');showToast('Excel exported successfully')};
+
+window.exportToPDF=function(){const{headers,rows}=getTableData();if(!rows.length){showToast('No data to export','error');return}const{doc}=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm'});doc.setFontSize(16);doc.text('Grade Validation Report',14,15);doc.setFontSize(10);doc.text('Generated: '+new Date().toLocaleString(),14,25);doc.text('School Year: {{ current_sy_label }}',14,32);doc.autoTable({head:[headers],body:rows,startY:40,theme:'striped',styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:[94,161,115],textColor:255}});doc.save('grade_validation_'+new Date().toISOString().slice(0,10)+'.pdf');showToast('PDF exported successfully')};
+
+window.printReport=function(){const{headers,rows}=getTableData();if(!rows.length){showToast('No data to print','error');return}const w=window.open('','_blank');w.document.write('<!DOCTYPE html><html><head><title>Grade Validation Report</title><style>body{font-family:Segoe UI,Arial,sans-serif;padding:20px}h1{color:#00072D}.meta{color:#718096;font-size:12px;margin-bottom:20px}table{width:100%;border-collapse:collapse}th{background:#5EA173;color:#fff;padding:10px;text-align:left;font-size:12px}td{padding:8px;border-bottom:1px solid #e9ecef;font-size:11px}.pill-pending{color:#856404}.pill-approved{color:#155724}.pill-returned{color:#721c24}</style></head><body><h1>Grade Validation Report</h1><div class="meta"><p>School Year: {{ current_sy_label }}</p><p>Generated: '+new Date().toLocaleString()+'</p><p>Total Records: '+rows.length+'</p></div><table><thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table></body></html>');w.document.close();w.print();showToast('Print dialog opened','info')};
+
+// ═══════════════ GRADE ACTIONS ═══════════════
+let currentId=null,rejectId=null,correctionId=null;
+
+window.viewGradeDetails=async function(id){currentId=id;try{const r=await fetch('/registrars/grades/detail/'+id+'/'),d=await r.json();if(d.success){const g=d.data;document.getElementById('gradeModalBody').innerHTML='<div class="detail-row"><div class="detail-label">LRN</div><div class="detail-value">'+(g.lrn||'—')+'</div></div><div class="detail-row"><div class="detail-label">Student Name</div><div class="detail-value"><strong>'+esc(g.student_name)+'</strong></div></div><div class="detail-row"><div class="detail-label">Grade & Section</div><div class="detail-value">'+esc(g.grade_level)+' — '+esc(g.section)+'</div></div><div class="detail-row"><div class="detail-label">Teacher</div><div class="detail-value">'+esc(g.teacher)+'</div></div><div class="detail-row"><div class="detail-label">Subject</div><div class="detail-value">'+esc(g.subject)+'</div></div><div class="detail-row"><div class="detail-label">Quarter</div><div class="detail-value">'+esc(g.quarter)+'</div></div><div class="detail-row"><div class="detail-label">Written Work</div><div class="detail-value">'+(g.written_work||'N/A')+'%</div></div><div class="detail-row"><div class="detail-label">Performance Task</div><div class="detail-value">'+(g.performance_task||'N/A')+'%</div></div><div class="detail-row"><div class="detail-label">Quarterly Assessment</div><div class="detail-value">'+(g.quarterly_assessment||'N/A')+'%</div></div><div class="detail-row"><div class="detail-label">Final Grade</div><div class="detail-value"><strong>'+g.final_grade+'%</strong></div></div><div class="detail-row"><div class="detail-label">Status</div><div class="detail-value">'+(g.status==='Submitted'?'<span class="pill pill-pending">Pending</span>':g.status==='Validated'?'<span class="pill pill-approved">Approved</span>':'<span class="pill pill-returned">Returned</span>')+'</div></div>'+(g.remarks?'<div class="detail-row"><div class="detail-label">Remarks</div><div class="detail-value">'+esc(g.remarks)+'</div></div>':'')+(g.validated_by?'<div class="detail-row"><div class="detail-label">Validated By</div><div class="detail-value">'+esc(g.validated_by)+'</div></div>':'');const ab=document.getElementById('approveBtn'),rb=document.getElementById('rejectBtn'),cb=document.getElementById('correctionBtn');if(g.status==='Submitted'){ab.style.display='inline-flex';rb.style.display='inline-flex';cb.style.display='none'}else if(g.status==='Returned'){ab.style.display='none';rb.style.display='none';cb.style.display='inline-flex'}else{ab.style.display='none';rb.style.display='none';cb.style.display='none'}openModal('gradeModal')}}catch(e){showToast('Error loading grade details','error')}};
+
+window.quickApprove=async function(id){if(!confirm('Approve this grade submission?'))return;await performAction(id,'approve','')};
+window.approveGrade=async function(){if(currentId&&confirm('Approve this grade submission?')){await performAction(currentId,'approve','');closeModal('gradeModal')}};
+
+window.openRejectModal=function(id){rejectId=id;document.getElementById('rejectReason').value='';openModal('rejectModal')};
+window.openRejectModalFromDetails=function(){if(currentId)openRejectModal(currentId)};
+window.confirmReject=async function(){const reason=document.getElementById('rejectReason').value.trim();if(!reason){showToast('Please provide a reason','warning');return}await performAction(rejectId||currentId,'reject',reason);closeModal('rejectModal')};
+
+window.requestCorrection=function(id){correctionId=id;document.getElementById('correctionNote').value='';openModal('correctionModal')};
+window.requestCorrectionFromDetails=function(){if(currentId)requestCorrection(currentId)};
+window.confirmCorrection=async function(){const note=document.getElementById('correctionNote').value.trim();if(!note){showToast('Please provide a correction note','warning');return}await performAction(correctionId||currentId,'correction',note);closeModal('correctionModal')};
+
+window.printGradeRecord=function(id){showToast('Printing grade record #'+id,'info')};
+
+async function performAction(id,action,remarks){try{const r=await fetch("{% url 'registrars:grade-action' %}",{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCSRF()},body:JSON.stringify({component_id:id,action:action,remarks:remarks})}),d=await r.json();if(d.success){showToast(d.message||'Action completed');closeModal('gradeModal');setTimeout(()=>location.reload(),1000)}else{showToast(d.error||'Error','error')}}catch(e){showToast('An error occurred','error')}}
+
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+// ═══════════════ TABLE SORTING ═══════════════
+let sortCol=null,sortAsc=true;
+window.sortTable=function(col){const table=document.getElementById('validationTable'),tbody=table.querySelector('tbody'),rows=Array.from(tbody.querySelectorAll('tr')).filter(r=>!r.querySelector('.empty-state'));const colMap={lrn:0,name:1,grade:2,section:3,teacher:4,subject:5,grade_val:6,status:7,date:8};const idx=colMap[col];if(idx===undefined)return;sortAsc=sortCol===col?!sortAsc:true;sortCol=col;rows.sort((a,b)=>{let va=a.cells[idx]?.textContent.trim()||'',vb=b.cells[idx]?.textContent.trim()||'';if(!isNaN(parseFloat(va))&&!isNaN(parseFloat(vb))){va=parseFloat(va);vb=parseFloat(vb)}return sortAsc?(va>vb?1:-1):(va<vb?-1:1)});rows.forEach(r=>tbody.appendChild(r));document.querySelectorAll('th').forEach(th=>th.classList.remove('sorted'));const th=table.querySelectorAll('th')[idx];if(th){th.classList.add('sorted');th.querySelector('.sort-icon').className='fi '+(sortAsc?'fi-rr-arrow-small-up':'fi-rr-arrow-small-down')+' sort-icon'}};
+
+})();
+</script>
+</body>
+</html>

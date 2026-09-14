@@ -1,0 +1,27 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Python environments and bytecode
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Local databases and generated application data
+db.sqlite3
+db.sqlite3.*
+*.sqbpro
+media/
+staticfiles/
+*.log
+
+# Generated machine-learning artifacts
+ml_engine/saved_models/*.pkl
+
+# Editor and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

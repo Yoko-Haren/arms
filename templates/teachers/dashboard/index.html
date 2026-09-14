@@ -1,0 +1,660 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard - Formify LIS</title>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', 'Century Gothic', sans-serif; }
+        :root {
+            --rich-black: #00072D; --dark-blue: #051650; --bangladesh-blue: #0A2472;
+            --caribbean-blue: #123499; --secondary-green: #5EA173; --gray-bg: #f5f7fb;
+            --border-color: #e9ecef; --text-primary: #2d3748; --text-secondary: #718096;
+            --sidebar-width: 280px; --sidebar-collapsed-width: 80px;
+            --warning-bg: #fff3cd; --warning-text: #856404;
+            --success-bg: #d4edda; --success-text: #155724;
+            --empty-state-color: #a0aec0;
+        }
+        body { background: var(--gray-bg); min-height: 100vh; }
+        .dashboard { display: flex; min-height: 100vh; }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: var(--sidebar-width); background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%);
+            color: white; position: fixed; height: 100vh; overflow-y: auto; overflow-x: hidden;
+            transition: width 0.3s ease; z-index: 100; display: flex; flex-direction: column;
+        }
+        .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
+        .sidebar.collapsed .sidebar-header h2,
+        .sidebar.collapsed .user-details,
+        .sidebar.collapsed .nav-link span,
+        .sidebar.collapsed .logo-area span { display: none; }
+        .sidebar.collapsed .sidebar-header { justify-content: center; padding: 1.5rem 0.5rem; }
+        .sidebar.collapsed .sidebar-header .logo-area { display: none; }
+        .sidebar.collapsed .user-info { justify-content: center; padding: 0.8rem; margin: 0 0.5rem 1.5rem; }
+        .sidebar.collapsed .nav-link { justify-content: center; padding: 0.85rem 0; gap: 0; }
+        .sidebar.collapsed .nav-link i { margin: 0; }
+        .sidebar.collapsed .user-avatar { margin: 0; }
+        .sidebar.collapsed .fold-btn { margin: 0 auto; }
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
+
+        .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .logo-area { display: flex; align-items: center; gap: 1rem; overflow: hidden; white-space: nowrap; }
+        .logo-area i.fi { font-size: 2rem; color: var(--secondary-green); flex-shrink: 0; display: inline-flex; align-items: center; }
+        .sidebar-header h2 { font-size: 1.1rem; font-weight: 600; line-height: 1.3; }
+        .sidebar-header h2 span { font-size: 0.7rem; opacity: 0.7; display: block; }
+        .fold-btn { background: rgba(255,255,255,0.1); border: none; color: white; cursor: pointer; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
+        .fold-btn:hover { background: rgba(255,255,255,0.25); }
+
+        .user-info { display: flex; align-items: center; gap: 1rem; padding: 1rem; margin: 1rem 1rem 1.5rem; background: rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; white-space: nowrap; }
+        .user-avatar { width: 45px; height: 45px; background: var(--secondary-green); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 700; color: var(--rich-black); flex-shrink: 0; }
+        .user-details h4 { font-size: 0.9rem; margin-bottom: 0.2rem; }
+        .user-details p { font-size: 0.7rem; opacity: 0.7; }
+
+        .nav-menu { list-style: none; padding: 0 0.75rem; flex: 1; }
+        .nav-item { margin-bottom: 0.25rem; }
+        .nav-link { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; color: rgba(255,255,255,0.8); text-decoration: none; border-radius: 10px; transition: all 0.3s; font-size: 0.9rem; cursor: pointer; white-space: nowrap; overflow: hidden; }
+        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
+        .nav-link i { width: 22px; font-size: 1.1rem; text-align: center; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+        .nav-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; }
+
+        /* ── Main Content ── */
+        .main-content { flex: 1; margin-left: var(--sidebar-width); padding: 1.5rem; transition: margin-left 0.3s; min-height: 100vh; }
+        .sidebar.collapsed ~ .main-content { margin-left: var(--sidebar-collapsed-width); }
+
+        .top-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; background: white; padding: 1rem 1.5rem; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .welcome h1 { font-size: 1.3rem; color: var(--rich-black); }
+        .welcome p { color: var(--text-secondary); font-size: 0.8rem; }
+        .top-bar-actions { display: flex; align-items: center; gap: 1rem; }
+        .date-display { display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.8rem; background: var(--gray-bg); padding: 0.4rem 0.8rem; border-radius: 8px; }
+
+        .notification-dropdown { position: relative; }
+        .notification-badge { position: relative; cursor: pointer; background: none; border: none; padding: 0.3rem; }
+        .notification-badge i.fi { font-size: 1.3rem; color: var(--text-primary); transition: color 0.2s; }
+        .notification-badge:hover i.fi { color: var(--secondary-green); }
+        .badge-count { position: absolute; top: -5px; right: -8px; background: #dc3545; color: white; font-size: 0.6rem; padding: 0.15rem 0.4rem; border-radius: 10px; min-width: 16px; text-align: center; font-weight: 700; }
+        .badge-count.zero { background: #adb5bd; }
+        .dropdown-menu { position: absolute; top: 45px; right: 0; width: 340px; background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 200; display: none; overflow: hidden; border: 1px solid var(--border-color); }
+        .dropdown-menu.show { display: block; animation: fadeInDown 0.25s ease; }
+        @keyframes fadeInDown { from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)} }
+        .dropdown-header { padding: 0.9rem 1.2rem; background: var(--gray-bg); border-bottom: 1px solid var(--border-color); font-weight: 700; font-size: 0.85rem; color: var(--rich-black); display: flex; justify-content: space-between; align-items: center; }
+        .notification-list { max-height: 380px; overflow-y: auto; }
+        .notification-item { display: flex; align-items: flex-start; gap: 0.8rem; padding: 0.9rem 1.2rem; border-bottom: 1px solid var(--border-color); transition: background 0.2s; }
+        .notification-item:hover { background: var(--gray-bg); }
+        .notification-item.unread { background: rgba(94,161,115,0.06); border-left: 3px solid var(--secondary-green); }
+        .notification-icon { width: 36px; height: 36px; background: rgba(94,161,115,0.12); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--secondary-green); flex-shrink: 0; }
+        .notification-content .notification-title { font-size: 0.8rem; font-weight: 600; color: var(--rich-black); }
+        .notification-content .notification-message { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; }
+        .notification-content .notification-time { font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.3rem; }
+        .dropdown-footer { padding: 0.7rem; text-align: center; border-top: 1px solid var(--border-color); background: var(--gray-bg); }
+        .dropdown-footer a { color: var(--secondary-green); font-size: 0.75rem; font-weight: 600; cursor: pointer; }
+
+        /* ── Poro Greeting ── */
+        .poro-greeting { background: linear-gradient(135deg, #f0f9f0, #e8f5e9); border-radius: 20px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(94,161,115,0.3); flex-wrap: wrap; gap: 1rem; }
+        .poro-greeting-content { display: flex; align-items: center; gap: 1rem; }
+        .character-icon { width: 50px; height: 50px; background: var(--secondary-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(94,161,115,0.3); animation: bounce 2s ease infinite; overflow: hidden; }
+        .character-icon img { width: 100%; height: 100%; object-fit: cover; }
+        @keyframes bounce { 0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)} }
+        .poro-message h3 { font-size: 1rem; color: var(--rich-black); margin-bottom: 0.2rem; }
+        .poro-message p { font-size: 0.75rem; color: var(--text-secondary); }
+
+        /* ── Stats Grid ── */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: white; padding: 1rem; border-radius: 16px; display: flex; align-items: center; gap: 0.8rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: transform 0.3s; cursor: pointer; }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-icon { width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+        .stat-icon.blue   { background: rgba(18,52,153,0.1); color: var(--caribbean-blue); }
+        .stat-icon.green  { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .stat-icon.orange { background: rgba(255,193,7,0.1);  color: #f39c12; }
+        .stat-icon.purple { background: rgba(128,0,128,0.1);  color: #9b59b6; }
+        .stat-info h3    { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.3px; }
+        .stat-info .value { font-size: 1.5rem; font-weight: 700; color: var(--rich-black); line-height: 1.2; }
+        .stat-info .sub   { font-size: 0.65rem; color: var(--text-secondary); }
+
+        /* ── Quick Actions ── */
+        .quick-actions { display: flex; gap: 0.8rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .btn-primary { background: var(--secondary-green); color: white; padding: 0.6rem 1.2rem; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; text-decoration: none; }
+        .btn-primary:hover { background: var(--caribbean-blue); }
+        .btn-primary:disabled, .btn-outline:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-outline { background: transparent; border: 2px solid var(--border-color); color: var(--text-primary); padding: 0.6rem 1.2rem; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; text-decoration: none; }
+        .btn-outline:hover:not(:disabled) { border-color: var(--secondary-green); color: var(--secondary-green); }
+
+        /* ── Two Col ── */
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+        .section-card { background: white; border-radius: 16px; padding: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .section-header h2 { font-size: 1rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
+        .section-header h2 i { color: var(--secondary-green); }
+        .view-all { color: var(--secondary-green); font-size: 0.75rem; cursor: pointer; text-decoration: none; }
+
+        /* ── Schedule ── */
+        .schedule-card { background: var(--gray-bg); padding: 0.8rem; border-radius: 12px; margin-bottom: 0.8rem; border-left: 3px solid var(--secondary-green); }
+        .schedule-time { color: var(--caribbean-blue); font-size: 0.7rem; font-weight: 600; }
+        .schedule-subject { font-size: 0.9rem; font-weight: 700; color: var(--rich-black); }
+        .schedule-class { font-size: 0.7rem; color: var(--text-secondary); }
+
+        /* ── Progress ── */
+        .progress-item { margin-bottom: 1rem; }
+        .progress-header { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.3rem; }
+        .progress-bar { height: 6px; background: var(--border-color); border-radius: 3px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--secondary-green); border-radius: 3px; transition: width 0.8s ease; }
+
+        /* ── Classes Grid ── */
+        .classes-container { background: white; border-radius: 16px; padding: 1rem; margin-bottom: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .class-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+        .class-item { background: var(--gray-bg); border-radius: 12px; padding: 1rem; cursor: pointer; transition: all 0.3s; }
+        .class-item:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .class-item-header { display: flex; justify-content: space-between; margin-bottom: 0.8rem; }
+        .class-name { font-size: 0.9rem; font-weight: 700; color: var(--rich-black); }
+        .class-role { color: white; padding: 0.2rem 0.5rem; border-radius: 20px; font-size: 0.6rem; }
+        .class-role.adviser { background: var(--secondary-green); }
+        .class-role.subject { background: var(--caribbean-blue); }
+        .class-detail-row { font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.3rem; }
+        .class-detail-row i { width: 16px; font-size: 0.7rem; color: var(--secondary-green); }
+        .class-actions-mini { display: flex; gap: 0.5rem; margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid var(--border-color); }
+        .mini-btn { flex: 1; background: white; border: 1px solid var(--border-color); padding: 0.3rem; border-radius: 6px; font-size: 0.65rem; text-align: center; cursor: pointer; }
+        .mini-btn:hover { background: var(--secondary-green); color: white; }
+
+        /* ── Analytics ── */
+        .three-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .analytics-card { background: white; border-radius: 16px; padding: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .analytics-title { font-size: 0.85rem; font-weight: 600; color: var(--rich-black); margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.4rem; }
+        .analytics-title i { color: var(--secondary-green); }
+        canvas { max-height: 160px; width: 100% !important; }
+        .chart-legend { display: flex; justify-content: center; gap: 0.5rem; margin-top: 0.5rem; font-size: 0.65rem; flex-wrap: wrap; }
+        .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 3px; }
+
+        /* ── Tasks ── */
+        .tasks-container { background: white; border-radius: 16px; padding: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .task-item { display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 0; border-bottom: 1px solid var(--border-color); }
+        .task-item:last-child { border-bottom: none; }
+        .task-info { display: flex; align-items: center; gap: 0.8rem; }
+        .task-icon { width: 32px; height: 32px; background: var(--gray-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--secondary-green); }
+        .task-details h4 { font-size: 0.85rem; color: var(--rich-black); }
+        .task-details p { font-size: 0.65rem; color: var(--text-secondary); }
+        .task-status { padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.65rem; font-weight: 600; }
+        .task-status.urgent   { background: var(--warning-bg); color: var(--warning-text); }
+        .task-status.today    { background: #e8f4fd; color: #0c5460; }
+        .task-status.upcoming { background: var(--success-bg); color: var(--success-text); }
+
+        /* ── Empty States ── */
+        .empty-container { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem 1.5rem; text-align: center; min-height: 180px; }
+        .empty-icon { font-size: 2.5rem; color: var(--empty-state-color); margin-bottom: 0.8rem; opacity: 0.6; }
+        .empty-title { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.3rem; }
+        .empty-message { font-size: 0.75rem; color: var(--empty-state-color); max-width: 280px; line-height: 1.5; }
+
+        /* ── Mobile ── */
+        .mobile-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
+        .mobile-overlay.show { display: block; }
+
+        @media (max-width: 1200px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .three-col  { grid-template-columns: 1fr; }
+            .class-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); width: var(--sidebar-width) !important; }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .main-content { margin-left: 0 !important; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .two-col    { grid-template-columns: 1fr; }
+            .class-grid { grid-template-columns: 1fr; }
+            .dropdown-menu { width: 290px; right: -20px; }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <!-- ═══════ SIDEBAR ═══════ -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <i class="fi fi-rr-graduation-cap"></i>
+                <h2>Formify <span>Learner Information System</span></h2>
+            </div>
+            <button class="fold-btn" id="foldBtn"><i class="fi fi-rr-angle-left"></i></button>
+        </div>
+        <div class="user-info">
+            <div class="user-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+            <div class="user-details">
+                <h4>{{ request.user.get_full_name }}</h4>
+                <p>Teacher</p>
+            </div>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="{% url 'teachers-dashboard' %}" class="nav-link active"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-classes' %}" class="nav-link"><i class="fi fi-rr-presentation"></i><span>My Classes</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-grades' %}" class="nav-link"><i class="fi fi-rr-pencil"></i><span>Grade Encoding</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-attendance' %}" class="nav-link"><i class="fi fi-rr-calendar-check"></i><span>Attendance</span></a></li>
+            <li class="nav-item"><a href="{% url 'teachers-forms' %}" class="nav-link"><i class="fi fi-rr-document"></i><span>School Forms</span></a></li>
+            <li class="nav-item"><a href="/teachers/reports/" class="nav-link"><i class="fi fi-rr-chart-line-up"></i><span>Reports</span></a></li>
+            <li class="nav-item"><a href="/teachers/schedule/" class="nav-link"><i class="fi fi-rr-calendar"></i><span>Schedule</span></a></li>
+        </ul>
+        <ul class="nav-menu nav-footer">
+            <li class="nav-item"><a href="{% url 'signout' %}" class="nav-link"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></li>
+        </ul>
+    </div>
+
+    <!-- ═══════ MAIN CONTENT ═══════ -->
+    <div class="main-content" id="mainContent">
+
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="welcome">
+                <h1 id="greetingText">Hello, {{ request.user.first_name }}!</h1>
+                <p>
+                    {% if has_data %}
+                        {{ total_classes }} class{{ total_classes|pluralize }} · {{ total_students }} student{{ total_students|pluralize }} · SY {{ request.user.username }}
+                    {% else %}
+                        No class assignments yet. Contact the Registrar to set up your schedule.
+                    {% endif %}
+                </p>
+            </div>
+            <div class="top-bar-actions">
+                <div class="date-display"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
+                <div class="notification-dropdown">
+                    <button class="notification-badge" id="notificationBtn">
+                        <i class="fi fi-rr-bell"></i>
+                        <span class="badge-count zero" id="notifCount">0</span>
+                    </button>
+                    <div class="dropdown-menu" id="notificationDropdown">
+                        <div class="dropdown-header"><span>Notifications</span><span style="font-size:0.7rem;opacity:0.7;">0 unread</span></div>
+                        <div class="notification-list">
+                            <div class="empty-container" style="min-height:120px;padding:1.5rem;">
+                                <i class="fi fi-rr-bell" style="font-size:2rem;color:var(--empty-state-color);opacity:0.5;"></i>
+                                <p style="font-size:0.75rem;color:var(--empty-state-color);margin-top:0.5rem;">No notifications yet</p>
+                            </div>
+                        </div>
+                        <div class="dropdown-footer"><a>Mark all as read</a></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Poro Banner -->
+        <div class="poro-greeting">
+            <div class="poro-greeting-content">
+                <div class="character-icon">
+                    <img src="{% static 'shared/poro/Poro.png' %}" alt="Poro"
+                        onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fi fi-rr-smile\' style=\'font-size:1.8rem;color:white;\'></i>';">
+                </div>
+                <div class="poro-message">
+                    <h3>Welcome back, {{ request.user.first_name }}!</h3>
+                    <p>
+                        {% if has_data %}
+                            You have {{ total_classes }} class{{ total_classes|pluralize }} and {{ total_students }} student{{ total_students|pluralize }} this school year.
+                            {% if pending_grades > 0 %}
+                                {{ pending_grades }} grade{{ pending_grades|pluralize }} pending submission.
+                            {% endif %}
+                        {% else %}
+                            Your dashboard is ready. Once the Registrar assigns your classes, your schedule, students, and tasks will appear here.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Grid — Django data -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon blue"><i class="fi fi-rr-presentation"></i></div>
+                <div class="stat-info">
+                    <h3>My Classes</h3>
+                    <div class="value">{{ total_classes }}</div>
+                    <div class="sub">{% if total_classes == 0 %}Awaiting assignment{% else %}Active this SY{% endif %}</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green"><i class="fi fi-rr-users"></i></div>
+                <div class="stat-info">
+                    <h3>Total Students</h3>
+                    <div class="value">{{ total_students }}</div>
+                    <div class="sub">{% if total_students == 0 %}No students assigned{% else %}Currently enrolled{% endif %}</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon orange"><i class="fi fi-rr-hourglass"></i></div>
+                <div class="stat-info">
+                    <h3>Pending Grades</h3>
+                    <div class="value">{{ pending_grades }}</div>
+                    <div class="sub">{% if pending_grades == 0 %}No grades to encode{% else %}Need submission{% endif %}</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon purple"><i class="fi fi-rr-check-circle"></i></div>
+                <div class="stat-info">
+                    <h3>Completion Rate</h3>
+                    <div class="value">{% if total_classes == 0 %}—{% else %}{{ completion_rate }}%{% endif %}</div>
+                    <div class="sub">{% if total_classes == 0 %}No data yet{% else %}Grades submitted{% endif %}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions — enabled only if has_data -->
+        <div class="quick-actions">
+            {% if has_data %}
+                <a href="/teachers/grades/" class="btn-primary"><i class="fi fi-rr-pencil"></i> Encode Grades</a>
+                <a href="/teachers/attendance/" class="btn-outline"><i class="fi fi-rr-calendar-check"></i> Take Attendance</a>
+                <a href="/teachers/forms/" class="btn-outline"><i class="fi fi-rr-file-pdf"></i> Generate Forms</a>
+            {% else %}
+                <button class="btn-primary" disabled><i class="fi fi-rr-pencil"></i> Encode Grades</button>
+                <button class="btn-outline" disabled><i class="fi fi-rr-calendar-check"></i> Take Attendance</button>
+                <button class="btn-outline" disabled><i class="fi fi-rr-file-pdf"></i> Generate Forms</button>
+            {% endif %}
+        </div>
+
+        <!-- Today's Schedule + Class Progress -->
+        <div class="two-col">
+
+            <!-- Today's Schedule -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h2><i class="fi fi-rr-calendar"></i> Today's Schedule
+                        <small style="font-size:0.65rem;color:var(--text-secondary);font-weight:400;">({{ current_day }})</small>
+                    </h2>
+                    <a href="/teachers/schedule/" class="view-all">View all</a>
+                </div>
+                {% if today_schedules %}
+                    {% for sched in today_schedules %}
+                    <div class="schedule-card">
+                        <div class="schedule-time">{{ sched.time_start|time:"h:i A" }} – {{ sched.time_end|time:"h:i A" }}</div>
+                        <div class="schedule-subject">{{ sched.class_assignment.subject.subject_name }}</div>
+                        <div class="schedule-class">
+                            {{ sched.class_assignment.section }} ·
+                            {% if sched.room %}{{ sched.room.room_name }}{% else %}No room assigned{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-container">
+                        <i class="fi fi-rr-calendar empty-icon"></i>
+                        <div class="empty-title">No Classes Today</div>
+                        <div class="empty-message">
+                            {% if has_data %}No classes scheduled for {{ current_day }}.{% else %}Your schedule will appear here once the Registrar assigns your classes.{% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Class Progress -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h2><i class="fi fi-rr-chart-line-up"></i> Grade Progress</h2>
+                    <a href="/teachers/grades/" class="view-all">View grades</a>
+                </div>
+                {% if class_progress %}
+                    {% for cp in class_progress %}
+                    <div class="progress-item">
+                        <div class="progress-header">
+                            <span>{{ cp.name }} — {{ cp.subject }}</span>
+                            <span>{{ cp.pct }}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width:{{ cp.pct }}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-container">
+                        <i class="fi fi-rr-chart-line-up empty-icon"></i>
+                        <div class="empty-title">No Grade Data</div>
+                        <div class="empty-message">Grade completion progress will be tracked here during the grading period.</div>
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
+
+        <!-- My Classes -->
+        <div class="classes-container">
+            <div class="section-header">
+                <h2><i class="fi fi-rr-users"></i> My Classes</h2>
+                <span class="view-all">{{ total_classes }} class{{ total_classes|pluralize }}</span>
+            </div>
+            {% if classes_data %}
+            <div class="class-grid">
+                {% for cls in classes_data %}
+                <div class="class-item">
+                    <div class="class-item-header">
+                        <div class="class-name">{{ cls.name }}</div>
+                        <span class="class-role {% if cls.is_advisory %}adviser{% else %}subject{% endif %}">
+                            {% if cls.is_advisory %}Adviser{% else %}Subject{% endif %}
+                        </span>
+                    </div>
+                    <div class="class-detail-row"><i class="fi fi-rr-book-alt"></i> {{ cls.subject }}</div>
+                    <div class="class-detail-row"><i class="fi fi-rr-users"></i> {{ cls.student_count }} student{{ cls.student_count|pluralize }}</div>
+                    <div class="class-actions-mini">
+                        <div class="mini-btn" onclick="location.href='/teachers/grades/'">Grades</div>
+                        <div class="mini-btn" onclick="location.href='/teachers/attendance/'">Attend.</div>
+                        <div class="mini-btn" onclick="location.href='/teachers/forms/'">Forms</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-container">
+                <i class="fi fi-rr-presentation empty-icon"></i>
+                <div class="empty-title">No Classes Assigned</div>
+                <div class="empty-message">Your assigned sections and subjects will appear here. Contact the School Registrar to set up your teaching load for the current school year.</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Analytics Charts -->
+        <div class="three-col">
+
+            <!-- Grade Distribution -->
+            <div class="analytics-card">
+                <div class="analytics-title"><i class="fi fi-rr-chart-pie"></i> Grade Distribution</div>
+                {% if has_data %}
+                <canvas id="gradeDistChart"></canvas>
+                <div class="chart-legend">
+                    <span><span class="legend-dot" style="background:#5EA173;"></span>90-100</span>
+                    <span><span class="legend-dot" style="background:#123499;"></span>80-89</span>
+                    <span><span class="legend-dot" style="background:#f39c12;"></span>75-79</span>
+                    <span><span class="legend-dot" style="background:#dc3545;"></span>Below 75</span>
+                </div>
+                {% else %}
+                <div class="empty-container" style="min-height:180px;">
+                    <i class="fi fi-rr-chart-pie empty-icon" style="font-size:2rem;"></i>
+                    <div class="empty-message">Charts will populate after grades are encoded</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Attendance Rate -->
+            <div class="analytics-card">
+                <div class="analytics-title"><i class="fi fi-rr-calendar-check"></i> Attendance (30 days)</div>
+                {% if has_data %}
+                <canvas id="attendanceChart"></canvas>
+                <div class="chart-legend">
+                    <span><span class="legend-dot" style="background:#5EA173;"></span>Present {{ attendance_stats.present_pct }}%</span>
+                    <span><span class="legend-dot" style="background:#dc3545;"></span>Absent {{ attendance_stats.absent_pct }}%</span>
+                    <span><span class="legend-dot" style="background:#f39c12;"></span>Late {{ attendance_stats.late_pct }}%</span>
+                </div>
+                {% else %}
+                <div class="empty-container" style="min-height:180px;">
+                    <i class="fi fi-rr-calendar-check empty-icon" style="font-size:2rem;"></i>
+                    <div class="empty-message">Charts will populate after attendance is recorded</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Weekly Performance -->
+            <div class="analytics-card">
+                <div class="analytics-title"><i class="fi fi-rr-chart-line-up"></i> Weekly Performance</div>
+                {% if has_data %}
+                <canvas id="weeklyChart"></canvas>
+                {% else %}
+                <div class="empty-container" style="min-height:180px;">
+                    <i class="fi fi-rr-chart-line-up empty-icon" style="font-size:2rem;"></i>
+                    <div class="empty-message">Charts will populate with grade trends over time</div>
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+
+        <!-- Upcoming Tasks -->
+        <div class="tasks-container">
+            <div class="section-header">
+                <h2><i class="fi fi-rr-clock"></i> Upcoming Tasks</h2>
+                <span class="view-all">0 tasks</span>
+            </div>
+            <div class="empty-container">
+                <i class="fi fi-rr-clock empty-icon"></i>
+                <div class="empty-title">No Upcoming Tasks</div>
+                <div class="empty-message">Deadlines for grade submission, form completion, and meetings will appear here once the academic calendar is configured.</div>
+            </div>
+        </div>
+
+    </div><!-- /.main-content -->
+</div><!-- /.dashboard -->
+
+<script>
+(function() {
+    'use strict';
+
+    // ── Django context data passed to JS ──
+    const HAS_DATA         = {{ has_data|yesno:"true,false" }};
+    const GRADE_DIST       = {{ grade_dist|safe }};
+    const ATTENDANCE_STATS = {{ attendance_stats|safe }};
+    const WEEKLY_LABELS    = {{ weekly_labels|safe }};
+    const WEEKLY_DATA      = {{ weekly_data|safe }};
+
+    // ── Sidebar ──
+    const sidebar     = document.getElementById('sidebar');
+    const foldBtn     = document.getElementById('foldBtn');
+    const mainContent = document.getElementById('mainContent');
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    let collapsed = false;
+
+    function adjustMargin() {
+        if (window.innerWidth > 768)
+            mainContent.style.marginLeft = collapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)';
+        else mainContent.style.marginLeft = '0';
+    }
+
+    foldBtn.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+            const open = sidebar.classList.toggle('mobile-open');
+            mobileOverlay.classList.toggle('show', open);
+        } else {
+            collapsed = !collapsed;
+            sidebar.classList.toggle('collapsed', collapsed);
+            foldBtn.querySelector('i').className = collapsed ? 'fi fi-rr-angle-right' : 'fi fi-rr-angle-left';
+            adjustMargin();
+        }
+    });
+
+    mobileOverlay.addEventListener('click', () => {
+        sidebar.classList.remove('mobile-open');
+        mobileOverlay.classList.remove('show');
+    });
+
+    window.addEventListener('resize', adjustMargin);
+    adjustMargin();
+
+    // ── Notification dropdown ──
+    document.getElementById('notificationBtn').addEventListener('click', e => {
+        e.stopPropagation();
+        document.getElementById('notificationDropdown').classList.toggle('show');
+    });
+    document.addEventListener('click', () => document.getElementById('notificationDropdown').classList.remove('show'));
+
+    // ── Greeting & date ──
+    function updateGreeting() {
+        const h = new Date().getHours();
+        const g = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+        const name = '{{ request.user.first_name|escapejs }}' || 'Teacher';
+        document.getElementById('greetingText').textContent = `${g}, ${name}!`;
+    }
+    function updateDate() {
+        document.getElementById('currentDate').textContent =
+            new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+    }
+    updateGreeting(); updateDate();
+    setInterval(updateDate, 60000);
+    setInterval(updateGreeting, 60000);
+
+    // ── Charts (only if has_data) ──
+    if (HAS_DATA) {
+        Chart.defaults.font.family = "'Segoe UI', sans-serif";
+        Chart.defaults.font.size   = 11;
+
+        // Grade Distribution — Doughnut
+        const gdCtx = document.getElementById('gradeDistChart');
+        if (gdCtx) {
+            new Chart(gdCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['90-100', '80-89', '75-79', 'Below 75'],
+                    datasets: [{
+                        data: [GRADE_DIST['90-100'], GRADE_DIST['80-89'], GRADE_DIST['75-79'], GRADE_DIST['Below 75']],
+                        backgroundColor: ['#5EA173','#123499','#f39c12','#dc3545'],
+                        borderWidth: 0,
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } }, cutout: '65%' }
+            });
+        }
+
+        // Attendance — Doughnut
+        const attCtx = document.getElementById('attendanceChart');
+        if (attCtx) {
+            new Chart(attCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Present', 'Absent', 'Late'],
+                    datasets: [{
+                        data: [ATTENDANCE_STATS.present_pct, ATTENDANCE_STATS.absent_pct, ATTENDANCE_STATS.late_pct],
+                        backgroundColor: ['#5EA173','#dc3545','#f39c12'],
+                        borderWidth: 0,
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } }, cutout: '65%' }
+            });
+        }
+
+        // Weekly Performance — Line
+        const wkCtx = document.getElementById('weeklyChart');
+        if (wkCtx) {
+            new Chart(wkCtx, {
+                type: 'line',
+                data: {
+                    labels: WEEKLY_LABELS,
+                    datasets: [{
+                        label: 'Avg Grade',
+                        data: WEEKLY_DATA,
+                        borderColor: '#5EA173',
+                        backgroundColor: 'rgba(94,161,115,0.12)',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#5EA173',
+                        tension: 0.4,
+                        fill: true,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { min: 60, max: 100, grid: { color: '#f0f0f0' }, ticks: { font: { size: 10 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+    }
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,737 @@
+{% extends 'admin/base.html' %}
+{% load static %}
+
+{% block title %}School Years{% endblock %}
+{% block page_title %}School Year Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ========== LAYOUT ========== */
+    .sy-layout {
+        display: grid;
+        grid-template-columns: 420px 1fr;
+        gap: 1.5rem;
+        align-items: start;
+    }
+    @media (max-width: 1100px) { .sy-layout { grid-template-columns: 1fr; } }
+
+    /* ========== FORM CARD ========== */
+    .form-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--gray-200);
+    }
+    .form-card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.85rem;
+        border-bottom: 2px solid var(--gray-100);
+    }
+    .form-card-header-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: var(--radius-xs);
+        background: var(--primary-gradient);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.95rem;
+    }
+    .form-card-header h6 {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin: 0;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    .form-label-sm {
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 600;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.3rem;
+    }
+    .form-label-sm.required::after {
+        content: ' *';
+        color: var(--danger);
+    }
+
+    .form-input,
+    .form-select-input {
+        width: 100%;
+        padding: 0.6rem 0.75rem;
+        border: 2px solid var(--gray-300);
+        border-radius: var(--radius-sm);
+        font-size: 0.8rem;
+        font-family: inherit;
+        background: var(--gray-50);
+        color: var(--gray-700);
+        transition: var(--transition);
+    }
+    .form-input:focus,
+    .form-select-input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(18,52,153,0.08);
+        background: white;
+    }
+    .form-input::placeholder { color: #adb5bd; }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+    @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: var(--gray-50);
+        border-radius: var(--radius-sm);
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    .checkbox-group:hover { background: var(--gray-100); }
+    .checkbox-group input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--primary);
+        cursor: pointer;
+    }
+    .checkbox-label {
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: var(--gray-700);
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .btn-submit {
+        width: 100%;
+        padding: 0.7rem;
+        border: none;
+        border-radius: var(--radius-sm);
+        background: var(--primary-gradient);
+        color: white;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        font-family: inherit;
+        margin-top: 0.5rem;
+    }
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(18,52,153,0.35);
+    }
+
+    /* ========== ALERT CARD ========== */
+    .warning-alert-card {
+        background: linear-gradient(135deg, #fffbf8, var(--warning-light));
+        border-radius: var(--radius-md);
+        padding: 1.2rem 1.25rem;
+        border: 1px solid rgba(230,81,0,0.2);
+        border-left: 4px solid var(--warning);
+        margin-top: 1.25rem;
+    }
+    .warning-alert-card .alert-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--warning);
+        margin-bottom: 0.5rem;
+    }
+    .warning-alert-card ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        font-size: 0.75rem;
+        color: var(--gray-700);
+    }
+    .warning-alert-card ul li {
+        padding: 0.2rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .warning-alert-card ul li::before {
+        content: '';
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--warning);
+        flex-shrink: 0;
+    }
+    .more-hint-text {
+        font-size: 0.7rem;
+        color: var(--gray-500);
+        font-weight: 500;
+        margin-top: 0.3rem;
+    }
+
+    /* ========== RIGHT COLUMN FILTER ========== */
+    .inline-filter-card {
+        background: white;
+        border-radius: var(--radius-md);
+        padding: 0.9rem 1.2rem;
+        box-shadow: var(--shadow-xs);
+        border: 1px solid var(--gray-200);
+        margin-bottom: 1.25rem;
+    }
+    .inline-filter-row {
+        display: flex;
+        gap: 0.75rem;
+        align-items: end;
+    }
+    @media (max-width: 480px) { .inline-filter-row { flex-direction: column; } }
+
+    .filter-group-inline { flex: 1; min-width: 0; }
+    .filter-group-inline label {
+        display: block;
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.3rem;
+    }
+    .filter-select-inline {
+        width: 100%;
+        padding: 0.55rem 0.7rem;
+        border: 2px solid var(--gray-300);
+        border-radius: var(--radius-sm);
+        font-size: 0.78rem;
+        font-family: inherit;
+        background: var(--gray-50);
+        color: var(--gray-700);
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    .filter-select-inline:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+
+    .btn-filter-sm {
+        padding: 0.55rem 1.1rem;
+        border: none;
+        border-radius: var(--radius-sm);
+        background: var(--primary-gradient);
+        color: white;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        font-family: inherit;
+        white-space: nowrap;
+    }
+    .btn-filter-sm:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(18,52,153,0.3);
+    }
+
+    /* ========== SY CARDS ========== */
+    .sy-list-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .sy-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+        transition: var(--transition);
+    }
+    .sy-card:hover {
+        box-shadow: var(--shadow-md);
+    }
+    .sy-card.current-highlight {
+        border-color: var(--success);
+        box-shadow: 0 2px 16px rgba(46,125,50,0.1);
+    }
+
+    .sy-card-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--gray-100);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    .sy-card-title {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+    .sy-card-title h6 {
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .current-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.2rem 0.65rem;
+        border-radius: 20px;
+        font-size: 0.62rem;
+        font-weight: 700;
+        background: var(--success-light);
+        color: var(--success);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .sy-card-subtitle {
+        font-size: 0.72rem;
+        color: var(--gray-500);
+    }
+
+    .sy-card-actions {
+        display: flex;
+        gap: 0.35rem;
+        flex-wrap: wrap;
+    }
+    .btn-sy-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.4rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.68rem;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1.5px solid var(--gray-300);
+        background: white;
+        color: var(--gray-500);
+        cursor: pointer;
+        transition: var(--transition);
+        font-family: inherit;
+        white-space: nowrap;
+    }
+    .btn-sy-action:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-xs);
+    }
+    .btn-sy-action.info-action:hover {
+        border-color: var(--info);
+        background: var(--info-light);
+        color: var(--info);
+    }
+    .btn-sy-action.secondary-action:hover {
+        border-color: var(--purple);
+        background: var(--purple-light);
+        color: var(--purple);
+    }
+    .btn-sy-action.danger-action:hover {
+        border-color: var(--danger);
+        background: var(--danger-light);
+        color: var(--danger);
+    }
+
+    .sy-card-body {
+        padding: 1rem 1.25rem;
+    }
+    .sy-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    @media (max-width: 768px) { .sy-detail-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .sy-detail-grid { grid-template-columns: 1fr; } }
+
+    .sy-detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+    }
+    .sy-detail-label {
+        font-size: 0.62rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+    }
+    .sy-detail-value {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--gray-700);
+    }
+
+    .sy-status-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.75rem;
+    }
+    .status-pill-sm {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.25rem 0.7rem;
+        border-radius: 20px;
+        font-size: 0.68rem;
+        font-weight: 600;
+    }
+    .status-pill-sm.active-status { background: var(--success-light); color: var(--success); }
+    .status-pill-sm.completed-status { background: #f5f5f5; color: #757575; }
+    .status-pill-sm.upcoming-status { background: var(--info-light); color: var(--info); }
+    .status-pill-sm.planning-status { background: var(--warning-light); color: var(--warning); }
+
+    .quarter-count-badge {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--gray-500);
+    }
+    .quarter-count-badge strong { color: var(--gray-700); }
+
+    /* ========== QUARTER TAGS ========== */
+    .quarter-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-top: 0.4rem;
+    }
+    .quarter-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.3rem 0.65rem;
+        border-radius: 20px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        background: var(--gray-100);
+        color: var(--gray-700);
+    }
+    .quarter-tag.active-quarter {
+        background: var(--success-light);
+        color: var(--success);
+    }
+    .quarter-tag.missing-quarter {
+        background: var(--danger-light);
+        color: var(--danger);
+    }
+    .quarter-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+    }
+    .quarter-dot.active-dot { background: var(--success); }
+    .quarter-dot.missing-dot { background: var(--danger); }
+    .quarter-dot.default-dot { background: var(--gray-500); }
+
+    .no-quarters-text {
+        font-size: 0.72rem;
+        color: #adb5bd;
+        font-style: italic;
+    }
+
+    /* ========== EMPTY STATE ========== */
+    .empty-state-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--gray-200);
+        text-align: center;
+        padding: 3rem 1.5rem;
+    }
+    .empty-state-circle {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: var(--gray-100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.25rem;
+        font-size: 2rem;
+        color: #bdbdbd;
+    }
+    .empty-state-card h5 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin-bottom: 0.4rem;
+    }
+    .empty-state-card p {
+        font-size: 0.8rem;
+        color: var(--gray-500);
+        margin: 0;
+    }
+
+    /* ========== CURRENT SY SUMMARY ========== */
+    .success-summary-card {
+        background: linear-gradient(135deg, #f8fdf8, var(--success-light));
+        border-radius: var(--radius-md);
+        padding: 1rem 1.25rem;
+        border: 1px solid rgba(46,125,50,0.2);
+        border-left: 4px solid var(--success);
+        margin-top: 1.25rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        font-size: 0.78rem;
+        color: var(--gray-700);
+    }
+    .success-summary-card i { color: var(--success); font-size: 1rem; margin-top: 0.1rem; }
+    .success-summary-card strong { font-weight: 700; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="sy-layout">
+
+    <!-- LEFT COLUMN: Create Form -->
+    <div>
+        <div class="form-card">
+            <div class="form-card-header">
+                <div class="form-card-header-icon">
+                    <i class="fas fa-plus-circle"></i>
+                </div>
+                <h6>Create New School Year</h6>
+            </div>
+
+            <form method="POST">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label class="form-label-sm required">School</label>
+                    <select name="school" class="form-select-input" required>
+                        <option value="">Select School...</option>
+                        {% for s in schools %}
+                        <option value="{{ s.id }}">{{ s.school_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label-sm required">Year Label</label>
+                    <input type="text" name="year_label" class="form-input" placeholder="e.g., SY 2026-2027" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label-sm required">Year Start</label>
+                        <input type="number" name="year_start" class="form-input" placeholder="2026" min="2000" max="2100" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-sm required">Year End</label>
+                        <input type="number" name="year_end" class="form-input" placeholder="2027" min="2000" max="2100" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label-sm required">Date Start</label>
+                        <input type="date" name="date_start" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label-sm required">Date End</label>
+                        <input type="date" name="date_end" class="form-input" required>
+                    </div>
+                </div>
+
+                <label class="checkbox-group">
+                    <input type="checkbox" name="auto_create_quarters" checked>
+                    <span class="checkbox-label">Auto-create 4 quarters</span>
+                </label>
+
+                <label class="checkbox-group">
+                    <input type="checkbox" name="is_current">
+                    <span class="checkbox-label">Set as Current School Year</span>
+                </label>
+
+                <button type="submit" class="btn-submit">
+                    <i class="fas fa-save"></i> Create School Year
+                </button>
+            </form>
+        </div>
+
+        <!-- Schools Without SY Alert -->
+        {% if schools_without_sy %}
+        <div class="warning-alert-card">
+            <div class="alert-header">
+                <i class="fas fa-exclamation-triangle"></i>
+                {{ schools_without_sy|length }} School{{ schools_without_sy|length|pluralize }} Missing School Year
+            </div>
+            <ul>
+                {% for s in schools_without_sy|slice:":5" %}
+                <li>{{ s.school_name }}</li>
+                {% endfor %}
+            </ul>
+            {% if schools_without_sy|length > 5 %}
+            <div class="more-hint-text">+ {{ schools_without_sy|length|add:"-5" }} more school{{ schools_without_sy|length|add:"-5"|pluralize }}</div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- RIGHT COLUMN: School Years List -->
+    <div>
+        <!-- Filter -->
+        <div class="inline-filter-card">
+            <form method="GET">
+                <div class="inline-filter-row">
+                    <div class="filter-group-inline">
+                        <label><i class="fas fa-building"></i> Filter by School</label>
+                        <select name="school" class="filter-select-inline" onchange="this.form.submit()">
+                            <option value="">All Schools</option>
+                            {% for s in schools %}
+                            <option value="{{ s.id }}" {% if selected_school|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>
+                                {{ s.school_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-filter-sm">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- School Years List -->
+        {% if school_years %}
+        <div class="sy-list-stack">
+            {% for sy in school_years %}
+            <div class="sy-card {% if sy.is_current %}current-highlight{% endif %}">
+                <div class="sy-card-header">
+                    <div class="sy-card-title">
+                        <h6>
+                            {{ sy.year_label }}
+                            {% if sy.is_current %}
+                            <span class="current-tag"><i class="fas fa-star"></i> Current</span>
+                            {% endif %}
+                        </h6>
+                        <span class="sy-card-subtitle">{{ sy.school.school_name }}</span>
+                    </div>
+                    <div class="sy-card-actions">
+                        {% if not sy.is_current %}
+                        <a href="{% url 'admin_panel:school_year_set_current' sy.id %}"
+                           class="btn-sy-action info-action"
+                           onclick="return confirm('Set {{ sy.year_label|escapejs }} as current?')">
+                            <i class="fas fa-check-circle"></i> Set Current
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'admin_panel:quarter_bulk_create' sy.id %}"
+                           class="btn-sy-action secondary-action"
+                           onclick="return confirm('Create quarters for {{ sy.year_label|escapejs }}?')">
+                            <i class="fas fa-clock"></i> Quarters
+                        </a>
+                        <form method="POST" action="{% url 'admin_panel:school_year_delete' sy.id %}" style="display:contents;" onsubmit="return confirm('Delete {{ sy.year_label|escapejs }}? This cannot be undone.')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-sy-action danger-action">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="sy-card-body">
+                    <div class="sy-detail-grid">
+                        <div class="sy-detail-item">
+                            <span class="sy-detail-label">Year</span>
+                            <span class="sy-detail-value">{{ sy.year_start }} – {{ sy.year_end }}</span>
+                        </div>
+                        <div class="sy-detail-item">
+                            <span class="sy-detail-label">Date Start</span>
+                            <span class="sy-detail-value">{{ sy.date_start|date:"M d, Y" }}</span>
+                        </div>
+                        <div class="sy-detail-item">
+                            <span class="sy-detail-label">Date End</span>
+                            <span class="sy-detail-value">{{ sy.date_end|date:"M d, Y" }}</span>
+                        </div>
+                        <div class="sy-detail-item">
+                            <span class="sy-detail-label">Quarters</span>
+                            <span class="sy-detail-value">{{ sy.quarter_count|default:0 }} / 4</span>
+                        </div>
+                    </div>
+
+                    <div class="sy-status-row">
+                        <span class="status-pill-sm {% if sy.status == 'Active' %}active-status{% elif sy.status == 'Completed' %}completed-status{% elif sy.status == 'Upcoming' %}upcoming-status{% else %}planning-status{% endif %}">
+                            <i class="fas fa-{% if sy.status == 'Active' %}play-circle{% elif sy.status == 'Completed' %}check-circle{% elif sy.status == 'Upcoming' %}clock{% else %}cog{% endif %}"></i>
+                            {{ sy.status }}
+                        </span>
+                    </div>
+
+                    <div>
+                        {% if sy.quarters.all %}
+                        <div class="quarter-tags">
+                            {% for q in sy.quarters.all %}
+                            <span class="quarter-tag {% if q.is_current_quarter %}active-quarter{% endif %}">
+                                <span class="quarter-dot {% if q.is_current_quarter %}active-dot{% else %}default-dot{% endif %}"></span>
+                                {{ q.quarter_label }} ({{ q.date_start|date:"M d" }} – {{ q.date_end|date:"M d" }})
+                            </span>
+                            {% endfor %}
+                            {% if sy.quarter_count < 4 %}
+                            <span class="quarter-tag missing-quarter">
+                                <span class="quarter-dot missing-dot"></span>
+                                Missing {{ 4|add:"-"|add:sy.quarter_count }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <span class="no-quarters-text">No quarters created yet</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state-card">
+            <div class="empty-state-circle">
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+            <h5>No School Years Found</h5>
+            <p>Create a school year using the form.</p>
+        </div>
+        {% endif %}
+
+        <!-- Current School Years Summary -->
+        {% if current_school_years %}
+        <div class="success-summary-card">
+            <i class="fas fa-info-circle"></i>
+            <div>
+                <strong>Current School Years:</strong>
+                {% for sy in current_school_years %}
+                    {{ sy.school.school_name }}: {{ sy.year_label }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
