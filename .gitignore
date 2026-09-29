@@ -25,3 +25,12 @@ ml_engine/saved_models/*.pkl
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local runtime / data files
+sqlite-data.json
+*.sqlite
+*.sqlite3
+
+# Supabase local state (keep config/migrations tracked)
+supabase/.temp/
+supabase/.branches/
