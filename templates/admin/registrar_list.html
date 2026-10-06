@@ -1,0 +1,24 @@
+{% extends 'admin/base.html' %}
+{% block title %}Registrars{% endblock %}
+{% block page_title %}Registrar Management{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div><strong>{{ active_count }}</strong> active · {{ inactive_count }} inactive</div>
+  <a class="btn btn-primary" href="{% url 'admin_panel:registrar_create' %}"><i class="fas fa-plus"></i> New Registrar</a>
+</div>
+<form class="card card-body mb-3" method="get">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-6"><label class="form-label" for="search">Search</label><input class="form-control" id="search" name="search" value="{{ search }}" placeholder="Name, email, employee ID, or school"></div>
+    <div class="col-md-3"><label class="form-label" for="status">Status</label><select class="form-select" name="status" id="status"><option value="active" {% if status == 'active' %}selected{% endif %}>Active</option><option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option><option value="all" {% if status == 'all' %}selected{% endif %}>All</option></select></div>
+    <div class="col-md-3"><button class="btn btn-outline-primary w-100">Filter</button></div>
+  </div>
+</form>
+<div class="card"><div class="table-responsive"><table class="table table-hover mb-0">
+  <thead><tr><th>Name</th><th>Email</th><th>School</th><th>Employee ID</th><th>Status</th></tr></thead>
+  <tbody>{% for registrar in registrars %}<tr>
+    <td>{{ registrar.full_name }}</td><td>{{ registrar.user.email }}</td><td>{{ registrar.school.school_name|default:'—' }}</td><td>{{ registrar.employee_number|default:'—' }}</td>
+    <td>{% if registrar.is_active and registrar.user.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}</td>
+  </tr>{% empty %}<tr><td colspan="5" class="text-center py-4">No registrars found.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% if registrars.has_other_pages %}<nav class="mt-3"><ul class="pagination">{% if registrars.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ registrars.previous_page_number }}&search={{ search|urlencode }}&status={{ status }}">Previous</a></li>{% endif %}<li class="page-item disabled"><span class="page-link">Page {{ registrars.number }} of {{ registrars.paginator.num_pages }}</span></li>{% if registrars.has_next %}<li class="page-item"><a class="page-link" href="?page={{ registrars.next_page_number }}&search={{ search|urlencode }}&status={{ status }}">Next</a></li>{% endif %}</ul></nav>{% endif %}
+{% endblock %}

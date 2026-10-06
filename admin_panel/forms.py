@@ -1,12 +1,38 @@
 from django import forms
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
+from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.db.models import Q
 import json
+import re
 
 # ===== USE REAL MODELS =====
 from academics.models import School, GradeLevel, SchoolYear, Quarter, GradingSchema
 from accounts.models import UserProfile
+
+
+# =============================================================================
+# GRADING PERIODS — driven by School.period_type
+# =============================================================================
+
+PERIOD_CONFIG = {
+    'QUARTERLY': {'count': 4, 'prefix': 'Q', 'noun': 'Quarter', 'plural': 'Quarters'},
+    'TRIMESTRAL': {'count': 3, 'prefix': 'T', 'noun': 'Trimester', 'plural': 'Trimesters'},
+    'SEMESTRAL': {'count': 2, 'prefix': 'S', 'noun': 'Semester', 'plural': 'Semesters'},
+}
+
+
+def period_config(school):
+    """Grading-period settings (count, label prefix, wording) for a school."""
+    return PERIOD_CONFIG.get(school.period_type, PERIOD_CONFIG['QUARTERLY'])
+
+
+def default_registrar_account(school):
+    """Default registrar login for a school: <short name>.registrar@<email domain>."""
+    slug = re.sub(r'[^a-z0-9]+', '', (school.short_name or '').lower())
+    domain = (school.email_domain or '').strip().lower().lstrip('@')
+    if not slug or not domain:
+        return None
+    return f'{slug}.registrar@{domain}'
 
 
 # =============================================================================
@@ -77,10 +103,7 @@ class SchoolForm(forms.ModelForm):
                 ('GPA_5', '0.0 - 5.0 GPA'),
                 ('LETTER', 'A - F Letter Grades'),
             ], attrs={'class': 'form-select'}),
-            'period_type': forms.Select(choices=[   
-                ('QUARTERLY', 'Quarterly'),
-                ('SEMESTRAL', 'Semestral'),
-            ], attrs={'class': 'form-select'}),
+            'period_type': forms.Select(attrs={'class': 'form-select'}),
             'passing_grade': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '100'}),
             'quarters_count': forms.NumberInput(attrs={'class': 'form-control', 'min': '2', 'max': '4'}),
             'email_domain': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '@school.edu (optional)'}),
@@ -103,6 +126,18 @@ class SchoolForm(forms.ModelForm):
             'theme_color': 'Theme Color',
             'is_active': 'Active',
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The count always follows the period type (see clean()).
+        self.fields['quarters_count'].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        period_type = cleaned_data.get('period_type')
+        if period_type in PERIOD_CONFIG:
+            cleaned_data['quarters_count'] = PERIOD_CONFIG[period_type]['count']
+        return cleaned_data
 
     def clean_school_id(self):
         school_id = self.cleaned_data.get('school_id')
@@ -267,14 +302,14 @@ class PrincipalCreationForm(forms.Form):
     )
 
     def clean_username(self):
-        username = self.cleaned_data.get('username')
-        if User.objects.filter(username=username).exists():
+        username = self.cleaned_data.get('username', '').strip().lower()
+        if User.objects.filter(username__iexact=username).exists():
             raise ValidationError('This username is already taken.')
         return username
 
     def clean_email(self):
-        email = self.cleaned_data.get('email')
-        if User.objects.filter(email=email).exists():
+        email = self.cleaned_data.get('email', '').strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
             raise ValidationError('This email is already in use.')
         return email
 
@@ -297,49 +332,81 @@ class PrincipalCreationForm(forms.Form):
         return cleaned_data
 
 
+class PrincipalEditForm(forms.Form):
+    """Edit an existing principal's account details and school assignment."""
+
+    first_name = forms.CharField(max_length=100)
+    last_name = forms.CharField(max_length=100)
+    username = forms.CharField(max_length=150)
+    email = forms.EmailField()
+    school = forms.ModelChoiceField(queryset=School.objects.none())
+    employee_id = forms.CharField(max_length=50, required=False)
+    designation = forms.CharField(max_length=150, required=False)
+
+    def __init__(self, *args, principal, **kwargs):
+        self.principal = principal
+        super().__init__(*args, **kwargs)
+        # Keep the current school selectable even if it has been deactivated.
+        self.fields['school'].queryset = School.objects.filter(
+            Q(is_active=True) | Q(pk=principal.school_id)
+        )
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username', '').strip().lower()
+        if User.objects.filter(username__iexact=username).exclude(pk=self.principal.user_id).exists():
+            raise ValidationError('This username is already taken.')
+        return username
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '').strip().lower()
+        if User.objects.filter(email__iexact=email).exclude(pk=self.principal.user_id).exists():
+            raise ValidationError('This email is already in use.')
+        return email
+
+    def clean_employee_id(self):
+        emp_id = (self.cleaned_data.get('employee_id') or '').strip()
+        if emp_id and UserProfile.objects.filter(employee_number=emp_id).exclude(pk=self.principal.pk).exists():
+            raise ValidationError('This Employee ID is already assigned.')
+        return emp_id
+
+
+class RegistrarCreationForm(forms.Form):
+    """Creates the default registrar account of a school; only the school is chosen."""
+
+    school = forms.ModelChoiceField(
+        queryset=School.objects.filter(is_active=True),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='School',
+    )
+
+    def clean_school(self):
+        school = self.cleaned_data['school']
+        account = default_registrar_account(school)
+        if not account:
+            raise ValidationError(
+                f'{school.school_name} needs a Short Name and an Email Domain before '
+                'its registrar account can be generated. Edit the school first.'
+            )
+        if User.objects.filter(Q(username__iexact=account) | Q(email__iexact=account)).exists():
+            raise ValidationError(f'The registrar account {account} already exists.')
+        self.account = account
+        return school
+
+
 # =============================================================================
 # GRADE LEVEL FORM
 # =============================================================================
 
-class GradeLevelForm(forms.ModelForm):
-    class Meta:
-        model = GradeLevel
-        fields = ['school', 'grade_code', 'grade_name', 'grade_number', 'level_category', 'is_senior_high']
-        widgets = {
-            'school': forms.Select(attrs={'class': 'form-select'}),
-            'grade_code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., G7, G8'}),
-            'grade_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Grade 7'}),
-            'grade_number': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'max': '12'}),
-            'level_category': forms.Select(choices=[
-                ('', '--- Select ---'),
-                ('JHS', 'Junior High School'),
-                ('SHS', 'Senior High School'),
-                ('ELEMENTARY', 'Elementary'),
-            ], attrs={'class': 'form-select'}),
-            'is_senior_high': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        }
+# The GradeLevel model only supports Grades 7-12 (JHS / SHS).
+GRADE_NUMBERS = list(range(7, 13))
 
 
-# =============================================================================
-# BULK GRADE LEVEL FORM
-# =============================================================================
-
-class BulkGradeLevelForm(forms.Form):
-    school = forms.ModelChoiceField(
-        queryset=School.objects.filter(is_active=True),
-        widget=forms.Select(attrs={'class': 'form-select'}),
-        label='School'
-    )
-    school_type = forms.ChoiceField(
-        choices=[
-            ('', '--- Select School Type ---'),
-            ('ELEMENTARY', 'Elementary (Grades 1-6)'),
-            ('JHS', 'Junior High School (Grades 7-10)'),
-            ('SHS', 'Senior High School (Grades 11-12)'),
-            ('INTEGRATED', 'Integrated School (JHS + SHS)'),
-        ],
-        widget=forms.Select(attrs={'class': 'form-select'}),
-        label='School Type'
+class GradeLevelForm(forms.Form):
+    school = forms.ModelChoiceField(queryset=School.objects.filter(is_active=True))
+    grades = forms.TypedMultipleChoiceField(
+        choices=[(n, f'Grade {n}') for n in GRADE_NUMBERS],
+        coerce=int,
+        error_messages={'required': 'Select at least one grade level.'},
     )
 
 
@@ -348,80 +415,67 @@ class BulkGradeLevelForm(forms.Form):
 # =============================================================================
 
 class SchoolYearForm(forms.ModelForm):
-    auto_create_quarters = forms.BooleanField(
-        required=False,
-        initial=True,
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        label='Auto-create 4 quarters',
-        help_text='Automatically create Q1-Q4 with evenly spaced dates.'
-    )
+    """Only the starting year and class dates are entered; label, end year and status are derived."""
+
+    auto_create_periods = forms.BooleanField(required=False)
 
     class Meta:
         model = SchoolYear
-        fields = ['school', 'year_label', 'year_start', 'year_end', 'date_start', 'date_end', 'is_current', 'status']
-        widgets = {
-            'school': forms.Select(attrs={'class': 'form-select'}),
-            'year_label': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., SY 2026-2027'}),
-            'year_start': forms.NumberInput(attrs={'class': 'form-control', 'min': '2000', 'max': '2100'}),
-            'year_end': forms.NumberInput(attrs={'class': 'form-control', 'min': '2000', 'max': '2100'}),
-            'date_start': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'date_end': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'is_current': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'status': forms.Select(choices=[
-                ('Pending', 'Pending'),
-                ('Active', 'Active'),
-                ('Completed', 'Completed'),
-                ('Closed', 'Closed'),
-            ], attrs={'class': 'form-select'}),
-        }
-        labels = {
-            'school': 'School',
-            'year_label': 'School Year Label',
-            'year_start': 'Year Start (e.g., 2026)',
-            'year_end': 'Year End (e.g., 2027)',
-            'date_start': 'Start Date',
-            'date_end': 'End Date',
-            'is_current': 'Set as Current School Year',
-            'status': 'Status',
+        fields = ['school', 'year_start', 'date_start', 'date_end', 'is_current']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['school'].queryset = School.objects.filter(is_active=True)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        school = cleaned_data.get('school')
+        year_start = cleaned_data.get('year_start')
+        if school and year_start:
+            label = f'{year_start}-{year_start + 1}'
+            if SchoolYear.objects.filter(school=school, year_label=label).exists():
+                raise ValidationError({'year_start': f'School year {label} already exists for {school.school_name}.'})
+        return cleaned_data
+
+    def save(self, commit=True):
+        sy = super().save(commit=False)
+        sy.year_end = sy.year_start + 1
+        sy.year_label = f'{sy.year_start}-{sy.year_end}'
+        sy.status = 'Active' if sy.is_current else 'Upcoming'
+        if commit:
+            sy.save()
+        return sy
+
+
+# =============================================================================
+# GRADING PERIOD FORMS (stored in the Quarter table)
+# =============================================================================
+
+class QuarterForm(forms.ModelForm):
+    """One grading period; its label (Q/T/S + number) follows the school's period type."""
+
+    class Meta:
+        model = Quarter
+        fields = ['school_year', 'quarter_number', 'date_start', 'date_end', 'is_current_quarter']
+        error_messages = {
+            NON_FIELD_ERRORS: {'unique_together': 'That period already exists for this school year.'},
         }
 
     def clean(self):
         cleaned_data = super().clean()
-        date_start = cleaned_data.get('date_start')
-        date_end = cleaned_data.get('date_end')
-        if date_start and date_end and date_start >= date_end:
-            raise ValidationError({'date_end': 'End date must be after start date.'})
+        school_year = cleaned_data.get('school_year')
+        number = cleaned_data.get('quarter_number')
+        if school_year and number:
+            cfg = period_config(school_year.school)
+            if number > cfg['count']:
+                raise ValidationError({
+                    'quarter_number': f'{school_year.school.school_name} only has {cfg["count"]} {cfg["plural"].lower()} per school year.'
+                })
+            self.instance.quarter_label = f'{cfg["prefix"]}{number}'
         return cleaned_data
 
 
-# =============================================================================
-# QUARTER FORM
-# =============================================================================
-
-class QuarterForm(forms.ModelForm):
+class QuarterUpdateForm(forms.ModelForm):
     class Meta:
         model = Quarter
-        fields = ['school_year', 'quarter_label', 'quarter_number', 'date_start', 'date_end', 'is_current_quarter', 'is_grades_locked']
-        widgets = {
-            'school_year': forms.Select(attrs={'class': 'form-select'}),
-            'quarter_label': forms.Select(choices=[
-                ('Q1', 'First Quarter (Q1)'),
-                ('Q2', 'Second Quarter (Q2)'),
-                ('Q3', 'Third Quarter (Q3)'),
-                ('Q4', 'Fourth Quarter (Q4)'),
-            ], attrs={'class': 'form-select'}),
-            'quarter_number': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'max': '4'}),
-            'date_start': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'date_end': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'is_current_quarter': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'is_grades_locked': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        }
-        labels = {
-            'school_year': 'School Year',
-            'quarter_label': 'Quarter Label',
-            'quarter_number': 'Quarter Number',
-            'date_start': 'Start Date',
-            'date_end': 'End Date',
-            'is_current_quarter': 'Current Quarter',
-            'is_grades_locked': 'Grades Locked',
-        }
+        fields = ['date_start', 'date_end', 'is_current_quarter', 'is_grades_locked']

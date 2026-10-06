@@ -351,7 +351,7 @@
                 <select name="school" class="filter-select">
                     <option value="">All Schools</option>
                     {% for school in schools %}
-                    <option value="{{ school.id }}" {% if school_filter|stringformat:"s" == school.id|stringformat:"s" %}selected{% endif %}>{{ school.name }}</option>
+                    <option value="{{ school.id }}" {% if school_filter|stringformat:"s" == school.id|stringformat:"s" %}selected{% endif %}>{{ school.school_name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -368,7 +368,7 @@
                 <select name="sort" class="filter-select">
                     <option value="-created_at" {% if sort == '-created_at' %}selected{% endif %}>Newest First</option>
                     <option value="user__last_name" {% if sort == 'user__last_name' %}selected{% endif %}>Name (A-Z)</option>
-                    <option value="school__name" {% if sort == 'school__name' %}selected{% endif %}>School (A-Z)</option>
+                    <option value="school__school_name" {% if sort == 'school__school_name' %}selected{% endif %}>School (A-Z)</option>
                 </select>
             </div>
             <button type="submit" class="btn-search" title="Search">

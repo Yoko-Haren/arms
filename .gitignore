@@ -34,3 +34,11 @@ sqlite-data.json
 # Supabase local state (keep config/migrations tracked)
 supabase/.temp/
 supabase/.branches/
+
+# One-off local scripts (seeding, wiping, debugging, admin bootstrap)
+/create_admin.py
+/seed_*.py
+/wipe_*.py
+/debug_grades.py
+/fix_grades.py
+/defense_demo.py

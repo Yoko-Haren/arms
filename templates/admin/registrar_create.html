@@ -1,0 +1,66 @@
+{% extends 'admin/base.html' %}
+{% block title %}Create Registrar{% endblock %}
+{% block page_title %}Create Registrar Account{% endblock %}
+{% block content %}
+<div class="card"><div class="card-body">
+  <p class="text-muted">Select a school and its default registrar account is generated for you as <code>shortname.registrar@email-domain</code>. A temporary password is shown once after the account is created.</p>
+  {% if schools %}
+  <form method="post">{% csrf_token %}
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label" for="schoolSelect">School</label>
+        <select class="form-select" name="school" id="schoolSelect" required>
+          <option value="">— Select a school —</option>
+          {% for s in schools %}
+          <option value="{{ s.id }}" data-account="{{ s.registrar_account|default:'' }}" data-name="{{ s.short_name }} Registrar"
+                  {% if s.registrar_exists %}data-exists="1"{% endif %}
+                  {% if form.school.value|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>{{ s.school_name }} ({{ s.school_id }}){% if s.registrar_exists %} — registrar already created{% elif not s.registrar_account %} — no email domain{% endif %}</option>
+          {% endfor %}
+        </select>
+        {% for error in form.school.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+      </div>
+    </div>
+
+    <div class="alert alert-info mt-3 d-none" id="accountPreview">
+      <div><strong>Name:</strong> <span id="previewName"></span></div>
+      <div><strong>Username / Email:</strong> <code id="previewAccount"></code></div>
+    </div>
+    <div class="alert alert-warning mt-3 d-none" id="accountWarning"></div>
+
+    <div class="d-flex gap-2 mt-4"><button class="btn btn-primary" type="submit" id="createBtn" disabled>Create Registrar</button><a class="btn btn-outline-secondary" href="{% url 'admin_panel:registrar_list' %}">Cancel</a></div>
+  </form>
+  {% else %}
+  <div class="alert alert-warning mb-0">No active schools yet. <a href="{% url 'admin_panel:school_create' %}">Create a school first</a>.</div>
+  {% endif %}
+</div></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    var schoolSelect = document.getElementById('schoolSelect');
+    if (schoolSelect) {
+        var preview = document.getElementById('accountPreview');
+        var warning = document.getElementById('accountWarning');
+        var createBtn = document.getElementById('createBtn');
+
+        function showAccount() {
+            var option = schoolSelect.options[schoolSelect.selectedIndex];
+            var account = option.dataset.account;
+            var problem = '';
+            if (schoolSelect.value && !account) {
+                problem = 'This school has no Short Name or Email Domain yet. Edit the school to add them first.';
+            } else if (option.dataset.exists) {
+                problem = 'The registrar account ' + account + ' already exists for this school.';
+            }
+            preview.classList.toggle('d-none', !account || !!problem);
+            warning.classList.toggle('d-none', !problem);
+            warning.textContent = problem;
+            document.getElementById('previewName').textContent = option.dataset.name || '';
+            document.getElementById('previewAccount').textContent = account || '';
+            createBtn.disabled = !account || !!problem;
+        }
+        schoolSelect.addEventListener('change', showAccount);
+        showAccount();
+    }
+</script>
+{% endblock %}

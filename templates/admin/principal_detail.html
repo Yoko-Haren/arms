@@ -633,6 +633,9 @@
                 <h6>Actions</h6>
             </div>
             <div class="action-btn-group">
+                <a href="{% url 'admin_panel:principal_edit' principal.id %}" class="btn-action" style="text-decoration:none;border-color:var(--primary);color:var(--primary);">
+                    <i class="fas fa-edit"></i> Edit Principal
+                </a>
                 <button type="button" class="btn-action danger-btn" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">
                     <i class="fas fa-key"></i> Reset Password
                 </button>

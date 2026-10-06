@@ -106,9 +106,10 @@
             </div>
             <div class="col-md-4 mb-3">
                 <label class="form-label">Period Type</label>
-                <select name="period_type" class="form-select">
-                    <option value="QUARTERLY" {% if edit_mode and school.period_type == 'QUARTERLY' %}selected{% endif %}>Quarterly</option>
-                    <option value="SEMESTRAL" {% if edit_mode and school.period_type == 'SEMESTRAL' %}selected{% endif %}>Semestral</option>
+                <select name="period_type" id="periodType" class="form-select">
+                    {% for value, label in form.fields.period_type.choices %}
+                    <option value="{{ value }}" {% if form.period_type.value == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
                 </select>
             </div>
         </div>
@@ -121,10 +122,10 @@
                        step="0.01" min="0" max="100">
             </div>
             <div class="col-md-4 mb-3">
-                <label class="form-label">Quarters Count</label>
-                <input type="number" name="quarters_count" class="form-control"
-                       value="{% if edit_mode %}{{ school.quarters_count }}{% else %}4{% endif %}"
-                       min="2" max="4">
+                <label class="form-label" id="periodCountLabel">Quarters Count</label>
+                <input type="number" name="quarters_count" id="periodCount" class="form-control"
+                       value="{{ form.quarters_count.value|default:4 }}" readonly>
+                <div class="form-text">Set automatically by the Period Type.</div>
             </div>
             <div class="col-md-4 mb-3">
                 <label class="form-label">Email Domain</label>
@@ -223,6 +224,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ period_config|json_script:"periodConfigData" }}
 <script>
     // ===== ALL SCHEMA DATA FOR PREVIEW =====
     var schemaData = {
@@ -362,6 +364,31 @@
                 previewDiv.style.display = 'block';
             } else {
                 previewDiv.style.display = 'none';
+            }
+        });
+    }
+
+    // ===== Period count follows the Period Type =====
+    var periodConfig = JSON.parse(document.getElementById('periodConfigData').textContent);
+    var periodType = document.getElementById('periodType');
+    var periodCount = document.getElementById('periodCount');
+    var periodCountLabel = document.getElementById('periodCountLabel');
+
+    function syncPeriodCount() {
+        var cfg = periodConfig[periodType.value];
+        if (!cfg) return;
+        periodCount.value = cfg.count;
+        periodCountLabel.textContent = cfg.plural + ' Count';
+    }
+    periodType.addEventListener('change', syncPeriodCount);
+    syncPeriodCount();
+
+    // A trimester grading system implies a trimestral period type
+    if (schemaSelect) {
+        schemaSelect.addEventListener('change', function() {
+            if (this.value === 'CHED_TRIMESTER') {
+                periodType.value = 'TRIMESTRAL';
+                syncPeriodCount();
             }
         });
     }

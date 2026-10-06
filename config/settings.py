@@ -13,9 +13,14 @@ import os
 
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management.utils import get_random_secret_key
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load project-local settings for development. Host-provided variables take
+# precedence because load_dotenv does not override existing environment values.
+load_dotenv(BASE_DIR / '.env')
 
 
 # =============================================================================
@@ -105,30 +110,28 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # DATABASE
 # =============================================================================
 
-DATABASE_URL = os.environ.get('DATABASE_URL')
+DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
+if not DATABASE_URL:
+    raise ImproperlyConfigured(
+        'DATABASE_URL must point to the Supabase PostgreSQL database. '
+        'SQLite is disabled for this project.'
+    )
 
-# Use Supabase Postgres when DATABASE_URL is configured. SQLite remains the
-# zero-configuration local-development fallback.
-if DATABASE_URL:
-    # This dependency is only needed when the Supabase Postgres connection is
-    # enabled. Keeping it local preserves the SQLite fallback for a fresh
-    # local checkout before optional deployment dependencies are installed.
-    import dj_database_url
+import dj_database_url
 
+try:
     DATABASES = {
-        'default': dj_database_url.config(
-            default=DATABASE_URL,
+        'default': dj_database_url.parse(
+            DATABASE_URL,
             conn_max_age=600,
             conn_health_checks=True,
         )
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+except ValueError as exc:
+    raise ImproperlyConfigured('DATABASE_URL must be a valid PostgreSQL URL.') from exc
+
+if DATABASES['default']['ENGINE'] != 'django.db.backends.postgresql':
+    raise ImproperlyConfigured('DATABASE_URL must use PostgreSQL; SQLite is disabled.')
 
 # Supabase credentials are intentionally environment-only. The anon key is
 # used for user-facing Auth requests; keep the service-role key server-only.

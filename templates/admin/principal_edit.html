@@ -1,0 +1,224 @@
+{% extends 'admin/base.html' %}
+{% load static %}
+
+{% block title %}Edit Principal{% endblock %}
+{% block page_title %}Edit Principal: {{ principal.full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    .form-section {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--gray-200);
+        margin-bottom: 1.5rem;
+    }
+    .form-section-header {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--gray-100);
+    }
+    .form-section-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: var(--primary-gradient);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.95rem;
+        flex-shrink: 0;
+    }
+    .form-section-header h6 {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--gray-700);
+        margin: 0;
+    }
+    .form-section-header .required-note {
+        font-size: 0.65rem;
+        color: var(--gray-500);
+        margin-left: auto;
+    }
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem;
+    }
+    @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
+    .form-field { display: flex; flex-direction: column; gap: 0.35rem; }
+    .form-field.full-width { grid-column: 1 / -1; }
+    .form-label {
+        font-size: 0.73rem;
+        font-weight: 600;
+        color: var(--gray-700);
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    .required-asterisk { color: var(--danger); font-weight: 700; }
+    .optional-tag {
+        font-size: 0.6rem;
+        font-weight: 500;
+        color: #adb5bd;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .form-input,
+    .form-select {
+        width: 100%;
+        padding: 0.65rem 0.85rem;
+        border: 2px solid var(--gray-300);
+        border-radius: var(--radius-sm);
+        font-size: 0.8rem;
+        font-family: inherit;
+        background: var(--gray-50);
+        color: var(--gray-700);
+        transition: var(--transition);
+    }
+    .form-input:focus,
+    .form-select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(18,52,153,0.08);
+        background: white;
+    }
+    .form-input.is-invalid,
+    .form-select.is-invalid { border-color: var(--danger); background: #fff8f8; }
+    .field-error { font-size: 0.68rem; color: var(--danger); }
+    .field-hint { font-size: 0.68rem; color: var(--gray-500); }
+    .form-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    .btn-cancel {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.7rem 1.5rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.8rem;
+        font-weight: 600;
+        border: 2px solid var(--gray-300);
+        background: white;
+        color: var(--gray-500);
+        text-decoration: none;
+        transition: var(--transition);
+    }
+    .btn-cancel:hover { border-color: var(--gray-500); color: var(--gray-700); background: var(--gray-50); }
+    .btn-submit {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.7rem 2rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.82rem;
+        font-weight: 600;
+        border: none;
+        background: var(--primary-gradient);
+        color: white;
+        cursor: pointer;
+        transition: var(--transition);
+        box-shadow: 0 4px 15px rgba(18,52,153,0.3);
+    }
+    .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 6px 22px rgba(18,52,153,0.45); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="form-container">
+    <form method="POST">
+        {% csrf_token %}
+
+        <!-- ACCOUNT INFORMATION -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <div class="form-section-icon">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <h6>Account Information</h6>
+                <span class="required-note">* Required fields</span>
+            </div>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label" for="first_name">First Name <span class="required-asterisk">*</span></label>
+                    <input type="text" name="first_name" id="first_name" class="form-input {% if form.first_name.errors %}is-invalid{% endif %}" value="{{ form.first_name.value|default:'' }}" required>
+                    {% for error in form.first_name.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="form-field">
+                    <label class="form-label" for="last_name">Last Name <span class="required-asterisk">*</span></label>
+                    <input type="text" name="last_name" id="last_name" class="form-input {% if form.last_name.errors %}is-invalid{% endif %}" value="{{ form.last_name.value|default:'' }}" required>
+                    {% for error in form.last_name.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="form-field">
+                    <label class="form-label" for="username">Username <span class="required-asterisk">*</span></label>
+                    <input type="text" name="username" id="username" class="form-input {% if form.username.errors %}is-invalid{% endif %}" value="{{ form.username.value|default:'' }}" required>
+                    <div class="field-hint">Changing this changes what the principal signs in with.</div>
+                    {% for error in form.username.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="form-field">
+                    <label class="form-label" for="email">Email <span class="required-asterisk">*</span></label>
+                    <input type="email" name="email" id="email" class="form-input {% if form.email.errors %}is-invalid{% endif %}" value="{{ form.email.value|default:'' }}" required>
+                    {% for error in form.email.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="form-field">
+                    <label class="form-label" for="employee_id">Employee ID <span class="optional-tag">Optional</span></label>
+                    <input type="text" name="employee_id" id="employee_id" class="form-input {% if form.employee_id.errors %}is-invalid{% endif %}" value="{{ form.employee_id.value|default:'' }}">
+                    {% for error in form.employee_id.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="form-field">
+                    <label class="form-label" for="designation">Designation <span class="optional-tag">Optional</span></label>
+                    <input type="text" name="designation" id="designation" class="form-input" value="{{ form.designation.value|default:'' }}" placeholder="e.g., Principal IV">
+                </div>
+            </div>
+        </div>
+
+        <!-- SCHOOL ASSIGNMENT -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <div class="form-section-icon" style="background: var(--success-gradient);">
+                    <i class="fas fa-building"></i>
+                </div>
+                <h6>School Assignment <span class="required-asterisk">*</span></h6>
+            </div>
+            <div class="form-field">
+                <label class="form-label" for="school">School</label>
+                <select name="school" id="school" class="form-select {% if form.school.errors %}is-invalid{% endif %}" required>
+                    <option value="">— Select a school —</option>
+                    {% for s in form.fields.school.queryset %}
+                    <option value="{{ s.id }}" {% if form.school.value|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>{{ s.school_name }} ({{ s.school_id }}){% if not s.is_active %} — inactive{% endif %}</option>
+                    {% endfor %}
+                </select>
+                {% for error in form.school.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+            </div>
+        </div>
+
+        <!-- FORM ACTIONS -->
+        <div class="form-actions">
+            <a href="{% url 'admin_panel:principal_detail' principal.id %}" class="btn-cancel">
+                <i class="fas fa-arrow-left"></i> Cancel
+            </a>
+            <button type="submit" class="btn-submit">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

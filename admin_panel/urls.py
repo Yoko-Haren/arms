@@ -26,10 +26,15 @@ urlpatterns = [
     path('principals/<int:principal_id>/edit/', views.principal_edit, name='principal_edit'),
     path('principals/<int:principal_id>/toggle/', views.principal_toggle_status, name='principal_toggle'),
     path('principals/<int:principal_id>/reset-password/', views.principal_reset_password, name='principal_reset_password'),
+
+    # Registrars
+    path('registrars/', views.registrar_list, name='registrar_list'),
+    path('registrars/create/', views.registrar_create, name='registrar_create'),
     
     # Grade Levels
     path('grade-levels/', views.grade_level_list, name='grade_level_list'),
     path('grade-levels/create/', views.grade_level_create, name='grade_level_create'),
+    path('grade-levels/<int:grade_level_id>/delete/', views.grade_level_delete, name='grade_level_delete'),
     
     # School Years
     path('school-years/', views.school_year_manage, name='school_year_manage'),
@@ -39,6 +44,7 @@ urlpatterns = [
     # Quarters
     path('quarters/', views.quarter_manage, name='quarter_manage'),
     path('quarters/<int:sy_id>/bulk-create/', views.quarter_bulk_create, name='quarter_bulk_create'),
+    path('quarters/<int:quarter_id>/update/', views.quarter_update, name='quarter_update'),
     path('quarters/<int:quarter_id>/delete/', views.quarter_delete, name='quarter_delete'),
     
     # AJAX

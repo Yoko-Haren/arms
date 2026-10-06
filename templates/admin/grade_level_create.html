@@ -1,416 +1,216 @@
 {% extends 'admin/base.html' %}
 {% load static %}
 
-{% block title %}Grade Levels{% endblock %}
-{% block page_title %}Grade Levels{% endblock %}
+{% block title %}Add Grade Levels{% endblock %}
+{% block page_title %}Add Grade Levels{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* ========== TOOLBAR ========== */
-    .toolbar-row {
+    .form-card {
+        max-width: 760px;
+        margin: 0 auto;
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--gray-200);
+    }
+    .form-card-header {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        margin-bottom: 1.5rem;
+        gap: 0.6rem;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.85rem;
+        border-bottom: 2px solid var(--gray-100);
     }
-
-    .btn-create {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.6rem 1.3rem;
-        border-radius: var(--radius-sm);
-        font-size: 0.78rem;
-        font-weight: 600;
+    .form-card-header-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: var(--radius-xs);
         background: var(--primary-gradient);
+        display: flex;
+        align-items: center;
+        justify-content: center;
         color: white;
-        text-decoration: none;
-        transition: var(--transition);
-        box-shadow: 0 4px 15px rgba(18,52,153,0.25);
+        font-size: 0.95rem;
     }
-    .btn-create:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 22px rgba(18,52,153,0.4);
-        color: white;
+    .form-card-header h6 { font-size: 0.85rem; font-weight: 700; color: var(--gray-700); margin: 0; }
+    .form-group { margin-bottom: 1.25rem; }
+    .form-label-sm {
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 600;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.4rem;
     }
-
-    .filter-select {
-        padding: 0.6rem 2rem 0.6rem 0.75rem;
+    .form-select-input {
+        width: 100%;
+        padding: 0.6rem 0.75rem;
         border: 2px solid var(--gray-300);
         border-radius: var(--radius-sm);
         font-size: 0.8rem;
         font-family: inherit;
         background: var(--gray-50);
         color: var(--gray-700);
+    }
+    .form-select-input:focus { outline: none; border-color: var(--primary); background: white; }
+
+    .preset-row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .btn-preset {
+        padding: 0.35rem 0.85rem;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border: 1.5px solid var(--gray-300);
+        background: white;
+        color: var(--gray-700);
+        cursor: pointer;
+        font-family: inherit;
+        transition: var(--transition);
+    }
+    .btn-preset:hover { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+
+    .grade-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.6rem;
+    }
+    @media (max-width: 520px) { .grade-grid { grid-template-columns: repeat(2, 1fr); } }
+    .grade-option {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.7rem 0.85rem;
+        border: 2px solid var(--gray-300);
+        border-radius: var(--radius-sm);
         cursor: pointer;
         transition: var(--transition);
-        appearance: none;
-        -webkit-appearance: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236c757d' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 0.7rem center;
-        min-width: 200px;
-    }
-    .filter-select:focus {
-        outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(18,52,153,0.08);
-        background-color: white;
-    }
-
-    /* ========== TABLE CARD ========== */
-    .table-card {
-        background: white;
-        border-radius: var(--radius-lg);
-        box-shadow: var(--shadow-md);
-        border: 1px solid var(--gray-200);
-        overflow: hidden;
-    }
-    .table-wrapper { overflow-x: auto; }
-
-    .data-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.78rem;
-    }
-    .data-table thead th {
-        text-align: left;
-        padding: 0.75rem 1rem;
-        border-bottom: 2px solid var(--gray-200);
-        color: var(--gray-500);
-        font-weight: 700;
-        text-transform: uppercase;
-        font-size: 0.65rem;
-        letter-spacing: 0.6px;
-        background: var(--gray-50);
-        white-space: nowrap;
-    }
-    .data-table tbody td {
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid var(--gray-100);
-        color: var(--gray-700);
-        vertical-align: middle;
-    }
-    .data-table tbody tr {
-        transition: var(--transition);
-    }
-    .data-table tbody tr:hover {
-        background: var(--primary-light);
-    }
-    .data-table tbody tr:last-child td {
-        border-bottom: none;
-    }
-
-    .grade-code {
-        font-weight: 700;
-        color: var(--primary);
-        font-size: 0.82rem;
-    }
-    .grade-name {
-        font-weight: 600;
-        color: var(--gray-700);
-    }
-    .grade-number-cell {
-        text-align: center;
-    }
-    .grade-number-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        font-weight: 700;
-        font-size: 0.78rem;
-        background: var(--gray-100);
-        color: var(--gray-700);
-    }
-
-    .category-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.3rem;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.68rem;
-        font-weight: 600;
-        white-space: nowrap;
-    }
-    .category-badge.shs-badge {
-        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
-        color: #1565C0;
-    }
-    .category-badge.jhs-badge {
-        background: linear-gradient(135deg, #e8eeff, #c5cae9);
-        color: #123499;
-    }
-    .category-badge.elem-badge {
-        background: linear-gradient(135deg, #f3e5f5, #e1bee7);
-        color: #6A1B9A;
-    }
-
-    .shs-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.3rem;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.68rem;
-        font-weight: 600;
-    }
-    .shs-badge.yes-badge { background: var(--info-light); color: var(--info); }
-    .shs-badge.no-badge { background: #f5f5f5; color: #9e9e9e; }
-
-    .school-link {
-        color: var(--gray-700);
-        font-weight: 500;
-        text-decoration: none;
-        transition: var(--transition);
-    }
-    .school-link:hover { color: var(--primary); text-decoration: underline; }
-    .no-school { color: #adb5bd; font-style: italic; }
-
-    .date-cell {
-        font-size: 0.72rem;
-        color: var(--gray-500);
-        white-space: nowrap;
-    }
-
-    /* ========== EMPTY STATE ========== */
-    .empty-state {
-        text-align: center;
-        padding: 3rem 1.5rem;
-    }
-    .empty-state-icon {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        background: var(--gray-100);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 1.25rem;
-        font-size: 2rem;
-        color: #bdbdbd;
-    }
-    .empty-state h5 {
-        font-size: 1rem;
-        font-weight: 700;
-        color: var(--gray-700);
-        margin-bottom: 0.5rem;
-    }
-    .empty-state p {
-        font-size: 0.82rem;
-        color: var(--gray-500);
-        margin-bottom: 1.25rem;
-    }
-
-    /* ========== PAGINATION ========== */
-    .pagination-wrapper {
-        display: flex;
-        justify-content: center;
-        margin-top: 1.5rem;
-    }
-    .pagination-list {
-        display: flex;
-        gap: 0.35rem;
-        list-style: none;
-        padding: 0;
         margin: 0;
-        flex-wrap: wrap;
-        justify-content: center;
     }
-    .pagination-list li { display: inline; }
-    .page-link-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 38px;
-        height: 38px;
-        padding: 0 0.6rem;
-        border-radius: var(--radius-sm);
-        font-size: 0.78rem;
-        font-weight: 600;
-        text-decoration: none;
-        border: 2px solid var(--gray-300);
-        background: white;
-        color: var(--gray-700);
-        transition: var(--transition);
-    }
-    .page-link-btn:hover {
-        border-color: var(--primary);
-        background: var(--primary-light);
-        color: var(--primary);
-    }
-    .page-link-btn.active-page {
-        background: var(--primary);
-        color: white;
-        border-color: var(--primary);
-        pointer-events: none;
-    }
-    .page-link-btn.disabled-page {
-        opacity: 0.4;
-        pointer-events: none;
-    }
+    .grade-option:hover { border-color: var(--primary); }
+    .grade-option input { width: 18px; height: 18px; accent-color: var(--primary); }
+    .grade-option.exists { background: var(--gray-100); cursor: not-allowed; opacity: 0.7; }
+    .grade-option-name { font-size: 0.8rem; font-weight: 600; color: var(--gray-700); }
+    .grade-option-meta { font-size: 0.65rem; color: var(--gray-500); }
 
-    /* ========== RESPONSIVE ========== */
-    @media (max-width: 640px) {
-        .toolbar-row { flex-direction: column; align-items: stretch; }
-        .filter-select { width: 100%; }
-        .btn-create { justify-content: center; }
+    .form-actions { display: flex; justify-content: space-between; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap; }
+    .btn-cancel {
+        display: inline-flex; align-items: center; gap: 0.5rem;
+        padding: 0.65rem 1.4rem; border-radius: var(--radius-sm);
+        font-size: 0.8rem; font-weight: 600;
+        border: 2px solid var(--gray-300); background: white; color: var(--gray-500);
+        text-decoration: none;
     }
+    .btn-submit {
+        display: inline-flex; align-items: center; gap: 0.5rem;
+        padding: 0.65rem 1.8rem; border-radius: var(--radius-sm);
+        font-size: 0.8rem; font-weight: 600; border: none;
+        background: var(--primary-gradient); color: white; cursor: pointer; font-family: inherit;
+    }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- TOOLBAR -->
-<div class="toolbar-row">
-    <a href="{% url 'admin_panel:grade_level_create' %}" class="btn-create">
-        <i class="fas fa-plus"></i> Add Grade Levels
-    </a>
-    <form method="GET">
-        <select name="school" class="filter-select" onchange="this.form.submit()">
-            <option value="">🏫 All Schools</option>
-            {% for s in schools %}
-            <option value="{{ s.id }}" {% if selected_school|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>
-                {{ s.school_name }}
-            </option>
-            {% endfor %}
-        </select>
-    </form>
-</div>
-
-<!-- GRADE LEVELS TABLE -->
-<div class="table-card">
-    <div class="table-wrapper">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Code</th>
-                    <th>Grade Name</th>
-                    <th>Number</th>
-                    <th>Category</th>
-                    <th>SHS</th>
-                    <th>School</th>
-                    <th>Created</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for gl in grade_levels %}
-                <tr>
-                    <td><span class="grade-code">{{ gl.grade_code }}</span></td>
-                    <td><span class="grade-name">{{ gl.grade_name }}</span></td>
-                    <td class="grade-number-cell">
-                        <span class="grade-number-badge">{{ gl.grade_number }}</span>
-                    </td>
-                    <td>
-                        {% if gl.level_category == 'SHS' %}
-                            <span class="category-badge shs-badge">
-                                <i class="fas fa-graduation-cap"></i> {{ gl.get_level_category_display }}
-                            </span>
-                        {% elif gl.level_category == 'JHS' %}
-                            <span class="category-badge jhs-badge">
-                                <i class="fas fa-school"></i> {{ gl.get_level_category_display }}
-                            </span>
-                        {% else %}
-                            <span class="category-badge elem-badge">
-                                <i class="fas fa-child"></i> {{ gl.get_level_category_display }}
-                            </span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if gl.is_senior_high %}
-                            <span class="shs-badge yes-badge">
-                                <i class="fas fa-check-circle"></i> Yes
-                            </span>
-                        {% else %}
-                            <span class="shs-badge no-badge">
-                                <i class="fas fa-circle"></i> No
-                            </span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if gl.school %}
-                            <a href="{% url 'admin_panel:school_detail' gl.school.id %}" class="school-link">
-                                {{ gl.school.school_name }}
-                            </a>
-                        {% else %}
-                            <span class="no-school">—</span>
-                        {% endif %}
-                    </td>
-                    <td><span class="date-cell">{{ gl.created_at|date:"M d, Y" }}</span></td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7">
-                        <div class="empty-state">
-                            <div class="empty-state-icon">
-                                <i class="fas fa-layer-group"></i>
-                            </div>
-                            <h5>No Grade Levels Found</h5>
-                            <p>Add grade levels to start organizing students by grade.</p>
-                            <a href="{% url 'admin_panel:grade_level_create' %}" class="btn-create">
-                                <i class="fas fa-plus"></i> Add Grade Levels
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="form-card">
+    <div class="form-card-header">
+        <div class="form-card-header-icon"><i class="fas fa-layer-group"></i></div>
+        <h6>Add Grade Levels to a School</h6>
     </div>
+
+    {% if schools %}
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label class="form-label-sm" for="schoolSelect">School</label>
+            <select name="school" id="schoolSelect" class="form-select-input" required>
+                <option value="">Select School...</option>
+                {% for s in schools %}
+                <option value="{{ s.id }}" {% if selected_school|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>{{ s.school_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label-sm">Grade Levels</label>
+            <div class="preset-row">
+                <button type="button" class="btn-preset" data-grades="7,8,9,10">Junior High (7–10)</button>
+                <button type="button" class="btn-preset" data-grades="11,12">Senior High (11–12)</button>
+                <button type="button" class="btn-preset" data-grades="7,8,9,10,11,12">Integrated (7–12)</button>
+                <button type="button" class="btn-preset" data-grades="">Clear</button>
+            </div>
+            <div class="grade-grid">
+                {% for n in grade_numbers %}
+                <label class="grade-option" data-grade="{{ n }}">
+                    <input type="checkbox" name="grades" value="{{ n }}">
+                    <span>
+                        <span class="grade-option-name">Grade {{ n }}</span><br>
+                        <span class="grade-option-meta" data-default="{% if n >= 11 %}Senior High{% else %}Junior High{% endif %}">{% if n >= 11 %}Senior High{% else %}Junior High{% endif %}</span>
+                    </span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{% url 'admin_panel:grade_level_list' %}" class="btn-cancel"><i class="fas fa-arrow-left"></i> Cancel</a>
+            <button type="submit" class="btn-submit" id="submitBtn" disabled><i class="fas fa-save"></i> Add Grade Levels</button>
+        </div>
+    </form>
+    {% else %}
+    <p class="text-muted mb-0">No active schools yet. <a href="{% url 'admin_panel:school_create' %}">Create a school first</a>.</p>
+    {% endif %}
 </div>
 
-<!-- PAGINATION -->
-{% if grade_levels.has_other_pages %}
-<div class="pagination-wrapper">
-    <ul class="pagination-list">
-        {% if grade_levels.has_previous %}
-            <li>
-                <a href="?page=1{% if selected_school %}&school={{ selected_school }}{% endif %}" class="page-link-btn" title="First">
-                    <i class="fas fa-angle-double-left"></i>
-                </a>
-            </li>
-            <li>
-                <a href="?page={{ grade_levels.previous_page_number }}{% if selected_school %}&school={{ selected_school }}{% endif %}" class="page-link-btn" title="Previous">
-                    <i class="fas fa-angle-left"></i>
-                </a>
-            </li>
-        {% else %}
-            <li><span class="page-link-btn disabled-page"><i class="fas fa-angle-double-left"></i></span></li>
-            <li><span class="page-link-btn disabled-page"><i class="fas fa-angle-left"></i></span></li>
-        {% endif %}
+{% endblock %}
 
-        {% for num in grade_levels.paginator.page_range %}
-            {% if num == grade_levels.number %}
-                <li><span class="page-link-btn active-page">{{ num }}</span></li>
-            {% elif num > grade_levels.number|add:"-3" and num < grade_levels.number|add:"3" %}
-                <li>
-                    <a href="?page={{ num }}{% if selected_school %}&school={{ selected_school }}{% endif %}" class="page-link-btn">{{ num }}</a>
-                </li>
-            {% endif %}
-        {% endfor %}
+{% block extra_js %}
+{{ existing_grades|json_script:"existingGradesData" }}
+<script>
+    var schoolSelect = document.getElementById('schoolSelect');
+    if (schoolSelect) {
+        var existingGrades = JSON.parse(document.getElementById('existingGradesData').textContent);
+        var options = document.querySelectorAll('.grade-option');
+        var submitBtn = document.getElementById('submitBtn');
 
-        {% if grade_levels.has_next %}
-            <li>
-                <a href="?page={{ grade_levels.next_page_number }}{% if selected_school %}&school={{ selected_school }}{% endif %}" class="page-link-btn" title="Next">
-                    <i class="fas fa-angle-right"></i>
-                </a>
-            </li>
-            <li>
-                <a href="?page={{ grade_levels.paginator.num_pages }}{% if selected_school %}&school={{ selected_school }}{% endif %}" class="page-link-btn" title="Last">
-                    <i class="fas fa-angle-double-right"></i>
-                </a>
-            </li>
-        {% else %}
-            <li><span class="page-link-btn disabled-page"><i class="fas fa-angle-right"></i></span></li>
-            <li><span class="page-link-btn disabled-page"><i class="fas fa-angle-double-right"></i></span></li>
-        {% endif %}
-    </ul>
-</div>
-{% endif %}
+        function refreshSubmit() {
+            submitBtn.disabled = !schoolSelect.value || !document.querySelector('.grade-option input:checked');
+        }
 
+        // Grades the selected school already has are locked
+        function refreshExisting() {
+            var existing = existingGrades[schoolSelect.value] || [];
+            options.forEach(function(option) {
+                var input = option.querySelector('input');
+                var meta = option.querySelector('.grade-option-meta');
+                var exists = existing.indexOf(parseInt(option.dataset.grade, 10)) !== -1;
+                option.classList.toggle('exists', exists);
+                input.disabled = exists;
+                if (exists) input.checked = false;
+                meta.textContent = exists ? 'Already added' : meta.dataset.default;
+            });
+            refreshSubmit();
+        }
+
+        document.querySelectorAll('.btn-preset').forEach(function(button) {
+            button.addEventListener('click', function() {
+                var grades = this.dataset.grades ? this.dataset.grades.split(',') : [];
+                options.forEach(function(option) {
+                    var input = option.querySelector('input');
+                    input.checked = !input.disabled && grades.indexOf(option.dataset.grade) !== -1;
+                });
+                refreshSubmit();
+            });
+        });
+        options.forEach(function(option) {
+            option.querySelector('input').addEventListener('change', refreshSubmit);
+        });
+        schoolSelect.addEventListener('change', refreshExisting);
+        refreshExisting();
+    }
+</script>
 {% endblock %}

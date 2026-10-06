@@ -527,44 +527,39 @@
 
                 <div class="form-group">
                     <label class="form-label-sm required">School</label>
-                    <select name="school" class="form-select-input" required>
+                    <select name="school" id="sySchool" class="form-select-input" required>
                         <option value="">Select School...</option>
                         {% for s in schools %}
-                        <option value="{{ s.id }}">{{ s.school_name }}</option>
+                        <option value="{{ s.id }}" data-period="{{ s.period_type }}" {% if form.school.value|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>{{ s.school_name }}</option>
                         {% endfor %}
                     </select>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label-sm required">Year Label</label>
-                    <input type="text" name="year_label" class="form-input" placeholder="e.g., SY 2026-2027" required>
-                </div>
-
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label-sm required">Year Start</label>
-                        <input type="number" name="year_start" class="form-input" placeholder="2026" min="2000" max="2100" required>
+                        <label class="form-label-sm required">Starting Year</label>
+                        <input type="number" name="year_start" id="syYearStart" class="form-input" placeholder="2026" min="2000" max="2099" value="{{ form.year_start.value|default:'' }}" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label-sm required">Year End</label>
-                        <input type="number" name="year_end" class="form-input" placeholder="2027" min="2000" max="2100" required>
+                        <label class="form-label-sm">School Year</label>
+                        <input type="text" id="syLabel" class="form-input" placeholder="2026-2027" readonly tabindex="-1">
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label-sm required">Date Start</label>
-                        <input type="date" name="date_start" class="form-input" required>
+                        <label class="form-label-sm required">First Day of Classes</label>
+                        <input type="date" name="date_start" class="form-input" value="{{ form.date_start.value|default:'' }}" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label-sm required">Date End</label>
-                        <input type="date" name="date_end" class="form-input" required>
+                        <label class="form-label-sm required">Last Day of Classes</label>
+                        <input type="date" name="date_end" class="form-input" value="{{ form.date_end.value|default:'' }}" required>
                     </div>
                 </div>
 
                 <label class="checkbox-group">
-                    <input type="checkbox" name="auto_create_quarters" checked>
-                    <span class="checkbox-label">Auto-create 4 quarters</span>
+                    <input type="checkbox" name="auto_create_periods" checked>
+                    <span class="checkbox-label" id="syAutoLabel">Auto-create grading periods</span>
                 </label>
 
                 <label class="checkbox-group">
@@ -638,16 +633,24 @@
                     </div>
                     <div class="sy-card-actions">
                         {% if not sy.is_current %}
-                        <a href="{% url 'admin_panel:school_year_set_current' sy.id %}"
-                           class="btn-sy-action info-action"
-                           onclick="return confirm('Set {{ sy.year_label|escapejs }} as current?')">
-                            <i class="fas fa-check-circle"></i> Set Current
-                        </a>
+                        <form method="POST" action="{% url 'admin_panel:school_year_set_current' sy.id %}" style="display:contents;" onsubmit="return confirm('Set {{ sy.year_label|escapejs }} as current?')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-sy-action info-action">
+                                <i class="fas fa-check-circle"></i> Set Current
+                            </button>
+                        </form>
                         {% endif %}
-                        <a href="{% url 'admin_panel:quarter_bulk_create' sy.id %}"
-                           class="btn-sy-action secondary-action"
-                           onclick="return confirm('Create quarters for {{ sy.year_label|escapejs }}?')">
-                            <i class="fas fa-clock"></i> Quarters
+                        {% if sy.missing_periods %}
+                        <form method="POST" action="{% url 'admin_panel:quarter_bulk_create' sy.id %}" style="display:contents;">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{% url 'admin_panel:school_year_manage' %}">
+                            <button type="submit" class="btn-sy-action secondary-action">
+                                <i class="fas fa-magic"></i> Create {{ sy.period_cfg.plural }}
+                            </button>
+                        </form>
+                        {% endif %}
+                        <a href="{% url 'admin_panel:quarter_manage' %}?school_year={{ sy.id }}" class="btn-sy-action secondary-action">
+                            <i class="fas fa-clock"></i> Manage {{ sy.period_cfg.plural }}
                         </a>
                         <form method="POST" action="{% url 'admin_panel:school_year_delete' sy.id %}" style="display:contents;" onsubmit="return confirm('Delete {{ sy.year_label|escapejs }}? This cannot be undone.')">
                             {% csrf_token %}
@@ -673,8 +676,8 @@
                             <span class="sy-detail-value">{{ sy.date_end|date:"M d, Y" }}</span>
                         </div>
                         <div class="sy-detail-item">
-                            <span class="sy-detail-label">Quarters</span>
-                            <span class="sy-detail-value">{{ sy.quarter_count|default:0 }} / 4</span>
+                            <span class="sy-detail-label">{{ sy.period_cfg.plural }}</span>
+                            <span class="sy-detail-value">{{ sy.periods|length }} / {{ sy.period_cfg.count }}</span>
                         </div>
                     </div>
 
@@ -686,23 +689,23 @@
                     </div>
 
                     <div>
-                        {% if sy.quarters.all %}
+                        {% if sy.periods %}
                         <div class="quarter-tags">
-                            {% for q in sy.quarters.all %}
+                            {% for q in sy.periods %}
                             <span class="quarter-tag {% if q.is_current_quarter %}active-quarter{% endif %}">
                                 <span class="quarter-dot {% if q.is_current_quarter %}active-dot{% else %}default-dot{% endif %}"></span>
                                 {{ q.quarter_label }} ({{ q.date_start|date:"M d" }} – {{ q.date_end|date:"M d" }})
                             </span>
                             {% endfor %}
-                            {% if sy.quarter_count < 4 %}
+                            {% if sy.missing_periods %}
                             <span class="quarter-tag missing-quarter">
                                 <span class="quarter-dot missing-dot"></span>
-                                Missing {{ 4|add:"-"|add:sy.quarter_count }}
+                                Missing {{ sy.missing_periods }}
                             </span>
                             {% endif %}
                         </div>
                         {% else %}
-                        <span class="no-quarters-text">No quarters created yet</span>
+                        <span class="no-quarters-text">No {{ sy.period_cfg.plural|lower }} created yet</span>
                         {% endif %}
                     </div>
                 </div>
@@ -734,4 +737,33 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+{{ period_config|json_script:"periodConfigData" }}
+<script>
+    var periodConfig = JSON.parse(document.getElementById('periodConfigData').textContent);
+    var sySchool = document.getElementById('sySchool');
+    var syYearStart = document.getElementById('syYearStart');
+
+    // The label is always "<start>-<start + 1>"
+    function syncLabel() {
+        var year = parseInt(syYearStart.value, 10);
+        document.getElementById('syLabel').value = year ? year + '-' + (year + 1) : '';
+    }
+
+    // Number and name of the periods follow the selected school's period type
+    function syncAutoLabel() {
+        var option = sySchool.options[sySchool.selectedIndex];
+        var cfg = periodConfig[option.dataset.period];
+        document.getElementById('syAutoLabel').textContent = cfg
+            ? 'Auto-create ' + cfg.count + ' ' + cfg.plural.toLowerCase()
+            : 'Auto-create grading periods';
+    }
+
+    syYearStart.addEventListener('input', syncLabel);
+    sySchool.addEventListener('change', syncAutoLabel);
+    syncLabel();
+    syncAutoLabel();
+</script>
 {% endblock %}

@@ -385,6 +385,10 @@
                 <span class="sidebar-link-icon"><i class="fas fa-user-tie"></i></span>
                 <span>Principals</span>
             </a>
+            <a href="{% url 'admin_panel:registrar_list' %}" class="sidebar-link {% if active == 'registrars' %}active{% endif %}">
+                <span class="sidebar-link-icon"><i class="fas fa-user-shield"></i></span>
+                <span>Registrars</span>
+            </a>
             
             <div class="sidebar-section-title">Configuration</div>
             <a href="{% url 'admin_panel:grade_level_list' %}" class="sidebar-link {% if active == 'grade_levels' %}active{% endif %}">
@@ -397,7 +401,7 @@
             </a>
             <a href="{% url 'admin_panel:quarter_manage' %}" class="sidebar-link {% if active == 'quarters' %}active{% endif %}">
                 <span class="sidebar-link-icon"><i class="fas fa-clock"></i></span>
-                <span>Quarters</span>
+                <span>Grading Periods</span>
             </a>
         </nav>
         

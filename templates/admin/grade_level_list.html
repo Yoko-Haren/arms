@@ -94,14 +94,12 @@
         background: var(--gray-50);
         white-space: nowrap;
     }
-    .data-table thead th:last-child { text-align: center; }
     .data-table tbody td {
         padding: 0.75rem 1rem;
         border-bottom: 1px solid var(--gray-100);
         color: var(--gray-700);
         vertical-align: middle;
     }
-    .data-table tbody td:last-child { text-align: center; }
     .data-table tbody tr {
         transition: var(--transition);
     }
@@ -312,6 +310,7 @@
                     <th>SHS</th>
                     <th>School</th>
                     <th>Created</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -350,10 +349,16 @@
                     </td>
                     <td><span class="school-cell">{{ gl.school.school_name|default:"—" }}</span></td>
                     <td><span class="date-cell">{{ gl.created_at|date:"M d, Y" }}</span></td>
+                    <td>
+                        <form method="POST" action="{% url 'admin_panel:grade_level_delete' gl.id %}" style="display:inline;" onsubmit="return confirm('Remove {{ gl.grade_name|escapejs }} from {{ gl.school.school_name|escapejs }}?')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove"><i class="fas fa-trash"></i></button>
+                        </form>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7">
+                    <td colspan="8">
                         <div class="empty-state">
                             <div class="empty-state-icon">
                                 <i class="fas fa-layer-group"></i>

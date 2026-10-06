@@ -239,6 +239,12 @@ class Quarter(models.Model):
         ('Q2', 'Q2'),
         ('Q3', 'Q3'),
         ('Q4', 'Q4'),
+        # Grading periods for non-quarterly schools (see School.period_type)
+        ('T1', 'T1'),
+        ('T2', 'T2'),
+        ('T3', 'T3'),
+        ('S1', 'S1'),
+        ('S2', 'S2'),
     ]
 
     school_year = models.ForeignKey(

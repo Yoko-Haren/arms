@@ -1,8 +1,8 @@
 {% extends 'admin/base.html' %}
 {% load static %}
 
-{% block title %}Quarters{% endblock %}
-{% block page_title %}Quarter Management{% endblock %}
+{% block title %}Grading Periods{% endblock %}
+{% block page_title %}Grading Period Management{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -309,6 +309,17 @@
     .quarter-label-icon.q2 { background: linear-gradient(135deg, #2E7D32, #43a047); }
     .quarter-label-icon.q3 { background: linear-gradient(135deg, #E65100, #f57c00); }
     .quarter-label-icon.q4 { background: linear-gradient(135deg, #C62828, #e53935); }
+    .quarter-label-icon.t1, .quarter-label-icon.s1 { background: linear-gradient(135deg, #1565C0, #1e88e5); }
+    .quarter-label-icon.t2, .quarter-label-icon.s2 { background: linear-gradient(135deg, #2E7D32, #43a047); }
+    .quarter-label-icon.t3 { background: linear-gradient(135deg, #E65100, #f57c00); }
+
+    .period-edit { margin-top: 0.75rem; border-top: 1px dashed var(--gray-200); padding-top: 0.6rem; }
+    .period-edit summary { font-size: 0.7rem; font-weight: 600; color: var(--primary); cursor: pointer; }
+    .period-edit-form { display: flex; gap: 0.6rem; align-items: end; flex-wrap: wrap; margin-top: 0.6rem; }
+    .period-edit-form .form-group { margin-bottom: 0; }
+    .period-edit-form .checkbox-group { margin-bottom: 0; }
+    .period-edit-form .btn-filter-sm { height: 38px; }
+    .form-hint { font-size: 0.68rem; color: var(--gray-500); margin-top: 0.3rem; }
 
     .quarter-label-text {
         font-size: 0.9rem;
@@ -483,7 +494,7 @@
                 <div class="form-card-header-icon">
                     <i class="fas fa-plus-circle"></i>
                 </div>
-                <h6>Create New Quarter</h6>
+                <h6>Add a Grading Period</h6>
             </div>
 
             <form method="POST">
@@ -491,27 +502,20 @@
 
                 <div class="form-group">
                     <label class="form-label-sm required">School Year</label>
-                    <select name="school_year" class="form-select-input" required>
+                    <select name="school_year" id="periodSchoolYear" class="form-select-input" required>
                         <option value="">Select School Year...</option>
                         {% for sy in school_years %}
-                        <option value="{{ sy.id }}">{{ sy.school.school_name }} — {{ sy.year_label }}</option>
+                        <option value="{{ sy.id }}" {% if form.school_year.value|stringformat:"s" == sy.id|stringformat:"s" or not form.is_bound and selected_sy|stringformat:"s" == sy.id|stringformat:"s" %}selected{% endif %}>{{ sy.school.school_name }} — {{ sy.year_label }}</option>
                         {% endfor %}
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label-sm required">Quarter Label</label>
-                    <select name="quarter_label" class="form-select-input" required>
-                        <option value="Q1">Q1 (First Quarter)</option>
-                        <option value="Q2">Q2 (Second Quarter)</option>
-                        <option value="Q3">Q3 (Third Quarter)</option>
-                        <option value="Q4">Q4 (Fourth Quarter)</option>
+                    <label class="form-label-sm required" id="periodLabel">Period</label>
+                    <select name="quarter_number" id="periodNumber" class="form-select-input" required>
+                        <option value="">Select a school year first...</option>
                     </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label-sm required">Quarter Number</label>
-                    <input type="number" name="quarter_number" class="form-input" min="1" max="4" required>
+                    <div class="form-hint" id="periodHint">The available periods depend on the school's Period Type.</div>
                 </div>
 
                 <div class="form-row">
@@ -527,17 +531,18 @@
 
                 <label class="checkbox-group">
                     <input type="checkbox" name="is_current_quarter">
-                    <span class="checkbox-label">Set as Current Quarter</span>
+                    <span class="checkbox-label">Set as Current Period</span>
                 </label>
 
-                <button type="submit" class="btn-submit">
-                    <i class="fas fa-save"></i> Create Quarter
+                <button type="submit" class="btn-submit" id="periodSubmit">
+                    <i class="fas fa-save"></i> Add Period
                 </button>
+                <div class="form-hint">Grade encoding and validation deadlines default to 7 and 14 days after the period ends.</div>
             </form>
         </div>
     </div>
 
-    <!-- RIGHT COLUMN: Quarters List -->
+    <!-- RIGHT COLUMN: Periods List -->
     <div>
         <!-- Filters -->
         <div class="inline-filter-card">
@@ -572,100 +577,126 @@
             </form>
         </div>
 
-        <!-- Quarters Grouped by School Year -->
-        {% regroup quarters by school_year as quarter_list %}
-
-        {% if quarter_list %}
-            {% for school_year in quarter_list %}
-            <div class="sy-group">
-                <div class="sy-group-header">
-                    <div class="sy-group-title">
-                        <i class="fas fa-calendar-alt"></i>
-                        {{ school_year.grouper.school.school_name }} — {{ school_year.grouper.year_label }}
-                    </div>
-                    <div class="sy-group-badges">
-                        {% if school_year.grouper.is_current %}
-                        <span class="sy-badge-tag current-sy">
-                            <i class="fas fa-star"></i> Current SY
-                        </span>
-                        {% endif %}
-                        <span class="sy-badge-tag quarter-count">
-                            {{ school_year.list|length }} / 4 quarters
-                        </span>
-                    </div>
+        <!-- Periods grouped by school year -->
+        {% for sy in grouped_school_years %}
+        <div class="sy-group">
+            <div class="sy-group-header">
+                <div class="sy-group-title">
+                    <i class="fas fa-calendar-alt"></i>
+                    {{ sy.school.school_name }} — {{ sy.year_label }}
                 </div>
+                <div class="sy-group-badges">
+                    {% if sy.is_current %}
+                    <span class="sy-badge-tag current-sy">
+                        <i class="fas fa-star"></i> Current SY
+                    </span>
+                    {% endif %}
+                    <span class="sy-badge-tag quarter-count">
+                        {{ sy.periods|length }} / {{ sy.period_cfg.count }} {{ sy.period_cfg.plural|lower }}
+                    </span>
+                </div>
+            </div>
 
-                {% if school_year.list %}
-                <div class="quarter-stack">
-                    {% for quarter in school_year.list %}
-                    <div class="quarter-card {% if quarter.is_current_quarter %}current-highlight{% endif %} {% if quarter.is_grades_locked %}locked-dim{% endif %}">
-                        <div class="quarter-card-header">
-                            <div class="quarter-card-title">
-                                <div class="quarter-label-icon {{ quarter.quarter_label|lower }}">
-                                    <span>{{ quarter.quarter_label }}</span>
-                                </div>
-                                <span class="quarter-label-text">{{ quarter.quarter_label }}</span>
-                                <div class="quarter-tags-inline">
-                                    {% if quarter.is_current_quarter %}
-                                    <span class="quarter-tag-pill current-tag">
-                                        <i class="fas fa-star"></i> Current
-                                    </span>
-                                    {% endif %}
-                                    {% if quarter.is_grades_locked %}
-                                    <span class="quarter-tag-pill locked-tag">
-                                        <i class="fas fa-lock"></i> Locked
-                                    </span>
-                                    {% endif %}
-                                </div>
+            <div class="quarter-stack">
+                {% for quarter in sy.periods %}
+                <div class="quarter-card {% if quarter.is_current_quarter %}current-highlight{% endif %} {% if quarter.is_grades_locked %}locked-dim{% endif %}">
+                    <div class="quarter-card-header">
+                        <div class="quarter-card-title">
+                            <div class="quarter-label-icon {{ quarter.quarter_label|lower }}">
+                                <span>{{ quarter.quarter_label }}</span>
                             </div>
-                            <form method="POST" action="{% url 'admin_panel:quarter_delete' quarter.id %}" style="display:contents;" onsubmit="return confirm('Delete {{ quarter.quarter_label|escapejs }}?')">
+                            <span class="quarter-label-text">{{ sy.period_cfg.noun }} {{ quarter.quarter_number }}</span>
+                            <div class="quarter-tags-inline">
+                                {% if quarter.is_current_quarter %}
+                                <span class="quarter-tag-pill current-tag">
+                                    <i class="fas fa-star"></i> Current
+                                </span>
+                                {% endif %}
+                                {% if quarter.is_grades_locked %}
+                                <span class="quarter-tag-pill locked-tag">
+                                    <i class="fas fa-lock"></i> Locked
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <form method="POST" action="{% url 'admin_panel:quarter_delete' quarter.id %}" style="display:contents;" onsubmit="return confirm('Delete {{ quarter.quarter_label|escapejs }}?')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-delete-icon" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="quarter-card-body">
+                        <div class="quarter-detail-row">
+                            <div class="quarter-detail-item">
+                                <span class="quarter-detail-label">Date Start</span>
+                                <span class="quarter-detail-value">{{ quarter.date_start|date:"M d, Y" }}</span>
+                            </div>
+                            <div class="quarter-detail-item">
+                                <span class="quarter-detail-label">Date End</span>
+                                <span class="quarter-detail-value">{{ quarter.date_end|date:"M d, Y" }}</span>
+                            </div>
+                            <div class="quarter-detail-item">
+                                <span class="quarter-detail-label">Grade Encoding Deadline</span>
+                                <span class="quarter-detail-value">{{ quarter.grade_encoding_deadline|date:"M d, Y" }}</span>
+                            </div>
+                        </div>
+
+                        <details class="period-edit">
+                            <summary><i class="fas fa-edit"></i> Edit dates &amp; status</summary>
+                            <form method="POST" action="{% url 'admin_panel:quarter_update' quarter.id %}" class="period-edit-form">
                                 {% csrf_token %}
-                                <button type="submit" class="btn-delete-icon" title="Delete">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <div class="form-group">
+                                    <label class="form-label-sm">Date Start</label>
+                                    <input type="date" name="date_start" class="form-input" value="{{ quarter.date_start|date:'Y-m-d' }}" min="{{ sy.date_start|date:'Y-m-d' }}" max="{{ sy.date_end|date:'Y-m-d' }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label-sm">Date End</label>
+                                    <input type="date" name="date_end" class="form-input" value="{{ quarter.date_end|date:'Y-m-d' }}" min="{{ sy.date_start|date:'Y-m-d' }}" max="{{ sy.date_end|date:'Y-m-d' }}" required>
+                                </div>
+                                <label class="checkbox-group">
+                                    <input type="checkbox" name="is_current_quarter" {% if quarter.is_current_quarter %}checked{% endif %}>
+                                    <span class="checkbox-label">Current</span>
+                                </label>
+                                <label class="checkbox-group">
+                                    <input type="checkbox" name="is_grades_locked" {% if quarter.is_grades_locked %}checked{% endif %}>
+                                    <span class="checkbox-label">Grades locked</span>
+                                </label>
+                                <button type="submit" class="btn-filter-sm"><i class="fas fa-save"></i> Save</button>
                             </form>
-                        </div>
-                        <div class="quarter-card-body">
-                            <div class="quarter-detail-row">
-                                <div class="quarter-detail-item">
-                                    <span class="quarter-detail-label">Number</span>
-                                    <span class="quarter-detail-value">{{ quarter.quarter_number }}</span>
-                                </div>
-                                <div class="quarter-detail-item">
-                                    <span class="quarter-detail-label">Date Start</span>
-                                    <span class="quarter-detail-value">{{ quarter.date_start|date:"M d, Y" }}</span>
-                                </div>
-                                <div class="quarter-detail-item">
-                                    <span class="quarter-detail-label">Date End</span>
-                                    <span class="quarter-detail-value">{{ quarter.date_end|date:"M d, Y" }}</span>
-                                </div>
-                            </div>
-                        </div>
+                        </details>
                     </div>
-                    {% endfor %}
                 </div>
-                {% else %}
+                {% endfor %}
+
+                {% if sy.missing_periods %}
                 <div class="empty-group-card">
                     <div class="empty-group-icon">
                         <i class="fas fa-clock"></i>
                     </div>
-                    <p>No quarters created for this school year yet.</p>
-                    <a href="{% url 'admin_panel:quarter_bulk_create' school_year.grouper.id %}" class="btn-auto-create">
-                        <i class="fas fa-magic"></i> Auto-create All 4 Quarters
-                    </a>
+                    <p>
+                        {% if sy.periods %}{{ sy.missing_periods }} of {{ sy.period_cfg.count }} {{ sy.period_cfg.plural|lower }} still missing for this school year.{% else %}No {{ sy.period_cfg.plural|lower }} created for this school year yet.{% endif %}
+                    </p>
+                    <form method="POST" action="{% url 'admin_panel:quarter_bulk_create' sy.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button type="submit" class="btn-auto-create" style="border:none;cursor:pointer;font-family:inherit;">
+                            <i class="fas fa-magic"></i> Auto-create {% if sy.periods %}the missing{% else %}all {{ sy.period_cfg.count }}{% endif %} {{ sy.period_cfg.plural }}
+                        </button>
+                    </form>
                 </div>
                 {% endif %}
             </div>
-            {% endfor %}
-        {% else %}
+        </div>
+        {% empty %}
         <div class="empty-state-card">
             <div class="empty-state-circle">
                 <i class="fas fa-clock"></i>
             </div>
-            <h5>No Quarters Found</h5>
-            <p>Create a quarter using the form, or create school years first.</p>
+            <h5>No School Years Found</h5>
+            <p>Grading periods belong to a school year. <a href="{% url 'admin_panel:school_year_manage' %}">Create a school year first</a>.</p>
         </div>
-        {% endif %}
+        {% endfor %}
     </div>
 </div>
 
@@ -673,69 +704,69 @@
 
 {% block extra_js %}
 <script>
-    var schoolYearSelect = document.querySelector('select[name="school_year"]');
+    var schoolYearSelect = document.getElementById('periodSchoolYear');
+    var periodSelect = document.getElementById('periodNumber');
     var startDateInput = document.querySelector('input[name="date_start"]');
     var endDateInput = document.querySelector('input[name="date_end"]');
-    var quarterSelect = document.querySelector('select[name="quarter_label"]');
-    var quarterNumberInput = document.querySelector('input[name="quarter_number"]');
 
-    // Store school year dates from Django context
-    var schoolYearDates = {};
+    // Per school year: dates, period wording/count (from the school's period type), periods already created
+    var schoolYears = {};
     {% for sy in school_years %}
-    schoolYearDates[{{ sy.id }}] = {
+    schoolYears[{{ sy.id }}] = {
         start: '{{ sy.date_start|date:"Y-m-d" }}',
-        end: '{{ sy.date_end|date:"Y-m-d" }}'
+        end: '{{ sy.date_end|date:"Y-m-d" }}',
+        count: {{ sy.period_cfg.count }},
+        prefix: '{{ sy.period_cfg.prefix }}',
+        noun: '{{ sy.period_cfg.noun }}',
+        taken: [{% for q in sy.periods %}{{ q.quarter_number }}{% if not forloop.last %}, {% endif %}{% endfor %}]
     };
     {% endfor %}
 
-    // Auto-set quarter number when label changes
-    if (quarterSelect) {
-        quarterSelect.addEventListener('change', function() {
-            var qMap = {'Q1': 1, 'Q2': 2, 'Q3': 3, 'Q4': 4};
-            if (quarterNumberInput) {
-                quarterNumberInput.value = qMap[this.value] || '';
-            }
-            calculateQuarterDates();
-        });
-    }
+    var DAY = 86400000;
+    function iso(date) { return date.toISOString().split('T')[0]; }
 
-    function calculateQuarterDates() {
-        var syId = schoolYearSelect ? schoolYearSelect.value : null;
-        var quarter = quarterSelect ? quarterSelect.value : null;
-
-        if (syId && quarter && schoolYearDates[syId] && startDateInput && endDateInput) {
-            var start = new Date(schoolYearDates[syId].start + 'T00:00:00');
-            var end = new Date(schoolYearDates[syId].end + 'T00:00:00');
-            var totalDays = (end - start) / (1000 * 60 * 60 * 24);
-            var quarterLength = Math.floor(totalDays / 4);
-
-            var quarterStart, quarterEnd;
-            switch(quarter) {
-                case 'Q1':
-                    quarterStart = new Date(start);
-                    quarterEnd = new Date(start.getTime() + (quarterLength * 86400000));
-                    break;
-                case 'Q2':
-                    quarterStart = new Date(start.getTime() + (quarterLength * 86400000) + 86400000);
-                    quarterEnd = new Date(start.getTime() + (quarterLength * 2 * 86400000));
-                    break;
-                case 'Q3':
-                    quarterStart = new Date(start.getTime() + (quarterLength * 2 * 86400000) + 86400000);
-                    quarterEnd = new Date(start.getTime() + (quarterLength * 3 * 86400000));
-                    break;
-                case 'Q4':
-                    quarterStart = new Date(start.getTime() + (quarterLength * 3 * 86400000) + 86400000);
-                    quarterEnd = new Date(end);
-                    break;
-            }
-
-            startDateInput.value = quarterStart.toISOString().split('T')[0];
-            endDateInput.value = quarterEnd.toISOString().split('T')[0];
+    // Offer only the periods this school year can still have
+    function fillPeriods() {
+        var sy = schoolYears[schoolYearSelect.value];
+        periodSelect.innerHTML = '';
+        if (!sy) {
+            periodSelect.add(new Option('Select a school year first...', ''));
+            document.getElementById('periodLabel').textContent = 'Period';
+            document.getElementById('periodSubmit').disabled = true;
+            return;
         }
+        document.getElementById('periodLabel').textContent = sy.noun;
+        for (var n = 1; n <= sy.count; n++) {
+            if (sy.taken.indexOf(n) === -1) {
+                periodSelect.add(new Option(sy.prefix + n + ' (' + sy.noun + ' ' + n + ')', n));
+            }
+        }
+        var full = periodSelect.options.length === 0;
+        if (full) periodSelect.add(new Option('All ' + sy.count + ' already created', ''));
+        document.getElementById('periodSubmit').disabled = full;
+        document.getElementById('periodHint').textContent =
+            'This school uses ' + sy.count + ' ' + sy.noun.toLowerCase() + 's per school year.';
+        startDateInput.min = endDateInput.min = sy.start;
+        startDateInput.max = endDateInput.max = sy.end;
+        suggestDates();
     }
 
-    if (schoolYearSelect) {
-        schoolYearSelect.addEventListener('change', calculateQuarterDates);
+    // Suggest an even split of the school year; the admin can adjust the dates
+    function suggestDates() {
+        var sy = schoolYears[schoolYearSelect.value];
+        var n = parseInt(periodSelect.value, 10);
+        if (!sy || !n) return;
+        var start = new Date(sy.start + 'T00:00:00Z');
+        var end = new Date(sy.end + 'T00:00:00Z');
+        var length = Math.floor(((end - start) / DAY + 1) / sy.count);
+        var periodStart = new Date(start.getTime() + length * (n - 1) * DAY);
+        var periodEnd = n === sy.count ? end : new Date(periodStart.getTime() + (length - 1) * DAY);
+        startDateInput.value = iso(periodStart);
+        endDateInput.value = iso(periodEnd);
     }
+
+    schoolYearSelect.addEventListener('change', fillPeriods);
+    periodSelect.addEventListener('change', suggestDates);
+    fillPeriods();
 </script>
 {% endblock %}

@@ -5,11 +5,14 @@ from django.contrib.auth.models import User, Group
 from django.contrib import messages
 from django.db.models import Count, Q, Sum, Avg
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.conf import settings
 from django.db import transaction
+from django.db.models import ProtectedError
 from django.http import JsonResponse
 from django.urls import reverse
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
+import secrets
 
 # ===== USE THE REAL MODELS =====
 from academics.models import School, GradeLevel, SchoolYear, Quarter, GradingSchema
@@ -17,8 +20,10 @@ from accounts.models import UserProfile
 from enrollment.models import Enrollment
 
 from .forms import (
-    AdminLoginForm, SchoolForm, PrincipalCreationForm,
-    GradeLevelForm, SchoolYearForm, QuarterForm, BulkGradeLevelForm
+    AdminLoginForm, SchoolForm, PrincipalCreationForm, PrincipalEditForm,
+    RegistrarCreationForm, GradeLevelForm, SchoolYearForm, QuarterForm,
+    QuarterUpdateForm, GRADE_NUMBERS, PERIOD_CONFIG, period_config,
+    default_registrar_account,
 )
 
 
@@ -48,6 +53,54 @@ def get_school_students(school):
     return Enrollment.objects.filter(
         section__school=school, status__in=['Enrolled', 'Transferred_In']
     ).select_related('student', 'section__grade_level')
+
+
+def _period_deadlines(date_end):
+    """Default grade encoding / validation deadlines: 7 and 14 days after a period ends."""
+    end = datetime.combine(date_end, time(23, 59))
+    if settings.USE_TZ:
+        end = timezone.make_aware(end)
+    return end + timedelta(days=7), end + timedelta(days=14)
+
+
+def _generate_periods(sy):
+    """Create the missing grading periods of a school year, split evenly over its dates.
+
+    The number of periods and their labels follow the school's period type.
+    Returns (created, already_existing).
+    """
+    cfg = period_config(sy.school)
+    count = cfg['count']
+    length = ((sy.date_end - sy.date_start).days + 1) // count
+    created = 0
+    with transaction.atomic():
+        for i in range(count):
+            start = sy.date_start + timedelta(days=length * i)
+            end = sy.date_end if i == count - 1 else start + timedelta(days=length - 1)
+            encoding, validation = _period_deadlines(end)
+            _, was_created = Quarter.objects.get_or_create(
+                school_year=sy,
+                quarter_number=i + 1,
+                defaults={
+                    'quarter_label': f'{cfg["prefix"]}{i + 1}',
+                    'date_start': start,
+                    'date_end': end,
+                    'grade_encoding_deadline': encoding,
+                    'grade_validation_deadline': validation,
+                },
+            )
+            created += was_created
+    return created, count - created
+
+
+def _with_period_info(school_years):
+    """Attach period wording and progress to each school year for the templates."""
+    school_years = list(school_years)
+    for sy in school_years:
+        sy.period_cfg = period_config(sy.school)
+        sy.periods = list(sy.quarters.all())
+        sy.missing_periods = max(sy.period_cfg['count'] - len(sy.periods), 0)
+    return school_years
 
 
 def _log_admin_action(request, action_type, description):
@@ -240,7 +293,7 @@ def school_create(request):
         form = SchoolForm()
     
     return render(request, 'admin/school_create.html', {
-        'form': form, 'edit_mode': False,
+        'form': form, 'edit_mode': False, 'period_config': PERIOD_CONFIG,
         'title': 'Create New School', 'submit_text': 'Create School',
     })
 
@@ -282,9 +335,10 @@ def school_edit(request, school_id):
             form.save()
             messages.success(request, f'School "{school.school_name}" updated!')
             return redirect('admin_panel:school_detail', school_id=school.id)
+        _form_errors_to_messages(request, form)
     else:
         form = SchoolForm(instance=school)
-    return render(request, 'admin/school_create.html', {'form': form, 'school': school, 'edit_mode': True, 'title': f'Edit: {school.school_name}', 'submit_text': 'Update School'})
+    return render(request, 'admin/school_create.html', {'form': form, 'school': school, 'edit_mode': True, 'period_config': PERIOD_CONFIG, 'title': f'Edit: {school.school_name}', 'submit_text': 'Update School'})
 
 
 @login_required
@@ -322,7 +376,10 @@ def school_delete(request, school_id):
 @login_required
 @user_passes_test(is_admin, login_url='admin_panel:login')
 def principal_list(request):
-    principals = UserProfile.objects.filter(role='schoolhead').select_related('user', 'school').order_by('user__last_name')
+    principals = UserProfile.objects.filter(role='schoolhead').select_related('user', 'school').annotate(
+        registrar_count=Count('school__staff_profiles', filter=Q(school__staff_profiles__role='registrar', school__staff_profiles__is_active=True)),
+        teacher_count=Count('school__staff_profiles', filter=Q(school__staff_profiles__role='teacher', school__staff_profiles__is_active=True)),
+    ).order_by('user__last_name')
 
     search = request.GET.get('search', '')
     if search:
@@ -338,12 +395,16 @@ def principal_list(request):
     elif status == 'active':
         principals = principals.filter(is_active=True)
 
+    sort = request.GET.get('sort', 'user__last_name')
+    valid_sorts = {'user__last_name', '-user__last_name', 'school__school_name', '-school__school_name', '-created_at', 'created_at'}
+    principals = principals.order_by(sort if sort in valid_sorts else 'user__last_name')
+
     paginator = Paginator(principals, 10)
     page_obj = paginator.get_page(request.GET.get('page', 1))
 
     context = {
         'principals': page_obj,
-        'search': search, 'school_filter': school_filter, 'status': status,
+        'search': search, 'school_filter': school_filter, 'status': status, 'sort': sort,
         'schools': School.objects.filter(is_active=True),
         'active_count': UserProfile.objects.filter(role='schoolhead', is_active=True).count(),
         'inactive_count': UserProfile.objects.filter(role='schoolhead', is_active=False).count(),
@@ -355,52 +416,103 @@ def principal_list(request):
 @user_passes_test(is_admin, login_url='admin_panel:login')
 def principal_create(request):
     schools = School.objects.filter(is_active=True)
-    if request.method == 'POST':
-        first_name = request.POST.get('first_name', '').strip()
-        last_name = request.POST.get('last_name', '').strip()
-        email = request.POST.get('email', '').strip().lower()
-        username = request.POST.get('username', '').strip().lower()
-        password = request.POST.get('password', '')
-        school_id = request.POST.get('school', '')
-        employee_id = request.POST.get('employee_id', '').strip()
+    form = PrincipalCreationForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        user, school = _create_school_staff(form.cleaned_data, 'schoolhead', 'Principal', 'School Principal')
+        messages.success(request, f'Principal "{user.get_full_name()}" created for {school.school_name}.')
+        return redirect('admin_panel:principal_list')
+    _form_errors_to_messages(request, form)
+    return render(request, 'admin/principal_create.html', {'schools': schools, 'form': form})
 
-        errors = []
-        if not all([first_name, last_name, email, username, password, school_id]):
-            errors.append('All required fields must be filled.')
-        if User.objects.filter(username=username).exists():
-            errors.append(f'Username "{username}" is taken.')
-        if User.objects.filter(email=email).exists():
-            errors.append(f'Email "{email}" is in use.')
-        if employee_id and UserProfile.objects.filter(employee_number=employee_id).exists():
-            errors.append(f'Employee ID "{employee_id}" is already assigned.')
-        if len(password) < 6:
-            errors.append('Password must be at least 6 characters.')
 
-        if errors:
+def _form_errors_to_messages(request, form):
+    if form.is_bound:
+        for field, errors in form.errors.items():
             for error in errors:
-                messages.error(request, error)
-        else:
-            try:
-                with transaction.atomic():
-                    user = User.objects.create_user(username=username, email=email, password=password, first_name=first_name, last_name=last_name, is_active=True, is_staff=True)
-                    school = School.objects.get(id=school_id)
-                    profile = user.profile
-                    profile.role = 'schoolhead'
-                    profile.school = school
-                    profile.employee_number = employee_id or None
-                    profile.designation = request.POST.get('designation', 'Principal')
-                    profile.position_title = 'School Principal'
-                    profile.employment_status = 'Regular_Permanent'
-                    profile.save()
-                    principal_group, _ = Group.objects.get_or_create(name='Principal')
-                    user.groups.add(principal_group)
-                    messages.success(request, f'✅ Principal "{user.get_full_name()}" created for {school.school_name}!')
-                    return redirect('admin_panel:principal_list')
-            except School.DoesNotExist:
-                messages.error(request, 'School does not exist.')
-            except Exception as e:
-                messages.error(request, f'Error: {str(e)}')
-    return render(request, 'admin/principal_create.html', {'schools': schools})
+                messages.error(request, f'{field}: {error}')
+
+
+def _create_school_staff(data, role, group_name, position_title):
+    """Create a school-scoped user, profile, and role group together."""
+    with transaction.atomic():
+        user = User.objects.create_user(
+            username=data['username'].strip().lower(),
+            email=data['email'].strip().lower(),
+            password=data['password'],
+            first_name=data['first_name'].strip(),
+            last_name=data['last_name'].strip(),
+            is_active=True,
+            is_staff=False,
+        )
+        profile = user.profile
+        profile.role = role
+        profile.school = data['school']
+        profile.employee_number = data.get('employee_id') or None
+        profile.designation = data.get('designation') or group_name
+        profile.position_title = position_title
+        profile.employment_status = 'Regular_Permanent'
+        profile.save()
+        group, _ = Group.objects.get_or_create(name=group_name)
+        user.groups.add(group)
+    return user, data['school']
+
+
+@login_required
+@user_passes_test(is_admin, login_url='admin_panel:login')
+def registrar_list(request):
+    registrars = UserProfile.objects.filter(role='registrar').select_related('user', 'school').order_by('user__last_name')
+    search = request.GET.get('search', '').strip()
+    if search:
+        registrars = registrars.filter(
+            Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search)
+            | Q(user__email__icontains=search) | Q(employee_number__icontains=search)
+            | Q(school__school_name__icontains=search)
+        )
+    status = request.GET.get('status', 'active')
+    if status == 'active':
+        registrars = registrars.filter(is_active=True)
+    elif status == 'inactive':
+        registrars = registrars.filter(is_active=False)
+    return render(request, 'admin/registrar_list.html', {
+        'registrars': Paginator(registrars, 10).get_page(request.GET.get('page', 1)),
+        'search': search, 'status': status,
+        'active_count': UserProfile.objects.filter(role='registrar', is_active=True).count(),
+        'inactive_count': UserProfile.objects.filter(role='registrar', is_active=False).count(),
+    })
+
+
+@login_required
+@user_passes_test(is_admin, login_url='admin_panel:login')
+def registrar_create(request):
+    """Create a school's default registrar account; the admin only picks the school."""
+    form = RegistrarCreationForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        school = form.cleaned_data['school']
+        password = secrets.token_urlsafe(9)
+        user, school = _create_school_staff({
+            'username': form.account,
+            'email': form.account,
+            'password': password,
+            'first_name': school.short_name,
+            'last_name': 'Registrar',
+            'school': school,
+            'designation': 'School Registrar',
+        }, 'registrar', 'Registrar', 'School Registrar')
+        messages.success(
+            request,
+            f'Registrar account created for {school.school_name}. '
+            f'Username: {user.username} — Temporary password: {password} '
+            '(shown only once; copy it now).'
+        )
+        return redirect('admin_panel:registrar_list')
+    _form_errors_to_messages(request, form)
+
+    taken = set(User.objects.values_list('username', flat=True))
+    schools = list(School.objects.filter(is_active=True))
+    for school in schools:
+        school.registrar_account = default_registrar_account(school)
+        school.registrar_exists = school.registrar_account in taken
+    return render(request, 'admin/registrar_create.html', {'form': form, 'schools': schools})
 
 
 @login_required
@@ -470,89 +582,56 @@ def grade_level_list(request):
 @login_required
 @user_passes_test(is_admin, login_url='admin_panel:login')
 def grade_level_create(request):
-    """Create grade levels (single or bulk)"""
-    schools = School.objects.filter(is_active=True)
-    
-    if request.method == 'POST':
-        if 'bulk_create' in request.POST:
-            bulk_form = BulkGradeLevelForm(request.POST)
-            if bulk_form.is_valid():
-                school = bulk_form.cleaned_data['school']
-                school_type = bulk_form.cleaned_data['school_type']
-
-                grade_configs = {
-                    'JHS': [(7, 'Grade 7', 'G7', 'JHS'),
-                            (8, 'Grade 8', 'G8', 'JHS'),
-                            (9, 'Grade 9', 'G9', 'JHS'),
-                            (10, 'Grade 10', 'G10', 'JHS')],
-                    'ELEMENTARY': [(i, f'Grade {i}', f'G{i}', 'ELEMENTARY') for i in range(1, 7)],
-                    'SHS': [(11, 'Grade 11', 'G11', 'SHS'),
-                            (12, 'Grade 12', 'G12', 'SHS')],
-                    'INTEGRATED': [
-                        (7, 'Grade 7', 'G7', 'JHS'),
-                        (8, 'Grade 8', 'G8', 'JHS'),
-                        (9, 'Grade 9', 'G9', 'JHS'),
-                        (10, 'Grade 10', 'G10', 'JHS'),
-                        (11, 'Grade 11', 'G11', 'SHS'),
-                        (12, 'Grade 12', 'G12', 'SHS'),
-                    ],
-                }
-
-                grades_list = grade_configs.get(school_type, [])
-                if not grades_list:
-                    messages.error(request, f'No grade configuration found for type: {school_type}')
-                    return redirect('admin_panel:grade_level_create')
-
-                created, skipped = 0, 0
-                with transaction.atomic():
-                    for grade_num, grade_name, grade_code, level_category in grades_list:
-                        _, c = GradeLevel.objects.get_or_create(
-                            school=school,
-                            grade_name=grade_name,
-                            grade_number=grade_num,
-                            defaults={
-                                'grade_code': grade_code,
-                                'level_category': level_category,
-                                'is_senior_high': (level_category == 'SHS'),
-                            }
-                        )
-                        if c:
-                            created += 1
-                        else:
-                            skipped += 1
-
-                if created > 0:
-                    messages.success(request, f'✅ {created} grade levels created for {school.school_name}! ({skipped} already existed)')
-                else:
-                    messages.info(request, f'All {skipped} grade levels already exist for {school.school_name}.')
-                return redirect('admin_panel:grade_level_list')
-            else:
-                # Show bulk form errors
-                for field, errors in bulk_form.errors.items():
-                    for error in errors:
-                        messages.error(request, f'Bulk form — {field}: {error}')
+    """Add one or more grade levels (Grades 7-12) to a school."""
+    form = GradeLevelForm(request.POST or None, initial={'school': request.GET.get('school')})
+    if request.method == 'POST' and form.is_valid():
+        school = form.cleaned_data['school']
+        created = 0
+        with transaction.atomic():
+            for number in form.cleaned_data['grades']:
+                # level_category / is_senior_high are set by GradeLevel.save()
+                _, was_created = GradeLevel.objects.get_or_create(
+                    school=school,
+                    grade_code=f'G{number}',
+                    defaults={
+                        'grade_name': f'Grade {number}',
+                        'grade_number': number,
+                        'sort_order': number,
+                    },
+                )
+                created += was_created
+        skipped = len(form.cleaned_data['grades']) - created
+        if created:
+            note = f' ({skipped} already existed)' if skipped else ''
+            messages.success(request, f'{created} grade level(s) added to {school.school_name}.{note}')
         else:
-            # Single grade level creation
-            form = GradeLevelForm(request.POST)
-            if form.is_valid():
-                grade_level = form.save()
-                messages.success(request, f'Grade level "{grade_level.grade_name}" created for {grade_level.school.school_name}!')
-                return redirect('admin_panel:grade_level_list')
-            else:
-                for field, errors in form.errors.items():
-                    for error in errors:
-                        messages.error(request, f'Single form — {field}: {error}')
-    else:
-        form = GradeLevelForm()
-        bulk_form = BulkGradeLevelForm()
+            messages.info(request, f'Those grade levels already exist for {school.school_name}.')
+        return redirect(f"{reverse('admin_panel:grade_level_list')}?school={school.id}")
+    _form_errors_to_messages(request, form)
 
+    existing = {}
+    for school_id, number in GradeLevel.objects.values_list('school_id', 'grade_number'):
+        existing.setdefault(school_id, []).append(number)
     return render(request, 'admin/grade_level_create.html', {
         'form': form,
-        'bulk_form': bulk_form,
-        'schools': schools,
+        'schools': School.objects.filter(is_active=True),
+        'grade_numbers': GRADE_NUMBERS,
+        'existing_grades': existing,
+        'selected_school': request.POST.get('school') or request.GET.get('school', ''),
     })
 
-# ✅ REMOVED grade_level_toggle_status — GradeLevel has no is_active field
+
+@login_required
+@user_passes_test(is_admin, login_url='admin_panel:login')
+def grade_level_delete(request, grade_level_id):
+    if request.method == 'POST':
+        grade_level = get_object_or_404(GradeLevel, id=grade_level_id)
+        try:
+            grade_level.delete()
+            messages.success(request, f'{grade_level.grade_name} removed.')
+        except ProtectedError:
+            messages.error(request, f'{grade_level.grade_name} is already in use (sections, subjects or enrollments) and cannot be removed.')
+    return redirect('admin_panel:grade_level_list')
 
 
 # =============================================================================
@@ -563,59 +642,34 @@ def grade_level_create(request):
 @user_passes_test(is_admin, login_url='admin_panel:login')
 def school_year_manage(request):
     """Manage school years"""
-    if request.method == 'POST':
-        form = SchoolYearForm(request.POST)
-        if form.is_valid():
-            sy = form.save()
-            
-            # Auto-create quarters if checked
-            if request.POST.get('auto_create_quarters'):
-                total_days = (sy.date_end - sy.date_start).days  # ✅ date_end, not end_date
-                q_len = total_days // 4
-                
-                for i, label in enumerate(['Q1', 'Q2', 'Q3', 'Q4']):
-                    start = sy.date_start + timedelta(days=q_len * i + (1 if i > 0 else 0))  # ✅
-                    end = sy.date_end if i == 3 else sy.date_start + timedelta(days=q_len * (i + 1))  # ✅
-                    Quarter.objects.get_or_create(
-                        school_year=sy,
-                        quarter_label=label,
-                        defaults={
-                            'date_start': start,  # ✅
-                            'date_end': min(end, sy.date_end),  # ✅
-                        }
-                    )
-                messages.success(request, f'School Year {sy.year_label} with 4 quarters created!')
-            else:
-                messages.success(request, f'School Year {sy.year_label} created for {sy.school.school_name}!')
-            return redirect('admin_panel:school_year_manage')
+    form = SchoolYearForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        sy = form.save()
+        if form.cleaned_data['auto_create_periods']:
+            created, _ = _generate_periods(sy)
+            plural = period_config(sy.school)['plural'].lower()
+            messages.success(request, f'School Year {sy.year_label} created for {sy.school.school_name} with {created} {plural}.')
         else:
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f'{field}: {error}')
-    else:
-        form = SchoolYearForm()
+            messages.success(request, f'School Year {sy.year_label} created for {sy.school.school_name}.')
+        return redirect('admin_panel:school_year_manage')
+    _form_errors_to_messages(request, form)
 
-    # Get all school years
-    school_years = SchoolYear.objects.select_related('school').annotate(
-        quarter_count=Count('quarters'),
-    ).order_by('-date_start')  # ✅ date_start
-
-    # Filter by school
+    school_years = SchoolYear.objects.select_related('school').prefetch_related('quarters').order_by('-date_start')
     school_filter = request.GET.get('school', '')
     if school_filter:
         school_years = school_years.filter(school_id=school_filter)
 
-    # Schools without any school year
     schools_with_sy = SchoolYear.objects.values_list('school_id', flat=True).distinct()
     schools_without_sy = School.objects.filter(is_active=True).exclude(id__in=schools_with_sy)
 
     context = {
         'form': form,
-        'school_years': school_years,
+        'school_years': _with_period_info(school_years),
         'schools': School.objects.filter(is_active=True),
         'selected_school': school_filter,
         'schools_without_sy': schools_without_sy,
         'current_school_years': school_years.filter(is_current=True),
+        'period_config': PERIOD_CONFIG,
     }
     return render(request, 'admin/school_year_manage.html', context)
 
@@ -623,10 +677,12 @@ def school_year_manage(request):
 @login_required
 @user_passes_test(is_admin, login_url='admin_panel:login')
 def school_year_set_current(request, sy_id):
-    sy = get_object_or_404(SchoolYear, id=sy_id)
-    sy.is_current = True
-    sy.save()
-    messages.success(request, f'✅ {sy.year_label} set as current.')
+    if request.method == 'POST':
+        sy = get_object_or_404(SchoolYear, id=sy_id)
+        sy.is_current = True
+        sy.status = 'Active'
+        sy.save()
+        messages.success(request, f'{sy.year_label} set as the current school year of {sy.school.school_name}.')
     return redirect('admin_panel:school_year_manage')
 
 
@@ -634,93 +690,95 @@ def school_year_set_current(request, sy_id):
 @user_passes_test(is_admin, login_url='admin_panel:login')
 def school_year_delete(request, sy_id):
     if request.method == 'POST':
-        get_object_or_404(SchoolYear, id=sy_id).delete()
-        messages.success(request, 'School year deleted.')
+        sy = get_object_or_404(SchoolYear, id=sy_id)
+        try:
+            sy.delete()
+            messages.success(request, 'School year deleted.')
+        except ProtectedError:
+            messages.error(request, f'{sy.year_label} already has records attached and cannot be deleted.')
     return redirect('admin_panel:school_year_manage')
 
 
 @login_required
 @user_passes_test(is_admin, login_url='admin_panel:login')
 def quarter_manage(request):
-    """Manage quarters"""
-    if request.method == 'POST':
-        form = QuarterForm(request.POST)
-        if form.is_valid():
-            q = form.save()
-            messages.success(request, f'{q.get_quarter_label_display()} created!')
-            return redirect('admin_panel:quarter_manage')
-    else:
-        form = QuarterForm()
+    """Manage grading periods (quarters / trimesters / semesters, by school period type)."""
+    form = QuarterForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        period = form.save(commit=False)
+        period.grade_encoding_deadline, period.grade_validation_deadline = _period_deadlines(period.date_end)
+        period.save()
+        messages.success(request, f'{period.quarter_label} created for {period.school_year}.')
+        return redirect(f"{reverse('admin_panel:quarter_manage')}?school_year={period.school_year_id}")
+    _form_errors_to_messages(request, form)
 
-    quarters = Quarter.objects.select_related('school_year__school').all().order_by('-school_year__date_start', 'quarter_label')
+    all_school_years = SchoolYear.objects.select_related('school').order_by('-date_start')
+    school_years = all_school_years.prefetch_related('quarters')
 
-    # Filter by school year
     sy_filter = request.GET.get('school_year', '')
     if sy_filter:
-        quarters = quarters.filter(school_year_id=sy_filter)
-
-    # Filter by school
+        school_years = school_years.filter(id=sy_filter)
     school_filter = request.GET.get('school', '')
     if school_filter:
-        quarters = quarters.filter(school_year__school_id=school_filter)
-
-    # Incomplete school years
-    incomplete_sy = SchoolYear.objects.select_related('school').annotate(
-        q_count=Count('quarters')
-    ).filter(q_count__lt=4, is_current=True)
+        school_years = school_years.filter(school_id=school_filter)
 
     context = {
         'form': form,
-        'quarters': quarters,
-        'school_years': SchoolYear.objects.select_related('school').all().order_by('-date_start'),
-        'schools': School.objects.filter(is_active=True),  # ✅ ADDED
+        'grouped_school_years': _with_period_info(school_years),
+        'school_years': _with_period_info(all_school_years.prefetch_related('quarters')),
+        'schools': School.objects.filter(is_active=True),
         'selected_sy': sy_filter,
         'selected_school': school_filter,
-        'incomplete_sy': incomplete_sy,
     }
     return render(request, 'admin/quarter_manage.html', context)
+
 
 @login_required
 @user_passes_test(is_admin, login_url='admin_panel:login')
 def quarter_bulk_create(request, sy_id):
-    """Bulk create all 4 quarters for a school year"""
-    sy = get_object_or_404(SchoolYear, id=sy_id)
+    """Create every missing grading period of a school year."""
+    if request.method == 'POST':
+        sy = get_object_or_404(SchoolYear.objects.select_related('school'), id=sy_id)
+        created, skipped = _generate_periods(sy)
+        plural = period_config(sy.school)['plural'].lower()
+        if created:
+            messages.success(request, f'{created} {plural} created for {sy.year_label} ({skipped} already existed).')
+        else:
+            messages.info(request, f'All {skipped} {plural} already exist for {sy.year_label}.')
+    return redirect(request.POST.get('next') or 'admin_panel:quarter_manage')
 
-    total_days = (sy.date_end - sy.date_start).days  # ✅
-    q_len = total_days // 4
 
-    created, skipped = 0, 0
-    with transaction.atomic():
-        for i, label in enumerate(['Q1', 'Q2', 'Q3', 'Q4']):
-            start = sy.date_start + timedelta(days=q_len * i + (1 if i > 0 else 0))  # ✅
-            end = sy.date_end if i == 3 else sy.date_start + timedelta(days=q_len * (i + 1))  # ✅
-            _, c = Quarter.objects.get_or_create(
-                school_year=sy,
-                quarter_label=label,
-                defaults={
-                    'date_start': start,  # ✅
-                    'date_end': min(end, sy.date_end),  # ✅
-                }
-            )
-            if c:
-                created += 1
-            else:
-                skipped += 1
-
-    if created > 0:
-        messages.success(request, f'✅ {created} quarters created for {sy.year_label}! ({skipped} already existed)')
-    else:
-        messages.info(request, f'All 4 quarters already exist for {sy.year_label}.')
-
-    return redirect('admin_panel:quarter_manage')
+@login_required
+@user_passes_test(is_admin, login_url='admin_panel:login')
+def quarter_update(request, quarter_id):
+    """Adjust a grading period's dates, current flag and grade lock."""
+    period = get_object_or_404(Quarter, id=quarter_id)
+    if request.method == 'POST':
+        was_locked = period.is_grades_locked
+        form = QuarterUpdateForm(request.POST, instance=period)
+        if form.is_valid():
+            period = form.save(commit=False)
+            if period.is_grades_locked and not was_locked:
+                period.locked_by, period.locked_at = request.user, timezone.now()
+            elif not period.is_grades_locked:
+                period.locked_by, period.locked_at = None, None
+            period.save()
+            messages.success(request, f'{period.quarter_label} updated.')
+        else:
+            _form_errors_to_messages(request, form)
+    return redirect(f"{reverse('admin_panel:quarter_manage')}?school_year={period.school_year_id}")
 
 
 @login_required
 @user_passes_test(is_admin, login_url='admin_panel:login')
 def quarter_delete(request, quarter_id):
     if request.method == 'POST':
-        get_object_or_404(Quarter, id=quarter_id).delete()
-        messages.success(request, 'Quarter deleted.')
+        period = get_object_or_404(Quarter, id=quarter_id)
+        try:
+            period.delete()
+            messages.success(request, f'{period.quarter_label} deleted.')
+        except ProtectedError:
+            messages.error(request, f'{period.quarter_label} already has grades or records attached and cannot be deleted.')
     return redirect('admin_panel:quarter_manage')
 
 
@@ -728,27 +786,33 @@ def quarter_delete(request, quarter_id):
 @login_required
 @user_passes_test(is_admin, login_url='admin_panel:login')
 def principal_edit(request, principal_id):
-    principal = get_object_or_404(UserProfile, id=principal_id, role='schoolhead')
-    if request.method == 'POST':
-        principal.user.first_name = request.POST.get('first_name', principal.user.first_name)
-        principal.user.last_name = request.POST.get('last_name', principal.user.last_name)
-        principal.user.email = request.POST.get('email', principal.user.email)
-        principal.employee_number = request.POST.get('employee_id', principal.employee_number)
-        principal.designation = request.POST.get('designation', principal.designation)
-        new_school_id = request.POST.get('school')
-        if new_school_id:
-            try:
-                principal.school = School.objects.get(id=new_school_id)
-            except School.DoesNotExist:
-                pass
-        principal.user.save()
-        principal.save()
+    principal = get_object_or_404(UserProfile.objects.select_related('user', 'school'), id=principal_id, role='schoolhead')
+    user = principal.user
+    form = PrincipalEditForm(request.POST or None, principal=principal, initial={
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'username': user.username,
+        'email': user.email,
+        'school': principal.school_id,
+        'employee_id': principal.employee_number,
+        'designation': principal.designation,
+    })
+    if request.method == 'POST' and form.is_valid():
+        data = form.cleaned_data
+        with transaction.atomic():
+            user.first_name = data['first_name'].strip()
+            user.last_name = data['last_name'].strip()
+            user.username = data['username']
+            user.email = data['email']
+            user.save()
+            principal.school = data['school']
+            principal.employee_number = data['employee_id'] or None
+            principal.designation = data['designation'] or 'Principal'
+            principal.save()
         messages.success(request, f'Principal "{principal.full_name}" updated!')
         return redirect('admin_panel:principal_detail', principal_id=principal.id)
-    return render(request, 'admin/principal_edit.html', {
-        'principal': principal,
-        'schools': School.objects.filter(is_active=True),
-    })
+    _form_errors_to_messages(request, form)
+    return render(request, 'admin/principal_edit.html', {'principal': principal, 'form': form})
 
 
 # =============================================================================
@@ -773,7 +837,7 @@ def get_grade_levels_for_school(request, school_id):
 @login_required
 @user_passes_test(is_admin, login_url='admin_panel:login')
 def get_school_years_for_school(request, school_id):
-    sy = SchoolYear.objects.filter(school_id=school_id).values('id', 'year_label', 'is_current').order_by('-start_date')
+    sy = SchoolYear.objects.filter(school_id=school_id).values('id', 'year_label', 'is_current').order_by('-date_start')
     return JsonResponse(list(sy), safe=False)
 
 
