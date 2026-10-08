@@ -19,6 +19,8 @@ from academics.models import School, GradeLevel, SchoolYear, Quarter, GradingSch
 from accounts.models import UserProfile
 from enrollment.models import Enrollment
 
+from core.caching import remember_filters
+
 from .forms import (
     AdminLoginForm, SchoolForm, PrincipalCreationForm, PrincipalEditForm,
     RegistrarCreationForm, GradeLevelForm, SchoolYearForm, QuarterForm,
@@ -220,6 +222,7 @@ def dashboard(request):
 
 @login_required
 @user_passes_test(is_admin, login_url='admin_panel:login')
+@remember_filters('admin-school_list', ['search', 'grading', 'status', 'sort'])
 def school_list(request):
     """List all schools"""
     schools = School.objects.all().annotate(
@@ -375,6 +378,7 @@ def school_delete(request, school_id):
 
 @login_required
 @user_passes_test(is_admin, login_url='admin_panel:login')
+@remember_filters('admin-principal_list', ['search', 'school', 'status', 'sort'])
 def principal_list(request):
     principals = UserProfile.objects.filter(role='schoolhead').select_related('user', 'school').annotate(
         registrar_count=Count('school__staff_profiles', filter=Q(school__staff_profiles__role='registrar', school__staff_profiles__is_active=True)),
@@ -451,6 +455,7 @@ def _create_school_staff(data, role, group_name, position_title):
         profile.designation = data.get('designation') or group_name
         profile.position_title = position_title
         profile.employment_status = 'Regular_Permanent'
+        profile.must_change_password = True  # the admin-issued password is temporary
         profile.save()
         group, _ = Group.objects.get_or_create(name=group_name)
         user.groups.add(group)
@@ -459,6 +464,7 @@ def _create_school_staff(data, role, group_name, position_title):
 
 @login_required
 @user_passes_test(is_admin, login_url='admin_panel:login')
+@remember_filters('admin-registrar_list', ['search', 'status'])
 def registrar_list(request):
     registrars = UserProfile.objects.filter(role='registrar').select_related('user', 'school').order_by('user__last_name')
     search = request.GET.get('search', '').strip()
@@ -530,12 +536,13 @@ def principal_detail(request, principal_id):
 @user_passes_test(is_admin, login_url='admin_panel:login')
 def principal_toggle_status(request, principal_id):
     principal = get_object_or_404(UserProfile, id=principal_id, role='schoolhead')
-    principal.is_active = not principal.is_active
-    principal.user.is_active = principal.is_active
-    principal.user.save()
-    principal.save()
-    status = "activated" if principal.is_active else "deactivated"
-    messages.success(request, f'Principal "{principal.full_name}" {status}.')
+    if request.method == 'POST':
+        principal.is_active = not principal.is_active
+        principal.user.is_active = principal.is_active
+        principal.user.save()
+        principal.save()
+        status = "activated" if principal.is_active else "deactivated"
+        messages.success(request, f'Principal "{principal.full_name}" {status}.')
     return redirect('admin_panel:principal_list')
 
 
@@ -548,6 +555,8 @@ def principal_reset_password(request, principal_id):
         if new_password and len(new_password) >= 8:
             principal.user.set_password(new_password)
             principal.user.save()
+            principal.must_change_password = True
+            principal.save(update_fields=['must_change_password', 'updated_at'])
             messages.success(request, f'Password reset for "{principal.full_name}".')
         else:
             messages.error(request, 'Password must be at least 8 characters.')
@@ -560,6 +569,7 @@ def principal_reset_password(request, principal_id):
 
 @login_required
 @user_passes_test(is_admin, login_url='admin_panel:login')
+@remember_filters('admin-grade_level_list', ['school'])
 def grade_level_list(request):
     grade_levels = GradeLevel.objects.select_related('school').all().order_by('school__school_name', 'grade_number')
 
@@ -640,6 +650,7 @@ def grade_level_delete(request, grade_level_id):
 
 @login_required
 @user_passes_test(is_admin, login_url='admin_panel:login')
+@remember_filters('admin-school_year_manage', ['school'])
 def school_year_manage(request):
     """Manage school years"""
     form = SchoolYearForm(request.POST or None)
@@ -701,6 +712,7 @@ def school_year_delete(request, sy_id):
 
 @login_required
 @user_passes_test(is_admin, login_url='admin_panel:login')
+@remember_filters('admin-quarter_manage', ['school', 'school_year'])
 def quarter_manage(request):
     """Manage grading periods (quarters / trimesters / semesters, by school period type)."""
     form = QuarterForm(request.POST or None)

@@ -1,27 +1,41 @@
-<!-- templates/admin/base.html -->
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ARMS Admin Panel - {% block title %}Dashboard{% endblock %}</title>
-    
+
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
+    <!-- Font Awesome (page icons) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
+    <!-- Flaticon Uicons (shared sidebar icons) -->
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+
     <style>
         :root {
+            /* Shared ARMS palette (same names as the teacher / registrar / head portals) */
+            --rich-black: #00072D;
+            --dark-blue: #051650;
+            --caribbean-blue: #123499;
+            --gray-bg: #f5f7fb;
+            --border-color: #e9ecef;
+            --text-primary: #2d3748;
+            --text-secondary: #4a5568;
+            --danger-bg: #f8d7da;
+            --danger-red: #dc3545;
+            --ai-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --sidebar-width: 270px;
+            --sidebar-collapsed-width: 80px;
+
+            /* Names used by the admin pages */
             --primary: #123499;
-            --primary-dark: #0d2572;
+            --primary-dark: #051650;
             --primary-light: #e8eeff;
             --primary-gradient: linear-gradient(135deg, #123499, #1a4dcc);
             --success: #2E7D32;
             --success-light: #e8f5e9;
-            --success-gradient: linear-gradient(135deg, #2E7D32, #43a047);
+            --success-gradient: linear-gradient(135deg, #123499, #4a6fd4);
             --danger: #C62828;
             --danger-light: #ffebee;
             --danger-gradient: linear-gradient(135deg, #C62828, #e53935);
@@ -37,10 +51,9 @@
             --gray-100: #f0f4f8;
             --gray-200: #e8ecf1;
             --gray-300: #e0e5ea;
-            --gray-500: #6c757d;
+            --gray-500: #4a5568;
             --gray-700: #1a1a2e;
             --gray-900: #0f0f1a;
-            --sidebar-bg: linear-gradient(180deg, #0f0f2e 0%, #1a1a3e 50%, #16213e 100%);
             --radius-xs: 8px;
             --radius-sm: 10px;
             --radius-md: 16px;
@@ -53,439 +66,184 @@
             --shadow-xl: 0 12px 40px rgba(0,0,0,0.15);
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
+
         body {
-            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: #f5f7fb;
+            font-family: 'Segoe UI', 'Century Gothic', sans-serif;
+            background: var(--gray-bg);
             color: var(--gray-700);
             line-height: 1.6;
             min-height: 100vh;
         }
-        
-        /* ========== SIDEBAR ========== */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 280px;
-            height: 100vh;
-            background: var(--sidebar-bg);
-            color: white;
-            transition: var(--transition);
-            z-index: 1050;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-            overflow-x: hidden;
-            box-shadow: 4px 0 24px rgba(0,0,0,0.15);
-        }
-        .sidebar::-webkit-scrollbar { width: 4px; }
-        .sidebar::-webkit-scrollbar-track { background: transparent; }
-        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
-        
-        .sidebar-brand {
-            padding: 1.75rem 1.5rem;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            flex-shrink: 0;
-        }
-        .sidebar-brand-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 14px;
-            background: var(--primary-gradient);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.3rem;
-            flex-shrink: 0;
-            box-shadow: 0 4px 15px rgba(18,52,153,0.4);
-        }
-        .sidebar-brand-text h3 {
-            font-size: 1.15rem;
-            font-weight: 800;
-            margin: 0;
-            letter-spacing: -0.3px;
-            color: white;
-            line-height: 1.2;
-        }
-        .sidebar-brand-text small {
-            font-size: 0.68rem;
-            opacity: 0.55;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-        }
-        
-        .sidebar-nav {
-            padding: 1rem 0.75rem;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-        .sidebar-section-title {
-            font-size: 0.6rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: rgba(255,255,255,0.3);
-            padding: 0.75rem 0.75rem 0.4rem;
-            font-weight: 700;
-        }
-        
-        .sidebar-link {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.7rem 0.85rem;
-            border-radius: var(--radius-sm);
-            color: rgba(255,255,255,0.65);
-            text-decoration: none;
-            font-size: 0.8rem;
-            font-weight: 500;
-            transition: var(--transition);
-            position: relative;
-        }
-        .sidebar-link:hover {
-            background: rgba(255,255,255,0.06);
-            color: rgba(255,255,255,0.9);
-        }
-        .sidebar-link.active {
-            background: rgba(18,52,153,0.4);
-            color: white;
-            font-weight: 600;
-            box-shadow: 0 2px 12px rgba(18,52,153,0.25);
-        }
-        .sidebar-link.active::before {
-            content: '';
-            position: absolute;
-            left: -0.75rem;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 3px;
-            height: 20px;
-            background: white;
-            border-radius: 0 3px 3px 0;
-        }
-        .sidebar-link-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: var(--radius-xs);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.9rem;
-            flex-shrink: 0;
-            transition: var(--transition);
-            background: rgba(255,255,255,0.06);
-        }
-        .sidebar-link.active .sidebar-link-icon {
-            background: rgba(255,255,255,0.2);
-        }
-        .sidebar-link:hover .sidebar-link-icon {
-            background: rgba(255,255,255,0.12);
-        }
-        
-        .sidebar-footer {
-            padding: 1rem 0.75rem;
-            border-top: 1px solid rgba(255,255,255,0.08);
-            flex-shrink: 0;
-        }
-        .sidebar-user {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.5rem 0.75rem;
-        }
-        .sidebar-user-avatar {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background: var(--primary-gradient);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.9rem;
-            font-weight: 700;
-            flex-shrink: 0;
-        }
-        .sidebar-user-info { flex: 1; min-width: 0; }
-        .sidebar-user-name {
-            font-size: 0.78rem;
-            font-weight: 600;
-            color: white;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .sidebar-user-role {
-            font-size: 0.65rem;
-            opacity: 0.55;
-        }
-        
+
         /* ========== MAIN CONTENT ========== */
         .main-content {
-            margin-left: 280px;
-            padding: 1.5rem;
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem 2rem;
             min-height: 100vh;
-            transition: var(--transition);
+            transition: margin-left 0.3s;
         }
-        
-        /* ========== TOP BAR ========== */
+        .sidebar.collapsed ~ .main-content { margin-left: var(--sidebar-collapsed-width); }
+        .content-wrap { max-width: 1400px; margin: 0 auto; }
+
+        /* ========== TOP BAR (same as the other portals) ========== */
         .top-bar {
-            background: white;
-            padding: 0.9rem 1.5rem;
-            border-radius: var(--radius-lg);
-            margin-bottom: 1.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: var(--shadow-sm);
-            border: 1px solid var(--gray-200);
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+            margin-bottom: 1.5rem; background: white; padding: 1rem 1.5rem; border-radius: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
-        .page-title {
-            font-size: 1.05rem;
-            font-weight: 700;
-            color: var(--gray-700);
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
+        .welcome h1 { font-size: 1.2rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; font-weight: 700; margin: 0; }
+        .welcome h1 i { color: var(--caribbean-blue); font-size: 1.3rem; }
+        .welcome p { color: var(--text-secondary); font-size: 0.82rem; margin: 0.2rem 0 0; }
+        .date-display {
+            display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.8rem;
+            background: var(--gray-bg); padding: 0.5rem 1rem; border-radius: 10px;
         }
-        .page-title i { color: var(--primary); font-size: 1.1rem; }
-        
-        .user-menu {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
+
+        /* ========== MESSAGES ========== */
+        .flash {
+            display: flex; align-items: flex-start; gap: 0.8rem; background: white; border-radius: 14px;
+            padding: 0.9rem 1.2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 1rem;
+            border-left: 4px solid var(--caribbean-blue); font-size: 0.86rem; color: var(--text-primary);
         }
-        .user-greeting {
-            font-size: 0.78rem;
-            color: var(--gray-500);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .user-greeting i { color: var(--primary); font-size: 1.1rem; }
-        .user-greeting strong { color: var(--gray-700); }
-        
-        .btn-logout {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.73rem;
-            font-weight: 600;
-            border: 2px solid var(--gray-300);
-            background: white;
-            color: var(--gray-500);
-            cursor: pointer;
-            text-decoration: none;
-            transition: var(--transition);
-        }
-        .btn-logout:hover {
-            border-color: var(--danger);
-            color: var(--danger);
-            background: var(--danger-light);
-        }
-        
-        /* ========== ALERTS ========== */
+        .flash i { font-size: 1.1rem; margin-top: 0.1rem; color: var(--caribbean-blue); }
+        .flash.error { border-left-color: var(--danger-red); }
+        .flash.error i { color: var(--danger-red); }
+        .flash.warning { border-left-color: #f39c12; }
+        .flash.warning i { color: #f39c12; }
+        .flash-body { flex: 1; line-height: 1.5; word-break: break-word; }
+        .flash-close { background: none; border: none; cursor: pointer; font-size: 1.2rem; color: var(--text-secondary); line-height: 1; }
+
+        /* ========== ALERTS (used inside pages) ========== */
         .alert {
-            border: none;
-            border-radius: var(--radius-md);
-            padding: 1rem 1.25rem;
-            font-size: 0.82rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            margin-bottom: 1rem;
-            box-shadow: var(--shadow-xs);
+            border: none; border-radius: var(--radius-md); padding: 1rem 1.25rem; font-size: 0.86rem; font-weight: 500;
+            display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; box-shadow: var(--shadow-xs);
         }
-        .alert-success { background: var(--success-light); color: var(--success); }
-        .alert-danger { background: var(--danger-light); color: var(--danger); }
+        .alert-success { background: var(--info-light); color: var(--primary); }
+        .alert-danger, .alert-error { background: var(--danger-light); color: var(--danger); }
         .alert-warning { background: var(--warning-light); color: var(--warning); }
         .alert-info { background: var(--info-light); color: var(--info); }
-        
+
         /* ========== CARDS (GLOBAL) ========== */
         .card {
-            border: 1px solid var(--gray-200);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-sm);
-            background: white;
-            margin-bottom: 1.5rem;
-            overflow: hidden;
+            border: 1px solid var(--gray-200); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+            background: white; margin-bottom: 1.5rem; overflow: hidden;
         }
-        .card-header {
-            background: white;
-            border-bottom: 2px solid var(--gray-100);
-            padding: 1.2rem 1.5rem;
-            font-weight: 700;
-            font-size: 0.85rem;
-            color: var(--gray-700);
-        }
+        .card-header { background: white; border-bottom: 2px solid var(--gray-100); padding: 1.2rem 1.5rem; font-weight: 700; font-size: 0.9rem; color: var(--gray-700); }
         .card-body { padding: 1.5rem; }
-        
+
+        /* Bootstrap buttons in the system colours */
+        .btn-primary { background: var(--primary); border-color: var(--primary); }
+        .btn-primary:hover, .btn-primary:focus { background: var(--primary-dark); border-color: var(--primary-dark); }
+        .btn-outline-primary { color: var(--primary); border-color: var(--primary); }
+        .btn-outline-primary:hover { background: var(--primary); border-color: var(--primary); }
+
         /* ========== RESPONSIVE ========== */
-        @media (max-width: 1024px) {
-            .sidebar { width: 80px; }
-            .sidebar-brand-text,
-            .sidebar-link span,
-            .sidebar-section-title,
-            .sidebar-user-info,
-            .sidebar-footer .sidebar-user-info { display: none; }
-            .sidebar-link { justify-content: center; padding: 0.75rem; }
-            .sidebar-link.active::before { left: -0.25rem; }
-            .sidebar-brand { justify-content: center; padding: 1.25rem 0.5rem; }
-            .sidebar-nav { padding: 1rem 0.5rem; }
-            .sidebar-footer { padding: 0.75rem 0.5rem; }
-            .sidebar-user { justify-content: center; }
-            .main-content { margin-left: 80px; }
-        }
-        @media (max-width: 640px) {
-            .sidebar { width: 0; padding: 0; }
-            .sidebar.open { width: 280px; }
-            .main-content { margin-left: 0; }
-            .top-bar { flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); width: var(--sidebar-width); }
+            .sidebar.mobile-open { transform: none; }
+            .main-content, .sidebar.collapsed ~ .main-content { margin-left: 0; padding: 1rem; }
+            .mobile-menu-btn { display: block; }
         }
     </style>
+    <link rel="stylesheet" href="{% static 'shared/css/arms-sidebar.css' %}">
+    <link rel="stylesheet" href="{% static 'shared/css/arms-theme.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- MOBILE OVERLAY -->
-    <div id="sidebarOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1040;" onclick="toggleSidebar()"></div>
-    
-    <!-- SIDEBAR -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-brand">
-            <div class="sidebar-brand-icon">
-                <i class="fas fa-school"></i>
-            </div>
-            <div class="sidebar-brand-text">
-                <h3>ARMS</h3>
-                <small>Admin Portal</small>
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <!-- SIDEBAR (shared ARMS design) -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="{% url 'admin_panel:dashboard' %}" class="logo-area">
+                <i class="fi fi-rr-graduation-cap"></i>
+                <h2>ARMS <span>Admin Portal</span></h2>
+            </a>
+            <button class="fold-btn" id="foldBtn" title="Toggle sidebar"><i class="fi fi-rr-angle-left"></i></button>
+        </div>
+        <div class="user-info">
+            <div class="user-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper|default:request.user.username|first|upper }}</div>
+            <div class="user-details">
+                <h4>{{ request.user.get_full_name|default:request.user.username }}</h4>
+                <p>Administrator</p>
             </div>
         </div>
-        
-        <nav class="sidebar-nav">
-            <div class="sidebar-section-title">Main Menu</div>
-            <a href="{% url 'admin_panel:dashboard' %}" class="sidebar-link {% if active == 'dashboard' %}active{% endif %}">
-                <span class="sidebar-link-icon"><i class="fas fa-tachometer-alt"></i></span>
-                <span>Dashboard</span>
-            </a>
-            <a href="{% url 'admin_panel:school_list' %}" class="sidebar-link {% if active == 'schools' %}active{% endif %}">
-                <span class="sidebar-link-icon"><i class="fas fa-building"></i></span>
-                <span>Schools</span>
-            </a>
-            <a href="{% url 'admin_panel:principal_list' %}" class="sidebar-link {% if active == 'principals' %}active{% endif %}">
-                <span class="sidebar-link-icon"><i class="fas fa-user-tie"></i></span>
-                <span>Principals</span>
-            </a>
-            <a href="{% url 'admin_panel:registrar_list' %}" class="sidebar-link {% if active == 'registrars' %}active{% endif %}">
-                <span class="sidebar-link-icon"><i class="fas fa-user-shield"></i></span>
-                <span>Registrars</span>
-            </a>
-            
-            <div class="sidebar-section-title">Configuration</div>
-            <a href="{% url 'admin_panel:grade_level_list' %}" class="sidebar-link {% if active == 'grade_levels' %}active{% endif %}">
-                <span class="sidebar-link-icon"><i class="fas fa-layer-group"></i></span>
-                <span>Grade Levels</span>
-            </a>
-            <a href="{% url 'admin_panel:school_year_manage' %}" class="sidebar-link {% if active == 'school_years' %}active{% endif %}">
-                <span class="sidebar-link-icon"><i class="fas fa-calendar-alt"></i></span>
-                <span>School Years</span>
-            </a>
-            <a href="{% url 'admin_panel:quarter_manage' %}" class="sidebar-link {% if active == 'quarters' %}active{% endif %}">
-                <span class="sidebar-link-icon"><i class="fas fa-clock"></i></span>
-                <span>Grading Periods</span>
-            </a>
-        </nav>
-        
-        <div class="sidebar-footer">
-            <div class="sidebar-user">
-                <div class="sidebar-user-avatar">
-                    {{ request.user.get_full_name|default:request.user.username|slice:":1"|upper }}
-                </div>
-                <div class="sidebar-user-info">
-                    <div class="sidebar-user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
-                    <div class="sidebar-user-role">Administrator</div>
-                </div>
-            </div>
-        </div>
-    </aside>
-    
+        {% with path=request.path name=request.resolver_match.url_name %}
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="{% url 'admin_panel:dashboard' %}" class="nav-link {% if name == 'dashboard' %}active{% endif %}"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="{% url 'admin_panel:school_list' %}" class="nav-link {% if '/schools/' in path %}active{% endif %}"><i class="fi fi-rr-building"></i><span>Schools</span></a></li>
+            <li class="nav-item"><a href="{% url 'admin_panel:principal_list' %}" class="nav-link {% if '/principals/' in path %}active{% endif %}"><i class="fi fi-rr-user"></i><span>Principals</span></a></li>
+            <li class="nav-item"><a href="{% url 'admin_panel:registrar_list' %}" class="nav-link {% if '/registrars/' in path %}active{% endif %}"><i class="fi fi-rr-clipboard-list"></i><span>Registrars</span></a></li>
+            <li class="nav-item"><a href="{% url 'admin_panel:grade_level_list' %}" class="nav-link {% if '/grade-levels/' in path %}active{% endif %}"><i class="fi fi-rr-layers"></i><span>Grade Levels</span></a></li>
+            <li class="nav-item"><a href="{% url 'admin_panel:school_year_manage' %}" class="nav-link {% if '/school-years/' in path %}active{% endif %}"><i class="fi fi-rr-calendar"></i><span>School Years</span></a></li>
+            <li class="nav-item"><a href="{% url 'admin_panel:quarter_manage' %}" class="nav-link {% if '/quarters/' in path %}active{% endif %}"><i class="fi fi-rr-clock"></i><span>Grading Periods</span></a></li>
+        </ul>
+        {% endwith %}
+        <ul class="nav-menu nav-footer">
+            <li class="nav-item"><a href="{% url 'account_settings' %}" class="nav-link nav-settings"><i class="fi fi-rr-settings"></i><span>Account Settings</span></a></li>
+            <li class="nav-item"><a href="{% url 'admin_panel:logout' %}" class="nav-link nav-logout"><i class="fi fi-rr-sign-out-alt"></i><span>Logout</span></a></li>
+        </ul>
+    </div>
+
     <!-- MAIN CONTENT -->
     <main class="main-content" id="mainContent">
-        <!-- MOBILE HAMBURGER -->
-        <button id="mobileMenuBtn" style="display:none;position:fixed;top:1rem;left:1rem;z-index:1060;width:40px;height:40px;border-radius:10px;background:white;border:1px solid var(--gray-200);cursor:pointer;box-shadow:var(--shadow-sm);" onclick="toggleSidebar()">
-            <i class="fas fa-bars" style="color:var(--primary);"></i>
-        </button>
-        
-        <!-- TOP BAR -->
+      <div class="content-wrap">
         <div class="top-bar">
-            <div class="page-title">
-                <i class="fas fa-tachometer-alt"></i>
-                {% block page_title %}Dashboard{% endblock %}
+            <button class="mobile-menu-btn" id="mobileMenuBtn" type="button"><i class="fi fi-rr-menu-burger"></i></button>
+            <div class="welcome" style="flex:1;">
+                <h1 id="greetingText"><i class="fi fi-rr-dashboard"></i> Hello, {{ request.user.first_name|default:request.user.username }}!</h1>
+                <p>Admin Portal — {% block page_title %}Dashboard{% endblock %}</p>
             </div>
-            <div class="user-menu">
-                <span class="user-greeting">
-                    <i class="fas fa-user-circle"></i>
-                    Hello, <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
-                </span>
-                <a href="{% url 'admin_panel:logout' %}" class="btn-logout">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </a>
-            </div>
+            <div class="date-display"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
         </div>
-        
-        <!-- MESSAGES -->
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'danger' %}times-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
-                    {{ message }}
-                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" style="font-size:0.6rem;"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-        
+
+        {% for message in messages %}
+        <div class="flash {{ message.level_tag }}">
+            <i class="fi {% if message.level_tag == 'success' %}fi-rr-check-circle{% elif message.level_tag == 'error' %}fi-rr-exclamation{% elif message.level_tag == 'warning' %}fi-rr-triangle-warning{% else %}fi-rr-info{% endif %}"></i>
+            <div class="flash-body">{{ message }}</div>
+            <button type="button" class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+        </div>
+        {% endfor %}
+
         {% block content %}{% endblock %}
+      </div>
     </main>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{% static 'shared/js/arms-ui.js' %}"></script>
     <script>
-        // Mobile sidebar toggle
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebarOverlay');
-            sidebar.classList.toggle('open');
-            if (sidebar.classList.contains('open')) {
-                overlay.style.display = 'block';
-            } else {
-                overlay.style.display = 'none';
-            }
+    (function() {
+        var hour = new Date().getHours();
+        var greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+        var name = '{{ request.user.first_name|escapejs }}' || '{{ request.user.username|escapejs }}';
+        document.getElementById('greetingText').innerHTML = '<i class="fi fi-rr-dashboard"></i> ' + greeting + ', ' + name + '!';
+        document.getElementById('currentDate').textContent =
+            new Date().toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'});
+
+        // Sidebar: fold on desktop (remembered), slide-in on mobile
+        var sidebar = document.getElementById('sidebar');
+        var foldBtn = document.getElementById('foldBtn');
+        var overlay = document.getElementById('mobileOverlay');
+        function setCollapsed(collapsed) {
+            sidebar.classList.toggle('collapsed', collapsed);
+            foldBtn.querySelector('i').className = collapsed ? 'fi fi-rr-angle-right' : 'fi fi-rr-angle-left';
         }
-        
-        // Show mobile menu button on small screens
-        function checkMobile() {
-            const btn = document.getElementById('mobileMenuBtn');
-            if (window.innerWidth <= 640) {
-                btn.style.display = 'flex';
-                btn.style.alignItems = 'center';
-                btn.style.justifyContent = 'center';
-            } else {
-                btn.style.display = 'none';
-                document.getElementById('sidebar').classList.remove('open');
-                document.getElementById('sidebarOverlay').style.display = 'none';
-            }
-        }
-        window.addEventListener('resize', checkMobile);
-        document.addEventListener('DOMContentLoaded', checkMobile);
+        function closeMobile() { sidebar.classList.remove('mobile-open'); overlay.classList.remove('show'); }
+        try { if (window.innerWidth > 768 && localStorage.getItem('armsSidebar') === 'collapsed') setCollapsed(true); } catch (e) {}
+        foldBtn.addEventListener('click', function() {
+            if (window.innerWidth <= 768) { closeMobile(); return; }
+            var collapsed = !sidebar.classList.contains('collapsed');
+            setCollapsed(collapsed);
+            try { localStorage.setItem('armsSidebar', collapsed ? 'collapsed' : 'open'); } catch (e) {}
+        });
+        document.getElementById('mobileMenuBtn').addEventListener('click', function() {
+            sidebar.classList.add('mobile-open'); overlay.classList.add('show');
+        });
+        overlay.addEventListener('click', closeMobile);
+    })();
     </script>
     {% block extra_js %}{% endblock %}
 </body>

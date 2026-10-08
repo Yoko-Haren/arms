@@ -1,0 +1,133 @@
+{% extends 'registrars/base.html' %}
+{% load static %}
+
+{% block title %}{{ assignment.subject.subject_code }} Grades - ARMS{% endblock %}
+{% block subtitle %}{{ assignment.subject.subject_code }} — {{ assignment.section.section_name }} · {{ period.quarter_label }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .grade-badge { display: inline-block; min-width: 42px; text-align: center; padding: 2px 6px; border-radius: 6px; font-weight: 700; font-size: 0.78rem; }
+    .grade-badge.pass { background: var(--success-bg); color: var(--success-text); }
+    .grade-badge.fail { background: var(--danger-bg); color: var(--danger-text); }
+    .grade-badge.pending { background: #e9ecef; color: #4a5568; }
+    .review-layout { display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; align-items: start; }
+    @media (max-width: 1000px) { .review-layout { grid-template-columns: 1fr; } }
+    .fact { display: flex; justify-content: space-between; padding: 0.45rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.8rem; }
+    .fact:last-child { border-bottom: none; }
+    .fact span { color: var(--text-secondary); }
+    .fact strong { color: var(--rich-black); }
+    textarea.form-input { min-height: 84px; resize: vertical; font-family: inherit; }
+    tr.missing-row td { background: #fffaf0; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+    <h3><i class="fi fi-rr-shield-check"></i> {{ assignment.subject.subject_name }}</h3>
+    <div class="page-head-actions">
+        <a href="{% url 'registrars:grade_validation' %}?period={{ period.id }}" class="btn-outline"><i class="fi fi-rr-arrow-left"></i> All Classes</a>
+    </div>
+</div>
+
+{% if period.is_grades_locked %}
+<div class="flash warning">
+    <i class="fi fi-rr-lock"></i>
+    <div class="flash-body"><strong>{{ period.quarter_label }} is locked.</strong> Grades and their validation cannot be changed until the period is unlocked.</div>
+</div>
+{% endif %}
+{% if state == 'returned' and note %}
+<div class="flash warning">
+    <i class="fi fi-rr-undo"></i>
+    <div class="flash-body"><strong>Returned to the teacher:</strong> {{ note }}</div>
+</div>
+{% endif %}
+
+<div class="review-layout">
+    <div class="card">
+        <div class="section-header">
+            <h2><i class="fi fi-rr-graduation-cap"></i> Student Grades</h2>
+            <span class="muted">Passing grade: {{ passing|floatformat:"-2" }}</span>
+        </div>
+        {% if students %}
+        <div class="table-responsive">
+            <table>
+                <thead><tr><th style="width:40px;">#</th><th>Student</th><th style="text-align:center;">Grade</th><th>Remark</th><th>Status</th></tr></thead>
+                <tbody>
+                    {% for s in students %}
+                    <tr class="{% if not s.grade %}missing-row{% endif %}">
+                        <td style="color:#718096;">{{ forloop.counter }}</td>
+                        <td><strong>{{ s.enrollment.student.last_name }}</strong>, {{ s.enrollment.student.first_name }} <span class="muted">{{ s.enrollment.student.lrn }}</span></td>
+                        <td style="text-align:center;">
+                            {% if s.value is not None %}
+                                <span class="grade-badge {% if s.value >= passing %}pass{% else %}fail{% endif %}">{{ s.value|floatformat:"-2" }}</span>
+                            {% else %}
+                                <span class="grade-badge pending">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if s.value is None %}<span class="badge badge-warning">No grade yet</span>
+                            {% elif s.value >= passing %}<span class="badge badge-success">Passed</span>
+                            {% else %}<span class="badge badge-danger">Failed</span>{% endif %}
+                        </td>
+                        <td>{% if s.grade %}<span class="badge {% if s.grade.validation_status == 'Validated' or s.grade.validation_status == 'Finalized' %}badge-success{% elif s.grade.validation_status == 'Returned' %}badge-warning{% else %}badge-info{% endif %}">{{ s.grade.validation_status }}</span>{% else %}—{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fi fi-rr-folder-open"></i><h5>No Students Enrolled</h5><p>This section has no active students.</p></div>
+        {% endif %}
+    </div>
+
+    <div>
+        <div class="card">
+            <div class="section-header"><h2><i class="fi fi-rr-info"></i> Summary</h2></div>
+            <div class="fact"><span>Teacher</span><strong>{{ assignment.teacher.get_full_name|default:assignment.teacher.username }}</strong></div>
+            <div class="fact"><span>Section</span><strong>{{ assignment.section.section_name }}</strong></div>
+            <div class="fact"><span>Period</span><strong>{{ period.quarter_label }}</strong></div>
+            <div class="fact"><span>Grades in</span><strong>{{ encoded }} / {{ students|length }}</strong></div>
+            <div class="fact"><span>Class average</span><strong>{{ average|default_if_none:"—" }}</strong></div>
+            <div class="fact"><span>Passed / Failed</span><strong>{{ passed }} / {{ failed }}</strong></div>
+            <div class="fact"><span>Status</span>
+                <strong>
+                    {% if state == 'validated' %}<span class="badge badge-success">Validated</span>
+                    {% elif state == 'ready' %}<span class="badge badge-info">Ready to validate</span>
+                    {% elif state == 'returned' %}<span class="badge badge-warning">Returned</span>
+                    {% elif state == 'incomplete' %}<span class="badge badge-warning">Incomplete</span>
+                    {% else %}<span class="badge badge-danger">Not started</span>{% endif %}
+                </strong>
+            </div>
+        </div>
+
+        {% if encoded and not period.is_grades_locked %}
+        <div class="card">
+            <div class="section-header"><h2><i class="fi fi-rr-check-circle"></i> Decision</h2></div>
+            {% if missing %}
+            <p class="muted" style="margin-bottom:0.8rem;"><strong style="color:var(--warning-text);">{{ missing }} student{{ missing|pluralize }}</strong> {{ missing|pluralize:"has,have" }} no grade yet. You can still validate what is in, or return it to the teacher.</p>
+            {% endif %}
+            <form method="POST" data-confirm="Validate the {{ period.quarter_label }} grades of {{ assignment.subject.subject_code }} — {{ assignment.section.section_name }}? The teacher can no longer overwrite them unless you return them." data-confirm-title="Validate grades" data-confirm-ok="Validate">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="validate">
+                <button type="submit" class="btn-primary" style="width:100%;justify-content:center;{% if state == 'validated' %}opacity:0.5;cursor:not-allowed;{% endif %}" {% if state == 'validated' %}disabled{% endif %}>
+                    <i class="fi fi-rr-shield-check"></i> {% if state == 'validated' %}Already Validated{% else %}Validate Grades{% endif %}
+                </button>
+            </form>
+            <form method="POST" style="margin-top:1rem;border-top:1px solid var(--border-color);padding-top:1rem;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="return">
+                <div class="form-field">
+                    <label for="note">Return to teacher with a note</label>
+                    <textarea name="note" id="note" class="form-input" placeholder="What needs to be corrected?" required></textarea>
+                </div>
+                <button type="submit" class="btn-outline btn-danger-outline" style="width:100%;justify-content:center;margin-top:0.6rem;">
+                    <i class="fi fi-rr-undo"></i> Return for Correction
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

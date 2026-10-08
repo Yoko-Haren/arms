@@ -11,8 +11,8 @@
         text-align: center; cursor: pointer; transition: all 0.3s; background: #fafbfc;
     }
     .upload-zone:hover { border-color: #123499; background: #f0f4ff; }
-    .upload-zone.dragover { border-color: #5EA173; background: #f0faf2; }
-    .upload-zone.has-file { border-color: #5EA173; background: #f0faf2; }
+    .upload-zone.dragover { border-color: #123499; background: #f0faf2; }
+    .upload-zone.has-file { border-color: #123499; background: #f0faf2; }
     
     .info-box {
         background: #f0f7ff; border-left: 4px solid #123499;
@@ -33,7 +33,7 @@
     .modal-box h3 { font-size: 1.1rem; margin-bottom: 0.8rem; }
     .modal-box .preview-table { width: 100%; font-size: 0.78rem; margin: 1rem 0; }
     .modal-box .preview-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid #f0f0f0; }
-    .modal-box .preview-table td:first-child { font-weight: 600; width: 100px; color: #6c757d; }
+    .modal-box .preview-table td:first-child { font-weight: 600; width: 100px; color: #4a5568; }
     .modal-actions { display: flex; gap: 0.8rem; justify-content: flex-end; margin-top: 1.2rem; }
     
     .btn {
@@ -42,7 +42,7 @@
         align-items: center; gap: 0.4rem; transition: all 0.2s;
     }
     .btn-primary { background: #123499; color: white; }
-    .btn-success { background: #5EA173; color: white; }
+    .btn-success { background: #123499; color: white; }
     .btn-outline { background: white; border: 2px solid #e0e5ea; color: #1a1a2e; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     
@@ -62,7 +62,7 @@
 
     <div class="info-box">
         <strong><i class="fi fi-rr-info"></i> How it works:</strong>
-        <p style="margin:0.3rem 0 0 0;color:#6c757d;">
+        <p style="margin:0.3rem 0 0 0;color:#4a5568;">
             Drop your <strong>DepEd E-Class Record (.xlsx)</strong> file. 
             The system will <strong>auto-detect</strong> the section by matching student names 
             and import <strong>all quarters (Q1-Q4)</strong> at once.
@@ -80,9 +80,9 @@
             <div class="upload-zone" id="uploadZone" onclick="document.getElementById('csvFile').click()">
                 <i class="fi fi-rr-file-upload" style="font-size:3.5rem;color:#123499;opacity:0.5;"></i>
                 <h4 style="margin-top:0.8rem;">Drop your E-Class Record here</h4>
-                <p style="color:#6c757d;font-size:0.85rem;">Excel (.xlsx) or CSV (.csv)</p>
+                <p style="color:#4a5568;font-size:0.85rem;">Excel (.xlsx) or CSV (.csv)</p>
                 <input type="file" name="csv_file" id="csvFile" accept=".csv,.xlsx,.xls" style="display:none;" onchange="showFileName()" required>
-                <div id="fileNameDisplay" style="margin-top:1rem;font-weight:600;color:#5EA173;font-size:0.9rem;"></div>
+                <div id="fileNameDisplay" style="margin-top:1rem;font-weight:600;color:#123499;font-size:0.9rem;"></div>
             </div>
 
             <button type="submit" class="btn-primary" style="width:100%;margin-top:1.2rem;" id="submitBtn">
@@ -145,7 +145,7 @@ function showConfirmation(event) {
     var file = document.getElementById('csvFile').files[0];
     
     if (!file) {
-        alert('Please select a file.');
+        ARMS.alert('Please select a file.', {title: 'No file selected'});
         return false;
     }
     

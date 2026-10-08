@@ -1,0 +1,18 @@
+{% load static %}<link rel="stylesheet" href="{% static 'shared/css/arms-sidebar.css' %}"><link rel="stylesheet" href="{% static 'shared/css/arms-theme.css' %}">
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="logo-area"><i class="fi fi-rr-graduation-cap"></i><h2>ARMS <span>School Head Portal</span></h2></div>
+        <button class="fold-btn" id="foldBtn" title="Toggle sidebar"><i class="fi fi-rr-angle-left"></i></button>
+    </div>
+    <div class="user-info">
+        <div class="user-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+        <div class="user-details"><h4>{{ request.user.get_full_name|default:request.user.username }}</h4><p>School Principal</p></div>
+    </div>
+    <ul class="nav-menu">
+        {% include 'heads/_nav.html' %}
+    </ul>
+    <ul class="nav-menu nav-footer">
+        <li class="nav-item"><a href="{% url 'account_settings' %}" class="nav-link nav-settings"><i class="fi fi-rr-settings"></i><span>Account Settings</span></a></li>
+        <li class="nav-item"><a href="{% url 'signout' %}" class="nav-link nav-logout"><i class="fi fi-rr-sign-out-alt"></i><span>Logout</span></a></li>
+    </ul>
+</div>

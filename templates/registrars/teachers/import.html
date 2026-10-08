@@ -1,0 +1,96 @@
+{% extends 'registrars/base.html' %}
+{% load static %}
+
+{% block title %}Import Teachers - ARMS{% endblock %}
+{% block subtitle %}Import Teacher Accounts — {{ school.school_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-zone {
+        border: 3px dashed var(--border-color); border-radius: 16px; padding: 2.6rem 2rem;
+        text-align: center; cursor: pointer; transition: all var(--transition-speed); background: #fafbfc;
+    }
+    .upload-zone:hover, .upload-zone.dragging { border-color: var(--caribbean-blue); background: #f0f4ff; }
+    .upload-zone h4 { margin-top: 0.8rem; color: var(--rich-black); font-size: 0.95rem; }
+    .upload-zone p { color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.2rem; }
+    .col-table td { padding: 0.4rem 0.6rem; font-size: 0.76rem; }
+    .col-table code { background: var(--gray-bg); padding: 0.1rem 0.4rem; border-radius: 4px; font-family: Consolas, monospace; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="max-width:780px;margin:0 auto;">
+
+    <div class="page-head">
+        <h3><i class="fi fi-rr-users-medical"></i> Import Teachers from CSV</h3>
+        <div class="page-head-actions">
+            <a href="{% url 'registrars:teacher_list' %}" class="btn-outline"><i class="fi fi-rr-arrow-left"></i> Teachers</a>
+            <a href="?template=1" class="btn-outline"><i class="fi fi-rr-download"></i> Download Template</a>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <strong><i class="fi fi-rr-info"></i> How it works:</strong>
+        <p style="margin:0.3rem 0 0 0;color:var(--text-secondary);">
+            Upload a list of teachers and review it before anything is created. Each teacher gets an account for
+            <strong>{{ school.school_name }}</strong> with a temporary password, which they must replace the first time they sign in.
+        </p>
+    </div>
+
+    <div class="card">
+        <div class="section-header"><h2><i class="fi fi-rr-upload"></i> Upload Teacher List</h2></div>
+        <form method="POST" enctype="multipart/form-data" id="uploadForm">
+            {% csrf_token %}
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('csvFile').click()">
+                <i class="fi fi-rr-file-upload" style="font-size:3.2rem;color:#123499;opacity:0.5;"></i>
+                <h4>Drop the teacher list here</h4>
+                <p>or click to choose a CSV (.csv) file</p>
+                <input type="file" name="csv_file" id="csvFile" accept=".csv" style="display:none;" required>
+                <div id="fileNameDisplay" style="margin-top:1rem;font-weight:600;color:var(--secondary-green);font-size:0.9rem;"></div>
+            </div>
+            <button type="submit" class="btn-primary" style="width:100%;margin-top:1.2rem;justify-content:center;" id="submitBtn" disabled>
+                <i class="fi fi-rr-search-alt"></i> Review Teachers
+            </button>
+        </form>
+    </div>
+
+    <div class="card">
+        <div class="section-header"><h2><i class="fi fi-rr-document"></i> Columns</h2></div>
+        <table class="col-table">
+            <tr><td><code>first_name</code></td><td><span class="badge badge-danger">Required</span></td><td>Given name</td></tr>
+            <tr><td><code>last_name</code></td><td><span class="badge badge-danger">Required</span></td><td>Family name</td></tr>
+            <tr><td><code>email</code></td><td><span class="badge badge-info">Optional</span></td><td>
+                {% if email_domain %}Leave blank to generate <code>firstname.lastname@{{ email_domain }}</code>.{% else %}Your school has no email domain set, so every row needs an email.{% endif %}
+                The email is the teacher's username.</td></tr>
+            <tr><td><code>employee_number</code></td><td><span class="badge badge-info">Optional</span></td><td>Must be unique</td></tr>
+            <tr><td><code>position</code></td><td><span class="badge badge-info">Optional</span></td><td>e.g. Teacher II (defaults to Teacher)</td></tr>
+            <tr><td><code>teaching_area</code></td><td><span class="badge badge-info">Optional</span></td><td>e.g. Mathematics</td></tr>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    var zone = document.getElementById('uploadZone');
+    var fileInput = document.getElementById('csvFile');
+    var submitBtn = document.getElementById('submitBtn');
+    function showFileName() {
+        var file = fileInput.files[0];
+        document.getElementById('fileNameDisplay').textContent = file ? file.name : '';
+        submitBtn.disabled = !file;
+    }
+    fileInput.addEventListener('change', showFileName);
+    ['dragenter', 'dragover'].forEach(function(name) {
+        zone.addEventListener(name, function(e) { e.preventDefault(); zone.classList.add('dragging'); });
+    });
+    ['dragleave', 'drop'].forEach(function(name) {
+        zone.addEventListener(name, function(e) { e.preventDefault(); zone.classList.remove('dragging'); });
+    });
+    zone.addEventListener('drop', function(e) {
+        if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; showFileName(); }
+    });
+</script>
+{% endblock %}

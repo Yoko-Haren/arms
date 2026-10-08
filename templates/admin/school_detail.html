@@ -685,7 +685,7 @@
                 </a>
                 <form method="POST" action="{% url 'admin_panel:school_toggle' school.id %}" style="display:contents;">
                     {% csrf_token %}
-                    <button type="submit" class="btn-action warning-btn" onclick="return confirm('Toggle school status for {{ school.school_name|escapejs }}?')">
+                    <button type="submit" class="btn-action warning-btn" data-confirm="Toggle school status for {{ school.school_name }}?">
                         <i class="fas fa-power-off"></i> {% if school.is_active %}Deactivate{% else %}Activate{% endif %}
                     </button>
                 </form>
@@ -841,11 +841,10 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <a href="{% url 'admin_panel:school_year_set_current' sy.id %}" 
-                                       class="btn-set-current"
-                                       onclick="return confirm('Set as current school year?')">
-                                        <i class="fas fa-check"></i> Set Current
-                                    </a>
+                                    <form method="POST" action="{% url 'admin_panel:school_year_set_current' sy.id %}" style="display:contents;" data-confirm="Set {{ sy.year_label }} as the current school year?">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-set-current" style="border:none;cursor:pointer;font-family:inherit;"><i class="fas fa-check"></i> Set Current</button>
+                                    </form>
                                 </td>
                             </tr>
                             {% endfor %}

@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1129,8 +1130,8 @@
                 renderConversations();
             }
 
-            window.deleteConversation = function(otherParty) {
-                if (confirm('Delete entire conversation? This action cannot be undone.')) {
+            window.deleteConversation = async function(otherParty) {
+                if (await ARMS.confirm('Delete entire conversation? This action cannot be undone.', {danger: true, confirmText: 'Delete'})) {
                     messages = messages.filter(msg =>
                         !((msg.sender === currentUserId && msg.receiver === otherParty) ||
                           (msg.sender === otherParty && msg.receiver === currentUserId))
@@ -1210,5 +1211,6 @@
             setInterval(updateGreeting, 60000);
         })();
     </script>
+<script src="{% static 'shared/js/arms-ui.js' %}"></script>
 </body>
 </html>

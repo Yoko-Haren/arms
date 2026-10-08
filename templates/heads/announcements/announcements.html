@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -961,7 +962,7 @@
                 if (document.getElementById('annSendEmail').checked) showToast('Email Sent', 'Notification sent to target audience.');
             };
             window.toggleDraft = function(id) { const ann = announcements.find(a => a.id === id); if(ann) { ann.status = ann.status === 'draft' ? 'published' : 'draft'; saveAnnouncements(); filterAnnouncements(); showToast('Status Changed', `Announcement ${ann.status==='draft'?'moved to drafts':'published'}.`); } };
-            window.deleteAnnouncement = function(id) { if(confirm('Delete this announcement?')) { announcements = announcements.filter(a => a.id !== id); saveAnnouncements(); filterAnnouncements(); updateStats(); showToast('Deleted', 'Announcement has been deleted.'); } };
+            window.deleteAnnouncement = async function(id) { if(await ARMS.confirm('Delete this announcement?', {danger: true, confirmText: 'Delete'})) { announcements = announcements.filter(a => a.id !== id); saveAnnouncements(); filterAnnouncements(); updateStats(); showToast('Deleted', 'Announcement has been deleted.'); } };
             window.showReaders = function(id) { const ann = announcements.find(a => a.id === id); if(!ann) return; currentReadersAnnouncement = ann; document.getElementById('readersTitle').innerText = ann.title; document.getElementById('readersList').innerHTML = ann.readers.map(r => `<div class="reader-item"><span><strong>${r.name}</strong> (${r.role})</span><span>${r.read ? 'Read: '+new Date(r.readTime).toLocaleString() : 'Unread'}</span></div>`).join(''); document.getElementById('readersModal').classList.add('active'); };
             window.closeReadersModal = function() { document.getElementById('readersModal').classList.remove('active'); };
             window.sendReminderToUnread = function() { if(currentReadersAnnouncement) { const unread = currentReadersAnnouncement.readers.filter(r => !r.read).map(r => r.name).join(', '); showToast('Reminder Sent', `Sent to: ${unread || 'everyone has read this.'}`); } closeReadersModal(); };
@@ -971,5 +972,6 @@
             setInterval(updateDateTime, 1000); setInterval(updateGreeting, 60000);
         })();
     </script>
+<script src="{% static 'shared/js/arms-ui.js' %}"></script>
 </body>
 </html>

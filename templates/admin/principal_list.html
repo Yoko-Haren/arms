@@ -53,7 +53,7 @@
         box-shadow: 0 0 0 3px rgba(18,52,153,0.08);
         background: white;
     }
-    .filter-input::placeholder { color: #adb5bd; }
+    .filter-input::placeholder { color: #718096; }
 
     .btn-search {
         width: 100%;
@@ -178,7 +178,7 @@
         transition: var(--transition);
     }
     .school-link:hover { color: var(--primary-dark); text-decoration: underline; }
-    .no-school { color: #adb5bd; font-style: italic; }
+    .no-school { color: #718096; font-style: italic; }
 
     .status-badge {
         display: inline-flex;
@@ -458,12 +458,10 @@
                             <a href="{% url 'admin_panel:principal_edit' principal.id %}" class="btn-icon-action edit-btn" title="Edit Principal">
                                 <i class="fas fa-edit"></i>
                             </a>
-                            <a href="{% url 'admin_panel:principal_toggle' principal.id %}" 
-                               class="btn-icon-action toggle-btn" 
-                               title="Toggle Status"
-                               onclick="return confirm('Toggle principal status for {{ principal.user.get_full_name|default:principal.user.username|escapejs }}?')">
-                                <i class="fas fa-power-off"></i>
-                            </a>
+                            <form method="POST" action="{% url 'admin_panel:principal_toggle' principal.id %}" style="display:contents;" data-confirm="Toggle principal status for {{ principal.user.get_full_name|default:principal.user.username }}?">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-icon-action toggle-btn" title="Toggle Status"><i class="fas fa-power-off"></i></button>
+                            </form>
                         </div>
                     </td>
                 </tr>

@@ -12,7 +12,7 @@
     @media (min-width: 1025px) { .dashboard-layout { align-items: flex-start; } }
 
     .mode-toggle { display: flex; gap: 0; border-radius: 10px; overflow: hidden; border: 2px solid #e0e5ea; background: #f8f9fa; }
-    .mode-option { flex: 1; padding: 0.55rem 0.8rem; font-size: 0.73rem; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.2s; color: #6c757d; background: #f8f9fa; border: none; font-family: inherit; white-space: nowrap; }
+    .mode-option { flex: 1; padding: 0.55rem 0.8rem; font-size: 0.73rem; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.2s; color: #4a5568; background: #f8f9fa; border: none; font-family: inherit; white-space: nowrap; }
     .mode-option.active { background: #123499; color: white; }
     .mode-option:hover:not(.active) { background: #e8ecf1; color: #1a1a2e; }
 
@@ -20,12 +20,12 @@
     .subject-card-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.2rem; padding-bottom: 1rem; border-bottom: 2px solid #f0f4f8; }
     .subject-icon { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #123499, #1a4dcc); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.3rem; flex-shrink: 0; }
     .subject-card-title { font-size: 0.9rem; font-weight: 700; color: #1a1a2e; }
-    .subject-card-subtitle { font-size: 0.7rem; color: #6c757d; margin-top: 0.15rem; }
+    .subject-card-subtitle { font-size: 0.7rem; color: #4a5568; margin-top: 0.15rem; }
     .subject-select { width: 100%; padding: 0.65rem 0.8rem; border: 2px solid #e0e5ea; border-radius: 10px; font-size: 0.8rem; background: #f8f9fa; cursor: pointer; font-family: inherit; color: #1a1a2e; transition: all 0.2s; }
     .subject-select:focus { outline: none; border-color: #123499; box-shadow: 0 0 0 3px rgba(18,52,153,0.08); }
     .subject-stats { margin-top: 1.2rem; display: flex; flex-direction: column; gap: 0.6rem; }
     .subject-stat-row { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0.7rem; background: #f8f9fa; border-radius: 8px; font-size: 0.75rem; }
-    .subject-stat-label { color: #6c757d; font-weight: 500; }
+    .subject-stat-label { color: #4a5568; font-weight: 500; }
     .subject-stat-value { font-weight: 700; color: #1a1a2e; }
     .k-badge { color: #2E7D32; } .p-badge { color: #123499; } .u-badge { color: #E65100; } .prod-badge { color: #6A1B9A; }
 
@@ -46,8 +46,8 @@
     .prof-card.approaching .prof-value { color: #1565C0; }
     .prof-card.developing .prof-value { color: #E65100; }
     .prof-card.beginning .prof-value { color: #C62828; }
-    .prof-card .prof-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px; color: #6c757d; margin-top: 0.3rem; font-weight: 700; }
-    .prof-card .prof-range { font-size: 0.62rem; color: #adb5bd; margin-top: 0.15rem; }
+    .prof-card .prof-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px; color: #4a5568; margin-top: 0.3rem; font-weight: 700; }
+    .prof-card .prof-range { font-size: 0.62rem; color: #718096; margin-top: 0.15rem; }
 
     .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
     @media (max-width: 1024px) { .charts-row { grid-template-columns: 1fr; } }
@@ -70,7 +70,7 @@
     .table-badge.beginning { background: #ffebee; color: #C62828; }
     .table-wrapper { overflow-x: auto; border-radius: 12px; }
     .data-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
-    .data-table th { text-align: left; padding: 0.7rem 0.8rem; border-bottom: 2px solid #e8ecf1; color: #6c757d; font-weight: 700; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 0.6px; background: #f8f9fa; white-space: nowrap; }
+    .data-table th { text-align: left; padding: 0.7rem 0.8rem; border-bottom: 2px solid #e8ecf1; color: #4a5568; font-weight: 700; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 0.6px; background: #f8f9fa; white-space: nowrap; }
     .data-table td { padding: 0.65rem 0.8rem; border-bottom: 1px solid #f0f4f8; }
     .data-table tbody tr { transition: all 0.2s; }
     .data-table tbody tr:hover { background: #f0f4ff; }
@@ -78,7 +78,7 @@
     /* CLICKABLE SECTION ROWS */
     .data-table tbody tr.section-row { cursor: pointer; }
     .data-table tbody tr.section-row:hover { background: #e8eeff; box-shadow: inset 3px 0 0 #123499; }
-    .section-link-icon { color: #adb5bd; font-size: 0.6rem; margin-left: 0.3rem; transition: all 0.2s; opacity: 0; }
+    .section-link-icon { color: #718096; font-size: 0.6rem; margin-left: 0.3rem; transition: all 0.2s; opacity: 0; }
     .data-table tbody tr.section-row:hover .section-link-icon { opacity: 1; color: #123499; }
 
     .proficiency-badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.65rem; font-weight: 600; }
@@ -93,7 +93,7 @@
     .filter-card { background: white; border-radius: 16px; padding: 1rem 1.2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid #e8ecf1; margin-bottom: 1.5rem; }
     .filter-row { display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: flex-end; }
     .filter-group { flex: 1; min-width: 130px; }
-    .filter-group label { display: block; font-size: 0.65rem; font-weight: 600; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.3rem; }
+    .filter-group label { display: block; font-size: 0.65rem; font-weight: 600; color: #4a5568; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.3rem; }
     .filter-group select { width: 100%; padding: 0.5rem 0.6rem; border: 2px solid #e0e5ea; border-radius: 8px; font-size: 0.78rem; background: #f8f9fa; cursor: pointer; font-family: inherit; color: #1a1a2e; }
     .filter-group select:focus { outline: none; border-color: #123499; }
 
@@ -101,7 +101,7 @@
     .at-risk-list::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; } .at-risk-list::-webkit-scrollbar-thumb:hover { background: #ccc; }
 
     @media (max-width: 768px) { .charts-row { grid-template-columns: 1fr; } .filter-row { flex-direction: column; } .filter-group { min-width: 100%; } .proficiency-grid { grid-template-columns: repeat(2, 1fr); } }
-    @keyframes poroPulse { 0%,100%{transform: scale(1); box-shadow: 0 6px 20px rgba(94,161,115,0.4);} 50%{transform: scale(1.06); box-shadow: 0 10px 28px rgba(94,161,115,0.55);} }
+    @keyframes poroPulse { 0%,100%{transform: scale(1); box-shadow: 0 6px 20px rgba(18,52,153,0.4);} 50%{transform: scale(1.06); box-shadow: 0 10px 28px rgba(18,52,153,0.55);} }
 </style>
 {% endblock %}
 
@@ -265,7 +265,7 @@
                 </div>
                 <div>
                     <div style="font-size:0.8rem;font-weight:700;color:#1a1a2e;">At-Risk Students</div>
-                    <div style="font-size:0.65rem;color:#6c757d;">{{ at_risk_students|length }} student(s) detected</div>
+                    <div style="font-size:0.65rem;color:#4a5568;">{{ at_risk_students|length }} student(s) detected</div>
                 </div>
             </div>
             <div class="at-risk-list" style="display:flex;flex-direction:column;gap:0.6rem;max-height:350px;overflow-y:auto;">
@@ -277,8 +277,8 @@
                         <span style="font-size:0.73rem;font-weight:600;color:#1a1a2e;">{{ student.name|truncatechars:18 }}</span>
                         <span style="font-size:0.6rem;font-weight:700;color:#C62828;">{{ student.lowest_grade }}%</span>
                     </div>
-                    <div style="font-size:0.62rem;color:#6c757d;margin-top:0.2rem;">{{ student.section|truncatechars:20 }}</div>
-                    <div style="font-size:0.6rem;color:#adb5bd;margin-top:0.2rem;display:flex;align-items:center;gap:0.3rem;">
+                    <div style="font-size:0.62rem;color:#4a5568;margin-top:0.2rem;">{{ student.section|truncatechars:20 }}</div>
+                    <div style="font-size:0.6rem;color:#718096;margin-top:0.2rem;display:flex;align-items:center;gap:0.3rem;">
                         <i class="fi fi-rr-book" style="font-size:0.5rem;"></i>
                         {{ student.failed_count }} failed: {{ student.subjects|truncatechars:30 }}
                     </div>
@@ -336,7 +336,7 @@
         
         <!-- Poro AI Insight -->
         <div class="insight-card">
-            <div style="width: 52px; height: 52px; background: linear-gradient(135deg, #5EA173, #7dbb8f); border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 6px 20px rgba(94,161,115,0.4); animation: poroPulse 2.5s ease infinite; overflow: hidden;">
+            <div style="width: 52px; height: 52px; background: linear-gradient(135deg, #123499, #4a6fd4); border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 6px 20px rgba(18,52,153,0.4); animation: poroPulse 2.5s ease infinite; overflow: hidden;">
                 <img src="{% static 'shared/poro/Poro.png' %}" alt="Poro AI" style="width: 100%; height: 100%; object-fit: cover;"
                      onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\'font-size:1.4rem;color:white;\'><i class=\'fi fi-rr-robot\'></i></span>';">
             </div>
@@ -383,7 +383,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="9" style="text-align:center;padding:3rem;color:#6c757d;">
+                            <td colspan="9" style="text-align:center;padding:3rem;color:#4a5568;">
                                 <i class="fi fi-rr-chart-line-up" style="font-size:2rem;display:block;margin-bottom:0.5rem;"></i>
                                 No KPUP data available for the selected filters.
                             </td>

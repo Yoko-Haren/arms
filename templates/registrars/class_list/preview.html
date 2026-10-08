@@ -1,0 +1,142 @@
+{% extends 'registrars/base.html' %}
+{% load static %}
+
+{% block title %}Review Class List - ARMS{% endblock %}
+{% block subtitle %}Review before importing — SY {{ current_sy.year_label }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .review-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    .review-item { background: var(--gray-bg); border-radius: 14px; padding: 0.9rem 1rem; }
+    .review-item small { display: block; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); font-weight: 600; }
+    .review-item strong { display: block; font-size: 0.92rem; color: var(--rich-black); margin: 0.2rem 0; word-break: break-word; }
+    .review-item span.sub { font-size: 0.72rem; color: var(--text-secondary); }
+    .teacher-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; align-items: start; }
+    .preview-scroll { max-height: 420px; overflow-y: auto; border-radius: 14px; border: 1px solid var(--border-color); }
+    .preview-scroll thead th { position: sticky; top: 0; z-index: 1; }
+    tr.state-elsewhere td, tr.state-duplicate td { background: #fffaf0; }
+    .confirm-bar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    @media (max-width: 900px) { .review-grid { grid-template-columns: 1fr 1fr; } .teacher-pick { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+    <h3><i class="fi fi-rr-search-alt"></i> Review Class List</h3>
+    <span class="muted"><i class="fi fi-rr-document"></i> {{ file_name }} — nothing has been saved yet</span>
+</div>
+
+<form method="POST" id="confirmForm">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="confirm">
+    <textarea name="payload" hidden>{{ payload }}</textarea>
+
+    <!-- What the file describes -->
+    <div class="card">
+        <div class="section-header"><h2><i class="fi fi-rr-info"></i> This class</h2></div>
+        <div class="review-grid">
+            <div class="review-item">
+                <small>Section</small>
+                <strong>{{ parsed.section_name }}</strong>
+                {% if preview.section %}<span class="badge badge-info">Existing section</span>{% else %}<span class="badge badge-success">Will be created</span>{% endif %}
+            </div>
+            <div class="review-item">
+                <small>Subject</small>
+                <strong>{{ parsed.subject_code }}</strong>
+                <span class="sub">{{ parsed.subject_name }}</span><br>
+                {% if preview.subject %}<span class="badge badge-info">Existing subject</span>{% else %}<span class="badge badge-success">Will be created</span>{% endif %}
+            </div>
+            <div class="review-item">
+                <small>Year / Grade Level</small>
+                <strong>{{ parsed.header.year_level|default:"—" }}</strong>
+                <span class="sub">Saved under {{ preview.grade_level.grade_name|default:parsed.grade_name }}</span>
+            </div>
+            <div class="review-item">
+                <small>Term &amp; Schedule</small>
+                <strong>{{ parsed.header.semester|default:"—" }}</strong>
+                <span class="sub">{{ parsed.header.schedule|default:"No schedule in file" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teacher -->
+    <div class="card">
+        <div class="section-header"><h2><i class="fi fi-rr-chalkboard-user"></i> Teacher for this class</h2></div>
+        <div class="teacher-pick">
+            <div>
+                <div class="review-item">
+                    <small>Instructor in the file</small>
+                    <strong>{{ parsed.instructor_name|default:"Not stated" }}</strong>
+                    {% if preview.matched_teacher %}
+                        <span class="badge badge-success">Matches {{ preview.matched_teacher.get_full_name }}</span>
+                    {% elif parsed.instructor_name %}
+                        <span class="badge badge-warning">No teacher account with this name</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="form-field">
+                <label for="teacherSelect">Assign the class to</label>
+                <select name="teacher" id="teacherSelect" class="form-input">
+                    {% if parsed.instructor_name and not preview.matched_teacher %}
+                    <option value="new" selected>Create an account for {{ parsed.instructor_name }}</option>
+                    {% endif %}
+                    {% for t in teacher_options %}
+                    <option value="{{ t.user_id }}" {% if preview.matched_teacher and preview.matched_teacher.id == t.user_id %}selected{% endif %}>
+                        {{ t.name }} — {{ t.classes }} class{{ t.classes|pluralize:"es" }} · {{ t.hours }} hrs/wk{% if t.most_available %} (most available){% endif %}
+                    </option>
+                    {% endfor %}
+                    <option value="" {% if not parsed.instructor_name and not preview.matched_teacher %}selected{% endif %}>Leave unassigned for now</option>
+                </select>
+                <div class="form-hint">Teachers are listed lightest teaching load first, so the top names have the most free time.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Students -->
+    <div class="card">
+        <div class="section-header">
+            <h2><i class="fi fi-rr-users-alt"></i> Students ({{ preview.rows|length }})</h2>
+        </div>
+        <div class="summary-strip">
+            <div class="summary-item"><span class="dot green"></span> <strong>{{ preview.counts.new }}</strong> will be enrolled</div>
+            <div class="summary-item"><span class="dot blue"></span> <strong>{{ preview.counts.existing }}</strong> already in this section</div>
+            {% if preview.counts.elsewhere %}<div class="summary-item"><span class="dot orange"></span> <strong>{{ preview.counts.elsewhere }}</strong> enrolled in another section (not moved)</div>{% endif %}
+            {% if preview.counts.duplicate %}<div class="summary-item"><span class="dot red"></span> <strong>{{ preview.counts.duplicate }}</strong> duplicate row{{ preview.counts.duplicate|pluralize }} (ignored)</div>{% endif %}
+        </div>
+        <div class="preview-scroll">
+            <table>
+                <thead><tr><th style="width:50px;">#</th><th>Student No.</th><th>Name</th><th>What will happen</th></tr></thead>
+                <tbody>
+                    {% for row in preview.rows %}
+                    <tr class="state-{{ row.state }}">
+                        <td style="color:#718096;">{{ forloop.counter }}</td>
+                        <td>{{ row.student_id }}</td>
+                        <td><strong>{{ row.last_name }}</strong>{% if row.first_name %}, {{ row.first_name }}{% endif %}</td>
+                        <td>
+                            <span class="badge {% if row.state == 'new' %}badge-success{% elif row.state == 'existing' %}badge-info{% else %}badge-warning{% endif %}">{{ row.note }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card confirm-bar">
+        <a href="{% url 'registrars:upload_class_list' %}" class="btn-outline"><i class="fi fi-rr-arrow-left"></i> Cancel, choose another file</a>
+        <button type="submit" class="btn-primary" id="confirmBtn"><i class="fi fi-rr-check-circle"></i> Confirm &amp; Import</button>
+    </div>
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('confirmForm').addEventListener('submit', function() {
+        var button = document.getElementById('confirmBtn');
+        button.disabled = true;
+        button.innerHTML = '<i class="fi fi-rr-spinner"></i> Importing...';
+    });
+</script>
+{% endblock %}

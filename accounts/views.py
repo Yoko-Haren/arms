@@ -9,11 +9,11 @@ from django.core.validators import validate_email
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout as auth_logout
 from django.contrib import messages
-from django.contrib.sessions.models import Session
 from django.utils import timezone
 from django.conf import settings
 from django.views.decorators.http import require_http_methods
 from .models import UserProfile, LoginAttempt
+from .services.sessions import end_other_sessions
 
 
 logger = logging.getLogger(__name__)
@@ -131,14 +131,8 @@ def signin(request):
                 user=user,
             )
 
-            # Kill all other active sessions for this user (force single session)
-            for session in Session.objects.all():
-                session_data = session.get_decoded()
-                if session_data.get('_auth_user_id') == str(user.id):
-                    if session.session_key != request.session.session_key:
-                        session.delete()
-
             login(request, user)
+            end_other_sessions(user, request.session.session_key)  # single session per user
 
             # ── 8. Redirect based on actual role from database ──
             return redirect(_get_dashboard_url(actual_role))
@@ -183,46 +177,37 @@ def signout(request):
 
 
 @require_http_methods(['GET', 'POST'])
-def password_reset_request(request):
-    """Request a Supabase Auth password-reset email without leaking accounts."""
+def password_change_required(request):
+    """First sign-in with a temporary password: the user must choose their own."""
+    from django.contrib.auth import update_session_auth_hash
+    from django.contrib.auth.password_validation import validate_password
+
+    if not request.user.is_authenticated:
+        return redirect('signin')
+    profile = request.user.profile
+    if not profile.must_change_password:
+        return redirect(_get_dashboard_url(profile.role))
+
+    errors = []
     if request.method == 'POST':
-        email = request.POST.get('email', '').strip()
+        new_password = request.POST.get('new_password', '')
+        confirm_password = request.POST.get('confirm_password', '')
+        if new_password != confirm_password:
+            errors.append('The two passwords do not match.')
+        elif request.user.check_password(new_password):
+            errors.append('Choose a password different from the temporary one.')
+        else:
+            try:
+                validate_password(new_password, user=request.user)
+            except ValidationError as exc:
+                errors.extend(exc.messages)
+        if not errors:
+            request.user.set_password(new_password)
+            request.user.save()
+            profile.must_change_password = False
+            profile.save(update_fields=['must_change_password', 'updated_at'])
+            update_session_auth_hash(request, request.user)  # stay signed in
+            messages.success(request, 'Your password has been updated.')
+            return redirect(_get_dashboard_url(profile.role))
 
-        try:
-            validate_email(email)
-        except ValidationError:
-            return render(request, 'accounts/password_reset.html', {
-                'email': email,
-                'error': 'Enter a valid email address.',
-            }, status=400)
-
-        try:
-            # Keep Supabase optional during SQLite-only local development.
-            # The integration is imported only when its route is used.
-            from .services.supabase_client import get_supabase_client
-
-            get_supabase_client().auth.reset_password_email(email)
-        except RuntimeError:
-            logger.exception('Supabase password reset is not configured.')
-            return render(request, 'accounts/password_reset.html', {
-                'email': email,
-                'error': 'Password reset is not configured yet. Contact the system administrator.',
-            }, status=503)
-        except Exception:
-            # Do not disclose whether an account exists or expose provider
-            # details. Record the technical failure for the administrator.
-            logger.exception('Supabase password-reset request failed.')
-            return render(request, 'accounts/password_reset.html', {
-                'email': email,
-                'error': 'We could not send a reset link right now. Please try again later.',
-            }, status=503)
-
-        return redirect('password_reset_done')
-
-    return render(request, 'accounts/password_reset.html', {
-        'email': request.GET.get('email', '').strip(),
-    })
-
-
-def password_reset_done(request):
-    return render(request, 'accounts/password_reset_done.html')
+    return render(request, 'accounts/password_change_required.html', {'errors': errors})

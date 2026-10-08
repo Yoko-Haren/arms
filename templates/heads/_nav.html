@@ -1,0 +1,5 @@
+{% with name=request.resolver_match.url_name %}
+<li class="nav-item"><a href="{% url 'heads-ai-dashboard' %}" class="nav-link {% if name == 'heads-ai-dashboard' or name == 'heads-ai-section-detail' %}active{% endif %}"><i class="fi fi-rr-brain"></i><span>Academic Dashboard</span></a></li>
+<li class="nav-item"><a href="{% url 'heads-school-performance' %}" class="nav-link {% if name == 'heads-school-performance' or name == 'heads-school-performance-sy' %}active{% endif %}"><i class="fi fi-rr-chart-histogram"></i><span>School Performance</span></a></li>
+<li class="nav-item"><a href="{% url 'heads-user-management' %}" class="nav-link {% if name == 'heads-user-management' %}active{% endif %}"><i class="fi fi-rr-users-gear"></i><span>User Management</span></a></li>
+{% endwith %}

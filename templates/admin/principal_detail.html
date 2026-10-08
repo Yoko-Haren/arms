@@ -641,7 +641,7 @@
                 </button>
                 <form method="POST" action="{% url 'admin_panel:principal_toggle' principal.id %}" style="display:contents;">
                     {% csrf_token %}
-                    <button type="submit" class="btn-action warning-btn" onclick="return confirm('Toggle principal status for {{ principal.full_name|escapejs }}?')">
+                    <button type="submit" class="btn-action warning-btn" data-confirm="Toggle principal status for {{ principal.full_name }}?">
                         <i class="fas fa-power-off"></i> {% if principal.is_active %}Deactivate{% else %}Activate{% endif %}
                     </button>
                 </form>
@@ -764,7 +764,7 @@
                     <div>
                         <label class="form-label">New Password</label>
                         <input type="password" name="new_password" class="form-control" required minlength="8" placeholder="Enter new password">
-                        <small style="font-size:0.68rem;color:#adb5bd;margin-top:0.3rem;display:block;">Minimum 8 characters.</small>
+                        <small style="font-size:0.68rem;color:#718096;margin-top:0.3rem;display:block;">Minimum 8 characters.</small>
                     </div>
                 </div>
                 <div class="modal-footer">

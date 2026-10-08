@@ -1,0 +1,224 @@
+{% extends 'registrars/base.html' %}
+{% load static %}
+
+{% block title %}{{ section.section_name }} - ARMS{% endblock %}
+{% block subtitle %}Section {{ section.section_name }} — {{ section.grade_level.grade_name }} · SY {{ current_sy.year_label }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 1.5rem; align-items: start; }
+    @media (max-width: 1100px) { .detail-grid { grid-template-columns: 1fr; } }
+    .class-row { border: 1px solid var(--border-color); border-radius: 14px; padding: 0.9rem 1rem; margin-bottom: 0.8rem; }
+    .class-row-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; flex-wrap: wrap; }
+    .class-code { font-weight: 700; color: var(--rich-black); font-size: 0.9rem; }
+    .class-name { font-size: 0.74rem; color: var(--text-secondary); }
+    .class-teacher { font-size: 0.8rem; color: var(--text-primary); margin-top: 0.4rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+    .inline-form { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-top: 0.7rem; }
+    .inline-form select { flex: 1; min-width: 200px; }
+    details.change summary { cursor: pointer; font-size: 0.72rem; font-weight: 600; color: var(--caribbean-blue); list-style: none; display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.5rem; }
+    details.change summary::-webkit-details-marker { display: none; }
+    .roster-scroll { max-height: 640px; overflow-y: auto; }
+    .roster-scroll thead th { position: sticky; top: 0; z-index: 1; }
+    tr.inactive-row td { opacity: 0.55; }
+    tr.inactive-row td:last-child { opacity: 1; }
+    .row-actions { display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; }
+    .row-actions form { display: inline-flex; gap: 0.35rem; align-items: center; }
+    .row-actions select { padding: 0.3rem 0.5rem; font-size: 0.72rem; border-radius: 8px; max-width: 150px; }
+    .add-box { background: var(--gray-bg); border-radius: 14px; padding: 1rem; margin-top: 0.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+    <h3><i class="fi fi-rr-users-alt"></i> {{ section.section_name }}</h3>
+    <div class="page-head-actions">
+        <a href="{% url 'registrars:section_list' %}" class="btn-outline"><i class="fi fi-rr-arrow-left"></i> All Sections</a>
+        <a href="{% url 'registrars:upload_class_list' %}" class="btn-primary"><i class="fi fi-rr-upload"></i> Upload Class List</a>
+    </div>
+</div>
+
+<div class="summary-strip">
+    <div class="summary-item"><span class="dot green"></span> <strong>{{ active_count }}</strong> of {{ section.max_capacity }} students</div>
+    <div class="summary-item"><span class="dot blue"></span> <strong>{{ assignments|length }}</strong> class{{ assignments|length|pluralize:"es" }}</div>
+    {% if inactive_count %}<div class="summary-item"><span class="dot red"></span> <strong>{{ inactive_count }}</strong> not active</div>{% endif %}
+    <div class="summary-item"><span class="dot purple"></span> Adviser: <strong>{{ section.adviser.get_full_name|default:"None" }}</strong></div>
+</div>
+
+<div class="detail-grid">
+
+    <!-- ROSTER -->
+    <div class="card">
+        <div class="section-header">
+            <h2><i class="fi fi-rr-graduation-cap"></i> Students</h2>
+            <span class="muted">{{ enrollments|length }} record{{ enrollments|length|pluralize }}</span>
+        </div>
+        {% if enrollments %}
+        <div class="table-responsive roster-scroll">
+            <table>
+                <thead><tr><th style="width:40px;">#</th><th>Student</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody>
+                    {% for e in enrollments %}
+                    <tr class="{% if e.status != 'Enrolled' and e.status != 'Transferred_In' %}inactive-row{% endif %}">
+                        <td style="color:#718096;">{{ forloop.counter }}</td>
+                        <td>
+                            <strong>{{ e.student.last_name }}</strong>, {{ e.student.first_name }}
+                            <div class="muted">{{ e.student.lrn }}</div>
+                        </td>
+                        <td>
+                            {% if e.status == 'Enrolled' or e.status == 'Transferred_In' %}
+                                <span class="badge badge-success">{% if e.status == 'Enrolled' %}Enrolled{% else %}Transferred in{% endif %}</span>
+                            {% else %}
+                                <span class="badge badge-danger">{{ e.status|cut:"_" }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="row-actions">
+                                {% if e.status == 'Enrolled' or e.status == 'Transferred_In' %}
+                                    {% if other_sections %}
+                                    <form method="POST" data-confirm="Move {{ e.student.last_name }}, {{ e.student.first_name }} to the selected section? Their grades move with them." data-confirm-title="Move student">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="move_student">
+                                        <input type="hidden" name="enrollment" value="{{ e.id }}">
+                                        <select name="target" class="form-input" required aria-label="Move to section">
+                                            <option value="">Move to…</option>
+                                            {% for s in other_sections %}<option value="{{ s.id }}">{{ s.section_name }}</option>{% endfor %}
+                                        </select>
+                                        <button type="submit" class="btn-outline btn-sm" title="Move"><i class="fi fi-rr-exchange"></i></button>
+                                    </form>
+                                    {% endif %}
+                                    <form method="POST" data-confirm="Drop {{ e.student.last_name }}, {{ e.student.first_name }} from {{ section.section_name }}? They stay on record as Dropped and can be restored." data-confirm-title="Drop student" data-confirm-ok="Drop" data-confirm-danger>
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="drop_student">
+                                        <input type="hidden" name="enrollment" value="{{ e.id }}">
+                                        <button type="submit" class="btn-outline btn-sm btn-danger-outline" title="Drop"><i class="fi fi-rr-user-remove"></i> Drop</button>
+                                    </form>
+                                {% else %}
+                                    <form method="POST" data-confirm="Restore {{ e.student.last_name }}, {{ e.student.first_name }} as Enrolled in {{ section.section_name }}?" data-confirm-title="Restore student">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="restore_student">
+                                        <input type="hidden" name="enrollment" value="{{ e.id }}">
+                                        <button type="submit" class="btn-outline btn-sm"><i class="fi fi-rr-undo"></i> Restore</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fi fi-rr-folder-open"></i>
+            <h5>No Students Yet</h5>
+            <p>Upload a class list for this section to enroll its students.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- CLASSES & TEACHERS -->
+    <div>
+        <div class="card">
+            <div class="section-header">
+                <h2><i class="fi fi-rr-chalkboard-user"></i> Classes &amp; Teachers</h2>
+            </div>
+
+            {% for a in assignments %}
+            <div class="class-row">
+                <div class="class-row-head">
+                    <div>
+                        <div class="class-code">{{ a.subject.subject_code }}</div>
+                        <div class="class-name">{{ a.subject.subject_name }}</div>
+                    </div>
+                    <form method="POST" data-confirm="Remove {{ a.subject.subject_code }} from this section's classes? The teacher will no longer see it. Encoded grades are kept." data-confirm-title="Remove class" data-confirm-ok="Remove" data-confirm-danger>
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="remove_class">
+                        <input type="hidden" name="assignment" value="{{ a.id }}">
+                        <button type="submit" class="btn-outline btn-sm btn-danger-outline" title="Remove class"><i class="fi fi-rr-trash"></i></button>
+                    </form>
+                </div>
+                <div class="class-teacher">
+                    <i class="fi fi-rr-user"></i> <strong>{{ a.teacher.get_full_name|default:a.teacher.username }}</strong>
+                    {% if a.teacher_load %}
+                    <span class="badge badge-info">{{ a.teacher_load.classes }} class{{ a.teacher_load.classes|pluralize:"es" }} · {{ a.teacher_load.hours }} hrs/wk</span>
+                    {% else %}
+                    <span class="badge badge-danger">Account inactive</span>
+                    {% endif %}
+                </div>
+                <details class="change">
+                    <summary><i class="fi fi-rr-refresh"></i> Change teacher</summary>
+                    <form method="POST" class="inline-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="assign_teacher">
+                        <input type="hidden" name="subject" value="{{ a.subject.id }}">
+                        <select name="teacher" class="form-input" required>
+                            <option value="">Choose a teacher…</option>
+                            {% for t in teacher_options %}{% if t.user_id != a.teacher_id %}
+                            <option value="{{ t.user_id }}">{{ t.name }} — {{ t.classes }} class{{ t.classes|pluralize:"es" }} · {{ t.hours }} hrs/wk{% if t.most_available %} (most available){% endif %}</option>
+                            {% endif %}{% endfor %}
+                        </select>
+                        <button type="submit" class="btn-primary btn-sm">Assign</button>
+                    </form>
+                </details>
+            </div>
+            {% empty %}
+            <div class="empty-state" style="padding:1.5rem 1rem;">
+                <i class="fi fi-rr-chalkboard-user"></i>
+                <h5>No Classes Yet</h5>
+                <p>Add a subject and its teacher below, or upload a class list.</p>
+            </div>
+            {% endfor %}
+
+            <!-- Add a class -->
+            <div class="add-box">
+                <div style="font-size:0.8rem;font-weight:700;color:var(--rich-black);margin-bottom:0.6rem;"><i class="fi fi-rr-plus"></i> Add a class to this section</div>
+                {% if not teacher_options %}
+                    <p class="muted">There are no active teacher accounts yet. <a href="{% url 'registrars:teacher_create' %}" style="color:var(--caribbean-blue);font-weight:600;">Create one</a> first.</p>
+                {% elif not available_subjects %}
+                    <p class="muted">Every subject of your school is already assigned in this section. New subjects are created when you upload a class list.</p>
+                {% else %}
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_class">
+                    <div class="form-field" style="margin-bottom:0.6rem;">
+                        <label for="addSubject">Subject</label>
+                        <select name="subject" id="addSubject" class="form-input" required>
+                            <option value="">Choose a subject…</option>
+                            {% for s in available_subjects %}<option value="{{ s.id }}">{{ s.subject_code }} — {{ s.subject_name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-field" style="margin-bottom:0.8rem;">
+                        <label for="addTeacher">Teacher</label>
+                        <select name="teacher" id="addTeacher" class="form-input" required>
+                            {% for t in teacher_options %}
+                            <option value="{{ t.user_id }}">{{ t.name }} — {{ t.classes }} class{{ t.classes|pluralize:"es" }} · {{ t.hours }} hrs/wk{% if t.most_available %} (most available){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-hint">Listed lightest teaching load first; the first name has the most free time.</div>
+                    </div>
+                    <button type="submit" class="btn-primary btn-sm"><i class="fi fi-rr-plus"></i> Add Class</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Adviser -->
+        <div class="card">
+            <div class="section-header"><h2><i class="fi fi-rr-user-crown"></i> Class Adviser</h2></div>
+            <form method="POST" class="inline-form" style="margin-top:0;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="set_adviser">
+                <select name="teacher" class="form-input">
+                    <option value="">No adviser</option>
+                    {% for t in teacher_options %}
+                    <option value="{{ t.user_id }}" {% if section.adviser_id == t.user_id %}selected{% endif %}>{{ t.name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn-outline btn-sm">Save</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

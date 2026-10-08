@@ -14,13 +14,13 @@
     .grade-badge { display: inline-block; width: 38px; text-align: center; padding: 2px 0; border-radius: 6px; font-weight: 700; font-size: 0.75rem; }
     .grade-badge.pass { background: #d4edda; color: #155724; }
     .grade-badge.fail { background: #f8d7da; color: #721c24; }
-    .grade-badge.pending { background: #e9ecef; color: #6c757d; }
+    .grade-badge.pending { background: #e9ecef; color: #4a5568; }
     .clickable-row { cursor: pointer; transition: background 0.15s; }
     .clickable-row:hover { background: #f0f4ff; }
     .summary-strip { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
-    .summary-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #6c757d; }
+    .summary-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #4a5568; }
     .summary-item .dot { width: 8px; height: 8px; border-radius: 50%; }
-    .summary-item .dot.green { background: #5EA173; }
+    .summary-item .dot.green { background: #123499; }
     .summary-item .dot.orange { background: #f39c12; }
     .summary-item .dot.red { background: #dc3545; }
     .summary-item strong { color: #1a1a2e; }
@@ -58,11 +58,11 @@
         <div>
             <div style="font-size:0.95rem;font-weight:700;color:#1a1a2e;">
                 {{ item.section.section_name }}
-                <span style="font-size:0.7rem;color:#6c757d;font-weight:400;margin-left:0.5rem;">
+                <span style="font-size:0.7rem;color:#4a5568;font-weight:400;margin-left:0.5rem;">
                     {{ item.section.grade_level.grade_name }}
                 </span>
             </div>
-            <div style="font-size:0.78rem;color:#6c757d;">
+            <div style="font-size:0.78rem;color:#4a5568;">
                 {{ item.subject.subject_name }} ({{ item.subject.subject_code }})
             </div>
         </div>
@@ -70,8 +70,8 @@
             <!-- Quarter Stats -->
             {% for qs in item.quarter_stats %}
             <div style="text-align:center;padding:0.3rem 0.6rem;border-radius:8px;background:{% if qs.complete %}#d4edda{% elif qs.done > 0 %}#fff3cd{% else %}#f8f9fa{% endif %};">
-                <div style="font-size:0.6rem;font-weight:600;color:#6c757d;">{{ qs.quarter }}</div>
-                <div style="font-size:0.85rem;font-weight:700;color:{% if qs.complete %}#155724{% elif qs.done > 0 %}#856404{% else %}#6c757d{% endif %};">
+                <div style="font-size:0.6rem;font-weight:600;color:#4a5568;">{{ qs.quarter }}</div>
+                <div style="font-size:0.85rem;font-weight:700;color:{% if qs.complete %}#155724{% elif qs.done > 0 %}#856404{% else %}#4a5568{% endif %};">
                     {{ qs.done }}/{{ qs.total }}
                 </div>
             </div>
@@ -106,10 +106,10 @@
                 <tbody>
                     {% for student in item.students %}
                     <tr>
-                        <td style="color:#adb5bd;">{{ forloop.counter }}</td>
+                        <td style="color:#718096;">{{ forloop.counter }}</td>
                         <td>
                             <strong>{{ student.last_name }}</strong>, {{ student.first_name }}
-                            <span style="font-size:0.65rem;color:#adb5bd;margin-left:0.3rem;">{{ student.lrn }}</span>
+                            <span style="font-size:0.65rem;color:#718096;margin-left:0.3rem;">{{ student.lrn }}</span>
                         </td>
                         {% for grade in student.quarter_grades %}
                         <td style="text-align:center;">
@@ -137,7 +137,7 @@
             </table>
         </div>
         {% else %}
-        <p style="text-align:center;color:#adb5bd;padding:1rem;">No students enrolled in this section.</p>
+        <p style="text-align:center;color:#718096;padding:1rem;">No students enrolled in this section.</p>
         {% endif %}
     </div>
 </div>
@@ -145,9 +145,9 @@
 
 {% else %}
 <div class="card" style="text-align:center;padding:3rem;">
-    <i class="fi fi-rr-folder-open" style="font-size:3rem;color:#a0aec0;opacity:0.4;"></i>
-    <h5 style="color:#6c757d;margin-top:1rem;">No Class Assignments Yet</h5>
-    <p style="color:#a0aec0;">Contact your registrar to be assigned to sections.</p>
+    <i class="fi fi-rr-folder-open" style="font-size:3rem;color:#718096;opacity:0.4;"></i>
+    <h5 style="color:#4a5568;margin-top:1rem;">No Class Assignments Yet</h5>
+    <p style="color:#718096;">Contact your registrar to be assigned to sections.</p>
 </div>
 {% endif %}
 

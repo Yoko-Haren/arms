@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -950,7 +951,7 @@
                 googleBtn.disabled = true;
 
                 setTimeout(() => {
-                    alert('Redirecting to Google Sign-In...');
+                    ARMS.alert('Redirecting to Google Sign-In...');
                     window.location.href = '../../teachers/dashboard/index.html'; // Simulate successful Google login
                 }, 800);
             });
@@ -970,11 +971,11 @@
             sendResetBtn.addEventListener('click', function() {
                 const email = resetEmail.value.trim();
                 if (!email) {
-                    alert('Please enter your email address.');
+                    ARMS.alert('Please enter your email address.');
                     return;
                 }
                 if (!email.includes('@deped.gov.ph')) {
-                    alert('Please use your official DepEd email address (@deped.gov.ph)');
+                    ARMS.alert('Please use your official DepEd email address (@deped.gov.ph)');
                     return;
                 }
                 
@@ -1007,5 +1008,6 @@
             }
         })();
     </script>
+<script src="{% static 'shared/js/arms-ui.js' %}"></script>
 </body>
 </html>

@@ -139,6 +139,17 @@ class UserProfile(models.Model):
         help_text='BEIS School ID — for LIS interoperability and DepEd reporting.',
     )
     
+    # ===== Google sign-in binding =====
+    google_sub = models.CharField(
+        max_length=64, unique=True, null=True, blank=True,
+        help_text="Google account ID ('sub') bound to this user. NULL until the user links Google.",
+    )
+    google_email = models.EmailField(blank=True, help_text='Address of the bound Google account.')
+    google_linked_at = models.DateTimeField(null=True, blank=True)
+    must_change_password = models.BooleanField(
+        default=False,
+        help_text='Set when an administrator issues a temporary password; cleared once the user sets their own.',
+    )
     is_active = models.BooleanField(default=True, db_index=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -761,3 +772,38 @@ class PasswordReset(models.Model):
             f"Password Reset: {self.user.get_full_name()} — "
             f"{self.requested_at.strftime('%Y-%m-%d %H:%M')} — {status}"
         )
+
+
+# =============================================================================
+# EmailCode — one-time codes sent by email (Google binding, password reset, email change)
+# =============================================================================
+class EmailCode(models.Model):
+    PURPOSE_CHOICES = [
+        ('bind_google', 'Link Google account'),
+        ('password_reset', 'Password reset'),
+        ('change_email', 'Change email address'),
+    ]
+    MAX_ATTEMPTS = 5
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='email_codes')
+    purpose = models.CharField(max_length=20, choices=PURPOSE_CHOICES, db_index=True)
+    code_hash = models.CharField(max_length=128, help_text='Keyed hash of the 6-digit code; the code itself is never stored.')
+    sent_to = models.EmailField()
+    payload = models.JSONField(default=dict, blank=True, help_text='What the code confirms, e.g. the Google account being linked.')
+    attempts = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [models.Index(fields=['user', 'purpose', 'created_at'], name='accounts_emailcode_lookup')]
+        verbose_name = 'Email Code'
+        verbose_name_plural = 'Email Codes'
+
+    @property
+    def is_usable(self):
+        return self.used_at is None and self.attempts < self.MAX_ATTEMPTS and timezone.now() < self.expires_at
+
+    def __str__(self):
+        return f'{self.get_purpose_display()} code for {self.user} ({self.created_at:%Y-%m-%d %H:%M})'

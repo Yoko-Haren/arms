@@ -5,6 +5,7 @@ from openpyxl import load_workbook
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from core.caching import cache_page_for_user
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -28,6 +29,7 @@ from students.models import Student
 # =============================================================================
 
 @login_required
+@cache_page_for_user()
 def dashboard(request):
     """Teacher Dashboard."""
     if not hasattr(request.user, 'profile') or request.user.profile.role != 'teacher':
@@ -174,6 +176,7 @@ def assessment_detail(request, assessment_id):
 # =============================================================================
 
 @login_required
+@cache_page_for_user()
 def class_record_list(request):
     """Teacher sees their class records with expandable student lists."""
     if request.user.profile.role != 'teacher':
@@ -612,6 +615,22 @@ def process_all_grades(grades_data, teacher_user, school, current_sy):
                 ).first()
                 if not quarter:
                     error_rows.append(f'Quarter {quarter_label} not found')
+                    continue
+
+                # Locked periods and registrar-validated grades are read-only
+                blocked = None
+                if quarter.is_grades_locked:
+                    blocked = f'{quarter.quarter_label} is locked by the registrar - its grades were not changed'
+                else:
+                    current = GradeComponent.objects.filter(
+                        enrollment=enrollment, subject=subject, quarter=quarter
+                    ).values('validation_status', 'is_locked').first()
+                    if current and (current['is_locked'] or current['validation_status'] in ('Validated', 'Finalized')):
+                        blocked = (f'{subject_code} {quarter.quarter_label} grades are already validated - '
+                                   'ask the registrar to return them before re-uploading')
+                if blocked:
+                    if blocked not in error_rows:
+                        error_rows.append(blocked)
                     continue
                 
                 # ✅ SAVE with ALL required fields

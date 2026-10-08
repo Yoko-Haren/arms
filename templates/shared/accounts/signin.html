@@ -22,9 +22,9 @@
             --rich-black: #00072D;
             --dark-blue: #051650;
             --caribbean-blue: #123499;
-            --secondary-green: #5EA173;
-            --secondary-green-light: #7dbb8f;
-            --secondary-green-dark: #1e6b45;
+            --secondary-green: #123499;
+            --secondary-green-light: #4a6fd4;
+            --secondary-green-dark: #051650;
             --gray-bg: #f5f7fb;
             --border-color: #e9ecef;
             --text-primary: #2d3748;
@@ -52,7 +52,7 @@
         }
         body::before {
             width: 600px; height: 600px;
-            background: radial-gradient(circle, rgba(94,161,115,0.3) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(18,52,153,0.3) 0%, transparent 70%);
             top: -150px; right: -100px;
         }
         body::after {
@@ -104,7 +104,7 @@
         }
         .logo-section .deped-badge {
             display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 0.6rem;
-            background: rgba(94,161,115,0.09); color: var(--secondary-green-dark);
+            background: rgba(18,52,153,0.09); color: var(--secondary-green-dark);
             border-radius: 20px; padding: 0.25rem 0.85rem; font-size: 0.7rem; font-weight: 600;
         }
         .deped-badge i { font-size: 0.75rem; color: var(--secondary-green); }
@@ -185,7 +185,7 @@
         .remember-me input[type="checkbox"] { 
             width: 15px; height: 15px; accent-color: var(--caribbean-blue); cursor: pointer; 
         }
-        .forgot-link {
+        .forgot-link { text-decoration: none;
             font-size: 0.82rem; font-weight: 600; color: var(--caribbean-blue);
             background: none; border: none; cursor: pointer; padding: 0; transition: color 0.2s;
         }
@@ -193,7 +193,7 @@
         
         .btn-login {
             width: 100%; padding: 0.88rem;
-            background: linear-gradient(135deg, var(--rich-black) 0%, var(--caribbean-blue) 100%);
+            background: linear-gradient(135deg, #123499 0%, #1a4dcc 100%);
             color: #fff; border: none; border-radius: var(--radius-md);
             font-size: 0.88rem; font-weight: 700; letter-spacing: 0.5px;
             cursor: pointer; transition: all 0.25s ease;
@@ -202,7 +202,7 @@
         }
         .btn-login::before {
             content: ''; position: absolute; inset: 0;
-            background: linear-gradient(135deg, var(--dark-blue) 0%, var(--secondary-green) 100%);
+            background: linear-gradient(135deg, var(--dark-blue) 0%, #123499 100%);
             opacity: 0; transition: opacity 0.25s;
         }
         .btn-login:hover::before { opacity: 1; }
@@ -245,62 +245,6 @@
         .card-footer .help-text a { color: var(--caribbean-blue); text-decoration: none; font-weight: 600; transition: color 0.2s; }
         .card-footer .help-text a:hover { color: var(--secondary-green); }
         
-        /* Modal */
-        .modal-overlay {
-            display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5);
-            backdrop-filter: blur(5px); z-index: 1000;
-            align-items: center; justify-content: center; padding: 1rem;
-        }
-        .modal-overlay.active { display: flex; }
-        .modal-box {
-            background: #fff; border-radius: var(--radius-lg); width: 100%; max-width: 400px;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.22);
-            animation: modalIn 0.28s cubic-bezier(0.16,1,0.3,1);
-        }
-        @keyframes modalIn {
-            from { opacity: 0; transform: translateY(-20px) scale(0.97); }
-            to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        .modal-head {
-            padding: 1.2rem 1.5rem 1rem; border-bottom: 1px solid var(--border-color);
-            display: flex; align-items: center; justify-content: space-between;
-        }
-        .modal-head h2 { 
-            font-size: 1.05rem; font-weight: 700; color: var(--text-primary); 
-            display: flex; align-items: center; gap: 0.5rem; 
-        }
-        .modal-head h2 i { color: var(--caribbean-blue); font-size: 1rem; }
-        .modal-close-btn {
-            background: none; border: none; cursor: pointer; padding: 0.3rem;
-            border-radius: 6px; display: flex; align-items: center; transition: background 0.2s;
-            color: var(--text-light);
-        }
-        .modal-close-btn i { font-size: 1rem; }
-        .modal-close-btn:hover { background: #f3f4f6; color: var(--text-primary); }
-        .modal-body { padding: 1.3rem 1.5rem; }
-        .modal-body p { font-size: 0.83rem; color: var(--text-secondary); margin-bottom: 1.1rem; line-height: 1.55; }
-        .modal-foot { padding: 0.8rem 1.5rem 1.3rem; display: flex; justify-content: flex-end; gap: 0.7rem; }
-        .btn-cancel {
-            padding: 0.6rem 1.1rem; background: transparent; border: 1.5px solid var(--border-color);
-            border-radius: var(--radius-sm); font-size: 0.83rem; font-weight: 600; font-family: inherit;
-            color: var(--text-secondary); cursor: pointer; transition: all 0.2s;
-        }
-        .btn-cancel:hover { background: #f9fafb; }
-        .btn-send {
-            padding: 0.6rem 1.2rem; background: var(--caribbean-blue); color: #fff; border: none;
-            border-radius: var(--radius-sm); font-size: 0.83rem; font-weight: 700;
-            font-family: inherit; cursor: pointer; transition: all 0.2s;
-            display: flex; align-items: center; gap: 0.4rem;
-        }
-        .btn-send i { font-size: 0.8rem; }
-        .btn-send:hover { background: var(--dark-blue); transform: translateY(-1px); }
-        .success-alert {
-            display: flex; align-items: center; gap: 0.5rem; background: #ecfdf5;
-            border-radius: var(--radius-sm); padding: 0.7rem 0.9rem; font-size: 0.8rem;
-            color: #065f46; font-weight: 500; margin-top: 0.8rem; border: 1px solid #a7f3d0;
-        }
-        .success-alert i { color: var(--success-green); font-size: 0.85rem; flex-shrink: 0; }
-        
         @media (max-width: 480px) {
             .login-card { padding: 1.8rem 1.4rem 1.5rem; }
             .logo-section .app-name { font-size: 1.3rem; }
@@ -325,6 +269,15 @@
           School Information Platform
         </div>
       </div>
+
+      {% for message in messages %}
+      <div class="django-messages">
+        <div class="django-error"{% if message.level_tag == 'success' or message.level_tag == 'info' %} style="background:#e3f0ff;color:#123499;border-color:#123499;"{% endif %}>
+          <i class="fi {% if message.level_tag == 'success' or message.level_tag == 'info' %}fi-rr-check-circle{% else %}fi-rr-exclamation-circle{% endif %}"></i>
+          {{ message }}
+        </div>
+      </div>
+      {% endfor %}
 
       {% if error %}
       <div class="django-messages">
@@ -386,7 +339,7 @@
           <label class="remember-me">
             <input type="checkbox" name="remember" value="1"> Remember me
           </label>
-          <button type="button" class="forgot-link" id="forgotBtn">Forgot Password?</button>
+          <a class="forgot-link" id="forgotBtn" href="{% url 'password_reset' %}">Forgot Password?</a>
         </div>
 
         <button type="submit" class="btn-login" id="loginBtn">
@@ -422,48 +375,6 @@
   </div>
 </div>
 
-<!-- Forgot Password Modal -->
-<div id="forgotModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-  <div class="modal-box">
-    <div class="modal-head">
-      <h2 id="modalTitle">
-        <i class="fi fi-rr-key"></i>
-        Reset Password
-      </h2>
-      <button class="modal-close-btn" id="closeModal" aria-label="Close">
-        <i class="fi fi-rr-cross"></i>
-      </button>
-    </div>
-    <div class="modal-body">
-      <p>Enter your school email address and we'll send you a link to reset your password.</p>
-      <div class="form-group">
-        <label for="resetEmail">Email Address</label>
-        <div class="input-wrap">
-          <span class="input-icon">
-            <i class="fi fi-rr-envelope"></i>
-          </span>
-          <input type="email" class="form-control" id="resetEmail" placeholder="name@school.edu" autocomplete="email">
-        </div>
-        <div id="resetEmailError" class="field-error hidden">
-          <i class="fi fi-rr-exclamation-circle"></i>
-          <span></span>
-        </div>
-      </div>
-      <div id="resetSuccess" class="success-alert hidden">
-        <i class="fi fi-rr-check-circle"></i>
-        Password reset link sent! Check your inbox.
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn-cancel" id="cancelModal">Cancel</button>
-      <button class="btn-send" id="sendResetBtn">
-        <i class="fi fi-rr-paper-plane"></i>
-        Send Reset Link
-      </button>
-    </div>
-  </div>
-</div>
-
 <script>
 (function () {
     'use strict';
@@ -479,13 +390,6 @@
     const eyeIcon         = document.getElementById('eyeIcon');
     const googleBtn       = document.getElementById('googleBtn');
     const forgotBtn       = document.getElementById('forgotBtn');
-    const forgotModal     = document.getElementById('forgotModal');
-    const closeModal      = document.getElementById('closeModal');
-    const cancelModal     = document.getElementById('cancelModal');
-    const sendResetBtn    = document.getElementById('sendResetBtn');
-    const resetEmailInput = document.getElementById('resetEmail');
-    const resetEmailError = document.getElementById('resetEmailError');
-    const resetSuccess    = document.getElementById('resetSuccess');
 
     // Toggle password visibility
     togglePwd.addEventListener('click', () => {
@@ -551,57 +455,25 @@
     });
 
     googleBtn.addEventListener('click', () => {
+        {% if google_signin_enabled %}
         googleBtn.disabled = true;
-        googleBtn.textContent = 'Redirecting…';
-        setTimeout(() => {
-            alert('Connect django-allauth for Google Sign-In.');
-            googleBtn.disabled = false;
-            googleBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style="width:18px;height:18px;"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg> Sign in with Google`;
-        }, 1000);
+        googleBtn.lastChild.textContent = ' Redirecting to Google…';
+        window.location.href = "{% url 'google_login' %}";
+        {% else %}
+        ARMS.alert('Google sign-in has not been set up for this system yet. Please use your username and password.', {title: 'Google sign-in unavailable'});
+        {% endif %}
     });
 
-    // Modal functions
-    function openModal() {
-        resetEmailInput.value = '';
-        resetEmailError.classList.add('hidden');
-        resetSuccess.classList.add('hidden');
-        forgotModal.classList.add('active');
-        setTimeout(() => resetEmailInput.focus(), 100);
-    }
-    function closeModalFn() { forgotModal.classList.remove('active'); }
-
-    forgotBtn.addEventListener('click', openModal);
-    closeModal.addEventListener('click', closeModalFn);
-    cancelModal.addEventListener('click', closeModalFn);
-    forgotModal.addEventListener('click', e => { if (e.target === forgotModal) closeModalFn(); });
-    document.addEventListener('keydown', e => { 
-        if (e.key === 'Escape' && forgotModal.classList.contains('active')) closeModalFn(); 
-    });
-
-    sendResetBtn.addEventListener('click', () => {
-        const email = resetEmailInput.value.trim();
-        resetEmailError.classList.add('hidden');
-        resetEmailInput.classList.remove('is-error');
-        
-        if (!email) {
-            resetEmailInput.classList.add('is-error');
-            resetEmailError.querySelector('span').textContent = 'Please enter your email address.';
-            resetEmailError.classList.remove('hidden');
-            return;
+    // "Forgot Password?" opens the reset page, carrying over what was typed as the username
+    forgotBtn.addEventListener('click', e => {
+        const typed = document.getElementById('username').value.trim();
+        if (typed) {
+            e.preventDefault();
+            window.location.href = forgotBtn.href + '?email=' + encodeURIComponent(typed);
         }
-        if (!/^\S+@\S+\.\S+$/.test(email)) {
-            resetEmailInput.classList.add('is-error');
-            resetEmailError.querySelector('span').textContent = 'Please enter a valid email address.';
-            resetEmailError.classList.remove('hidden');
-            return;
-        }
-        
-        // This is a Django page, not a static mock. Send the user to the
-        // server-rendered form, which includes CSRF protection and calls
-        // Supabase Auth after submission.
-        window.location.href = "{% url 'password_reset' %}?email=" + encodeURIComponent(email);
     });
 })();
 </script>
+<script src="{% static 'shared/js/arms-ui.js' %}"></script>
 </body>
 </html>

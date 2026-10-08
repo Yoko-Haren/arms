@@ -85,7 +85,7 @@
         box-shadow: 0 0 0 3px rgba(18,52,153,0.08);
         background: white;
     }
-    .form-input::placeholder { color: #adb5bd; }
+    .form-input::placeholder { color: #718096; }
 
     .form-row {
         display: grid;
@@ -452,7 +452,7 @@
 
     .no-quarters-text {
         font-size: 0.72rem;
-        color: #adb5bd;
+        color: #718096;
         font-style: italic;
     }
 
@@ -633,7 +633,7 @@
                     </div>
                     <div class="sy-card-actions">
                         {% if not sy.is_current %}
-                        <form method="POST" action="{% url 'admin_panel:school_year_set_current' sy.id %}" style="display:contents;" onsubmit="return confirm('Set {{ sy.year_label|escapejs }} as current?')">
+                        <form method="POST" action="{% url 'admin_panel:school_year_set_current' sy.id %}" style="display:contents;" data-confirm="Set {{ sy.year_label }} as current?">
                             {% csrf_token %}
                             <button type="submit" class="btn-sy-action info-action">
                                 <i class="fas fa-check-circle"></i> Set Current
@@ -652,7 +652,7 @@
                         <a href="{% url 'admin_panel:quarter_manage' %}?school_year={{ sy.id }}" class="btn-sy-action secondary-action">
                             <i class="fas fa-clock"></i> Manage {{ sy.period_cfg.plural }}
                         </a>
-                        <form method="POST" action="{% url 'admin_panel:school_year_delete' sy.id %}" style="display:contents;" onsubmit="return confirm('Delete {{ sy.year_label|escapejs }}? This cannot be undone.')">
+                        <form method="POST" action="{% url 'admin_panel:school_year_delete' sy.id %}" style="display:contents;" data-confirm="Delete {{ sy.year_label }}? This cannot be undone.">
                             {% csrf_token %}
                             <button type="submit" class="btn-sy-action danger-action">
                                 <i class="fas fa-trash"></i>

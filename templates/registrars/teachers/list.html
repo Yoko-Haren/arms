@@ -1,0 +1,154 @@
+{% extends 'registrars/base.html' %}
+{% load static %}
+
+{% block title %}Teachers - ARMS{% endblock %}
+{% block subtitle %}Teacher Accounts — {{ request.user.profile.school_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-box { max-width: 320px; }
+    #teacherTable { min-width: 860px; }
+    .teacher-cell { display: flex; align-items: center; gap: 0.7rem; }
+    .teacher-avatar {
+        width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+        background: var(--ai-gradient); color: white; font-size: 0.75rem; font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .teacher-avatar.off { background: #cbd5e0; }
+    .teacher-name { font-weight: 600; color: var(--rich-black); }
+    .teacher-sub { font-size: 0.7rem; color: var(--text-secondary); }
+    .badge-class { background: #f0f0ff; color: var(--caribbean-blue); margin: 1px 2px; }
+    .row-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .row-actions form { display: inline; }
+    tr.inactive-row td { opacity: 0.6; }
+    tr.inactive-row td:last-child { opacity: 1; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+    <h3><i class="fi fi-rr-chalkboard-user"></i> Teacher Accounts</h3>
+    <div class="page-head-actions">
+        <a href="{% url 'registrars:teacher_import' %}" class="btn-outline">
+            <i class="fi fi-rr-users-medical"></i> Import from CSV
+        </a>
+        <a href="{% url 'registrars:teacher_create' %}" class="btn-primary">
+            <i class="fi fi-rr-user-add"></i> Add Teacher
+        </a>
+    </div>
+</div>
+
+<div class="summary-strip">
+    <div class="summary-item"><span class="dot blue"></span> <strong>{{ total_teachers }}</strong> Total</div>
+    <div class="summary-item"><span class="dot green"></span> <strong>{{ active_teachers }}</strong> Active</div>
+    <div class="summary-item"><span class="dot red"></span> <strong>{{ inactive_teachers }}</strong> Inactive</div>
+    <div class="summary-item"><span class="dot orange"></span> <strong>{{ without_classes }}</strong> Without classes this SY</div>
+    {% if pending_password %}<div class="summary-item"><span class="dot purple"></span> <strong>{{ pending_password }}</strong> Not signed in yet (temporary password)</div>{% endif %}
+</div>
+
+<div class="card">
+    {% if teachers %}
+    <div class="toolbar">
+        <input type="text" class="form-input search-box" id="searchInput" data-remember="search" placeholder="Filter by name, email or class..." onkeyup="filterTeachers()">
+        <span class="muted" id="rowCount"></span>
+    </div>
+
+    <div class="table-responsive">
+        <table id="teacherTable">
+            <thead>
+                <tr>
+                    <th>Teacher</th>
+                    <th>Username</th>
+                    <th>Employee No.</th>
+                    <th>Classes{% if current_sy %} (SY {{ current_sy.year_label }}){% endif %}</th>
+                    <th>Weekly Load</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in teachers %}
+                <tr class="{% if not t.account_active %}inactive-row{% endif %}"
+                    data-search="{{ t.full_name|lower }} {{ t.user.username|lower }} {{ t.user.email|lower }} {% for c in t.classes %}{{ c|lower }} {% endfor %}">
+                    <td>
+                        <div class="teacher-cell">
+                            <div class="teacher-avatar {% if not t.account_active %}off{% endif %}">{{ t.user.first_name|first|upper }}{{ t.user.last_name|first|upper }}</div>
+                            <div>
+                                <div class="teacher-name">{{ t.user.last_name }}, {{ t.user.first_name }}</div>
+                                <div class="teacher-sub">{{ t.designation|default:"Teacher" }}{% if t.teaching_area %} · {{ t.teaching_area }}{% endif %}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>{{ t.user.username }}</td>
+                    <td>{{ t.employee_number|default:"—" }}</td>
+                    <td>
+                        {% for c in t.classes %}
+                            <span class="badge badge-class">{{ c }}</span>
+                        {% empty %}
+                            <span class="badge badge-warning">No classes</span>
+                        {% endfor %}
+                    </td>
+                    <td>{% if t.load %}{{ t.load.hours }} hrs<div class="muted">{{ t.load.classes }} class{{ t.load.classes|pluralize:"es" }}</div>{% else %}—{% endif %}</td>
+                    <td>
+                        {% if t.account_active and t.must_change_password %}
+                            <span class="badge badge-warning" title="Has not replaced the temporary password yet">Temporary password</span>
+                        {% elif t.account_active %}
+                            <span class="badge badge-success">Active</span>
+                        {% else %}
+                            <span class="badge badge-danger">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="row-actions">
+                            <form method="POST" action="{% url 'registrars:teacher_reset_password' t.id %}" data-confirm-title="Reset password" data-confirm="Reset the password of {{ t.full_name }}? A new temporary password will be shown once.">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-outline btn-sm" title="Reset password"><i class="fi fi-rr-key"></i> Reset</button>
+                            </form>
+                            <form method="POST" action="{% url 'registrars:teacher_toggle_status' t.id %}" data-confirm="{% if t.account_active %}Deactivate{% else %}Activate{% endif %} {{ t.full_name }}?">
+                                {% csrf_token %}
+                                {% if t.account_active %}
+                                <button type="submit" class="btn-outline btn-sm btn-danger-outline" title="Deactivate"><i class="fi fi-rr-ban"></i> Deactivate</button>
+                                {% else %}
+                                <button type="submit" class="btn-outline btn-sm" title="Activate"><i class="fi fi-rr-check"></i> Activate</button>
+                                {% endif %}
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fi fi-rr-chalkboard-user"></i>
+        <h5>No Teacher Accounts Yet</h5>
+        <p>Create accounts so teachers can sign in and upload their class records.</p>
+        <a href="{% url 'registrars:teacher_create' %}" class="btn-primary"><i class="fi fi-rr-user-add"></i> Add Teacher</a>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function teacherRows() {
+        return Array.from(document.querySelectorAll('#teacherTable tbody tr'));
+    }
+    function filterTeachers() {
+        var query = document.getElementById('searchInput').value.toLowerCase();
+        var rows = teacherRows();
+        var visible = 0;
+        rows.forEach(function(row) {
+            var match = (row.getAttribute('data-search') || '').includes(query);
+            row.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+        document.getElementById('rowCount').textContent = visible + ' of ' + rows.length + ' teachers';
+    }
+    var rowCount = document.getElementById('rowCount');
+    if (rowCount) rowCount.textContent = teacherRows().length + ' teachers';
+</script>
+{% endblock %}

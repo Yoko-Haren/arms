@@ -1,0 +1,21 @@
+{% extends 'accounts/auth_base.html' %}
+{% block title %}{{ title }} - ARMS{% endblock %}
+{% block icon %}{{ icon }}{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<p class="lead">{{ lead }} <strong>{{ sent_to }}</strong>. {{ note }} The code expires in 15 minutes.</p>
+
+{% if error %}<div class="notice error" role="alert">{{ error }}</div>{% endif %}
+
+<form method="post" autocomplete="off">
+    {% csrf_token %}
+    <label for="code">6-digit code</label>
+    <input type="text" id="code" name="code" class="code-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" autofocus required>
+    <button type="submit" class="btn"><i class="fi fi-rr-check-circle"></i> {{ submit_label }}</button>
+</form>
+
+<div class="link-row">
+    <a href="{% url back_url %}">{{ back_label }}</a>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="resend"><button type="submit" class="link-btn">Send a new code</button></form>
+</div>
+{% endblock %}

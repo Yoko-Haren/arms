@@ -1,0 +1,95 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ARMS{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', 'Century Gothic', sans-serif; }
+        body { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; background: #f5f7fb; }
+        .auth-wrap { width: 100%; max-width: 440px; }
+        .auth-brand { display: flex; align-items: center; justify-content: center; gap: 0.6rem; margin-bottom: 1.2rem; text-decoration: none; }
+        .auth-brand-icon {
+            width: 38px; height: 38px; border-radius: 12px; color: white; font-size: 1.2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(102,126,234,0.3);
+        }
+        .auth-brand-text { font-size: 0.95rem; font-weight: 700; color: #00072D; line-height: 1.2; }
+        .auth-brand-text span { display: block; font-size: 0.62rem; font-weight: 500; color: #4a5568; letter-spacing: 0.5px; }
+        .card { background: white; border-radius: 22px; padding: 2.1rem; box-shadow: 0 8px 25px rgba(0,0,0,0.1); border: 1px solid #e9ecef; }
+        .icon {
+            width: 56px; height: 56px; border-radius: 16px; margin-bottom: 1.1rem; color: white; font-size: 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(102,126,234,0.3);
+        }
+        h1 { font-size: 1.3rem; color: #00072D; margin-bottom: 0.4rem; }
+        .lead { font-size: 0.84rem; color: #4a5568; line-height: 1.55; margin-bottom: 1.2rem; }
+        .lead strong { color: #2d3748; word-break: break-all; }
+        label { display: block; font-size: 0.74rem; font-weight: 600; color: #2d3748; margin: 1rem 0 0.35rem; }
+        .field { position: relative; }
+        input[type="text"], input[type="email"], input[type="password"] {
+            width: 100%; padding: 0.7rem 0.9rem; border: 2px solid #e9ecef; border-radius: 10px;
+            font-size: 0.9rem; background: #f5f7fb; color: #2d3748; transition: all 0.2s;
+        }
+        .field input { padding-right: 2.6rem; }
+        input:focus { outline: none; border-color: #123499; background: white; box-shadow: 0 0 0 3px rgba(18,52,153,0.15); }
+        input.code-input { text-align: center; font-size: 1.6rem; font-weight: 800; letter-spacing: 0.5rem; color: #123499; padding: 0.75rem; }
+        .toggle { position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #4a5568; font-size: 1rem; padding: 0.3rem; }
+        .hint { font-size: 0.72rem; color: #4a5568; margin-top: 0.35rem; line-height: 1.5; }
+        .notice { border-radius: 10px; padding: 0.7rem 0.9rem; font-size: 0.8rem; margin-bottom: 0.8rem; line-height: 1.5; border-left: 4px solid; }
+        .notice.error { background: #f8d7da; color: #721c24; border-color: #dc3545; }
+        .notice.success, .notice.info { background: #e3f0ff; color: #123499; border-color: #123499; }
+        .notice.warning { background: #fff3cd; color: #856404; border-color: #f39c12; }
+        .btn {
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; margin-top: 1.3rem;
+            padding: 0.8rem; border: none; border-radius: 10px; background: #123499; color: white;
+            font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all 0.2s; text-decoration: none;
+        }
+        .btn:hover { background: #051650; }
+        .btn.outline { background: white; color: #2d3748; border: 2px solid #e9ecef; font-weight: 600; }
+        .btn.outline:hover { border-color: #123499; color: #123499; background: white; }
+        .btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+        .link-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: 1.1rem; font-size: 0.78rem; }
+        .link-row a, .link-btn { color: #4a5568; text-decoration: none; background: none; border: none; cursor: pointer; font-size: 0.78rem; font-family: inherit; }
+        .link-row a:hover, .link-btn:hover { color: #123499; }
+        .steps { list-style: none; margin: 0.2rem 0 0; }
+        .steps li { display: flex; gap: 0.7rem; align-items: flex-start; font-size: 0.82rem; color: #2d3748; padding: 0.45rem 0; line-height: 1.45; }
+        .steps .num { width: 22px; height: 22px; border-radius: 50%; background: #f0f0ff; color: #123499; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .stepper { display: flex; align-items: center; margin-bottom: 1.2rem; }
+        .step { width: 26px; height: 26px; border-radius: 50%; background: #e9ecef; color: #4a5568; font-size: 0.72rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .step.current { background: #123499; color: white; box-shadow: 0 0 0 4px rgba(18,52,153,0.12); }
+        .step.done { background: #e3f0ff; color: #123499; }
+        .step-line { flex: 1; height: 2px; background: #e9ecef; margin: 0 0.4rem; }
+        .step-line.done { background: #123499; }
+        {% block extra_css %}{% endblock %}
+    </style>
+</head>
+<body>
+    <div class="auth-wrap">
+        <a href="{% url 'signin' %}" class="auth-brand">
+            <div class="auth-brand-icon"><i class="fi fi-rr-graduation-cap"></i></div>
+            <div class="auth-brand-text">ARMS<span>Academic Records Management System</span></div>
+        </a>
+        <main class="card">
+            <div class="icon"><i class="fi {% block icon %}fi-rr-lock{% endblock %}"></i></div>
+            {% for message in messages %}<div class="notice {{ message.level_tag }}" role="status">{{ message }}</div>{% endfor %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <script src="{% static 'shared/js/arms-ui.js' %}"></script>
+    <script>
+        document.querySelectorAll('.toggle').forEach(function(button) {
+            button.addEventListener('click', function() {
+                var input = document.getElementById(button.dataset.target);
+                input.type = input.type === 'password' ? 'text' : 'password';
+            });
+        });
+        // Codes are digits only
+        document.querySelectorAll('.code-input').forEach(function(input) {
+            input.addEventListener('input', function() { input.value = input.value.replace(/\D/g, '').slice(0, 6); });
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

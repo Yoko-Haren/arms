@@ -1,0 +1,16 @@
+{% extends 'shared/portal_base.html' %}
+
+{% block title %}ARMS - Registrar Portal{% endblock %}
+{% block home_url %}{% url 'registrars:dashboard' %}{% endblock %}
+{% block brand_icon %}fi-rr-clipboard-list{% endblock %}
+{% block portal_label %}Registrar Portal{% endblock %}
+{% block role_label %}Registrar{% endblock %}
+{% block subtitle %}Registrar Portal — {{ request.user.profile.school_name }}{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item"><a href="{% url 'registrars:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
+<li class="nav-item"><a href="{% url 'registrars:upload_class_list' %}" class="nav-link {% if '/class-list/' in request.path %}active{% endif %}"><i class="fi fi-rr-upload"></i><span>Class Lists</span></a></li>
+<li class="nav-item"><a href="{% url 'registrars:section_list' %}" class="nav-link {% if '/sections/' in request.path %}active{% endif %}"><i class="fi fi-rr-users-alt"></i><span>Sections</span></a></li>
+<li class="nav-item"><a href="{% url 'registrars:teacher_list' %}" class="nav-link {% if '/teachers/' in request.path %}active{% endif %}"><i class="fi fi-rr-chalkboard-user"></i><span>Teachers</span></a></li>
+<li class="nav-item"><a href="{% url 'registrars:grade_validation' %}" class="nav-link {% if '/grades/' in request.path %}active{% endif %}"><i class="fi fi-rr-shield-check"></i><span>Grade Validation</span></a></li>
+{% endblock %}

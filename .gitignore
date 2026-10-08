@@ -42,3 +42,6 @@ supabase/.branches/
 /debug_grades.py
 /fix_grades.py
 /defense_demo.py
+
+# Local cache files (core/caching.py)
+.cache/

@@ -37,7 +37,10 @@ if not SECRET_KEY:
     else:
         raise ImproperlyConfigured('DJANGO_SECRET_KEY must be set when DEBUG is False.')
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost'] + [
+    h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if h.strip()
+]
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()]
 
 
 # =============================================================================
@@ -79,10 +82,13 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.http.ConditionalGetMiddleware',   # unchanged pages -> 304 Not Modified
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'accounts.middleware.ForcePasswordChangeMiddleware',
+    'core.caching.DataVersionMiddleware',                # a write invalidates cached pages
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -98,6 +104,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'accounts.context_processors.auth_options',
             ],
         },
     },
@@ -138,6 +145,80 @@ if DATABASES['default']['ENGINE'] != 'django.db.backends.postgresql':
 SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
 SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY', '')
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
+
+
+# =============================================================================
+# CACHING, SESSIONS AND SCALING OUT
+# =============================================================================
+# `local`   — memory of one server process (fastest, a few seconds).
+# `default` — shared cache. Files on this machine by default; set REDIS_URL (and
+#             `pip install redis`) so several app servers share one cache, which
+#             is what running more than one server behind a load balancer needs.
+# See core/caching.py for how pages are cached and invalidated.
+REDIS_URL = os.environ.get('REDIS_URL', '').strip()
+if REDIS_URL:
+    _shared_cache = {'BACKEND': 'django.core.cache.backends.redis.RedisCache', 'LOCATION': REDIS_URL}
+else:
+    _shared_cache = {
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': str(BASE_DIR / '.cache' / 'django'),
+        'OPTIONS': {'MAX_ENTRIES': 5000},
+    }
+CACHES = {
+    'default': {**_shared_cache, 'TIMEOUT': 300, 'KEY_PREFIX': 'arms'},
+    'local': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'arms-local', 'TIMEOUT': 20, 'OPTIONS': {'MAX_ENTRIES': 500},
+    },
+}
+
+# Set PAGE_CACHE=False in .env to switch the per-user page cache off (for troubleshooting).
+PAGE_CACHE_ENABLED = os.environ.get('PAGE_CACHE', 'True').lower() in ('1', 'true', 'yes')
+
+# Sessions are read from the cache and written through to the database, so a
+# request does not need a database query for its session and any app server can
+# serve any user.
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+
+# Loads the user and profile together (one query per request instead of two).
+AUTHENTICATION_BACKENDS = ['accounts.backends.ProfileBackend']
+
+
+# =============================================================================
+# GOOGLE SIGN-IN (OAuth 2.0 / OpenID Connect)
+# =============================================================================
+# Create an OAuth client (type "Web application") in Google Cloud Console and
+# add <site>/accounts/google/callback/ as an authorised redirect URI.
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '').strip()
+# Leave blank to build it from the request (http://127.0.0.1:8000/accounts/google/callback/ locally).
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', '').strip()
+GOOGLE_SIGNIN_ENABLED = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
+# When on, every signed-in user must link a Google account before using the system.
+GOOGLE_BINDING_REQUIRED = GOOGLE_SIGNIN_ENABLED and (
+    os.environ.get('GOOGLE_BINDING_REQUIRED', 'True').lower() in ('1', 'true', 'yes')
+)
+
+
+# =============================================================================
+# EMAIL (verification codes, password reset)
+# =============================================================================
+# Without SMTP credentials, emails are printed in the runserver terminal so the
+# flows can still be tried locally.
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '').strip()
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() in ('1', 'true', 'yes')
+EMAIL_TIMEOUT = 20
+EMAIL_BACKEND = (
+    'django.core.mail.backends.smtp.EmailBackend' if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD
+    else 'django.core.mail.backends.console.EmailBackend'
+)
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', '').strip() or (
+    f'ARMS <{EMAIL_HOST_USER}>' if EMAIL_HOST_USER else 'ARMS <no-reply@arms.local>'
+)
+EMAIL_CODE_MINUTES = 15
 
 
 # =============================================================================

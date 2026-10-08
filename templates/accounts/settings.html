@@ -1,0 +1,171 @@
+{% extends base_template %}
+{% load static %}
+
+{% block title %}Account Settings - ARMS{% endblock %}
+{% block subtitle %}Account Settings — keep your sign-in details up to date{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
+    @media (max-width: 1000px) { .settings-grid { grid-template-columns: 1fr; } }
+    .settings-grid .card { margin-bottom: 0; }
+    .st-field { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.9rem; }
+    .st-field label { font-size: 0.72rem; font-weight: 600; color: var(--text-primary); }
+    .st-input {
+        width: 100%; padding: 0.6rem 0.85rem; border: 2px solid var(--border-color); border-radius: 10px;
+        font-size: 0.82rem; background: var(--gray-bg); color: var(--text-primary); transition: all 0.3s; font-family: inherit;
+    }
+    .st-input:focus { outline: none; border-color: var(--secondary-green); background: white; box-shadow: 0 0 0 3px rgba(18,52,153,0.12); }
+    .st-input[readonly] { color: var(--text-secondary); cursor: not-allowed; }
+    .st-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+    @media (max-width: 520px) { .st-row { grid-template-columns: 1fr; } }
+    .st-hint { font-size: 0.68rem; color: var(--text-secondary); line-height: 1.5; }
+    .st-error { background: var(--danger-bg); color: var(--danger-text); border-left: 4px solid var(--danger-red); border-radius: 10px; padding: 0.6rem 0.8rem; font-size: 0.78rem; margin-bottom: 0.9rem; }
+    .st-box { background: var(--gray-bg); border-radius: 14px; padding: 0.9rem 1rem; margin-bottom: 0.9rem; }
+    .st-box strong { color: var(--rich-black); word-break: break-all; }
+    .google-row { display: flex; align-items: center; gap: 0.8rem; }
+    .google-row svg { width: 30px; height: 30px; flex-shrink: 0; }
+    .code-input { text-align: center; font-size: 1.3rem; font-weight: 800; letter-spacing: 0.4rem; color: var(--caribbean-blue); }
+    .st-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="settings-grid">
+
+    <!-- PROFILE -->
+    <div class="card">
+        <div class="section-header"><h2><i class="fi fi-rr-user"></i> Profile</h2></div>
+        {% if errors.profile %}<div class="st-error">{{ errors.profile }}</div>{% endif %}
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="profile">
+            <div class="st-row">
+                <div class="st-field">
+                    <label for="first_name">First name</label>
+                    <input type="text" class="st-input" id="first_name" name="first_name" value="{{ request.user.first_name }}" required>
+                </div>
+                <div class="st-field">
+                    <label for="last_name">Last name</label>
+                    <input type="text" class="st-input" id="last_name" name="last_name" value="{{ request.user.last_name }}" required>
+                </div>
+            </div>
+            <div class="st-row">
+                <div class="st-field">
+                    <label>Username</label>
+                    <input type="text" class="st-input" value="{{ request.user.username }}" readonly>
+                    <span class="st-hint">Used with your password. It cannot be changed here.</span>
+                </div>
+                <div class="st-field">
+                    <label>Role</label>
+                    <input type="text" class="st-input" value="{{ profile.get_role_display }}{% if profile.school %} — {{ profile.school.short_name }}{% endif %}" readonly>
+                </div>
+            </div>
+            <button type="submit" class="btn-primary"><i class="fi fi-rr-disk"></i> Save name</button>
+        </form>
+    </div>
+
+    <!-- GOOGLE -->
+    <div class="card">
+        <div class="section-header"><h2><i class="fi fi-rr-link-alt"></i> Google Sign-In</h2></div>
+        <div class="st-box google-row">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
+            <div>
+                {% if profile.google_sub %}
+                    <strong>{{ profile.google_email }}</strong>
+                    <div class="st-hint">Linked {{ profile.google_linked_at|date:"M d, Y" }}. Choose "Sign in with Google" on the sign-in page; no password needed.</div>
+                {% else %}
+                    <strong>Not linked</strong>
+                    <div class="st-hint">Link a Google account to sign in without typing your password.</div>
+                {% endif %}
+            </div>
+        </div>
+        {% if google_enabled %}
+            {% if profile.google_sub %}
+            <a href="{% url 'google_bind' %}?change=1" class="btn-outline"><i class="fi fi-rr-refresh"></i> Use a different Google account</a>
+            <p class="st-hint" style="margin-top:0.6rem;">The new account is confirmed with a code sent to its email before it replaces the current one.</p>
+            {% else %}
+            <a href="{% url 'google_bind' %}" class="btn-primary"><i class="fi fi-rr-link-alt"></i> Link Google account</a>
+            {% endif %}
+        {% else %}
+            <p class="st-hint">Google sign-in has not been set up for this system yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- EMAIL -->
+    <div class="card">
+        <div class="section-header"><h2><i class="fi fi-rr-envelope"></i> Email Address</h2></div>
+        <div class="st-box">
+            <span class="st-hint">Current email</span><br>
+            <strong>{{ request.user.email|default:"None on file" }}</strong>
+            <div class="st-hint">Password reset codes are sent here.</div>
+        </div>
+
+        {% if pending_email %}
+            {% if errors.email_confirm %}<div class="st-error">{{ errors.email_confirm }}</div>{% endif %}
+            <form method="POST" autocomplete="off">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="email_confirm">
+                <div class="st-field">
+                    <label for="email_code">Code sent to {{ pending_email.sent_to }}</label>
+                    <input type="text" class="st-input code-input" id="email_code" name="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required>
+                    <span class="st-hint">The code expires in 15 minutes.</span>
+                </div>
+                <div class="st-actions">
+                    <button type="submit" class="btn-primary"><i class="fi fi-rr-check-circle"></i> Confirm new email</button>
+                    <button type="submit" class="btn-outline" form="cancelEmailForm">Cancel</button>
+                </div>
+            </form>
+            <form method="POST" id="cancelEmailForm">{% csrf_token %}<input type="hidden" name="action" value="email_cancel"></form>
+        {% else %}
+            {% if errors.email %}<div class="st-error">{{ errors.email }}</div>{% endif %}
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="email">
+                <div class="st-field">
+                    <label for="new_email">New email address</label>
+                    <input type="email" class="st-input" id="new_email" name="email" placeholder="you@example.com" required>
+                    <span class="st-hint">We send a 6-digit code to the new address. It replaces the current one only after you enter the code.</span>
+                </div>
+                <button type="submit" class="btn-primary"><i class="fi fi-rr-paper-plane"></i> Send code</button>
+            </form>
+        {% endif %}
+    </div>
+
+    <!-- PASSWORD -->
+    <div class="card">
+        <div class="section-header"><h2><i class="fi fi-rr-lock"></i> Password</h2></div>
+        {% if errors.password %}<div class="st-error">{{ errors.password }}</div>{% endif %}
+        <form method="POST" autocomplete="off">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="password">
+            <div class="st-field">
+                <label for="current_password">Current password</label>
+                <input type="password" class="st-input" id="current_password" name="current_password" autocomplete="current-password" required>
+            </div>
+            <div class="st-row">
+                <div class="st-field">
+                    <label for="new_password">New password</label>
+                    <input type="password" class="st-input" id="new_password" name="new_password" autocomplete="new-password" minlength="8" required>
+                </div>
+                <div class="st-field">
+                    <label for="confirm_password">Confirm new password</label>
+                    <input type="password" class="st-input" id="confirm_password" name="confirm_password" autocomplete="new-password" minlength="8" required>
+                </div>
+            </div>
+            <p class="st-hint" style="margin-bottom:0.9rem;">At least 8 characters, not only numbers. Forgot the current one? Sign out and use "Forgot Password?" to get a code by email.</p>
+            <button type="submit" class="btn-primary"><i class="fi fi-rr-lock"></i> Change password</button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('.code-input').forEach(function(input) {
+        input.addEventListener('input', function() { input.value = input.value.replace(/\D/g, '').slice(0, 6); });
+    });
+</script>
+{% endblock %}

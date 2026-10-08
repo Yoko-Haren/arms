@@ -1,19 +1,15 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}ARMS - Academic Records Management System{% endblock %}</title>
-    
-    <!-- Flaticon Uicons -->
-    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
-    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
-    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-bold-rounded/css/uicons-bold-rounded.css">
-    
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
+{% extends 'shared/portal_base.html' %}
+
+{% block title %}ARMS - Academic Records Management System{% endblock %}
+{% block home_url %}{% url 'heads-ai-dashboard' %}{% endblock %}
+{% block brand_icon %}fi-rr-graduation-cap{% endblock %}
+{% block portal_label %}School Head Portal{% endblock %}
+{% block role_label %}School Principal{% endblock %}
+{% block subtitle %}Academic Records Management System{% endblock %}
+
+{% block sidebar_nav %}{% include 'heads/_nav.html' %}{% endblock %}
+
+{% block portal_css %}
     <style>
         * { 
             margin: 0; 
@@ -29,8 +25,8 @@
             --caribbean-blue: #123499;
             
             /* Secondary Colors */
-            --secondary-green: #5EA173;
-            --secondary-green-light: #7dbb8f;
+            --secondary-green: #123499;
+            --secondary-green-light: #4a6fd4;
             
             /* Background & Borders */
             --gray-bg: #f5f7fb;
@@ -38,7 +34,7 @@
             
             /* Text Colors */
             --text-primary: #2d3748;
-            --text-secondary: #718096;
+            --text-secondary: #4a5568;
             
             /* Status Colors */
             --warning-bg: #fff3cd;
@@ -60,11 +56,11 @@
             --ai-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             
             /* Effects */
-            --empty-state-color: #a0aec0;
+            --empty-state-color: #718096;
             --card-shadow: 0 2px 10px rgba(0,0,0,0.05);
             --card-shadow-hover: 0 8px 25px rgba(0,0,0,0.1);
             --nav-shadow: 0 4px 24px rgba(0,0,0,0.08);
-            --glow-green: 0 0 20px rgba(94,161,115,0.3);
+            --glow-green: 0 0 20px rgba(18,52,153,0.3);
             --glow-blue: 0 0 20px rgba(18,52,153,0.3);
             --glow-purple: 0 0 20px rgba(102,126,234,0.3);
             --transition-speed: 0.3s;
@@ -389,9 +385,9 @@
         }
         
         .btn-primary:hover { 
-            background: var(--caribbean-blue); 
+            background: var(--dark-blue); 
             transform: translateY(-2px); 
-            box-shadow: 0 6px 20px rgba(94,161,115,0.4); 
+            box-shadow: 0 6px 20px rgba(18,52,153,0.4); 
         }
         
         .btn-outline { 
@@ -413,7 +409,7 @@
         .btn-outline:hover { 
             border-color: var(--secondary-green); 
             color: var(--secondary-green);
-            background: rgba(94,161,115,0.05);
+            background: rgba(18,52,153,0.05);
         }
         
         .btn-sm { 
@@ -677,105 +673,24 @@
                 break-inside: avoid; 
             }
         }
-    </style>
     
-    {% block extra_css %}{% endblock %}
-</head>
-<body>
-    <!-- ========== FLOATING NAVIGATION PILL ========== -->
-    <div class="nav-pill-container">
-        <nav class="nav-pill">
-            <!-- Brand -->
-            <a href="{% url 'heads-dashboard' %}" class="nav-brand">
-                <div class="nav-brand-icon">
-                    <i class="fi fi-rr-graduation-cap"></i>
-                </div>
-                <div class="nav-brand-text">
-                    ARMS
-                    <span>Academic Records</span>
-                </div>
-            </a>
-            
-            <!-- Navigation Links -->
-            <ul class="nav-links">
-                <li class="nav-link-item">
-                    <a href="{% url 'heads-ai-dashboard' %}" 
-                       class="{% if request.resolver_match.url_name == 'heads-ai-dashboard' %}active{% endif %}">
-                        <i class="fi fi-rr-dashboard"></i>
-                        <span>Dashboard</span>
-                    </a>
-                </li>
-                <li class="nav-link-item">
-                    <a href="{% url 'heads-school-performance' %}" 
-                       class="{% if request.resolver_match.url_name == 'heads-school-performance' %}active{% endif %}">
-                        <i class="fi fi-rr-chart-histogram"></i>
-                        <span>School Performance</span>
-                    </a>
-                </li>
-                <li class="nav-link-item">
-                    <a href="{% url 'heads-teacher-evaluation' %}" 
-                       class="{% if request.resolver_match.url_name == 'heads-teacher-evaluation' %}active{% endif %}">
-                        <i class="fi fi-rr-presentation"></i>
-                        <span>Teacher Evaluation</span>
-                    </a>
-                </li>
-                <li class="nav-link-item">
-                    <a href="{% url 'heads-user-management' %}" 
-                       class="{% if request.resolver_match.url_name == 'heads-user-management' %}active{% endif %}">
-                        <i class="fi fi-rr-users-gear"></i>
-                        <span>User Management</span>
-                    </a>
-                </li>
-            </ul>
-            
-            <!-- User Section -->
-            <div class="nav-user-section">
-                <div class="nav-user-avatar">
-                    {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
-                </div>
-                <div class="nav-user-info">
-                    <span class="nav-user-name">{{ request.user.get_full_name }}</span>
-                    <span class="nav-user-role">School Principal</span>
-                </div>
-                <a href="{% url 'signout' %}" class="nav-logout-btn" title="Logout">
-                    <i class="fi fi-rr-sign-out-alt"></i>
-                </a>
-            </div>
-        </nav>
-    </div>
+        /* Shared sidebar layout takes over page placement */
+        body { padding-top: 0 !important; }
+        #mainContent { max-width: none; margin: 0 0 0 var(--sidebar-width); }
+        .sidebar.collapsed ~ #mainContent { margin-left: var(--sidebar-collapsed-width); }
+        /* Pages that reuse .main-content for an inner column: no second page gutter, and let grid columns shrink */
+        #mainContent .main-content { max-width: none; margin: 0; padding: 0; }
+        #mainContent .content-wrap, #mainContent .dashboard-layout > * { min-width: 0; }
+        @media (max-width: 768px) { #mainContent, .sidebar.collapsed ~ #mainContent { margin-left: 0; } }
+        @media print { .sidebar { display: none !important; } #mainContent { margin-left: 0 !important; } }
+    </style>
+{% endblock %}
 
-    <!-- ========== MAIN CONTENT ========== -->
-    <div class="main-content" id="mainContent">
-        <!-- Top Bar -->
-        <div class="top-bar">
-            <div style="display:flex;align-items:center;gap:1rem;">
-                <div class="welcome">
-                    <h1 id="greetingText">
-                        <i class="fi fi-rr-dashboard"></i> 
-                        Hello, {{ request.user.first_name }}!
-                    </h1>
-                    <p>{% block subtitle %}Academic Records Management System{% endblock %}</p>
-                </div>
-            </div>
-            <div class="top-bar-actions">
-                <button class="btn-outline btn-sm" onclick="refreshPage()" title="Refresh data">
-                    <i class="fi fi-rr-refresh"></i>
-                </button>
-                <div class="date-display">
-                    <i class="fi fi-rr-calendar"></i>
-                    <span id="currentDate"></span>
-                </div>
-                {% block top_bar_actions %}{% endblock %}
-            </div>
-        </div>
-        
-        <!-- Page Content -->
-        {% block content %}{% endblock %}
-    </div>
+{% block top_bar_actions %}
+<button class="btn-outline btn-sm" onclick="refreshPage()" title="Refresh data"><i class="fi fi-rr-refresh"></i></button>
+{% endblock %}
 
-    <!-- Toast Container -->
-    <div class="toast-container" id="toastContainer"></div>
-
+{% block portal_body %}
     <!-- Modal Container -->
     <div class="modal-overlay" id="defaultModal">
         <div class="modal">
@@ -788,62 +703,14 @@
         </div>
     </div>
 
+{% endblock %}
+
+{% block portal_js %}
     <script>
     (function() {
-        // ===== GREETING & DATE =====
-        function updateGreeting() {
-            const hour = new Date().getHours();
-            const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-            const userName = '{{ request.user.first_name|escapejs }}' || 'User';
-            document.getElementById('greetingText').innerHTML = 
-                `<i class="fi fi-rr-dashboard" style="color:var(--secondary-green);"></i> ${greeting}, ${userName}!`;
-        }
-        
-        function updateDate() { 
-            const now = new Date();
-            const options = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
-            document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', options); 
-        }
-        
-        updateGreeting(); 
-        updateDate();
-        setInterval(updateDate, 60000); 
-        setInterval(updateGreeting, 3600000);
-        
         // ===== UTILITY FUNCTIONS =====
         window.refreshPage = function() {
             location.reload();
-        };
-        
-        window.showToast = function(message, type = 'success') {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            
-            const icons = { 
-                success: 'fi-rr-check-circle', 
-                error: 'fi-rr-exclamation', 
-                warning: 'fi-rr-exclamation-triangle',
-                info: 'fi-rr-info'
-            };
-            
-            toast.innerHTML = `
-                <i class="fi ${icons[type] || icons.success}"></i>
-                <div style="flex:1;">
-                    <strong>${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
-                    <p style="font-size:0.75rem;margin:0;">${message}</p>
-                </div>
-                <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-secondary);">&times;</button>
-            `;
-            
-            container.appendChild(toast);
-            
-            setTimeout(() => { 
-                if (toast.parentElement) {
-                    toast.style.animation = 'slideInRight 0.3s ease reverse';
-                    setTimeout(() => toast.remove(), 300);
-                }
-            }, 4000);
         };
         
         window.closeModal = function() {
@@ -900,18 +767,6 @@
             if (e.key === 'Escape') closeModal();
         });
         
-        // ===== ACTIVE NAV HANDLING =====
-        // Highlight current page in nav
-        const currentPath = window.location.pathname;
-        document.querySelectorAll('.nav-link-item a').forEach(link => {
-            if (link.getAttribute('href') === currentPath || 
-                currentPath.startsWith(link.getAttribute('href') + '/')) {
-                link.classList.add('active');
-            }
-        });
     })();
     </script>
-    
-    {% block extra_js %}{% endblock %}
-</body>
-</html>
+{% endblock %}

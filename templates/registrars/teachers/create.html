@@ -1,0 +1,138 @@
+{% extends 'registrars/base.html' %}
+{% load static %}
+
+{% block title %}Add Teacher - ARMS{% endblock %}
+{% block subtitle %}New Teacher Account — {{ school.school_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .account-preview {
+        display: flex; align-items: center; gap: 0.9rem; margin-top: 1.2rem;
+        background: var(--gray-bg); border-radius: 14px; padding: 0.9rem 1.1rem;
+    }
+    .account-preview-icon {
+        width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+        background: var(--ai-gradient); color: white; font-size: 1.1rem;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .account-preview small { display: block; font-size: 0.68rem; color: var(--text-secondary); }
+    .account-preview strong { font-size: 0.88rem; color: var(--rich-black); word-break: break-all; }
+    .form-actions { display: flex; justify-content: space-between; gap: 0.8rem; margin-top: 1.5rem; flex-wrap: wrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="max-width:820px;margin:0 auto;">
+
+    {% if pending %}
+    <div class="info-box">
+        <strong><i class="fi fi-rr-link-alt"></i> This teacher will be assigned right away</strong>
+        <p style="margin:0.3rem 0 0 0;color:var(--text-secondary);">
+            Once created, the account is assigned to <strong>{{ pending.subject.subject_code }} — {{ pending.subject.subject_name }}</strong>
+            in section <strong>{{ pending.section.section_name }}</strong>, from the class list you just uploaded.
+        </p>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="section-header">
+            <h2><i class="fi fi-rr-user-add"></i> Teacher Details</h2>
+            <span class="muted"><span style="color:var(--danger-red);">*</span> Required</span>
+        </div>
+
+        <form method="POST" id="teacherForm">
+            {% csrf_token %}
+            {% if pending %}
+            <input type="hidden" name="section" value="{{ pending.section.id }}">
+            <input type="hidden" name="subject" value="{{ pending.subject.id }}">
+            {% endif %}
+
+            {% for error in form.non_field_errors %}<div class="form-error" style="margin-bottom:0.8rem;">{{ error }}</div>{% endfor %}
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="first_name">First Name <span class="req">*</span></label>
+                    <input type="text" name="first_name" id="first_name" class="form-input {% if form.first_name.errors %}invalid{% endif %}" value="{{ form.first_name.value|default:'' }}" placeholder="e.g., Gertrude Grace" required>
+                    {% for error in form.first_name.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="form-field">
+                    <label for="last_name">Last Name <span class="req">*</span></label>
+                    <input type="text" name="last_name" id="last_name" class="form-input {% if form.last_name.errors %}invalid{% endif %}" value="{{ form.last_name.value|default:'' }}" placeholder="e.g., Tampus" required>
+                    {% for error in form.last_name.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="form-field full">
+                    <label for="email">Email {% if email_domain %}<span class="opt">Optional</span>{% else %}<span class="req">*</span>{% endif %}</label>
+                    <input type="email" name="email" id="email" class="form-input {% if form.email.errors %}invalid{% endif %}" value="{{ form.email.value|default:'' }}"
+                           placeholder="{% if email_domain %}Leave blank to use firstname.lastname@{{ email_domain }}{% else %}teacher@example.com{% endif %}" {% if not email_domain %}required{% endif %}>
+                    <div class="form-hint">
+                        {% if email_domain %}Leave blank and the school address is generated from the name. {% endif %}The email is also the teacher's username.
+                    </div>
+                    {% for error in form.email.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="form-field">
+                    <label for="employee_number">Employee Number <span class="opt">Optional</span></label>
+                    <input type="text" name="employee_number" id="employee_number" class="form-input {% if form.employee_number.errors %}invalid{% endif %}" value="{{ form.employee_number.value|default:'' }}">
+                    {% for error in form.employee_number.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="form-field">
+                    <label for="designation">Position <span class="opt">Optional</span></label>
+                    <input type="text" name="designation" id="designation" class="form-input" value="{{ form.designation.value|default:'' }}" placeholder="e.g., Teacher III" list="positions">
+                    <datalist id="positions">
+                        <option value="Teacher I"><option value="Teacher II"><option value="Teacher III">
+                        <option value="Master Teacher I"><option value="Master Teacher II"><option value="Head Teacher I">
+                        <option value="Instructor I"><option value="Assistant Professor I">
+                    </datalist>
+                </div>
+                <div class="form-field full">
+                    <label for="teaching_area">Teaching Area <span class="opt">Optional</span></label>
+                    <input type="text" name="teaching_area" id="teaching_area" class="form-input" value="{{ form.teaching_area.value|default:'' }}" placeholder="e.g., Mathematics">
+                </div>
+            </div>
+
+            <div class="account-preview">
+                <div class="account-preview-icon"><i class="fi fi-rr-key"></i></div>
+                <div>
+                    <small>The teacher will sign in with</small>
+                    <strong id="previewUsername">—</strong>
+                    <small>A temporary password is generated and shown once after you create the account.</small>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a href="{% url 'registrars:teacher_list' %}" class="btn-outline"><i class="fi fi-rr-arrow-left"></i> Cancel</a>
+                <button type="submit" class="btn-primary"><i class="fi fi-rr-user-add"></i> Create Teacher Account</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    var firstName = document.getElementById('first_name');
+    var lastName = document.getElementById('last_name');
+    var emailInput = document.getElementById('email');
+    var preview = document.getElementById('previewUsername');
+    var previewTimer = null;
+
+    // Show the username the account will get: the typed email, or the generated school address
+    function refreshPreview() {
+        var typed = emailInput.value.trim().toLowerCase();
+        if (typed) { preview.textContent = typed; return; }
+        if (!firstName.value.trim() || !lastName.value.trim()) { preview.textContent = '—'; return; }
+        clearTimeout(previewTimer);
+        previewTimer = setTimeout(function() {
+            var url = '{% url "registrars:teacher_email_preview" %}?first_name=' + encodeURIComponent(firstName.value) +
+                      '&last_name=' + encodeURIComponent(lastName.value);
+            fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+                if (!emailInput.value.trim()) preview.textContent = data.email || 'Type the teacher\'s email above';
+            });
+        }, 300);
+    }
+
+    [firstName, lastName, emailInput].forEach(function(input) { input.addEventListener('input', refreshPreview); });
+    refreshPreview();
+</script>
+{% endblock %}

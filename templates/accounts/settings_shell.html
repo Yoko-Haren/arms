@@ -1,0 +1,11 @@
+{% extends 'shared/portal_base.html' %}
+
+{% block title %}Account Settings - ARMS{% endblock %}
+{% block home_url %}{{ dashboard_url }}{% endblock %}
+{% block brand_icon %}fi-rr-graduation-cap{% endblock %}
+{% block portal_label %}Account{% endblock %}
+{% block role_label %}{{ request.user.profile.get_role_display|default:"Administrator" }}{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item"><a href="{{ dashboard_url }}" class="nav-link"><i class="fi fi-rr-arrow-left"></i><span>Back to Dashboard</span></a></li>
+{% endblock %}

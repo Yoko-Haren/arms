@@ -350,7 +350,7 @@
                     <td><span class="school-cell">{{ gl.school.school_name|default:"—" }}</span></td>
                     <td><span class="date-cell">{{ gl.created_at|date:"M d, Y" }}</span></td>
                     <td>
-                        <form method="POST" action="{% url 'admin_panel:grade_level_delete' gl.id %}" style="display:inline;" onsubmit="return confirm('Remove {{ gl.grade_name|escapejs }} from {{ gl.school.school_name|escapejs }}?')">
+                        <form method="POST" action="{% url 'admin_panel:grade_level_delete' gl.id %}" style="display:inline;" data-confirm="Remove {{ gl.grade_name }} from {{ gl.school.school_name }}?">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove"><i class="fas fa-trash"></i></button>
                         </form>

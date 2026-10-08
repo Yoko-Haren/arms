@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>School Performance - Formify School Head Portal</title>
+    <title>School Performance - ARMS School Head Portal</title>
     
     <!-- Flaticon UIcons -->
     <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
@@ -25,11 +25,11 @@
             --dark-blue: #051650;
             --bangladesh-blue: #0A2472;
             --caribbean-blue: #123499;
-            --secondary-green: #5EA173;
+            --secondary-green: #123499;
             --gray-bg: #f5f7fb;
             --border-color: #e9ecef;
             --text-primary: #2d3748;
-            --text-secondary: #718096;
+            --text-secondary: #4a5568;
             --warning-bg: #fff3cd;
             --warning-text: #856404;
             --success-bg: #d4edda;
@@ -232,7 +232,7 @@
             overflow: hidden;
         }
 
-        .nav-link:hover { background: rgba(94,161,115,0.2); color: white; }
+        .nav-link:hover { background: rgba(18,52,153,0.2); color: white; }
         .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
         .nav-link i.fi { width: 22px; font-size: 1.1rem; text-align: center; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
 
@@ -364,12 +364,12 @@
         }
 
         .notification-item:hover { background: var(--gray-bg); }
-        .notification-item.unread { background: rgba(94, 161, 115, 0.06); border-left: 3px solid var(--secondary-green); }
+        .notification-item.unread { background: rgba(18,52,153, 0.06); border-left: 3px solid var(--secondary-green); }
 
         .notification-icon {
             width: 36px;
             height: 36px;
-            background: rgba(94, 161, 115, 0.12);
+            background: rgba(18,52,153, 0.12);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -410,7 +410,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border: 1px solid rgba(94, 161, 115, 0.3);
+            border: 1px solid rgba(18,52,153, 0.3);
             flex-wrap: wrap;
             gap: 1rem;
         }
@@ -426,7 +426,7 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            box-shadow: 0 4px 12px rgba(94, 161, 115, 0.3);
+            box-shadow: 0 4px 12px rgba(18,52,153, 0.3);
             animation: bounce 2s ease infinite;
             overflow: hidden;
         }
@@ -474,7 +474,7 @@
         }
 
         .stat-icon.blue { background: rgba(18,52,153,0.1); color: var(--caribbean-blue); }
-        .stat-icon.green { background: rgba(94,161,115,0.1); color: var(--secondary-green); }
+        .stat-icon.green { background: rgba(18,52,153,0.1); color: var(--secondary-green); }
         .stat-icon.orange { background: rgba(243,156,18,0.1); color: #f39c12; }
         .stat-icon.purple { background: rgba(128,0,128,0.1); color: #9b59b6; }
 
@@ -681,41 +681,7 @@
 
     <div class="dashboard">
         <!-- Sidebar -->
-        <div class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="logo-area">
-                    <i class="fi fi-rr-graduation-cap"></i>
-                    <h2>Formify <span>School Head Portal</span></h2>
-                </div>
-                <button class="fold-btn" id="foldBtn" title="Toggle sidebar">
-                    <i class="fi fi-rr-angle-left"></i>
-                </button>
-            </div>
-            <br>
-            <div class="user-info">
-                <div class="user-avatar">{{ request.user.first_name.0 }}{{ request.user.last_name.0 }}</div>
-                <div class="user-details">
-                    <h4>{{ request.user.get_full_name }}</h4>
-                    <p>School Principal IV</p>
-                </div>
-            </div>
-
-            <ul class="nav-menu">
-                <li class="nav-item"><a href="{% url 'heads-dashboard' %}" class="nav-link"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
-                <li class="nav-item"><a href="{% url 'heads-school-performance' %}" class="nav-link active"><i class="fi fi-rr-chart-histogram"></i><span>School Performance</span></a></li>
-                <li class="nav-item"><a href="{% url 'heads-forms-compliance' %}" class="nav-link"><i class="fi fi-rr-document"></i><span>Forms Compliance</span></a></li>
-                <li class="nav-item"><a href="{% url 'heads-teacher-evaluation' %}" class="nav-link"><i class="fi fi-rr-presentation"></i><span>Teacher Evaluation</span></a></li>
-                <li class="nav-item"><a href="{% url 'heads-reports' %}" class="nav-link"><i class="fi fi-rr-chart-line-up"></i><span>Reports & Analytics</span></a></li>
-                <li class="nav-item"><a href="{% url 'heads-announcements' %}" class="nav-link"><i class="fi fi-rr-megaphone"></i><span>Announcements</span></a></li>
-                <li class="nav-item"><a href="{% url 'heads-messages' %}" class="nav-link"><i class="fi fi-rr-envelope"></i><span>Messages</span></a></li>
-                <li class="nav-item"><a href="{% url 'heads-user-management' %}" class="nav-link"><i class="fi fi-rr-users-gear"></i><span>User Management</span></a></li>
-                <li class="nav-item"><a href="{% url 'heads-settings' %}" class="nav-link"><i class="fi fi-rr-settings"></i><span>Settings</span></a></li>
-            </ul>
-
-            <ul class="nav-menu nav-footer">
-                <li class="nav-item"><a href="{% url 'signout' %}" class="nav-link"><i class="fi fi-rr-sign-out"></i><span>Logout</span></a></li>
-            </ul>
-        </div>
+    {% include 'heads/_sidebar.html' %}
 
         <!-- Main Content -->
         <div class="main-content" id="mainContent">
@@ -928,7 +894,7 @@
                                     <span>{{ s.avg }}%</span>
                                 </div>
                                 <div class="progress-bar">
-                                    <div class="progress-fill" style="width: {{ s.avg }}%; background: {% if s.avg >= 90 %}#27ae60{% elif s.avg >= 85 %}#5EA173{% elif s.avg >= 75 %}#f39c12{% else %}#e74c3c{% endif %};"></div>
+                                    <div class="progress-fill" style="width: {{ s.avg }}%; background: {% if s.avg >= 90 %}#27ae60{% elif s.avg >= 85 %}#123499{% elif s.avg >= 75 %}#f39c12{% else %}#e74c3c{% endif %};"></div>
                                 </div>
                             </div>
                             {% endfor %}
@@ -947,7 +913,7 @@
                     </div>
                     <canvas id="yearOverYearChart" style="max-height: 200px;"></canvas>
                     <div class="chart-legend">
-                        <span><span class="legend-dot" style="background:#5EA173;"></span> Previous Year</span>
+                        <span><span class="legend-dot" style="background:#123499;"></span> Previous Year</span>
                         <span><span class="legend-dot" style="background:#123499;"></span> {{ current_sy_label }}</span>
                     </div>
                 </div>
@@ -961,8 +927,8 @@
                 <p style="color: var(--text-secondary); margin-top: 0.5rem;">
                     Please set up the current school year to view performance metrics.
                 </p>
-                <a href="{% url 'heads-settings' %}" style="display: inline-block; margin-top: 1rem; padding: 0.6rem 1.5rem; background: var(--secondary-green); color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-                    Go to Settings
+                <a href="{% url 'heads-ai-dashboard' %}" style="display: inline-block; margin-top: 1rem; padding: 0.6rem 1.5rem; background: var(--secondary-green); color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                    Back to Academic Dashboard
                 </a>
             </div>
             {% endif %}
@@ -1190,5 +1156,6 @@
             setInterval(updateGreeting, 60000);
         })();
     </script>
+<script src="{% static 'shared/js/arms-ui.js' %}"></script>
 </body>
 </html>

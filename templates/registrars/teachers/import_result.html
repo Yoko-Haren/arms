@@ -1,0 +1,111 @@
+{% extends 'registrars/base.html' %}
+{% load static %}
+
+{% block title %}Teachers Imported - ARMS{% endblock %}
+{% block subtitle %}Import finished — {{ school.school_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cred-scroll { max-height: 520px; overflow-y: auto; border-radius: 14px; border: 1px solid var(--border-color); }
+    .cred-scroll thead th { position: sticky; top: 0; z-index: 1; }
+    .cred { font-family: Consolas, monospace; font-size: 0.8rem; background: var(--gray-bg); padding: 0.15rem 0.45rem; border-radius: 6px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+    <h3><i class="fi fi-rr-check-circle"></i> {{ created|length }} Teacher Account{{ created|length|pluralize }} Created</h3>
+    <div class="page-head-actions">
+        {% if created %}<button type="button" class="btn-primary" id="downloadBtn"><i class="fi fi-rr-download"></i> Download Credentials (CSV)</button>{% endif %}
+        <a href="{% url 'registrars:teacher_list' %}" class="btn-outline" {% if created %}data-confirm="The temporary passwords will not be shown again. Have you saved or downloaded them?" data-confirm-title="Leave this page?" data-confirm-ok="Yes, leave"{% endif %}>
+            <i class="fi fi-rr-chalkboard-user"></i> Go to Teachers
+        </a>
+    </div>
+</div>
+
+{% if created %}
+<div class="flash warning">
+    <i class="fi fi-rr-triangle-warning"></i>
+    <div class="flash-body">
+        <strong>These temporary passwords are shown only once.</strong> Download or copy them now and hand them to each teacher.
+        Every teacher is asked to set their own password the first time they sign in.
+    </div>
+</div>
+
+<div class="card">
+    <div class="cred-scroll">
+        <table id="credTable">
+            <thead><tr><th style="width:50px;">#</th><th>Teacher</th><th>Username</th><th>Temporary Password</th></tr></thead>
+            <tbody>
+                {% for c in created %}
+                <tr>
+                    <td style="color:#718096;">{{ forloop.counter }}</td>
+                    <td><strong>{{ c.name }}</strong></td>
+                    <td><span class="cred" data-col="username">{{ c.username }}</span></td>
+                    <td><span class="cred" data-col="password">{{ c.password }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <i class="fi fi-rr-folder-open"></i>
+        <h5>No Accounts Were Created</h5>
+        <p>Every row had a problem. Fix the file and try again.</p>
+        <a href="{% url 'registrars:teacher_import' %}" class="btn-primary"><i class="fi fi-rr-upload"></i> Upload Again</a>
+    </div>
+</div>
+{% endif %}
+
+{% if skipped %}
+<div class="card">
+    <div class="section-header"><h2><i class="fi fi-rr-exclamation"></i> Skipped Rows ({{ skipped|length }})</h2></div>
+    <div class="table-responsive">
+        <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Reason</th></tr></thead>
+            <tbody>
+                {% for r in skipped %}
+                <tr>
+                    <td>{{ r.data.last_name|default:"—" }}{% if r.data.first_name %}, {{ r.data.first_name }}{% endif %}</td>
+                    <td>{{ r.data.email|default:"—" }}</td>
+                    <td>{% for error in r.errors %}<span class="badge badge-danger">{{ error }}</span> {% endfor %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    var downloadBtn = document.getElementById('downloadBtn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', function() {
+            function cell(text) { return '"' + String(text).replace(/"/g, '""') + '"'; }
+            var lines = ['name,username,temporary_password'];
+            document.querySelectorAll('#credTable tbody tr').forEach(function(row) {
+                lines.push([
+                    cell(row.cells[1].textContent.trim()),
+                    cell(row.querySelector('[data-col="username"]').textContent),
+                    cell(row.querySelector('[data-col="password"]').textContent)
+                ].join(','));
+            });
+            var blob = new Blob([lines.join('\r\n')], {type: 'text/csv'});
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'teacher_credentials.csv';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            ARMS.toast('Credentials downloaded. Keep the file safe.', 'success');
+        });
+    }
+</script>
+{% endblock %}

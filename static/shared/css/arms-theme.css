@@ -1,0 +1,37 @@
+/*
+ * ARMS readability + action colours, loaded on every signed-in page after the
+ * page's own styles.
+ */
+
+/* Slightly larger text everywhere (pages size their text in rem). */
+html { font-size: 106.25%; }
+
+/* Secondary text was too pale to read comfortably. */
+:root {
+    --text-secondary: #4a5568;
+    --gray-500: #4a5568;
+}
+
+/* Destructive actions are always red: delete, remove, drop, deactivate, log out. */
+.sidebar .nav-footer .nav-logout { color: #dc3545; }
+.sidebar .nav-footer .nav-logout:hover { background: #f8d7da; color: #b02a37; }
+
+.btn-danger-outline,
+.btn-outline.danger,
+button.danger-action,
+.btn-sy-action.danger-action,
+.btn-delete-icon,
+.btn-action.danger-btn {
+    color: #dc3545 !important;
+    border-color: #f1aeb5 !important;
+}
+.btn-danger-outline:hover,
+.btn-outline.danger:hover,
+button.danger-action:hover,
+.btn-sy-action.danger-action:hover,
+.btn-delete-icon:hover,
+.btn-action.danger-btn:hover {
+    color: #ffffff !important;
+    background: #dc3545 !important;
+    border-color: #dc3545 !important;
+}

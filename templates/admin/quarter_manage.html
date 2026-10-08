@@ -85,7 +85,7 @@
         box-shadow: 0 0 0 3px rgba(18,52,153,0.08);
         background: white;
     }
-    .form-input::placeholder { color: #adb5bd; }
+    .form-input::placeholder { color: #718096; }
 
     .form-row {
         display: grid;
@@ -619,7 +619,7 @@
                                 {% endif %}
                             </div>
                         </div>
-                        <form method="POST" action="{% url 'admin_panel:quarter_delete' quarter.id %}" style="display:contents;" onsubmit="return confirm('Delete {{ quarter.quarter_label|escapejs }}?')">
+                        <form method="POST" action="{% url 'admin_panel:quarter_delete' quarter.id %}" style="display:contents;" data-confirm="Delete {{ quarter.quarter_label }}?">
                             {% csrf_token %}
                             <button type="submit" class="btn-delete-icon" title="Delete">
                                 <i class="fas fa-trash"></i>
