@@ -1,517 +1,667 @@
 {% extends 'heads/base.html' %}
 {% load static %}
 
-{% block title %}KPUP Cognitive Discipline Dashboard{% endblock %}
+{% block title %}Academic Dashboard{% endblock %}
 
-{% block subtitle %}DepEd Order No. 8, s. 2015 &bull; {{ current_sy_label|default:"Current SY" }} &bull; {{ quarter_name|default:"Q3" }}{% endblock %}
+{% block subtitle %}Academic Dashboard{% if sy %} &bull; SY {{ sy.year_label }}{% endif %}{% if period_name %} &bull; {{ period_name }}{% endif %}{% endblock %}
 
 {% block extra_css %}
 <style>
-    .dashboard-layout { display: grid; grid-template-columns: 300px 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
-    @media (max-width: 1024px) { .dashboard-layout { grid-template-columns: 1fr; } }
-    @media (min-width: 1025px) { .dashboard-layout { align-items: flex-start; } }
+    .ad { --ink: #1a1a2e; --muted: #4a5568; --line: #e8ecf1; --soft: #f5f7fb; --brand: #123499;
+          --lv-advanced: #2E7D32; --lv-advanced-bg: #e8f5e9; --lv-proficient: #123499; --lv-proficient-bg: #e3f2fd;
+          --lv-approaching: #1565C0; --lv-approaching-bg: #e8eaf6; --lv-developing: #B45309; --lv-developing-bg: #fff3e0;
+          --lv-beginning: #C62828; --lv-beginning-bg: #ffebee; display: flex; flex-direction: column; gap: 1.25rem; }
+    .ad .card { background: #fff; border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
+    .ad h3 { font-size: 1rem; font-weight: 700; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.5rem; }
+    .ad .hint { font-size: 0.8rem; color: var(--muted); margin: 0.2rem 0 0; }
+    .ad .muted { color: var(--muted); font-weight: 600; }
 
-    .mode-toggle { display: flex; gap: 0; border-radius: 10px; overflow: hidden; border: 2px solid #e0e5ea; background: #f8f9fa; }
-    .mode-option { flex: 1; padding: 0.55rem 0.8rem; font-size: 0.73rem; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.2s; color: #4a5568; background: #f8f9fa; border: none; font-family: inherit; white-space: nowrap; }
-    .mode-option.active { background: #123499; color: white; }
-    .mode-option:hover:not(.active) { background: #e8ecf1; color: #1a1a2e; }
+    /* ---------- guided filters ---------- */
+    .guide { padding: 1rem 1.25rem 0.9rem; }
+    .guide-row { display: flex; flex-wrap: wrap; gap: 0.9rem 1.2rem; align-items: flex-end; }
+    .step { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
+    .step.grow { flex: 1 1 240px; }
+    .step-label { font-size: 0.76rem; font-weight: 700; color: var(--muted); display: flex; align-items: center; gap: 0.45rem; }
+    .step-no { width: 20px; height: 20px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 0.68rem;
+               display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .guide select { width: 100%; min-width: 150px; padding: 0.6rem 2rem 0.6rem 0.8rem; border: 2px solid #e0e5ea; border-radius: 10px;
+                    font-size: 0.88rem; font-family: inherit; color: var(--ink); background-color: var(--soft); cursor: pointer; }
+    .guide select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(18,52,153,0.12); background-color: #fff; }
+    .pair { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .pair select { width: auto; min-width: 165px; }
+    .pair select:first-child { min-width: 205px; }
+    .seg { display: inline-flex; border: 2px solid #e0e5ea; border-radius: 10px; overflow: hidden; background: var(--soft); }
+    .seg button { border: 0; background: transparent; padding: 0.58rem 0.95rem; font: inherit; font-size: 0.86rem; font-weight: 600;
+                  color: var(--muted); cursor: pointer; white-space: nowrap; }
+    .seg button[aria-checked="true"] { background: var(--brand); color: #fff; }
+    .seg button:not([aria-checked="true"]):hover { background: #e8ecf1; color: var(--ink); }
+    .guide-summary { margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px dashed var(--line); font-size: 0.84rem; color: var(--muted);
+                     display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; }
+    .guide-summary strong { color: var(--ink); }
+    .guide-summary .reset { margin-left: auto; color: var(--brand); font-weight: 600; text-decoration: none; }
+    .guide-summary .reset:hover { text-decoration: underline; }
 
-    .subject-card { background: white; border-radius: 20px; padding: 1.5rem; box-shadow: 0 2px 12px rgba(0,0,0,0.06); height: fit-content; border: 1px solid #e8ecf1; }
-    .subject-card-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.2rem; padding-bottom: 1rem; border-bottom: 2px solid #f0f4f8; }
-    .subject-icon { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #123499, #1a4dcc); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.3rem; flex-shrink: 0; }
-    .subject-card-title { font-size: 0.9rem; font-weight: 700; color: #1a1a2e; }
-    .subject-card-subtitle { font-size: 0.7rem; color: #4a5568; margin-top: 0.15rem; }
-    .subject-select { width: 100%; padding: 0.65rem 0.8rem; border: 2px solid #e0e5ea; border-radius: 10px; font-size: 0.8rem; background: #f8f9fa; cursor: pointer; font-family: inherit; color: #1a1a2e; transition: all 0.2s; }
-    .subject-select:focus { outline: none; border-color: #123499; box-shadow: 0 0 0 3px rgba(18,52,153,0.08); }
-    .subject-stats { margin-top: 1.2rem; display: flex; flex-direction: column; gap: 0.6rem; }
-    .subject-stat-row { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0.7rem; background: #f8f9fa; border-radius: 8px; font-size: 0.75rem; }
-    .subject-stat-label { color: #4a5568; font-weight: 500; }
-    .subject-stat-value { font-weight: 700; color: #1a1a2e; }
-    .k-badge { color: #2E7D32; } .p-badge { color: #123499; } .u-badge { color: #E65100; } .prod-badge { color: #6A1B9A; }
+    /* ---------- status ---------- */
+    .top-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 1.25rem; align-items: stretch; }
+    @media (max-width: 1100px) { .top-grid { grid-template-columns: 1fr; } }
+    .status { padding: 1.3rem 1.4rem; border-top: 5px solid var(--lv); }
+    .status .eyebrow { font-size: 0.74rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+    .status-main { display: flex; gap: 1rem; align-items: center; margin: 0.8rem 0 1rem; }
+    .status-badge { width: 68px; height: 68px; border-radius: 18px; background: var(--lv-bg); color: var(--lv); font-size: 1.45rem;
+                    font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 2px solid var(--lv); }
+    .status-level { font-size: 1.6rem; font-weight: 800; color: var(--lv); line-height: 1.15; }
+    .status-meaning { font-size: 0.86rem; color: var(--muted); margin-top: 0.25rem; line-height: 1.5; max-width: 70ch; }
+    .status-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.6rem; }
+    @media (max-width: 640px) { .status-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .fact { background: var(--soft); border-radius: 12px; padding: 0.7rem 0.85rem; }
+    .fact b { display: block; font-size: 1.3rem; color: var(--ink); line-height: 1.2; }
+    .fact span { font-size: 0.78rem; color: var(--muted); }
+    .fact .chg { display: inline-flex; align-items: center; gap: 0.15rem; font-size: 0.76rem; font-weight: 700; font-style: normal; }
+    .up { color: #2E7D32; } .down { color: #C62828; } .flat { color: var(--muted); }
+    .fact.alert b { color: #C62828; }
+    .poro-line { display: flex; gap: 0.8rem; align-items: flex-start; margin-top: 1rem; padding: 0.9rem 1rem; border-radius: 14px;
+                 background: linear-gradient(135deg, #f0f4ff, #e8eeff); border: 1px solid rgba(18,52,153,0.15); }
+    .poro-line img { width: 40px; height: 40px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
+    .poro-line p { margin: 0; font-size: 0.9rem; color: var(--ink); line-height: 1.6; }
+    .poro-tag { display: block; font-size: 0.7rem; font-weight: 700; color: var(--brand); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 0.15rem; }
+    .level-advanced { --lv: var(--lv-advanced); --lv-bg: var(--lv-advanced-bg); }
+    .level-proficient { --lv: var(--lv-proficient); --lv-bg: var(--lv-proficient-bg); }
+    .level-approaching { --lv: var(--lv-approaching); --lv-bg: var(--lv-approaching-bg); }
+    .level-developing { --lv: var(--lv-developing); --lv-bg: var(--lv-developing-bg); }
+    .level-beginning { --lv: var(--lv-beginning); --lv-bg: var(--lv-beginning-bg); }
 
-    .main-content { display: flex; flex-direction: column; gap: 1.5rem; }
-    .proficiency-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; }
-    @media (max-width: 1024px) { .proficiency-grid { grid-template-columns: repeat(3, 1fr); } }
-    @media (max-width: 640px) { .proficiency-grid { grid-template-columns: repeat(2, 1fr); } }
-    .prof-card { background: white; border-radius: 16px; padding: 1.2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center; transition: all 0.3s; cursor: pointer; border-top: 4px solid #e0e0e0; }
-    .prof-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
-    .prof-card.advanced { border-top-color: #2E7D32; }
-    .prof-card.proficient { border-top-color: #123499; }
-    .prof-card.approaching { border-top-color: #1565C0; }
-    .prof-card.developing { border-top-color: #E65100; }
-    .prof-card.beginning { border-top-color: #C62828; }
-    .prof-card .prof-value { font-size: 2rem; font-weight: 800; line-height: 1.2; }
-    .prof-card.advanced .prof-value { color: #2E7D32; }
-    .prof-card.proficient .prof-value { color: #123499; }
-    .prof-card.approaching .prof-value { color: #1565C0; }
-    .prof-card.developing .prof-value { color: #E65100; }
-    .prof-card.beginning .prof-value { color: #C62828; }
-    .prof-card .prof-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px; color: #4a5568; margin-top: 0.3rem; font-weight: 700; }
-    .prof-card .prof-range { font-size: 0.62rem; color: #718096; margin-top: 0.15rem; }
+    /* ---------- learners below 75 ---------- */
+    .watch { padding: 1.2rem 1.2rem 1rem; display: flex; flex-direction: column; }
+    .count { background: #ffebee; color: #C62828; border-radius: 20px; padding: 0.05rem 0.55rem; font-size: 0.78rem; }
+    .watch ul { list-style: none; margin: 0.8rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+    .watch li a { display: flex; justify-content: space-between; gap: 0.6rem; padding: 0.55rem 0.7rem; border: 1px solid var(--line);
+                  border-radius: 10px; text-decoration: none; color: var(--ink); transition: border-color 0.15s, background 0.15s; }
+    .watch li a:hover, .watch li a:focus-visible { border-color: #C62828; background: #fffafa; outline: none; }
+    .watch .who { font-size: 0.86rem; font-weight: 600; }
+    .watch .where { display: block; font-size: 0.76rem; color: var(--muted); font-weight: 400; margin-top: 0.1rem; }
+    .watch .low { font-size: 0.86rem; font-weight: 800; color: #C62828; white-space: nowrap; }
+    .link-btn { background: none; border: 0; padding: 0.5rem 0 0; color: var(--brand); font: inherit; font-size: 0.84rem; font-weight: 600; cursor: pointer; text-align: left; }
+    .link-btn:hover { text-decoration: underline; }
+    .empty-good { margin-top: 0.8rem; font-size: 0.86rem; color: #2E7D32; display: flex; gap: 0.5rem; align-items: center; }
 
-    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-    @media (max-width: 1024px) { .charts-row { grid-template-columns: 1fr; } }
-    .chart-card { background: white; border-radius: 20px; padding: 1.5rem; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 1px solid #e8ecf1; }
-    .chart-title { font-size: 0.85rem; font-weight: 700; color: #1a1a2e; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
-    .chart-title i { color: #123499; font-size: 1rem; }
-    .chart-container { position: relative; width: 100%; }
-    .chart-container canvas { max-height: 280px; width: 100% !important; }
+    /* ---------- sections table ---------- */
+    .classes { padding: 1.2rem 1.3rem 1rem; container-type: inline-size; }
+    .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+    .head-actions { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
+    .kpup-key { font-size: 0.78rem; color: var(--muted); }
+    .kpup-key b { color: var(--ink); }
+    .sec-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 0.88rem; }
+    .sec-table th { text-align: left; padding: 0.6rem 0.55rem; font-size: 0.74rem; font-weight: 700; color: var(--muted);
+                    text-transform: uppercase; letter-spacing: 0.4px; background: var(--soft); border-bottom: 2px solid var(--line); }
+    .sec-table th:first-child { border-radius: 10px 0 0 0; } .sec-table th:last-child { border-radius: 0 10px 0 0; }
+    .sec-table th button { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; }
+    .sec-table th button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 4px; }
+    .sec-table th button i { font-size: 0.7rem; opacity: 0.45; }
+    .sec-table th[aria-sort] button i { opacity: 1; color: var(--brand); }
+    .sec-table td { padding: 0.7rem 0.55rem; border-bottom: 1px solid #f0f3f7; color: var(--ink); vertical-align: middle; overflow-wrap: anywhere; }
+    .sec-table .num { text-align: right; }
+    .sec-table col.c-section { width: 24%; } .sec-table col.c-learners { width: 11%; } .sec-table col.c-k { width: 8%; }
+    .sec-table col.c-avg { width: 13%; } .sec-table col.c-level { width: 16%; } .sec-table col.c-go { width: 4%; }
+    .sec-row { cursor: pointer; transition: background 0.15s; }
+    .sec-row:hover, .sec-row:focus-visible { background: #eef2ff; outline: none; box-shadow: inset 3px 0 0 var(--brand); }
+    .sec-name { font-weight: 700; color: var(--ink); text-decoration: none; }
+    .sec-row:hover .sec-name { color: var(--brand); }
+    .sub { display: block; font-size: 0.76rem; color: var(--muted); margin-top: 0.1rem; font-weight: 400; }
+    .sub.danger { color: #C62828; font-weight: 600; }
+    .delta { display: inline-flex; align-items: center; gap: 0.1rem; font-size: 0.76rem; font-weight: 700; margin-left: 0.3rem; }
+    .lvl { display: inline-block; padding: 0.22rem 0.6rem; border-radius: 20px; font-size: 0.78rem; font-weight: 700; white-space: nowrap;
+           background: var(--lv-bg); color: var(--lv); }
+    .go { text-align: right; color: #a0aec0; }
+    .sec-row:hover .go { color: var(--brand); }
+    .row-low td:first-child { box-shadow: inset 4px 0 0 #C62828; }
+    .footnote { font-size: 0.76rem; color: var(--muted); margin: 0.8rem 0 0; }
+    .empty-row td { text-align: center; padding: 2.5rem 1rem; color: var(--muted); font-size: 0.9rem; }
+    /* narrow: each row becomes a small card, the text keeps its size */
+    @container (max-width: 760px) {
+        .sec-table, .sec-table tbody { display: block; }
+        .sec-table colgroup, .sec-table thead { display: none; }
+        .sec-table tr.sec-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.35rem 0.6rem; padding: 0.8rem 0.9rem;
+                                border: 1px solid var(--line); border-radius: 14px; margin-bottom: 0.6rem; }
+        .sec-table td { display: block; border: 0; padding: 0; text-align: left !important; }
+        .sec-table td[data-label]::before { content: attr(data-label); display: block; font-size: 0.7rem; font-weight: 700; color: var(--muted);
+                                            text-transform: uppercase; letter-spacing: 0.4px; }
+        .sec-table td.cell-section { grid-column: 1 / 3; grid-row: 1; } .sec-table td.cell-section::before { display: none; }
+        .sec-table td.cell-level { grid-column: 3 / 5; grid-row: 1; text-align: right !important; } .sec-table td.cell-level::before { display: none; }
+        .sec-table td.cell-avg { grid-column: 1 / 3; grid-row: 2; } .sec-table td.cell-learners { grid-column: 3 / 5; grid-row: 2; }
+        .sec-table td.cell-k { grid-row: 3; background: var(--soft); border-radius: 8px; padding: 0.3rem 0.5rem; white-space: nowrap; }
+        .sec-table td.cell-k::before { margin-bottom: 0.05rem; }
+        .sec-table .cell-section .sub { text-wrap: balance; }
+        .sec-table td.cell-learners .sub, .sec-table td.cell-avg .delta { display: inline; margin-left: 0.35rem; }
+        .sec-table td.go { display: none; }
+        .row-low td:first-child { box-shadow: none; } .sec-table tr.row-low { border-left: 4px solid #C62828; }
+    }
 
-    .insight-card { background: linear-gradient(135deg, #f0f4ff, #e8eeff); border-radius: 16px; padding: 1.2rem 1.5rem; border: 1px solid rgba(18,52,153,0.15); display: flex; align-items: flex-start; gap: 0.8rem; }
+    /* ---------- KPUP by section: one dot plot, one row per class ---------- */
+    .chart-card { padding: 1.2rem 1.3rem; container-type: inline-size; }
+    .kp-legend { display: flex; flex-wrap: wrap; gap: 0.45rem 1.1rem; font-size: 0.8rem; color: var(--muted); margin: 0 0 0.6rem; }
+    .kp-legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .kp-key { width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .kp-key.avg { width: 3px; height: 14px; border-radius: 2px; background: var(--ink); }
+    .kp-key.pass { width: 0; height: 14px; border-radius: 0; border-left: 2px dashed rgba(198,40,40,0.6); }
+    .k-color { background: #2E7D32; } .p-color { background: #123499; } .u-color { background: #E65100; } .pd-color { background: #6A1B9A; }
+    .kp { --name-w: 220px; --val-w: 118px; }
+    .kp-axis, .kp-link { display: grid; grid-template-columns: var(--name-w) minmax(0, 1fr) var(--val-w); align-items: center; gap: 0.9rem; }
+    .kp-axis { padding: 0 0.6rem 0.35rem; font-size: 0.74rem; font-weight: 700; color: var(--muted); border-bottom: 1px solid var(--line); }
+    .kp-axis .kp-head-val { text-align: right; }
+    .kp-ticks { position: relative; height: 1.1rem; }
+    .kp-ticks span { position: absolute; top: 0; transform: translateX(-50%); font-weight: 600; }
+    .kp-rows { list-style: none; margin: 0; padding: 0; }
+    .kp-row + .kp-row { border-top: 1px solid #f0f3f7; }
+    .kp-link { padding: 0.5rem 0.6rem; text-decoration: none; color: var(--ink); border-radius: 10px; }
+    .kp-link:hover, .kp-link:focus-visible { background: #f3f6ff; outline: none; box-shadow: inset 3px 0 0 var(--brand); }
+    .kp-name { min-width: 0; }
+    .kp-name b { display: block; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .kp-name small { display: block; font-size: 0.76rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .kp-flag { font-style: normal; font-size: 0.7rem; font-weight: 700; color: #C62828; background: #ffebee; border-radius: 10px;
+               padding: 0.05rem 0.45rem; margin-left: 0.35rem; vertical-align: 1px; }
+    .kp-track { position: relative; height: 30px; border-right: 1px solid #e9edf4; }
+    .kp-track > span { position: absolute; }
+    .kp-grid { top: 0; bottom: 0; border-left: 1px solid #e9edf4; }
+    .kp-pass { top: 0; bottom: 0; border-left: 2px dashed rgba(198,40,40,0.45); }
+    .kp-range { top: 50%; height: 4px; transform: translateY(-50%); background: #cfd8e8; border-radius: 4px; }
+    .kp-avg { top: 4px; bottom: 4px; width: 3px; margin-left: -1.5px; background: var(--ink); border-radius: 2px; }
+    .kp-dot { top: 50%; width: 13px; height: 13px; border-radius: 50%; transform: translate(-50%, -50%); border: 2px solid #fff;
+              box-shadow: 0 0 0 1px rgba(0,0,0,0.12); }
+    .kp-dot:hover, .kp-avg:hover { z-index: 5; }
+    .kp-dot:hover::after, .kp-avg:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+              white-space: nowrap; background: #1a1a2e; color: #fff; font-size: 0.74rem; font-weight: 600; padding: 0.25rem 0.5rem; border-radius: 6px;
+              pointer-events: none; }
+    .kp-val { justify-self: end; display: inline-flex; align-items: center; gap: 0.35rem; }
+    .kp-delta { display: inline-flex; align-items: center; gap: 0.1rem; font-size: 0.74rem; font-weight: 700; }
+    .kp-empty { padding: 1.5rem 0.6rem; text-align: center; color: var(--muted); font-size: 0.88rem; }
+    .kp-note { font-size: 0.76rem; color: var(--muted); margin: 0.7rem 0 0; }
+    .ad-modal-body.kp-body { padding-top: 0; }
+    .kp-body .kp-legend { margin-top: 0.8rem; }
+    .kp-body .kp-axis { position: sticky; top: 0; z-index: 4; background: #fff; padding-top: 0.5rem; }
+    @container (max-width: 640px) {
+        .kp { --val-w: 64px; }
+        .kp-axis, .kp-link { grid-template-columns: minmax(0, 1fr) var(--val-w); gap: 0.3rem 0.7rem; }
+        .kp-name { grid-column: 1 / -1; }
+        .kp-axis .kp-spacer { display: none; }
+        .kp-val { flex-direction: column; align-items: flex-end; gap: 0.1rem; }
+    }
 
-    .table-card { background: white; border-radius: 20px; padding: 1.5rem; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 1px solid #e8ecf1; }
-    .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
-    .table-header h3 { font-size: 0.9rem; font-weight: 700; color: #1a1a2e; }
-    .table-badge { font-size: 0.65rem; padding: 0.3rem 0.8rem; border-radius: 20px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-    .table-badge.advanced { background: #e8f5e9; color: #2E7D32; }
-    .table-badge.proficient { background: #e3f2fd; color: #123499; }
-    .table-badge.approaching { background: #e8eaf6; color: #1565C0; }
-    .table-badge.developing { background: #fff3e0; color: #E65100; }
-    .table-badge.beginning { background: #ffebee; color: #C62828; }
-    .table-wrapper { overflow-x: auto; border-radius: 12px; }
-    .data-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
-    .data-table th { text-align: left; padding: 0.7rem 0.8rem; border-bottom: 2px solid #e8ecf1; color: #4a5568; font-weight: 700; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 0.6px; background: #f8f9fa; white-space: nowrap; }
-    .data-table td { padding: 0.65rem 0.8rem; border-bottom: 1px solid #f0f4f8; }
-    .data-table tbody tr { transition: all 0.2s; }
-    .data-table tbody tr:hover { background: #f0f4ff; }
-
-    /* CLICKABLE SECTION ROWS */
-    .data-table tbody tr.section-row { cursor: pointer; }
-    .data-table tbody tr.section-row:hover { background: #e8eeff; box-shadow: inset 3px 0 0 #123499; }
-    .section-link-icon { color: #718096; font-size: 0.6rem; margin-left: 0.3rem; transition: all 0.2s; opacity: 0; }
-    .data-table tbody tr.section-row:hover .section-link-icon { opacity: 1; color: #123499; }
-
-    .proficiency-badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.65rem; font-weight: 600; }
-    .proficiency-badge.advanced { background: #e8f5e9; color: #2E7D32; }
-    .proficiency-badge.proficient { background: #e3f2fd; color: #123499; }
-    .proficiency-badge.approaching { background: #e8eaf6; color: #1565C0; }
-    .proficiency-badge.developing { background: #fff3e0; color: #E65100; }
-    .proficiency-badge.beginning { background: #ffebee; color: #C62828; }
-    .kpup-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-    .kpup-dot.k { background: #2E7D32; } .kpup-dot.p { background: #123499; } .kpup-dot.u { background: #E65100; } .kpup-dot.prod { background: #6A1B9A; }
-
-    .filter-card { background: white; border-radius: 16px; padding: 1rem 1.2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid #e8ecf1; margin-bottom: 1.5rem; }
-    .filter-row { display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: flex-end; }
-    .filter-group { flex: 1; min-width: 130px; }
-    .filter-group label { display: block; font-size: 0.65rem; font-weight: 600; color: #4a5568; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.3rem; }
-    .filter-group select { width: 100%; padding: 0.5rem 0.6rem; border: 2px solid #e0e5ea; border-radius: 8px; font-size: 0.78rem; background: #f8f9fa; cursor: pointer; font-family: inherit; color: #1a1a2e; }
-    .filter-group select:focus { outline: none; border-color: #123499; }
-
-    .at-risk-list::-webkit-scrollbar { width: 4px; } .at-risk-list::-webkit-scrollbar-track { background: transparent; }
-    .at-risk-list::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; } .at-risk-list::-webkit-scrollbar-thumb:hover { background: #ccc; }
-
-    @media (max-width: 768px) { .charts-row { grid-template-columns: 1fr; } .filter-row { flex-direction: column; } .filter-group { min-width: 100%; } .proficiency-grid { grid-template-columns: repeat(2, 1fr); } }
-    @keyframes poroPulse { 0%,100%{transform: scale(1); box-shadow: 0 6px 20px rgba(18,52,153,0.4);} 50%{transform: scale(1.06); box-shadow: 0 10px 28px rgba(18,52,153,0.55);} }
+    /* ---------- dialogs (all learners below 75, all sections) ---------- */
+    .ad-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); display: flex; align-items: center; justify-content: center;
+                z-index: 3000; padding: 1.5rem; }
+    .ad-modal[hidden] { display: none; }
+    .ad-modal-card { background: #fff; border-radius: 20px; width: min(900px, 100%); max-height: calc(100vh - 3rem); display: flex;
+                     flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.25); container-type: inline-size; }
+    .ad-modal-card.wide { width: min(1120px, 100%); }
+    .ad-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.1rem 1.3rem 0.8rem; }
+    .ad-modal-tools { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; padding: 0 1.3rem 0.9rem; border-bottom: 1px solid var(--line); }
+    .ad-modal-body { padding: 0.8rem 1.3rem 1.2rem; overflow-y: auto; }
+    .tools-count { margin-left: auto; font-size: 0.82rem; color: var(--muted); }
+    .ad-search { position: relative; flex: 0 1 340px; min-width: 0; }
+    .ad-search i { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 0.8rem; }
+    .ad-search input { width: 100%; padding: 0.55rem 0.8rem 0.55rem 2.1rem; border: 2px solid #e0e5ea; border-radius: 20px; font: inherit; font-size: 0.86rem;
+                    background: var(--soft); }
+    .ad-sortby { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.82rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
+    .ad-sortby select { padding: 0.5rem 0.8rem; border: 2px solid #e0e5ea; border-radius: 20px; font: inherit; font-size: 0.86rem; background: var(--soft); color: var(--ink); }
+    .ad-search input:focus, .ad-sortby select:focus { outline: none; border-color: var(--brand); background: #fff; }
+    .icon-btn { width: 36px; height: 36px; border-radius: 10px; border: 2px solid var(--line); background: #fff; cursor: pointer; font-size: 1rem;
+                display: inline-flex; align-items: center; justify-content: center; color: var(--muted); flex-shrink: 0; }
+    .icon-btn:hover { border-color: #dc3545; color: #dc3545; }
+    .watch-all { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+    .watch-all a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.2rem 0.8rem; align-items: center; padding: 0.6rem 0.8rem;
+                   border: 1px solid var(--line); border-radius: 12px; text-decoration: none; color: var(--ink); }
+    .watch-all a:hover, .watch-all a:focus-visible { border-color: #C62828; background: #fffafa; outline: none; }
+    .watch-all .who { font-weight: 700; font-size: 0.9rem; }
+    .watch-all .where { font-size: 0.8rem; color: var(--muted); }
+    .watch-all .chips { grid-column: 1 / 2; display: flex; flex-wrap: wrap; gap: 0.3rem; }
+    .watch-all .chip { font-size: 0.74rem; font-weight: 700; padding: 0.12rem 0.5rem; border-radius: 12px; background: #ffebee; color: #C62828; }
+    .watch-all .low { grid-row: 1 / 3; grid-column: 2; font-size: 1.05rem; font-weight: 800; color: #C62828; }
+    .ad-none { padding: 1.5rem; text-align: center; color: var(--muted); font-size: 0.88rem; }
+    @container (max-width: 560px) {
+        .ad-search, .ad-sortby { flex: 1 1 100%; } .tools-count { margin-left: 0; }
+        .ad-sortby select { flex: 1 1 auto; min-width: 0; }
+    }
+    .ad-modal-card:focus { outline: none; }
 </style>
 {% endblock %}
 
 {% block content %}
+<div id="armsLive" data-fingerprint="{{ live_fingerprint }}" hidden></div>
+<div class="ad">
 
-<!-- FILTERS -->
-<div class="filter-card">
-    <form method="GET" class="filter-row" id="filterForm">
-        <!-- View Mode Toggle -->
-        <div class="filter-group" style="flex: 1.5; min-width: 220px;">
-            <label>🔍 View Mode</label>
-            <div class="mode-toggle">
-                <button type="button" class="mode-option {% if view_mode == 'all' or not view_mode %}active{% endif %}" 
-                        id="modeAllSubjects" onclick="switchMode('all')">
-                    📋 All Subjects
-                </button>
-                <button type="button" class="mode-option {% if view_mode == 'family' %}active{% endif %}" 
-                        id="modeByFamily" onclick="switchMode('family')">
-                    📚 By Discipline (Family)
-                </button>
-            </div>
-            <input type="hidden" name="view_mode" id="viewModeInput" value="{{ view_mode|default:'all' }}">
-        </div>
-
-        <!-- Subject Family -->
-        <div class="filter-group" id="familyFilterGroup" style="flex: 1.5; min-width: 200px; {% if view_mode != 'family' %}display:none;{% endif %}">
-            <label>📁 Discipline (Subject Family)</label>
-            <select name="subject_family" onchange="this.form.submit()">
-                <option value="">-- Select Discipline --</option>
-                {% for family in subject_families %}
-                <option value="{{ family.id }}" {% if selected_subject_family_id|stringformat:"s" == family.id|stringformat:"s" %}selected{% endif %}>
-                    {{ family.family_name }} ({{ family.family_code }})
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-        
-        <div class="filter-group">
-            <label>School Year</label>
-            <select name="school_year" onchange="this.form.submit()">
-                {% for sy in available_sy %}
-                <option value="{{ sy.id }}" {% if current_sy_id == sy.id %}selected{% endif %}>{{ sy }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>Quarter</label>
-            <select name="quarter" onchange="this.form.submit()">
-                <option value="Q1" {% if quarter_label == 'Q1' %}selected{% endif %}>First Quarter</option>
-                <option value="Q2" {% if quarter_label == 'Q2' %}selected{% endif %}>Second Quarter</option>
-                <option value="Q3" {% if quarter_label == 'Q3' %}selected{% endif %}>Third Quarter</option>
-                <option value="Q4" {% if quarter_label == 'Q4' %}selected{% endif %}>Fourth Quarter</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>Grade Level</label>
-            <select name="grade_level" onchange="this.form.submit()">
-                <option value="all">All Grade Levels</option>
-                {% for gl in grade_levels %}
-                <option value="{{ gl.id }}" {% if selected_grade|stringformat:"s" == gl.id|stringformat:"s" %}selected{% endif %}>{{ gl.grade_name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-    </form>
-</div>
-
-<div class="dashboard-layout">
-    
-    <!-- LEFT SIDEBAR -->
-    <div style="display:flex;flex-direction:column;gap:1.5rem;position:sticky;top:1rem;">
-        
-        <!-- Discipline/Subject Card -->
-        <div class="subject-card">
-            <div class="subject-card-header">
-                <div class="subject-icon" style="background: linear-gradient(135deg, {{ selected_subject_family.color_hex|default:'#123499' }}, #1a4dcc);">
-                    <i class="{{ selected_subject_family.icon_class|default:'fi fi-rr-books' }}"></i>
-                </div>
-                <div>
-                    <div class="subject-card-title">
-                        {% if selected_subject_family and not selected_subject %}
-                            {{ selected_subject_family.family_name }}
-                        {% elif selected_subject %}
-                            {{ selected_subject.subject_name }}
-                        {% else %}
-                            Select a Discipline or Subject
-                        {% endif %}
-                    </div>
-                    <div class="subject-card-subtitle">
-                        {% if selected_subject_family and not selected_subject %}
-                            All Grade Levels Combined
-                        {% elif selected_subject_family and selected_subject %}
-                            {{ selected_subject.subject_code }} — {{ selected_subject.grade_level.grade_name }}
-                        {% elif selected_subject %}
-                            {{ selected_subject.subject_code }}
-                        {% else %}
-                            Use filters above to begin
-                        {% endif %}
-                    </div>
+    <!-- 1. Guided filters: what to review, then which grade, then which period -->
+    <section class="card guide" aria-label="Choose what to review">
+        <form method="get" id="filterForm" class="guide-row">
+            <input type="hidden" name="view_mode" id="viewMode" value="{{ view_mode }}">
+            <div class="step">
+                <span class="step-label" id="stepMode"><span class="step-no">1</span> Review by</span>
+                <div class="seg" role="radiogroup" aria-labelledby="stepMode">
+                    <button type="button" role="radio" data-mode="family" aria-checked="{% if view_mode == 'family' %}true{% else %}false{% endif %}">Discipline</button>
+                    <button type="button" role="radio" data-mode="subject" aria-checked="{% if view_mode == 'subject' %}true{% else %}false{% endif %}">One subject</button>
                 </div>
             </div>
-            
-            <form method="GET" id="subjectForm">
-                <input type="hidden" name="school_year" value="{{ current_sy_id }}">
-                <input type="hidden" name="quarter" value="{{ quarter_label }}">
-                <input type="hidden" name="grade_level" value="{{ selected_grade }}">
-                <input type="hidden" name="subject_family" value="{{ selected_subject_family_id }}">
-                <input type="hidden" name="view_mode" value="{{ view_mode|default:'all' }}">
-                <select name="subject" class="subject-select" onchange="this.form.submit()">
-                    {% if selected_subject_family %}
-                        <option value="">📊 All {{ selected_subject_family.family_name }} (Combined)</option>
-                        <option disabled>── Individual Subjects ──</option>
-                    {% endif %}
-                    {% for subj in all_subjects %}
-                    <option value="{{ subj.id }}" {% if selected_subject_id|stringformat:"s" == subj.id|stringformat:"s" %}selected{% endif %}>
-                        {{ subj.subject_code }} — {{ subj.subject_name }}
-                    </option>
+
+            {% if view_mode == 'family' %}
+            <label class="step grow">
+                <span class="step-label"><span class="step-no">2</span> Discipline</span>
+                <select name="subject_family" class="auto-submit">
+                    {% for f in families %}<option value="{{ f.id }}" {% if family and f.id == family.id %}selected{% endif %}>{{ f.family_name }}</option>{% endfor %}
+                </select>
+            </label>
+            <label class="step">
+                <span class="step-label"><span class="step-no">3</span> Grade level</span>
+                <select name="grade_level" class="auto-submit">
+                    <option value="all">All grade levels</option>
+                    {% for gl in grade_levels %}<option value="{{ gl.id }}" {% if grade_id == gl.id|stringformat:"s" %}selected{% endif %}>{{ gl.grade_name }}</option>{% endfor %}
+                </select>
+            </label>
+            {% else %}
+            <label class="step grow">
+                <span class="step-label"><span class="step-no">2</span> Subject</span>
+                <select name="subject" class="auto-submit">
+                    {% for group, items in subject_groups %}
+                    <optgroup label="{{ group }}">
+                        {% for s in items %}<option value="{{ s.id }}" {% if subject and s.id == subject.id %}selected{% endif %}>{{ s.subject_name }} ({{ s.subject_code }})</option>{% endfor %}
+                    </optgroup>
                     {% endfor %}
                 </select>
-            </form>
-            
-            {% if selected_subject or selected_subject_family %}
-            <div class="subject-stats">
-                <div class="subject-stat-row">
-                    <span class="subject-stat-label">Overall Average</span>
-                    <span class="subject-stat-value">{{ overall_avg }}%</span>
-                </div>
-                <div class="subject-stat-row">
-                    <span class="subject-stat-label">Proficiency Level</span>
-                    <span class="subject-stat-value">{{ overall_level }} ({{ overall_letter }})</span>
-                </div>
-                <div class="subject-stat-row">
-                    <span class="subject-stat-label">Total Students</span>
-                    <span class="subject-stat-value">{{ total_students }}</span>
-                </div>
-                <div class="subject-stat-row">
-                    <span class="subject-stat-label k-badge">Knowledge (K)</span>
-                    <span class="subject-stat-value k-badge">{{ overall_k }}%</span>
-                </div>
-                <div class="subject-stat-row">
-                    <span class="subject-stat-label p-badge">Process (P)</span>
-                    <span class="subject-stat-value p-badge">{{ overall_p }}%</span>
-                </div>
-                <div class="subject-stat-row">
-                    <span class="subject-stat-label u-badge">Understanding (U)</span>
-                    <span class="subject-stat-value u-badge">{{ overall_u }}%</span>
-                </div>
-                <div class="subject-stat-row">
-                    <span class="subject-stat-label prod-badge">Product (P)</span>
-                    <span class="subject-stat-value prod-badge">{{ overall_product }}%</span>
-                </div>
-            </div>
+            </label>
             {% endif %}
-        </div>
 
-        <!-- At-Risk Students Card -->
-        {% if at_risk_students %}
-        <div class="subject-card" style="padding:1.2rem;">
-            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;padding-bottom:0.8rem;border-bottom:2px solid #f0f4f8;">
-                <div style="width:32px;height:32px;border-radius:8px;background:#ffebee;display:flex;align-items:center;justify-content:center;color:#C62828;font-size:0.9rem;flex-shrink:0;">
-                    <i class="fi fi-rr-user-alert"></i>
+            <div class="step">
+                <span class="step-label"><span class="step-no">{% if view_mode == 'family' %}4{% else %}3{% endif %}</span> Period</span>
+                <div class="pair">
+                    <select name="quarter" class="auto-submit" aria-label="Grading period">
+                        {% for p in period_options %}<option value="{{ p.value }}" {% if period and p.value == period.quarter_label %}selected{% endif %}>{{ p.name }}{% if p.current %} (current){% endif %}</option>{% endfor %}
+                    </select>
+                    <select name="school_year" class="auto-submit" aria-label="School year">
+                        {% for y in school_years %}<option value="{{ y.id }}" {% if sy and y.id == sy.id %}selected{% endif %}>SY {{ y.year_label }}</option>{% endfor %}
+                    </select>
                 </div>
+            </div>
+        </form>
+        <div class="guide-summary">
+            <i class="fi fi-rr-eye"></i>
+            <span>Showing <strong>{{ scope_name }}</strong>{% if scope_detail %} &middot; {{ scope_detail }}{% endif %}{% if period_name %} &middot; {{ period_name }}{% endif %}{% if sy %} &middot; SY {{ sy.year_label }}{% endif %}</span>
+            <a class="reset" href="?reset=1">Start over</a>
+        </div>
+    </section>
+
+    {% if status %}
+    <!-- 2. One status for the selection, and who needs help now -->
+    <div class="top-grid">
+        <section class="card status level-{{ status.level.key }}" aria-labelledby="statusTitle">
+            <span class="eyebrow">School status &middot; {{ scope_name }}{% if scope_detail %} &middot; {{ scope_detail }}{% endif %} &middot; {{ period_name }}</span>
+            <div class="status-main">
+                <div class="status-badge" aria-hidden="true">{{ status.level.letter }}</div>
                 <div>
-                    <div style="font-size:0.8rem;font-weight:700;color:#1a1a2e;">At-Risk Students</div>
-                    <div style="font-size:0.65rem;color:#4a5568;">{{ at_risk_students|length }} student(s) detected</div>
+                    <div class="status-level" id="statusTitle">{{ status.level.name }}</div>
+                    <div class="status-meaning">{{ status.level.meaning }}</div>
                 </div>
             </div>
-            <div class="at-risk-list" style="display:flex;flex-direction:column;gap:0.6rem;max-height:350px;overflow-y:auto;">
-                {% for student in at_risk_students %}
-                <div style="padding:0.6rem 0.7rem;background:#fff;border-radius:10px;border:1px solid #f0f0f0;transition:all 0.2s;cursor:pointer;"
-                    onmouseover="this.style.borderColor='#C62828';this.style.boxShadow='0 2px 8px rgba(198,40,40,0.08)';"
-                    onmouseout="this.style.borderColor='#f0f0f0';this.style.boxShadow='none';">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <span style="font-size:0.73rem;font-weight:600;color:#1a1a2e;">{{ student.name|truncatechars:18 }}</span>
-                        <span style="font-size:0.6rem;font-weight:700;color:#C62828;">{{ student.lowest_grade }}%</span>
-                    </div>
-                    <div style="font-size:0.62rem;color:#4a5568;margin-top:0.2rem;">{{ student.section|truncatechars:20 }}</div>
-                    <div style="font-size:0.6rem;color:#718096;margin-top:0.2rem;display:flex;align-items:center;gap:0.3rem;">
-                        <i class="fi fi-rr-book" style="font-size:0.5rem;"></i>
-                        {{ student.failed_count }} failed: {{ student.subjects|truncatechars:30 }}
-                    </div>
+            <div class="status-facts">
+                <div class="fact">
+                    <b>{{ status.average }}%</b>
+                    <span>Average grade</span>
+                    {% if status.delta is not None %}
+                    <span class="chg {% if status.delta > 0 %}up{% elif status.delta < 0 %}down{% else %}flat{% endif %}">
+                        {% if status.delta > 0 %}<i class="fi fi-rr-caret-up"></i>{% elif status.delta < 0 %}<i class="fi fi-rr-caret-down"></i>{% else %}no change{% endif %}{% if status.delta %}{{ status.delta_abs }}{% endif %} vs {{ prev_period_name }}
+                    </span>
+                    {% endif %}
                 </div>
+                <div class="fact"><b>{{ status.passing_rate }}%</b><span>Passing (75 and above)</span></div>
+                <div class="fact {% if status.below %}alert{% endif %}"><b>{{ status.below }}</b><span>Learners below 75</span></div>
+                <div class="fact"><b>{{ status.learners }}</b><span>Learners in {{ status.classes }} class{{ status.classes|pluralize:"es" }}</span></div>
+            </div>
+            <div class="poro-line">
+                <img src="{% static 'shared/poro/Poro.png' %}" alt="" onerror="this.remove()">
+                <p><span class="poro-tag">Poro AI</span>{{ status.insight }}</p>
+            </div>
+        </section>
+
+        <aside class="card watch" id="watchCard" aria-labelledby="watchTitle">
+            <h3 id="watchTitle"><i class="fi fi-rr-user-time" style="color:#C62828;"></i> Learners below 75 {% if at_risk %}<span class="count">{{ at_risk|length }}</span>{% endif %}</h3>
+            {% if at_risk %}
+            <p class="hint">Remediation is required (DepEd Order No. 8, s. 2015). Open a name to see the class.</p>
+            <ul>
+                {% for f in at_risk %}{% if forloop.counter <= 6 %}
+                <li>
+                    <a href="{{ f.url }}">
+                        <span class="who">{{ f.name }}<span class="where">{{ f.section }} &middot; {% for i in f.items %}{{ i.subject }}{% if not forloop.last %}, {% endif %}{% endfor %}</span></span>
+                        <span class="low">{{ f.lowest|floatformat:1 }}</span>
+                    </a>
+                </li>
+                {% endif %}{% endfor %}
+            </ul>
+            {% if at_risk|length > 6 %}<button type="button" class="link-btn" id="watchMore" aria-haspopup="dialog" aria-controls="watchModal">Show all {{ at_risk|length }} learners</button>{% endif %}
+            {% else %}
+            <p class="empty-good"><i class="fi fi-rr-check-circle"></i> No learner is below 75 for this selection.</p>
+            {% endif %}
+        </aside>
+    </div>
+
+    {% if at_risk|length > 6 %}
+    <div class="ad-modal" id="watchModal" role="dialog" aria-modal="true" aria-labelledby="watchModalTitle" hidden>
+        <div class="ad-modal-card" tabindex="-1">
+            <div class="ad-modal-head">
+                <div>
+                    <h3 id="watchModalTitle"><i class="fi fi-rr-user-time" style="color:#C62828;"></i> Learners below 75 <span class="count">{{ at_risk|length }}</span></h3>
+                    <p class="hint">{{ scope_name }}{% if scope_detail %} &middot; {{ scope_detail }}{% endif %} &middot; {{ period_name }}. Remediation is required (DepEd Order No. 8, s. 2015). Open a name to see the class.</p>
+                </div>
+                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
+            </div>
+            <div class="ad-modal-tools">
+                <label class="ad-search"><i class="fi fi-rr-search"></i><input type="search" id="watchSearch" placeholder="Find a learner, section or subject" aria-label="Find a learner, section or subject"></label>
+                <label class="ad-sortby">Sort by
+                    <select id="watchSort">
+                        <option value="low">Lowest grade first</option>
+                        <option value="name">Name (A to Z)</option>
+                        <option value="section">Section</option>
+                    </select>
+                </label>
+                <a class="btn-outline btn-sm" href="{{ export_url }}"><i class="fi fi-rr-download"></i> Download list</a>
+                <span class="tools-count" id="watchCount" aria-live="polite"></span>
+            </div>
+            <div class="ad-modal-body">
+                <ul class="watch-all" id="watchAll">
+                    {% for f in at_risk %}
+                    <li data-name="{{ f.name|lower }}" data-section="{{ f.section|lower }}" data-low="{{ f.lowest }}"
+                        data-text="{{ f.name|lower }} {{ f.section|lower }} {% for i in f.items %}{{ i.subject|lower }} {% endfor %}">
+                        <a href="{{ f.url }}">
+                            <span><span class="who">{{ f.name }}</span> <span class="where">&middot; {{ f.section }}</span></span>
+                            <span class="chips">{% for i in f.items %}<span class="chip">{{ i.subject }} {{ i.grade|floatformat:1 }}</span>{% endfor %}</span>
+                            <span class="low">{{ f.lowest|floatformat:1 }}</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <p class="ad-none" id="watchNone" hidden>No learner matches.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <!-- 3. Sections: open a row to see its analysis -->
+    <section class="card classes" id="classes" aria-labelledby="classesTitle">
+        <div class="card-head">
+            <div>
+                <h3 id="classesTitle"><i class="fi fi-rr-users-alt" style="color:#123499;"></i> Sections <span class="muted">{{ table|length }}</span></h3>
+                <p class="hint">Open a row to see the section's Poro AI brief, trend and learners. Rows marked red average below 75.</p>
+            </div>
+            <div class="head-actions">
+                <span class="kpup-key"><b>K</b> Knowledge &middot; <b>Pr</b> Process &middot; <b>U</b> Understanding &middot; <b>Pd</b> Product</span>
+                {% if table %}<a class="btn-outline btn-sm" href="{{ export_url }}"><i class="fi fi-rr-download"></i> Download report</a>{% endif %}
+            </div>
+        </div>
+        <table class="sec-table" id="secTable">
+            <colgroup><col class="c-section"><col class="c-learners"><col class="c-k"><col class="c-k"><col class="c-k"><col class="c-k"><col class="c-avg"><col class="c-level"><col class="c-go"></colgroup>
+            <thead>
+                <tr>
+                    <th scope="col"><button type="button" data-sort="section">Section <i class="fi fi-rr-sort-alt"></i></button></th>
+                    <th scope="col" class="num"><button type="button" data-sort="learners">Learners <i class="fi fi-rr-sort-alt"></i></button></th>
+                    <th scope="col" class="num" title="Knowledge">K</th>
+                    <th scope="col" class="num" title="Process">Pr</th>
+                    <th scope="col" class="num" title="Understanding">U</th>
+                    <th scope="col" class="num" title="Product">Pd</th>
+                    <th scope="col" class="num"><button type="button" data-sort="overall">Average <i class="fi fi-rr-sort-alt"></i></button></th>
+                    <th scope="col"><button type="button" data-sort="level">Level <i class="fi fi-rr-sort-alt"></i></button></th>
+                    <th scope="col"><span class="sr-only">Open</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in table %}
+                <tr class="sec-row level-{{ r.level.key }}{% if r.overall < 75 %} row-low{% endif %}" tabindex="0" data-href="{{ r.url }}"
+                    data-section="{{ forloop.counter0 }}" data-learners="{{ r.learners }}" data-overall="{{ r.overall }}">
+                    <td class="cell-section" data-label="Section">
+                        <a class="sec-name" href="{{ r.url }}" tabindex="-1">{{ r.section_name }}</a>
+                        <span class="sub">{{ r.grade_level }}{% if view_mode == 'family' %} &middot; {{ r.subject_name }}{% endif %}</span>
+                    </td>
+                    <td class="num cell-learners" data-label="Learners">{{ r.learners }}{% if r.below %}<span class="sub danger">{{ r.below }} below 75</span>{% endif %}</td>
+                    <td class="num cell-k" data-label="K">{{ r.k }}</td>
+                    <td class="num cell-k" data-label="Pr">{{ r.p }}</td>
+                    <td class="num cell-k" data-label="U">{{ r.u }}</td>
+                    <td class="num cell-k" data-label="Pd">{{ r.pd }}</td>
+                    <td class="num cell-avg" data-label="Average">
+                        <strong>{{ r.overall }}%</strong>
+                        {% if r.delta %}<span class="delta {% if r.delta > 0 %}up{% else %}down{% endif %}" title="Change vs {{ prev_period_name }}"><i class="fi {% if r.delta > 0 %}fi-rr-caret-up{% else %}fi-rr-caret-down{% endif %}"></i>{{ r.delta_abs }}</span>{% endif %}
+                    </td>
+                    <td class="cell-level" data-label="Level"><span class="lvl">{{ r.level.short }} ({{ r.level.letter }})</span></td>
+                    <td class="go"><i class="fi fi-rr-angle-small-right"></i></td>
+                </tr>
+                {% empty %}
+                <tr class="empty-row"><td colspan="9"><i class="fi fi-rr-chart-line-up" style="font-size:1.6rem;display:block;margin-bottom:0.4rem;"></i>No grades for this selection yet.</td></tr>
                 {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-        
-    </div>
+            </tbody>
+        </table>
+        {% if table %}<p class="footnote">K, Pr, U and Pd are estimated from each class average with the DepEd Order No. 73, s. 2012 weights. The average and level come from the actual grades.</p>{% endif %}
+    </section>
 
-    <!-- RIGHT MAIN CONTENT -->
-    <div class="main-content">
-        
-        <!-- Proficiency Stat Cards (5 cards for DO 31) -->
-        <div class="proficiency-grid">
-            <div class="prof-card advanced">
-                <div class="prof-value">{{ total_advanced }}</div>
-                <div class="prof-label">Advanced</div>
-                <div class="prof-range">90% - 100%</div>
+    {% if table %}
+    <!-- 4. KPUP by section: one row per class on a shared scale; the lowest six here, every class in the dialog -->
+    <section class="card chart-card" aria-labelledby="chartTitle">
+        <div class="card-head">
+            <div>
+                <h3 id="chartTitle"><i class="fi fi-rr-chart-scatter" style="color:#123499;"></i> KPUP by section</h3>
+                <p class="hint">One row per class, all on the same scale. Lowest averages first{% if table|length > 6 %}, 6 of {{ table|length }} shown{% endif %}. Point at a dot for its score.</p>
             </div>
-            <div class="prof-card proficient">
-                <div class="prof-value">{{ total_proficient }}</div>
-                <div class="prof-label">Proficient</div>
-                <div class="prof-range">85% - 89%</div>
-            </div>
-            <div class="prof-card approaching">
-                <div class="prof-value">{{ total_approaching }}</div>
-                <div class="prof-label">Approaching Prof.</div>
-                <div class="prof-range">80% - 84%</div>
-            </div>
-            <div class="prof-card developing">
-                <div class="prof-value">{{ total_developing }}</div>
-                <div class="prof-label">Developing</div>
-                <div class="prof-range">75% - 79%</div>
-            </div>
-            <div class="prof-card beginning">
-                <div class="prof-value">{{ total_beginning }}</div>
-                <div class="prof-label">Beginning</div>
-                <div class="prof-range">Below 75%</div>
-            </div>
+            {% if table|length > 6 %}<button type="button" class="btn-outline btn-sm" id="openChart" aria-haspopup="dialog" aria-controls="kpModal"><i class="fi fi-rr-expand"></i> View all {{ table|length }} sections</button>{% endif %}
         </div>
-        
-        <!-- Charts Row -->
-        <div class="charts-row">
-            <div class="chart-card">
-                <div class="chart-title"><i class="fi fi-rr-radar"></i> KPUP Cognitive Discipline Profile</div>
-                <div class="chart-container"><canvas id="kpupRadarChart"></canvas></div>
-            </div>
-            <div class="chart-card">
-                <div class="chart-title"><i class="fi fi-rr-chart-pie-alt"></i> Proficiency Distribution</div>
-                <div class="chart-container"><canvas id="proficiencyDonut"></canvas></div>
-            </div>
+        <div class="kp-legend" aria-hidden="true">
+            <span><i class="kp-key k-color"></i>Knowledge (K)</span><span><i class="kp-key p-color"></i>Process (Pr)</span>
+            <span><i class="kp-key u-color"></i>Understanding (U)</span><span><i class="kp-key pd-color"></i>Product (Pd)</span>
+            <span><i class="kp-key avg"></i>Class average</span><span><i class="kp-key pass"></i>Passing (75)</span>
         </div>
-        
-        <!-- Poro AI Insight -->
-        <div class="insight-card">
-            <div style="width: 52px; height: 52px; background: linear-gradient(135deg, #123499, #4a6fd4); border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 6px 20px rgba(18,52,153,0.4); animation: poroPulse 2.5s ease infinite; overflow: hidden;">
-                <img src="{% static 'shared/poro/Poro.png' %}" alt="Poro AI" style="width: 100%; height: 100%; object-fit: cover;"
-                     onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\'font-size:1.4rem;color:white;\'><i class=\'fi fi-rr-robot\'></i></span>';">
-            </div>
-            <div style="flex:1;">
-                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;">
-                    <span style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.8px;color:#123499;font-weight:700;">Poro AI Analysis</span>
-                    <span style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 0.15rem 0.6rem; border-radius: 20px; font-size: 0.6rem; font-weight: 600;">KPUP Classifier</span>
+        <div class="kp" id="kpInline" data-prev="{{ prev_period_name }}"></div>
+        <p class="kp-note">K, Pr, U and Pd are estimated from each class average, so the dots keep the same spacing in every row. Compare where the rows sit.</p>
+    </section>
+
+    {% if table|length > 6 %}
+    <div class="ad-modal" id="kpModal" role="dialog" aria-modal="true" aria-labelledby="kpModalTitle" hidden>
+        <div class="ad-modal-card wide" tabindex="-1">
+            <div class="ad-modal-head">
+                <div>
+                    <h3 id="kpModalTitle"><i class="fi fi-rr-chart-scatter" style="color:#123499;"></i> KPUP by section &middot; all {{ table|length }}</h3>
+                    <p class="hint">{{ scope_name }}{% if scope_detail %} &middot; {{ scope_detail }}{% endif %} &middot; {{ period_name }}. Open a row to see that class's Poro AI brief.</p>
                 </div>
-                <div style="font-size:0.82rem;color:#1a1a2e;line-height:1.6;">{{ ai_insight }}</div>
+                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
+            </div>
+            <div class="ad-modal-tools">
+                <label class="ad-search"><i class="fi fi-rr-search"></i><input type="search" id="kpSearch" placeholder="Find a section or subject" aria-label="Find a section or subject"></label>
+                <label class="ad-sortby">Sort by
+                    <select id="kpSort">
+                        <option value="low">Lowest average first</option>
+                        <option value="high">Highest average first</option>
+                        <option value="below">Most learners below 75</option>
+                        {% if prev_period_name %}<option value="drop">Biggest drop since {{ prev_period_name }}</option>{% endif %}
+                        <option value="grade">Grade level</option>
+                        <option value="name">Section name (A to Z)</option>
+                    </select>
+                </label>
+                <span class="tools-count" id="kpCount" aria-live="polite"></span>
+            </div>
+            <div class="ad-modal-body kp-body">
+                <div class="kp-legend" aria-hidden="true">
+                    <span><i class="kp-key k-color"></i>Knowledge (K)</span><span><i class="kp-key p-color"></i>Process (Pr)</span>
+                    <span><i class="kp-key u-color"></i>Understanding (U)</span><span><i class="kp-key pd-color"></i>Product (Pd)</span>
+                    <span><i class="kp-key avg"></i>Class average</span><span><i class="kp-key pass"></i>Passing (75)</span>
+                </div>
+                <div class="kp" id="kpAll"></div>
             </div>
         </div>
-
-        <!-- Section KPUP Table (CLICKABLE ROWS) -->
-        <div class="table-card">
-            <div class="table-header">
-                <h3><i class="fi fi-rr-table"></i> Section KPUP Breakdown — {{ display_subject_name }}</h3>
-                {% if overall_level and overall_level != 'N/A' %}
-                <span class="table-badge {{ overall_level|lower|cut:' ' }}">{{ overall_level }} ({{ overall_letter }})</span>
-                {% endif %}
-            </div>
-            <div class="table-wrapper">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Section</th><th>Grade</th><th>Students</th>
-                            <th>Knowledge (K)</th><th>Process (Pr)</th><th>Understanding (U)</th><th>Product (Pd)</th>
-                            <th>Overall</th><th>Classification</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for s in section_kpup_data %}
-                            <tr class="section-row" onclick="goToSection('{{ s.section_id }}', '{{ s.subject_id|default:selected_subject_id }}', '{{ current_quarter_id }}')" title="Click to view section detail">                            <td>
-                                <strong>{{ s.section_name }}</strong>
-                                <span class="section-link-icon"><i class="fi fi-rr-arrow-right"></i></span>
-                            </td>
-                            <td>{{ s.grade_level }}</td>
-                            <td>{{ s.total_students }}</td>
-                            <td><span class="kpup-dot k"></span> {{ s.avg_k }}%</td>
-                            <td><span class="kpup-dot p"></span> {{ s.avg_p }}%</td>
-                            <td><span class="kpup-dot u"></span> {{ s.avg_u }}%</td>
-                            <td><span class="kpup-dot prod"></span> {{ s.avg_product }}%</td>
-                            <td><strong>{{ s.overall }}%</strong></td>
-                            <td><span class="proficiency-badge {{ s.proficiency_level|lower|cut:' ' }}">{{ s.proficiency_level }} ({{ s.letter_grade }})</span></td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="9" style="text-align:center;padding:3rem;color:#4a5568;">
-                                <i class="fi fi-rr-chart-line-up" style="font-size:2rem;display:block;margin-bottom:0.5rem;"></i>
-                                No KPUP data available for the selected filters.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        {% if section_kpup_data %}
-        <div class="chart-card">
-            <div class="chart-title"><i class="fi fi-rr-chart-bar"></i> KPUP Dimensions by Section</div>
-            <div class="chart-container"><canvas id="sectionKpupChart"></canvas></div>
-        </div>
-        {% endif %}
-        
     </div>
+    {% endif %}
+    {{ chart|json_script:"kpupData" }}
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-function switchMode(mode) {
-    document.getElementById('viewModeInput').value = mode;
-    document.getElementById('modeAllSubjects').classList.toggle('active', mode === 'all');
-    document.getElementById('modeByFamily').classList.toggle('active', mode === 'family');
-    document.getElementById('familyFilterGroup').style.display = (mode === 'family') ? 'block' : 'none';
-    if (mode === 'all') {
-        document.querySelector('select[name="subject_family"]').value = '';
+(function () {
+    var form = document.getElementById('filterForm');
+    var esc = function (v) {
+        return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    };
+
+    // Filters: each change applies at once; switching between discipline and subject starts that picker fresh.
+    document.querySelectorAll('.auto-submit').forEach(function (el) {
+        el.addEventListener('change', function () { form.submit(); });
+    });
+    document.querySelectorAll('.seg button[data-mode]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            if (btn.getAttribute('aria-checked') === 'true') return;
+            document.getElementById('viewMode').value = btn.dataset.mode;
+            ['subject', 'subject_family', 'grade_level'].forEach(function (n) {
+                var f = form.querySelector('[name="' + n + '"]'); if (f) f.disabled = true;
+            });
+            form.submit();
+        });
+    });
+
+    // Rows open the section brief (mouse, Enter or Space)
+    document.querySelectorAll('.sec-row').forEach(function (row) {
+        row.addEventListener('click', function (e) { if (!e.target.closest('a')) window.location.href = row.dataset.href; });
+        row.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.location.href = row.dataset.href; }
+        });
+    });
+
+    // Sorting the sections table
+    var tbody = document.querySelector('#secTable tbody');
+    var levelRank = { beginning: 1, developing: 2, approaching: 3, proficient: 4, advanced: 5 };
+    document.querySelectorAll('#secTable th button[data-sort]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var th = btn.closest('th'), key = btn.dataset.sort;
+            var dir = th.getAttribute('aria-sort') === 'ascending' ? 'descending' : 'ascending';
+            document.querySelectorAll('#secTable th').forEach(function (t) { t.removeAttribute('aria-sort'); });
+            th.setAttribute('aria-sort', dir);
+            var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr.sec-row'));
+            var val = function (r) {
+                if (key === 'section') return +r.dataset.section;
+                if (key === 'learners') return +r.dataset.learners;
+                if (key === 'level') { var m = r.className.match(/level-(\w+)/); return levelRank[m ? m[1] : ''] || 0; }
+                return +r.dataset.overall;
+            };
+            rows.sort(function (a, b) { return dir === 'ascending' ? val(a) - val(b) : val(b) - val(a); });
+            rows.forEach(function (r) { tbody.appendChild(r); });
+        });
+    });
+
+    // ---------- dialogs: Esc or the backdrop closes them, focus stays inside and returns to the button ----------
+    var opener = null;
+    function openDialog(dialog, from) {
+        opener = from; dialog.hidden = false; document.body.style.overflow = 'hidden';
+        dialog.querySelector('.ad-modal-card').focus();
     }
-    document.getElementById('filterForm').submit();
-}
+    function closeDialog(dialog) {
+        dialog.hidden = true; document.body.style.overflow = '';
+        if (opener) opener.focus();
+    }
+    document.querySelectorAll('.ad-modal').forEach(function (dialog) {
+        dialog.addEventListener('click', function (e) { if (e.target === dialog || e.target.closest('[data-close]')) closeDialog(dialog); });
+    });
+    document.addEventListener('keydown', function (e) {
+        var open = document.querySelector('.ad-modal:not([hidden])');
+        if (open && e.key === 'Escape') closeDialog(open);
+    });
+    document.addEventListener('focusin', function (e) {
+        var open = document.querySelector('.ad-modal:not([hidden])');
+        if (open && !open.contains(e.target)) open.querySelector('.ad-modal-card').focus();
+    });
 
-// Navigate to section detail page
-function goToSection(sectionId, subjectId) {
-    var quarterId = "{{ current_quarter_id|default:'1' }}";
-    var url = "{% url 'heads-ai-section-detail' 0 0 0 %}".replace('/0/0/0/', '/' + sectionId + '/' + subjectId + '/' + quarterId + '/');
-    window.location.href = url;
-}
+    // ---------- every learner below 75 ----------
+    var watchModal = document.getElementById('watchModal');
+    if (watchModal) {
+        var list = document.getElementById('watchAll'), items = Array.prototype.slice.call(list.children);
+        var wSearch = document.getElementById('watchSearch'), wSort = document.getElementById('watchSort');
+        var showWatch = function () {
+            var q = wSearch.value.trim().toLowerCase(), key = wSort.value, shown = 0;
+            items.sort(function (a, b) {
+                if (key === 'name') return a.dataset.name.localeCompare(b.dataset.name);
+                if (key === 'section') return a.dataset.section.localeCompare(b.dataset.section) || (+a.dataset.low - +b.dataset.low);
+                return (+a.dataset.low - +b.dataset.low) || a.dataset.name.localeCompare(b.dataset.name);
+            });
+            items.forEach(function (li) {
+                li.hidden = q && li.dataset.text.indexOf(q) === -1;
+                if (!li.hidden) shown++;
+                list.appendChild(li);
+            });
+            document.getElementById('watchNone').hidden = shown > 0;
+            document.getElementById('watchCount').textContent = 'Showing ' + shown + ' of ' + items.length;
+        };
+        wSearch.addEventListener('input', showWatch);
+        wSort.addEventListener('change', showWatch);
+        document.getElementById('watchMore').addEventListener('click', function (e) { showWatch(); openDialog(watchModal, e.currentTarget); });
+    }
 
-document.addEventListener('DOMContentLoaded', function() {
-    var rc = document.getElementById('kpupRadarChart');
-    if (rc) new Chart(rc.getContext('2d'), {
-        type: 'radar',
-        data: { 
-            labels: ['Knowledge (K)','Process (Pr)','Understanding (U)','Product (Pd)'], 
-            datasets: [{ 
-                label: '{{ display_subject_code|default:"Subject" }}', 
-                data: {{ kpup_radar|safe }}, 
-                backgroundColor: 'rgba(18,52,153,0.15)', 
-                borderColor: '#123499', 
-                borderWidth: 2, 
-                pointBackgroundColor: '#123499', 
-                pointBorderColor: '#fff', 
-                pointBorderWidth: 2, 
-                pointRadius: 5, 
-                pointHoverRadius: 7 
-            }] 
-        },
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            scales: { 
-                r: { 
-                    beginAtZero: true, 
-                    max: 100, 
-                    ticks: { stepSize: 20, backdropColor: 'transparent', font: { size: 10 } }, 
-                    pointLabels: { font: { size: 11, weight: '600' } }, 
-                    grid: { color: 'rgba(0,0,0,0.06)' } 
-                } 
-            }, 
-            plugins: { legend: { display: false } } 
-        }
-    });
-    
-    var dc = document.getElementById('proficiencyDonut');
-    if (dc) new Chart(dc.getContext('2d'), {
-        type: 'doughnut',
-        data: { 
-            labels: ['Advanced','Proficient','Approaching Prof.','Developing','Beginning'], 
-            datasets: [{ 
-                data: {{ proficiency_dist|safe }}, 
-                backgroundColor: ['#2E7D32','#123499','#1565C0','#E65100','#C62828'], 
-                borderColor: '#fff', 
-                borderWidth: 3 
-            }] 
-        },
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            cutout: '60%', 
-            plugins: { 
-                legend: { 
-                    position: 'bottom', 
-                    labels: { padding: 15, usePointStyle: true, pointStyleWidth: 10, font: { size: 10 } } 
-                } 
-            } 
-        }
-    });
-    
-    {% if section_kpup_data %}
-    var bc = document.getElementById('sectionKpupChart');
-    if (bc) new Chart(bc.getContext('2d'), {
-        type: 'bar',
-        data: { 
-            labels: {{ section_labels|safe }}, 
-            datasets: [
-                { label: 'Knowledge (K)', data: {{ section_k_vals|safe }}, backgroundColor: '#2E7D32', borderRadius: 4 },
-                { label: 'Process (Pr)', data: {{ section_p_vals|safe }}, backgroundColor: '#123499', borderRadius: 4 },
-                { label: 'Understanding (U)', data: {{ section_u_vals|safe }}, backgroundColor: '#E65100', borderRadius: 4 },
-                { label: 'Product (Pd)', data: {{ section_prod_vals|safe }}, backgroundColor: '#6A1B9A', borderRadius: 4 }
-            ]
-        },
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            scales: { 
-                y: { beginAtZero: true, max: 100, ticks: { stepSize: 20 }, title: { display: true, text: 'Average Score (%)' } }, 
-                x: { ticks: { font: { size: 9 } } } 
-            }, 
-            plugins: { 
-                legend: { position: 'bottom', labels: { usePointStyle: true, pointStyleWidth: 8, font: { size: 10 }, padding: 15 } } 
-            } 
-        }
-    });
-    {% endif %}
-});
+    // ---------- KPUP by section: a dot plot, one row per class, all on one scale ----------
+    var dataEl = document.getElementById('kpupData');
+    if (!dataEl) return;
+    var rows = JSON.parse(dataEl.textContent);
+    var DIMS = [['k', 'Knowledge', 'K'], ['p', 'Process', 'Pr'], ['u', 'Understanding', 'U'], ['pd', 'Product', 'Pd']];
+    var mixed = rows.some(function (r) { return r.subject !== rows[0].subject; });
+    var prev = document.getElementById('kpInline').dataset.prev;
+    var values = [75];
+    rows.forEach(function (r) { DIMS.forEach(function (d) { values.push(r[d[0]]); }); values.push(r.overall); });
+    // The scale starts just below the lowest score (in steps of 5) so the dots use the width; labels and grid lines every 10.
+    var lo = Math.max(0, Math.floor((Math.min.apply(null, values) - 2) / 5) * 5), hi = 100;
+    var at = function (v) { return ((v - lo) / (hi - lo) * 100).toFixed(2) + '%'; };
+    var ticks = '', grid = '';
+    for (var v = Math.ceil(lo / 10) * 10; v <= hi; v += 10) {
+        ticks += '<span style="left:' + at(v) + '">' + v + '</span>';
+        if (v > lo && v < hi) grid += '<span class="kp-grid" style="left:' + at(v) + '"></span>';
+    }
+
+    function rowHtml(r) {
+        var dims = DIMS.map(function (d) { return r[d[0]]; }), low = Math.min.apply(null, dims), high = Math.max.apply(null, dims);
+        var said = r.section + ', ' + r.subject + ': average ' + r.overall.toFixed(1) +
+            (r.below ? ', ' + r.below + ' below 75' : '') +
+            (r.delta ? ', ' + (r.delta > 0 ? 'up ' : 'down ') + Math.abs(r.delta).toFixed(1) + ' since ' + prev : '') + ', ' +
+            DIMS.map(function (d) { return d[1] + ' ' + r[d[0]].toFixed(1); }).join(', ');
+        var change = r.delta ? '<span class="kp-delta ' + (r.delta > 0 ? 'up' : 'down') + '" title="Change since ' + esc(prev) + '">' +
+            '<i class="fi fi-rr-caret-' + (r.delta > 0 ? 'up' : 'down') + '"></i>' + Math.abs(r.delta).toFixed(1) + '</span>' : '';
+        return '<li class="kp-row level-' + esc(r.level) + '"><a class="kp-link" href="' + esc(r.url) + '" aria-label="' + esc(said) + '">' +
+            '<span class="kp-name"><b>' + esc(r.section) + (r.below ? '<em class="kp-flag">' + r.below + ' below 75</em>' : '') + '</b>' +
+            '<small>' + esc(mixed ? r.grade + ' \u00b7 ' + r.subject : r.level_name) + '</small></span>' +
+            '<span class="kp-track" aria-hidden="true">' + grid +
+                '<span class="kp-pass" style="left:' + at(75) + '"></span>' +
+                '<span class="kp-range" style="left:' + at(low) + ';width:calc(' + at(high) + ' - ' + at(low) + ')"></span>' +
+                '<span class="kp-avg" style="left:' + at(r.overall) + '" data-tip="Class average ' + r.overall.toFixed(1) + '%"></span>' +
+                DIMS.map(function (d) {
+                    return '<span class="kp-dot ' + d[0] + '-color" style="left:' + at(r[d[0]]) + '" data-tip="' + d[1] + ' (' + d[2] + ') ' + r[d[0]].toFixed(1) + '%"></span>';
+                }).join('') +
+            '</span>' +
+            '<span class="kp-val"><span class="lvl">' + r.overall.toFixed(1) + '%</span>' + change + '</span></a></li>';
+    }
+    function draw(box, list) {
+        box.innerHTML = '<div class="kp-axis" aria-hidden="true"><span class="kp-spacer">Section</span><span class="kp-ticks">' + ticks + '</span><span class="kp-head-val">Average</span></div>' +
+            (list.length ? '<ol class="kp-rows">' + list.map(rowHtml).join('') + '</ol>' : '<p class="kp-empty">No class matches.</p>');
+    }
+    var byLowest = function (a, b) { return a.overall - b.overall || a.order - b.order; };
+    draw(document.getElementById('kpInline'), rows.slice().sort(byLowest).slice(0, 6));
+
+    var kpModal = document.getElementById('kpModal');
+    if (!kpModal) return;
+    var kSearch = document.getElementById('kpSearch'), kSort = document.getElementById('kpSort');
+    var SORTS = {
+        low: byLowest,
+        high: function (a, b) { return b.overall - a.overall || a.order - b.order; },
+        below: function (a, b) { return b.below - a.below || a.overall - b.overall || a.order - b.order; },
+        drop: function (a, b) { return (a.delta == null) - (b.delta == null) || (a.delta || 0) - (b.delta || 0) || a.order - b.order; },
+        grade: function (a, b) { return a.order - b.order; },
+        name: function (a, b) { return a.section.localeCompare(b.section) || a.order - b.order; }
+    };
+    function showAll() {
+        var q = kSearch.value.trim().toLowerCase();
+        var list = rows.filter(function (r) { return !q || (r.section + ' ' + r.subject + ' ' + r.code + ' ' + r.grade).toLowerCase().indexOf(q) > -1; })
+                       .sort(SORTS[kSort.value] || byLowest);
+        draw(document.getElementById('kpAll'), list);
+        document.getElementById('kpCount').textContent = 'Showing ' + list.length + ' of ' + rows.length + ' sections';
+    }
+    kSearch.addEventListener('input', showAll);
+    kSort.addEventListener('change', showAll);
+    document.getElementById('openChart').addEventListener('click', function (e) { showAll(); openDialog(kpModal, e.currentTarget); });
+})();
 </script>
 {% endblock %}

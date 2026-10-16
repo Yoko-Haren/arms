@@ -1,4 +1,5 @@
 {% extends 'shared/portal_base.html' %}
+{% load static %}
 
 {% block title %}ARMS - Academic Records Management System{% endblock %}
 {% block home_url %}{% url 'heads-ai-dashboard' %}{% endblock %}
@@ -684,11 +685,10 @@
         @media (max-width: 768px) { #mainContent, .sidebar.collapsed ~ #mainContent { margin-left: 0; } }
         @media print { .sidebar { display: none !important; } #mainContent { margin-left: 0 !important; } }
     </style>
+    <link rel="stylesheet" href="{% static 'heads/css/head-live.css' %}">
 {% endblock %}
 
-{% block top_bar_actions %}
-<button class="btn-outline btn-sm" onclick="refreshPage()" title="Refresh data"><i class="fi fi-rr-refresh"></i></button>
-{% endblock %}
+{% block top_bar_actions %}{% include 'heads/_live.html' %}{% endblock %}
 
 {% block portal_body %}
     <!-- Modal Container -->
@@ -709,10 +709,6 @@
     <script>
     (function() {
         // ===== UTILITY FUNCTIONS =====
-        window.refreshPage = function() {
-            location.reload();
-        };
-        
         window.closeModal = function() {
             document.getElementById('defaultModal').classList.remove('show');
         };

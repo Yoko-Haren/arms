@@ -185,6 +185,20 @@ AUTHENTICATION_BACKENDS = ['accounts.backends.ProfileBackend']
 
 
 # =============================================================================
+# PORO AI (local language model through Ollama)
+# =============================================================================
+# Poro's reports are computed from the grades (heads/insights.py). The language model only rewords
+# the summary, and its text is shown only when every figure survives unchanged. If Ollama is not
+# running, the computed wording is shown instead.
+PORO_AI = {
+    'ENABLED': os.environ.get('PORO_AI_ENABLED', 'True').lower() in ('1', 'true', 'yes'),
+    'OLLAMA_URL': os.environ.get('OLLAMA_URL', 'http://127.0.0.1:11434').strip(),
+    'MODEL': os.environ.get('PORO_AI_MODEL', 'qwen2.5:1.5b').strip(),
+    'TIMEOUT': int(os.environ.get('PORO_AI_TIMEOUT', '45')),
+}
+
+
+# =============================================================================
 # GOOGLE SIGN-IN (OAuth 2.0 / OpenID Connect)
 # =============================================================================
 # Create an OAuth client (type "Web application") in Google Cloud Console and

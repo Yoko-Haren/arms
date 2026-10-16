@@ -98,13 +98,17 @@ def cache_page_for_user(ttl=PAGE_TTL):
 
             path = hashlib.sha1(request.get_full_path().encode()).hexdigest()
             key = f'page:{data_version()}:{user.pk}:{request.session.session_key}:{path}'
-            cached = tiered_get(key)
+            # a page that updates itself after new grades sets `arms_fresh` once to skip the cached copy
+            fresh = request.COOKIES.get('arms_fresh') == '1'
+            cached = None if fresh else tiered_get(key)
             if cached is not None:
                 response = HttpResponse(cached['content'], content_type=cached['content_type'])
                 response['X-ARMS-Cache'] = 'HIT'
                 return response
 
             response = view(request, *args, **kwargs)
+            if fresh:
+                response.delete_cookie('arms_fresh')
             storage = get_messages(request)
             if (
                 response.status_code == 200 and not response.streaming

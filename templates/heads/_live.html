@@ -1,0 +1,29 @@
+{% load static %}
+<div class="live" id="armsBell" data-updates-url="{% url 'heads-live-updates' %}" data-read-url="{% url 'heads-mark-notifications-read' %}">
+    <button type="button" class="live-btn" id="liveBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="livePanel" aria-label="Notifications">
+        <i class="fi fi-rr-bell"></i>
+        <span class="live-badge" id="liveBadge" hidden>0</span>
+    </button>
+    <div class="live-panel" id="livePanel" role="dialog" aria-labelledby="liveTitle" hidden>
+        <div class="live-head">
+            <strong id="liveTitle">Notifications</strong>
+            <button type="button" class="live-link" id="liveReadAll">Mark all as read</button>
+        </div>
+        <div class="live-update" id="liveUpdate" hidden>
+            <i class="fi fi-rr-refresh"></i><span>New grades are in.</span>
+            <button type="button" class="live-link" id="liveApply">Update now</button>
+        </div>
+        <ul class="live-list" id="liveList"><li class="live-empty">Loading&hellip;</li></ul>
+        <div class="live-foot">
+            <label class="live-switch"><input type="checkbox" id="liveAuto" checked> Update pages automatically</label>
+            <span id="liveTime"></span>
+        </div>
+    </div>
+    <div class="live-pill" id="livePill" role="status" hidden>
+        <i class="fi fi-rr-refresh"></i><span>New grades are available.</span>
+        <button type="button" id="livePillApply">Update now</button>
+        <button type="button" class="live-pill-close" id="livePillClose" aria-label="Dismiss"><i class="fi fi-rr-cross-small"></i></button>
+    </div>
+    <div class="sr-only" aria-live="polite" id="liveAnnounce"></div>
+</div>
+<script src="{% static 'heads/js/head-live.js' %}" defer></script>

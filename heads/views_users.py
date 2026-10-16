@@ -3,7 +3,6 @@
 The principal sees and manages only the accounts of their own school, and may
 add registrar accounts. System-wide user administration belongs to the admin panel.
 """
-import csv
 import json
 import secrets
 from datetime import date
@@ -352,17 +351,27 @@ def user_export(request):
     elif status == 'inactive':
         users = users.filter(Q(is_active=False) | Q(user__is_active=False))
 
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="{profile.school.short_name}_users_{date.today():%Y%m%d}.csv"'
-    writer = csv.writer(response)
-    writer.writerow(['Employee Number', 'First Name', 'Last Name', 'Username', 'Email', 'Role', 'Designation',
-                     'Department', 'Sign-in', 'Status', 'Last Active'])
-    for p in users:
-        u = p.user
-        writer.writerow([
-            p.employee_number or '', u.first_name, u.last_name, u.username, u.email, p.get_role_display(),
-            p.designation, p.teaching_area, 'Google linked' if p.google_sub else 'Password only',
-            'Active' if _is_active(p) else 'Inactive',
-            u.last_login.strftime('%Y-%m-%d %H:%M') if u.last_login else 'Never',
-        ])
-    return response
+    from core.xlsx import Report, safe_filename
+
+    users = list(users.select_related('user'))
+    active = sum(1 for p in users if _is_active(p))
+    shown = {'all': 'All roles'}.get(role) or dict(UserProfile.ROLE_CHOICES).get(role, role)
+    report = Report('School Accounts', profile.school.school_name, request.user.get_full_name() or request.user.username)
+    # usernames are usually the email address; then one column is enough
+    same = all(p.user.username == p.user.email for p in users)
+    widths = [15, 24] + ([36] if same else [30, 34]) + [22, 22, 24, 15, 10, 20]
+    sheet = report.sheet('Accounts', widths,
+                         subtitle='Accounts of this school', meta=[('Role', shown), ('Status', status.title() if status != 'all' else 'Active and inactive')])
+    sheet.figures([('Accounts', str(len(users)), None), ('Active', str(active), 'good'),
+                   ('Inactive', str(len(users) - active), 'risk' if len(users) - active else None),
+                   ('Google linked', str(sum(1 for p in users if p.google_sub)), None)])
+    sheet.table(
+        [{'title': 'Employee no.'}, {'title': 'Name'}] + ([{'title': 'Username and email'}] if same else [{'title': 'Username'}, {'title': 'Email'}])
+        + [{'title': 'Role', 'wrap': True}, {'title': 'Designation', 'wrap': True}, {'title': 'Department', 'wrap': True},
+           {'title': 'Sign-in'}, {'title': 'Status'}, {'title': 'Last active'}],
+        [[p.employee_number or '', f'{p.user.last_name}, {p.user.first_name}'.strip(', ')]
+         + ([p.user.email] if same else [p.user.username, p.user.email])
+         + [p.get_role_display(), p.designation, p.teaching_area, 'Google linked' if p.google_sub else 'Password only',
+          ('Active', 'advanced') if _is_active(p) else ('Inactive', 'beginning'),
+          p.user.last_login.strftime('%b %d, %Y %I:%M %p') if p.user.last_login else 'Never'] for p in users])
+    return report.response(f'{safe_filename(profile.school.short_name or "school", "accounts", date.today().strftime("%Y%m%d"))}.xlsx')

@@ -198,30 +198,33 @@ def class_record_list(request):
             section=a.section, school_year=current_sy,
             status__in=['Enrolled', 'Transferred_In']
         ).select_related('student').order_by('student__last_name', 'student__first_name')
-        
-        student_count = enrollments.count()
+        enrollments = list(enrollments)        # reused below: fetch once
+        student_count = len(enrollments)
         total_students += student_count
         
+        # every grade of this class in one query (was one query per student per quarter)
+        grade_of = {
+            (enrollment_id, quarter_id): value
+            for enrollment_id, quarter_id, value in GradeComponent.objects.filter(
+                enrollment__in=enrollments, subject=a.subject, initial_grade__isnull=False
+            ).values_list('enrollment_id', 'quarter_id', 'initial_grade')
+        }
         quarter_stats = []
         for q in quarters:
-            grades_done = GradeComponent.objects.filter(
-                enrollment__section=a.section, subject=a.subject,
-                quarter=q, initial_grade__isnull=False
-            ).count()
+            grades_done = sum(1 for e in enrollments if (e.id, q.id) in grade_of)
             quarter_stats.append({
                 'quarter': q.quarter_label, 'done': grades_done, 'total': student_count,
                 'complete': grades_done == student_count and student_count > 0,
             })
-        
         students_data = []
         for e in enrollments:
             quarter_grades = []
             final_sum = 0
             final_count = 0
             for q in quarters:
-                grade = GradeComponent.objects.filter(enrollment=e, subject=a.subject, quarter=q).first()
-                if grade and grade.initial_grade is not None:
-                    qg = int(float(grade.initial_grade))
+                value = grade_of.get((e.id, q.id))
+                if value is not None:
+                    qg = int(float(value))
                     quarter_grades.append(qg)
                     final_sum += qg
                     final_count += 1
@@ -232,7 +235,7 @@ def class_record_list(request):
                 'last_name': e.student.last_name, 'first_name': e.student.first_name,
                 'lrn': e.student.lrn, 'quarter_grades': quarter_grades, 'final_grade': final_grade,
             })
-        
+
         assignment_data.append({
             'section': a.section, 'subject': a.subject, 'student_count': student_count,
             'quarter_stats': quarter_stats, 'students': students_data,

@@ -23,6 +23,8 @@ from students.models import Student
 from grades.models import GradeComponent
 
 from core.caching import cache_page_for_user, remember_filters
+from heads.notify import notify_school_heads
+from heads.views_academic import period_name
 
 from .forms import TeacherAccountForm, school_email_domain, suggest_teacher_email
 
@@ -1037,6 +1039,10 @@ def _grade_overview(school, current_sy, period):
     return rows
 
 
+
+def _who(request):
+    return request.user.get_full_name() or request.user.username
+
 @registrar_required
 @remember_filters('registrar-grades', ['period'])
 @cache_page_for_user()
@@ -1056,6 +1062,9 @@ def grade_validation(request):
             period_grades.filter(validation_status='Validated').update(validation_status='Finalized')
             period_grades.update(is_locked=True, locked_by=request.user, locked_at=now)
             _log(request, 'LOCK_GRADES', period.id, f'Locked grades for {period.quarter_label} {current_sy.year_label}', 'Quarter')
+            notify_school_heads(school, 'GRADE_VALIDATED', f'{period_name(period)} grades are locked',
+                                f'{_who(request)} locked {period_name(period)}, SY {current_sy.year_label}. The grades are final.',
+                                reverse('heads-ai-dashboard'))
             messages.success(request, f'{period.quarter_label} is locked. Teachers can no longer change its grades.')
         elif action == 'unlock':
             period.is_grades_locked, period.locked_by, period.locked_at = False, None, None
@@ -1063,6 +1072,9 @@ def grade_validation(request):
             period_grades.update(is_locked=False, locked_by=None, locked_at=None)
             period_grades.filter(validation_status='Finalized').update(validation_status='Validated')
             _log(request, 'UNLOCK_GRADES', period.id, f'Unlocked grades for {period.quarter_label} {current_sy.year_label}', 'Quarter')
+            notify_school_heads(school, 'GRADE_RETURNED', f'{period_name(period)} grades were unlocked',
+                                f'{_who(request)} unlocked {period_name(period)} so grades can be corrected.',
+                                reverse('heads-ai-dashboard'))
             messages.success(request, f'{period.quarter_label} is unlocked.')
         elif action == 'validate_all':
             if period.is_grades_locked:
@@ -1076,6 +1088,9 @@ def grade_validation(request):
                             validation_status='Validated', validated_by=request.user, validation_date=now)
                         validated += 1
                 if validated:
+                    notify_school_heads(school, 'GRADE_VALIDATED', f'{period_name(period)}: {validated} class{"es" if validated != 1 else ""} validated',
+                                        f'{_who(request)} validated every complete class for {period_name(period)}.',
+                                        reverse('heads-ai-dashboard'))
                     messages.success(request, f'{validated} complete class(es) validated for {period.quarter_label}.')
                 else:
                     messages.info(request, 'No complete classes are waiting for validation.')
@@ -1117,6 +1132,11 @@ def grade_class_detail(request, assignment_id, period_id):
                           validation_date=timezone.now(), validation_notes='')
             _log(request, 'VALIDATE_GRADES', assignment.id,
                  f'Validated {assignment.subject.subject_code} — {assignment.section.section_name} ({period.quarter_label})', 'ClassAssignment')
+            notify_school_heads(school, 'GRADE_VALIDATED',
+                                f'Grades validated: {assignment.subject.subject_code} · {assignment.section.section_name}',
+                                f'{_who(request)} validated {period_name(period)} grades for {grades.count()} learners.',
+                                reverse('heads-ai-section-detail', args=[assignment.section_id, assignment.subject_id, period.id]),
+                                priority='Low')
             messages.success(request, f'{assignment.subject.subject_code} — {assignment.section.section_name} validated for {period.quarter_label}.')
         elif action == 'return':
             note = request.POST.get('note', '').strip()
@@ -1127,6 +1147,11 @@ def grade_class_detail(request, assignment_id, period_id):
                               validation_date=timezone.now(), validation_notes=note)
                 _log(request, 'RETURN_GRADES', assignment.id,
                      f'Returned {assignment.subject.subject_code} — {assignment.section.section_name} ({period.quarter_label}): {note}', 'ClassAssignment')
+                notify_school_heads(school, 'GRADE_RETURNED',
+                                    f'Grades returned: {assignment.subject.subject_code} · {assignment.section.section_name}',
+                                    f'{_who(request)} returned {period_name(period)} grades to '
+                                    f'{assignment.teacher.get_full_name() if assignment.teacher else "the teacher"} for correction: {note}',
+                                    reverse('heads-ai-section-detail', args=[assignment.section_id, assignment.subject_id, period.id]))
                 messages.success(request, 'Grades returned to the teacher for correction.')
         return redirect('registrars:grade_class_detail', assignment_id=assignment.id, period_id=period.id)
 

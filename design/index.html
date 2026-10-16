@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARMS Design Kit</title>
+<link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+<style>
+    :root {
+        --ink: #00072D; --blue: #123499; --blue-dark: #051650; --blue-light: #4a6fd4;
+        --text: #2d3748; --text-2: #4a5568; --muted: #718096;
+        --page: #f5f7fb; --card: #ffffff; --border: #e9ecef;
+        --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', 'Century Gothic', sans-serif; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--page); color: var(--text); line-height: 1.55; }
+
+    /* ---- layout ---- */
+    .side {
+        position: fixed; top: 0; left: 0; width: 250px; height: 100vh; background: var(--card);
+        border-right: 1px solid var(--border); padding: 1.3rem 0.9rem; overflow-y: auto;
+    }
+    .brand { display: flex; align-items: center; gap: 0.7rem; padding: 0 0.4rem 1.1rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+    .brand-icon { width: 38px; height: 38px; border-radius: 12px; background: var(--gradient); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; box-shadow: 0 0 20px rgba(102,126,234,0.3); }
+    .brand b { display: block; font-size: 0.95rem; color: var(--ink); line-height: 1.2; }
+    .brand span { font-size: 0.66rem; color: var(--text-2); letter-spacing: 0.5px; }
+    .side a { display: flex; align-items: center; gap: 0.7rem; padding: 0.55rem 0.9rem; border-radius: 30px; color: var(--text-2); text-decoration: none; font-size: 0.86rem; font-weight: 500; margin-bottom: 0.2rem; }
+    .side a:hover { background: var(--page); color: var(--ink); }
+    .side a.sub { padding-left: 2.5rem; font-size: 0.8rem; }
+    .side .label { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); padding: 0.9rem 0.9rem 0.3rem; }
+    main { margin-left: 250px; padding: 2rem 2.4rem 5rem; max-width: 1500px; }
+    @media (max-width: 900px) { .side { display: none; } main { margin-left: 0; padding: 1.2rem; } }
+
+    section { margin-bottom: 3.2rem; scroll-margin-top: 1rem; }
+    h1 { font-size: 1.7rem; color: var(--ink); }
+    h2 { font-size: 1.25rem; color: var(--ink); margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.5rem; }
+    h2 i { color: var(--blue); }
+    h3 { font-size: 0.98rem; color: var(--ink); margin: 1.6rem 0 0.7rem; }
+    .lead { color: var(--text-2); font-size: 0.92rem; max-width: 70ch; margin-bottom: 1.2rem; }
+    .card { background: var(--card); border-radius: 20px; padding: 1.4rem 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); }
+
+    /* ---- hero ---- */
+    .hero { display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem; align-items: stretch; margin-bottom: 3rem; }
+    @media (max-width: 1100px) { .hero { grid-template-columns: 1fr; } }
+    .hero .stats { display: flex; gap: 1.6rem; flex-wrap: wrap; margin-top: 1.2rem; }
+    .hero .stats b { display: block; font-size: 1.6rem; color: var(--blue); line-height: 1.1; }
+    .hero .stats span { font-size: 0.74rem; color: var(--text-2); }
+    .steps { list-style: none; counter-reset: s; }
+    .steps li { counter-increment: s; display: flex; gap: 0.8rem; padding: 0.55rem 0; font-size: 0.88rem; }
+    .steps li::before { content: counter(s); flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: #e3f0ff; color: var(--blue); font-size: 0.74rem; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 0.1rem; }
+    code { background: var(--page); border: 1px solid var(--border); border-radius: 6px; padding: 0.05rem 0.35rem; font-family: Consolas, monospace; font-size: 0.82em; color: var(--ink); }
+
+    /* ---- foundations ---- */
+    .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.9rem; }
+    .swatch { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: #fff; cursor: pointer; }
+    .swatch .chip { height: 64px; }
+    .swatch .meta { padding: 0.55rem 0.7rem; }
+    .swatch b { display: block; font-size: 0.78rem; color: var(--ink); }
+    .swatch span { font-size: 0.72rem; color: var(--text-2); font-family: Consolas, monospace; }
+    .type-row { display: flex; align-items: baseline; gap: 1.2rem; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
+    .type-row:last-child { border-bottom: none; }
+    .type-row small { width: 190px; flex-shrink: 0; font-size: 0.74rem; color: var(--text-2); font-family: Consolas, monospace; }
+    .comp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.2rem; }
+    .comp h4 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 0.8rem; }
+    .row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+    .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.2rem; border-radius: 10px; font-size: 0.84rem; font-weight: 600; border: 2px solid transparent; cursor: pointer; }
+    .btn.primary { background: var(--blue); color: #fff; }
+    .btn.outline { background: #fff; border-color: var(--border); color: var(--text); }
+    .btn.danger { background: #fff; border-color: #f1aeb5; color: #dc3545; }
+    .btn.sm { padding: 0.35rem 0.7rem; font-size: 0.74rem; border-radius: 8px; }
+    .badge { display: inline-flex; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.68rem; font-weight: 600; }
+    .b-success { background: #d4edda; color: #155724; } .b-info { background: #e3f0ff; color: #2D6AFF; }
+    .b-warning { background: #fff3cd; color: #856404; } .b-danger { background: #f8d7da; color: #721c24; }
+    .input { width: 100%; padding: 0.6rem 0.85rem; border: 2px solid var(--border); border-radius: 10px; font-size: 0.84rem; background: var(--page); color: var(--text); }
+    .input.focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgba(18,52,153,0.12); }
+    .flash { display: flex; gap: 0.7rem; align-items: center; background: #fff; border-radius: 14px; padding: 0.8rem 1rem; box-shadow: var(--shadow); border-left: 4px solid var(--blue); font-size: 0.82rem; margin-bottom: 0.5rem; }
+    .flash.error { border-left-color: #dc3545; } .flash.warning { border-left-color: #f39c12; }
+    .nav-item { display: flex; align-items: center; gap: 0.8rem; padding: 0.65rem 0.95rem; border-radius: 30px; font-size: 0.84rem; font-weight: 500; color: var(--text-2); margin-bottom: 0.25rem; }
+    .nav-item.active { background: var(--gradient); color: #fff; font-weight: 600; box-shadow: 0 0 20px rgba(102,126,234,0.3); }
+    .nav-item.logout { color: #dc3545; }
+    .dialog { background: #fff; border-radius: 20px; padding: 1.4rem; box-shadow: 0 20px 60px rgba(0,0,0,0.18); text-align: center; max-width: 300px; }
+    .dialog .ico { width: 48px; height: 48px; border-radius: 14px; margin: 0 auto 0.7rem; background: linear-gradient(135deg,#dc3545,#f39c12); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.3rem; }
+    .dialog b { display: block; color: var(--ink); font-size: 0.95rem; }
+    .dialog p { font-size: 0.78rem; color: var(--text-2); margin: 0.3rem 0 1rem; }
+    .dialog .row .btn { flex: 1; justify-content: center; }
+    .stat { border-radius: 16px; padding: 1.1rem; color: #fff; text-align: center; flex: 1; min-width: 110px; }
+    .stat b { display: block; font-size: 1.7rem; font-weight: 800; line-height: 1.1; }
+    .stat span { font-size: 0.72rem; opacity: 0.9; }
+
+    /* ---- flows ---- */
+    .flow { margin-bottom: 1.6rem; }
+    .flow-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+    .flow-head h3 { margin: 0 0 0.2rem; font-size: 1.02rem; }
+    .flow-head p { font-size: 0.84rem; color: var(--text-2); max-width: 75ch; }
+    .flow-canvas { background: #fbfcfe; border: 1px dashed var(--border); border-radius: 14px; padding: 1.2rem; overflow-x: auto; text-align: center; }
+    .flow-canvas svg { max-width: none; height: auto; }
+    .flow-canvas pre { text-align: left; font-family: Consolas, monospace; font-size: 0.76rem; color: var(--text-2); white-space: pre-wrap; }
+
+    /* ---- screens ---- */
+    .group-head { display: flex; align-items: baseline; gap: 0.8rem; margin: 2rem 0 0.9rem; }
+    .group-head h3 { margin: 0; }
+    .group-head span { font-size: 0.78rem; color: var(--text-2); }
+    .screens { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 1.2rem; }
+    .screen { background: #fff; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); text-decoration: none; color: inherit; display: block; transition: transform 0.2s, box-shadow 0.2s; }
+    .screen:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+    .shot { position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; background: var(--page); border-bottom: 1px solid var(--border); }
+    .shot iframe { position: absolute; top: 0; left: 0; width: 1440px; height: 900px; border: 0; transform-origin: 0 0; pointer-events: none; }
+    .screen .meta { padding: 0.75rem 0.95rem 0.9rem; }
+    .screen b { display: block; font-size: 0.88rem; color: var(--ink); }
+    .screen small { display: block; font-size: 0.76rem; color: var(--text-2); margin-top: 0.15rem; min-height: 1.2em; }
+    .screen code { display: inline-block; margin-top: 0.4rem; font-size: 0.7rem; }
+    .toast { position: fixed; bottom: 24px; right: 24px; background: var(--ink); color: #fff; padding: 0.7rem 1.1rem; border-radius: 12px; font-size: 0.82rem; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+    .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<nav class="side">
+    <div class="brand">
+        <div class="brand-icon"><i class="fi fi-rr-graduation-cap"></i></div>
+        <div><b>ARMS</b><span>Design Kit</span></div>
+    </div>
+    <a href="#start"><i class="fi fi-rr-home"></i> Overview</a>
+    <a href="#foundations"><i class="fi fi-rr-palette"></i> Foundations</a>
+    <a href="#flows"><i class="fi fi-rr-diagram-project"></i> Flows</a>
+    <div id="flowLinks"></div>
+    <a href="#screens"><i class="fi fi-rr-browser"></i> Screens</a>
+    <div id="screenLinks"></div>
+</nav>
+
+<main>
+    <!-- ================= OVERVIEW ================= -->
+    <section id="start">
+        <div class="hero">
+            <div class="card">
+                <h1>ARMS Design Kit</h1>
+                <p class="lead" style="margin-top:0.5rem;">
+                    Every live screen of the Academic Records Management System, filled with the demo school's data,
+                    together with the user flows and the design foundations. Everything here is taken from the running
+                    system, so it matches what users actually see.
+                </p>
+                <div class="stats">
+                    <div><b id="countScreens">–</b><span>screens</span></div>
+                    <div><b id="countFlows">–</b><span>flows</span></div>
+                    <div><b>4</b><span>roles</span></div>
+                    <div><b id="exported" style="font-size:0.95rem;line-height:1.9;">–</b><span>last export</span></div>
+                </div>
+            </div>
+            <div class="card">
+                <h2><i class="fi fi-rr-share"></i> In Figma</h2>
+                <p style="font-size:0.88rem;margin-top:0.6rem;">
+                    <a href="https://www.figma.com/design/aPbYfXX66pMThLHzulxu1S" target="_blank" style="color:var(--blue);font-weight:600;">ARMS - Screens and Flows</a>: every screen as editable layers, with click-through flows for Teacher, Registrar and School Head.<br>
+                    <a href="https://www.figma.com/board/dPeGM9oxn1i9y8ABjcSeHN" target="_blank" style="color:var(--blue);font-weight:600;">Flow diagrams (FigJam)</a>: the nine flows below.
+                </p>
+                <h3 style="margin:1rem 0 0.2rem;font-size:0.9rem;">Doing it by hand</h3>
+                <ol class="steps">
+                    <li><span><strong>Flows:</strong> press <em>Copy for Figma</em> on a flow, click the Figma canvas and press Ctrl+V; it arrives as editable shapes and text. <em>Download SVG</em> gives a file to drag in, and <em>Copy Mermaid</em> the source for FigJam's Mermaid tools.</span></li>
+                    <li><span><strong>Screens:</strong> open a screen and capture it with a Figma import plugin such as html.to.design, or take a full-page screenshot and place it in a 1440-wide frame.</span></li>
+                    <li><span><strong>Styles:</strong> import <code>design/tokens.json</code> with a tokens plugin to create the colour and text styles shown under Foundations.</span></li>
+                    <li><span><strong>After the system changes:</strong> run <code>python manage.py export_screens</code> to refresh every screen, then <code>design/tools/figma/convert.py</code> to rebuild the Figma layers.</span></li>
+                </ol>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= FOUNDATIONS ================= -->
+    <section id="foundations">
+        <h2><i class="fi fi-rr-palette"></i> Foundations</h2>
+        <p class="lead">Colours, type and the recurring components, with the exact values the system uses. Click a colour to copy its hex code.</p>
+
+        <div class="card">
+            <h3 style="margin-top:0;">Colour</h3>
+            <div class="swatches" id="swatches"></div>
+
+            <h3>Type — Segoe UI</h3>
+            <div class="type-row"><small>Page title · 20 / 700</small><span style="font-size:20px;font-weight:700;color:var(--ink);">Good morning, Maria!</span></div>
+            <div class="type-row"><small>Section title · 17 / 700</small><span style="font-size:17px;font-weight:700;color:var(--ink);">Classes &amp; Teachers</span></div>
+            <div class="type-row"><small>Body · 14 / 400</small><span style="font-size:14px;">Each CSV is one class: one subject of one section.</span></div>
+            <div class="type-row"><small>Secondary · 13 / 400</small><span style="font-size:13px;color:var(--text-2);">Teacher Portal — ARMS Demo National High School</span></div>
+            <div class="type-row"><small>Table head · 12 / 700 caps</small><span style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-2);letter-spacing:0.3px;">Section · Subject · Teacher</span></div>
+            <div class="type-row"><small>Stat number · 34 / 800</small><span style="font-size:34px;font-weight:800;color:var(--blue);line-height:1;">330</span></div>
+        </div>
+
+        <h3>Components</h3>
+        <div class="comp-grid">
+            <div class="card comp">
+                <h4>Buttons</h4>
+                <div class="row" style="margin-bottom:0.7rem;">
+                    <span class="btn primary"><i class="fi fi-rr-upload"></i> Primary</span>
+                    <span class="btn outline">Secondary</span>
+                    <span class="btn danger"><i class="fi fi-rr-trash"></i> Destructive</span>
+                </div>
+                <div class="row">
+                    <span class="btn primary sm">Small</span><span class="btn outline sm"><i class="fi fi-rr-eye"></i> Review</span><span class="btn danger sm"><i class="fi fi-rr-ban"></i> Deactivate</span>
+                </div>
+                <p style="font-size:0.76rem;color:var(--text-2);margin-top:0.8rem;">Radius 10. Primary hover: #051650. Delete, remove, drop, deactivate and log out are always red.</p>
+            </div>
+            <div class="card comp">
+                <h4>Status badges</h4>
+                <div class="row">
+                    <span class="badge b-success">Validated</span><span class="badge b-info">Ready to validate</span>
+                    <span class="badge b-warning">Incomplete</span><span class="badge b-danger">Not started</span>
+                </div>
+                <h4 style="margin-top:1.2rem;">Inputs</h4>
+                <input class="input" value="Default field" readonly style="margin-bottom:0.5rem;">
+                <input class="input focus" value="Focused field" readonly>
+            </div>
+            <div class="card comp">
+                <h4>Messages</h4>
+                <div class="flash"><i class="fi fi-rr-check-circle" style="color:var(--blue);"></i> Section "Rosal" updated for MATH7.</div>
+                <div class="flash warning"><i class="fi fi-rr-triangle-warning" style="color:#f39c12;"></i> 2 teachers have no class this school year.</div>
+                <div class="flash error"><i class="fi fi-rr-exclamation" style="color:#dc3545;"></i> That code is not correct. 4 attempts left.</div>
+            </div>
+            <div class="card comp">
+                <h4>Sidebar items</h4>
+                <div style="max-width:240px;">
+                    <div class="nav-item active"><i class="fi fi-rr-dashboard"></i> Dashboard</div>
+                    <div class="nav-item"><i class="fi fi-rr-users-alt"></i> Sections</div>
+                    <div class="nav-item"><i class="fi fi-rr-settings"></i> Account Settings</div>
+                    <div class="nav-item logout"><i class="fi fi-rr-sign-out-alt"></i> Logout</div>
+                </div>
+            </div>
+            <div class="card comp">
+                <h4>Confirmation dialog (destructive)</h4>
+                <div class="dialog">
+                    <div class="ico">?</div>
+                    <b>Drop student</b>
+                    <p>Drop the student from Sampaguita? They stay on record as Dropped and can be restored.</p>
+                    <div class="row"><span class="btn outline">Cancel</span><span class="btn" style="background:#dc3545;color:#fff;">Drop</span></div>
+                </div>
+            </div>
+            <div class="card comp">
+                <h4>Stat tiles</h4>
+                <div class="row">
+                    <div class="stat" style="background:linear-gradient(135deg,#123499,#667eea);"><b>330</b><span>Students</span></div>
+                    <div class="stat" style="background:linear-gradient(135deg,#123499,#4a6fd4);"><b>12</b><span>Sections</span></div>
+                    <div class="stat" style="background:var(--gradient);"><b>52</b><span>Subjects</span></div>
+                </div>
+                <h4 style="margin-top:1.2rem;">Brand</h4>
+                <div class="row">
+                    <div class="brand-icon"><i class="fi fi-rr-graduation-cap"></i></div>
+                    <div class="brand-icon" style="border-radius:10px;font-size:0.85rem;font-weight:700;">MS</div>
+                    <span style="font-size:0.78rem;color:var(--text-2);">Gradient #667eea → #764ba2: logo tile, avatar, active menu item.</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= FLOWS ================= -->
+    <section id="flows">
+        <h2><i class="fi fi-rr-diagram-project"></i> Flows</h2>
+        <p class="lead">How each role moves through the system. Every step is a real screen or a real decision the system makes.</p>
+        <p style="margin-bottom:1.2rem;"><button class="btn primary" id="downloadAll"><i class="fi fi-rr-download"></i> Download all flows as SVG</button></p>
+        <div id="flowList"></div>
+    </section>
+
+    <!-- ================= SCREENS ================= -->
+    <section id="screens">
+        <h2><i class="fi fi-rr-browser"></i> Screens</h2>
+        <p class="lead">Live pages with the demo school's data, at 1440 px wide. Click one to open it full size; links between screens work, forms are switched off.</p>
+        <div id="screenList"></div>
+    </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script src="screens/manifest.js"></script>
+<script src="flows/flows.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+(function () {
+    var toastTimer;
+    function toast(message) {
+        var el = document.getElementById('toast');
+        el.textContent = message; el.classList.add('show');
+        clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.classList.remove('show'); }, 1800);
+    }
+    function copy(text, label) {
+        if (navigator.clipboard) navigator.clipboard.writeText(text).then(function () { toast(label + ' copied'); });
+    }
+    function el(tag, attrs, html) {
+        var node = document.createElement(tag);
+        for (var k in (attrs || {})) node.setAttribute(k, attrs[k]);
+        if (html !== undefined) node.innerHTML = html;
+        return node;
+    }
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); }
+
+    // ---------- colours ----------
+    var COLOURS = [
+        ['Brand blue', '#123499'], ['Blue dark (hover)', '#051650'], ['Blue light', '#4a6fd4'], ['Ink (headings)', '#00072D'],
+        ['Gradient start', '#667eea'], ['Gradient end', '#764ba2'],
+        ['Text primary', '#2d3748'], ['Text secondary', '#4a5568'], ['Text muted', '#718096'],
+        ['Page', '#f5f7fb'], ['Card', '#ffffff'], ['Border', '#e9ecef'],
+        ['Success bg', '#d4edda'], ['Success text', '#155724'], ['Info bg', '#e3f0ff'], ['Info text', '#2D6AFF'],
+        ['Warning bg', '#fff3cd'], ['Warning', '#f39c12'], ['Danger bg', '#f8d7da'], ['Danger', '#dc3545'],
+        ['Advanced', '#2E7D32'], ['Approaching', '#1565C0'], ['Developing', '#E65100'], ['Beginning', '#C62828']
+    ];
+    var swatches = document.getElementById('swatches');
+    COLOURS.forEach(function (c) {
+        var card = el('div', {class: 'swatch', title: 'Copy ' + c[1]},
+            '<div class="chip" style="background:' + c[1] + ';' + (c[1] === '#ffffff' ? 'border-bottom:1px solid #e9ecef;' : '') + '"></div>' +
+            '<div class="meta"><b>' + c[0] + '</b><span>' + c[1] + '</span></div>');
+        card.addEventListener('click', function () { copy(c[1], c[1]); });
+        swatches.appendChild(card);
+    });
+
+    // ---------- flows ----------
+    var flows = window.ARMS_FLOWS || [];
+    document.getElementById('countFlows').textContent = flows.length;
+    var hasMermaid = typeof mermaid !== 'undefined';
+    if (hasMermaid) {
+        mermaid.initialize({
+            startOnLoad: false, securityLevel: 'loose', theme: 'base',
+            themeVariables: {
+                primaryColor: '#eef2ff', primaryBorderColor: '#123499', primaryTextColor: '#00072D',
+                lineColor: '#4a5568', secondaryColor: '#f5f7fb', tertiaryColor: '#ffffff',
+                fontFamily: 'Segoe UI, Arial, sans-serif', fontSize: '14px', edgeLabelBackground: '#ffffff'
+            },
+            flowchart: {htmlLabels: false, curve: 'basis', nodeSpacing: 34, rankSpacing: 46, padding: 12}
+        });
+    }
+    var flowList = document.getElementById('flowList'), flowLinks = document.getElementById('flowLinks');
+    flows.forEach(function (flow) {
+        flowLinks.appendChild(el('a', {href: '#flow-' + flow.id, class: 'sub'}, esc(flow.title)));
+        var card = el('div', {class: 'card flow', id: 'flow-' + flow.id});
+        card.innerHTML =
+            '<div class="flow-head"><div><h3>' + esc(flow.title) + '</h3><p>' + esc(flow.summary) + '</p></div>' +
+            '<div class="row"><button class="btn outline sm" data-act="copy"><i class="fi fi-rr-copy"></i> Copy Mermaid</button>' +
+            '<button class="btn outline sm" data-act="svg"><i class="fi fi-rr-download"></i> Download SVG</button>' +
+            '<button class="btn primary sm" data-act="copysvg"><i class="fi fi-rr-copy-alt"></i> Copy for Figma</button></div></div>' +
+            '<div class="flow-canvas"><pre>' + esc(flow.mermaid) + '</pre></div>';
+        flowList.appendChild(card);
+        var canvas = card.querySelector('.flow-canvas');
+        card.querySelector('[data-act=copy]').addEventListener('click', function () { copy(flow.mermaid, 'Mermaid source'); });
+        card.querySelector('[data-act=copysvg]').addEventListener('click', function () {
+            // Figma turns SVG markup on the clipboard into editable layers when pasted
+            var svg = canvas.querySelector('svg');
+            if (!svg) { toast('Diagram not rendered (needs internet for Mermaid)'); return; }
+            copy(new XMLSerializer().serializeToString(svg), 'Flow');
+        });
+        card.querySelector('[data-act=svg]').addEventListener('click', function () {
+            var svg = canvas.querySelector('svg');
+            if (!svg) { toast('Diagram not rendered (needs internet for Mermaid)'); return; }
+            var source = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(svg);
+            var link = el('a', {href: URL.createObjectURL(new Blob([source], {type: 'image/svg+xml'})), download: 'arms-flow-' + flow.id + '.svg'});
+            document.body.appendChild(link); link.click(); link.remove();
+            toast('Saved arms-flow-' + flow.id + '.svg');
+        });
+        if (hasMermaid) {
+            mermaid.render('m-' + flow.id.replace(/[^a-z0-9]/gi, ''), flow.mermaid).then(function (out) {
+                canvas.innerHTML = out.svg;
+            }).catch(function (err) {
+                canvas.querySelector('pre').insertAdjacentHTML('beforebegin', '<p style="color:#dc3545;font-size:0.8rem;text-align:left;margin-bottom:0.6rem;">Could not draw this flow: ' + esc(err.message || err) + '</p>');
+            });
+        }
+    });
+
+    document.getElementById('downloadAll').addEventListener('click', function () {
+        // one at a time, so the browser does not block the later files
+        Array.prototype.forEach.call(document.querySelectorAll('.flow [data-act=svg]'), function (button, i) {
+            setTimeout(function () { button.click(); }, i * 400);
+        });
+    });
+
+    // ---------- screens ----------
+    var screens = window.ARMS_SCREENS || [], groups = window.ARMS_GROUPS || [];
+    document.getElementById('countScreens').textContent = screens.length;
+    document.getElementById('exported').textContent = window.ARMS_EXPORTED || 'not exported yet';
+    var screenList = document.getElementById('screenList'), screenLinks = document.getElementById('screenLinks');
+    if (!screens.length) {
+        screenList.innerHTML = '<div class="card">No screens exported yet. Run <code>python manage.py seed_demo</code> and then <code>python manage.py export_screens</code>.</div>';
+    }
+    groups.forEach(function (g) {
+        var items = screens.filter(function (s) { return s.group === g[0]; });
+        if (!items.length) return;
+        screenLinks.appendChild(el('a', {href: '#screens-' + g[0], class: 'sub'}, esc(g[1]) + ' · ' + items.length));
+        screenList.appendChild(el('div', {class: 'group-head', id: 'screens-' + g[0]}, '<h3>' + esc(g[1]) + '</h3><span>' + items.length + ' screens</span>'));
+        var grid = el('div', {class: 'screens'});
+        items.forEach(function (s) {
+            var file = 'screens/' + s.group + '/' + s.slug + '.html';
+            grid.appendChild(el('a', {class: 'screen', href: file, target: '_blank'},
+                '<div class="shot"><iframe loading="lazy" src="' + file + '" title="' + esc(s.title) + '" tabindex="-1"></iframe></div>' +
+                '<div class="meta"><b>' + esc(s.title) + '</b><small>' + esc(s.note || '') + '</small><code>' + esc(s.url) + '</code></div>'));
+        });
+        screenList.appendChild(grid);
+    });
+    function fit() {
+        document.querySelectorAll('.shot').forEach(function (shot) {
+            shot.querySelector('iframe').style.transform = 'scale(' + (shot.clientWidth / 1440) + ')';
+        });
+    }
+    window.addEventListener('resize', fit);
+    fit();
+})();
+</script>
+</body>
+</html>

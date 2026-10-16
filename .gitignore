@@ -45,3 +45,6 @@ supabase/.branches/
 
 # Local cache files (core/caching.py)
 .cache/
+
+# Page snapshots made by `python manage.py export_screens` (rebuilt on demand; they hold account data)
+design/screens/

@@ -30,7 +30,7 @@ def assessment_list(request):
     context = {
         'assessments': assessments,
         'subjects': Subject.objects.filter(school=teacher_school, is_active=True),
-        'sections': Section.objects.filter(school=teacher_school, is_active=True),
+        'sections': Section.objects.filter(school=teacher_school, is_active=True, school_year__is_current=True),
         'school_years': SchoolYear.objects.filter(school=teacher_school, is_current=True),
         'quarters': Quarter.objects.filter(school_year__school=teacher_school, school_year__is_current=True),
     }
@@ -47,7 +47,7 @@ def assessment_create_page(request):
     
     context = {
         'subjects': Subject.objects.filter(school=teacher_school, is_active=True),
-        'sections': Section.objects.filter(school=teacher_school, is_active=True),
+        'sections': Section.objects.filter(school=teacher_school, is_active=True, school_year__is_current=True),
         'school_years': SchoolYear.objects.filter(school=teacher_school, is_current=True),
         'quarters': Quarter.objects.filter(school_year__school=teacher_school, school_year__is_current=True),
     }

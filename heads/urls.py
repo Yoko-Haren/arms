@@ -1,15 +1,21 @@
 from django.urls import path
 from django.views.generic import RedirectView
 
-from . import views, views_users
+from . import views, views_academic, views_users
 
 urlpatterns = [
-    # Academic Dashboard (the principal's landing page)
-    path('ai-dashboard/', views.ai_academic_dashboard, name='heads-ai-dashboard'),
+    # Academic Dashboard (the principal's landing page) and the section brief
+    path('ai-dashboard/', views_academic.academic_dashboard, name='heads-ai-dashboard'),
+    path('ai-dashboard/export/', views_academic.dashboard_export, name='heads-ai-dashboard-export'),
     path('ai-section/<int:section_id>/<int:subject_id>/<int:quarter_id>/',
-         views.ai_section_detail, name='heads-ai-section-detail'),
-    path('api/ai-recommendation/<int:section_id>/<int:subject_id>/<int:quarter_id>/',
-         views.get_ai_section_recommendation, name='ai-section-recommendation'),
+         views_academic.section_brief, name='heads-ai-section-detail'),
+    path('ai-section/<int:section_id>/<int:subject_id>/<int:quarter_id>/export/',
+         views_academic.section_export, name='heads-ai-section-export'),
+    path('api/poro/<str:token>/', views_academic.poro_narrative, name='heads-poro-narrative'),
+
+    # Live updates (polled by every School Head page) and notifications
+    path('api/updates/', views_academic.live_updates, name='heads-live-updates'),
+    path('notifications/<int:notification_id>/open/', views_academic.open_notification, name='heads-open-notification'),
     path('ai-mark-recommendation/<int:recommendation_id>/',
          views.ai_mark_recommendation_implemented, name='heads-ai-mark-recommendation'),
     path('ai-remark/<int:enrollment_id>/<int:subject_id>/<int:quarter_id>/',

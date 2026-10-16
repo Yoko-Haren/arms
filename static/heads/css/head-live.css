@@ -1,0 +1,48 @@
+/* School Head portal: notification bell and automatic page updates (templates/heads/_live.html). */
+.live { position: relative; display: inline-flex; }
+.live-btn { position: relative; width: 40px; height: 40px; border-radius: 12px; border: 2px solid #e9ecef; background: #fff;
+            color: #2d3748; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 1.05rem;
+            transition: border-color 0.15s, color 0.15s; }
+.live-btn:hover, .live-btn[aria-expanded="true"] { border-color: #123499; color: #123499; }
+.live-btn:focus-visible { outline: 3px solid rgba(18, 52, 153, 0.35); outline-offset: 2px; }
+.live-btn.pending::after { content: ''; position: absolute; bottom: 5px; right: 5px; width: 8px; height: 8px; border-radius: 50%;
+                           background: #123499; box-shadow: 0 0 0 2px #fff; }
+.live-badge { position: absolute; top: -7px; right: -7px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+              background: #dc3545; color: #fff; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center;
+              justify-content: center; border: 2px solid #fff; }
+.live-panel { position: absolute; right: 0; top: calc(100% + 10px); width: min(390px, calc(100vw - 32px)); background: #fff;
+              border: 1px solid #e8ecf1; border-radius: 16px; box-shadow: 0 18px 50px rgba(0, 7, 45, 0.18); z-index: 2500; overflow: hidden;
+              text-align: left; }
+.live-head { display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1rem; border-bottom: 1px solid #e8ecf1; }
+.live-head strong { font-size: 0.95rem; color: #1a1a2e; }
+.live-link { background: none; border: 0; padding: 0; color: #123499; font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.live-link:hover { text-decoration: underline; }
+.live-update { display: flex; gap: 0.5rem; align-items: center; padding: 0.6rem 1rem; background: #eef2ff; color: #123499; font-size: 0.82rem; font-weight: 600; }
+.live-update span { flex: 1; }
+.live-list { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow-y: auto; }
+.live-item > a, .live-item > div { display: flex; gap: 0.7rem; padding: 0.75rem 1rem; text-decoration: none; color: inherit; border-top: 1px solid #f0f3f7; }
+.live-item:first-child > a, .live-item:first-child > div { border-top: 0; }
+.live-item > a:hover, .live-item > a:focus-visible { background: #f5f7fb; outline: none; }
+.live-item.unread > a, .live-item.unread > div { background: #f3f6ff; box-shadow: inset 3px 0 0 #123499; }
+.live-ico { width: 32px; height: 32px; border-radius: 10px; background: #e8eeff; color: #123499; display: flex; align-items: center;
+            justify-content: center; flex-shrink: 0; font-size: 0.9rem; }
+.live-item.high .live-ico, .live-item.urgent .live-ico { background: #ffebee; color: #C62828; }
+.live-title { display: block; font-weight: 700; font-size: 0.86rem; color: #1a1a2e; }
+.live-msg { display: block; font-size: 0.8rem; color: #4a5568; line-height: 1.45; margin-top: 0.1rem; }
+.live-when { display: block; font-size: 0.74rem; color: #718096; margin-top: 0.2rem; }
+.live-empty { padding: 1.4rem 1rem; text-align: center; font-size: 0.84rem; color: #4a5568; }
+.live-foot { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; padding: 0.7rem 1rem; border-top: 1px solid #e8ecf1;
+             background: #f8fafc; font-size: 0.78rem; color: #4a5568; flex-wrap: wrap; }
+.live-switch { display: inline-flex; gap: 0.4rem; align-items: center; cursor: pointer; }
+.live-switch input { accent-color: #123499; width: 16px; height: 16px; }
+.live-pill { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 2600; background: #fff; color: #1a1a2e;
+             border: 2px solid #123499; border-radius: 30px; padding: 0.4rem 0.45rem 0.4rem 1rem; display: flex; gap: 0.6rem; align-items: center;
+             box-shadow: 0 10px 30px rgba(18, 52, 153, 0.25); font-size: 0.86rem; font-weight: 600; }
+.live-pill i { color: #123499; }
+.live-pill button { background: #123499; color: #fff; border: 0; border-radius: 20px; padding: 0.35rem 0.85rem; font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+.live-pill button:hover { background: #051650; }
+.live-pill .live-pill-close { background: transparent; color: #4a5568; padding: 0.25rem 0.4rem; }
+.live-pill .live-pill-close:hover { background: #f5f7fb; color: #1a1a2e; }
+.live-pill[hidden], .live-panel[hidden], .live-update[hidden], .live-badge[hidden] { display: none; }
+.sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+@media (max-width: 600px) { .live-panel { position: fixed; top: 70px; right: 16px; left: 16px; width: auto; } }
