@@ -1,6 +1,6 @@
 ---
 name: arms-verify
-description: Run ARMS's checks in order and report what fails: Django's system check, missing migrations, a signed-in page check for every role, and a secrets scan of the staged changes. Use before committing, after changing models, views, templates or settings, or when asked to "verify", "check", "test the pages" or "make sure it still works".
+description: Run ARMS's checks in order and report what fails (Django's system check, missing migrations, a signed-in page check for every role, and a secrets scan of the staged changes). Use before committing, after changing models, views, templates or settings, or when asked to "verify", "check", "test the pages" or "make sure it still works".
 ---
 
 # ARMS Verify
