@@ -11,23 +11,25 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 
 from academics.models import GradeLevel, Quarter, SchoolYear, Section, Subject, SubjectFamily
 from communication.models import Notification
 from core.caching import cache_page_for_user, data_version, remember_filters
+from core.periods import GRADE, HAS_GRADE
 from core.xlsx import Report, safe_filename
 from enrollment.models import Enrollment
 from grades.models import GradeComponent
 from scheduling.models import ClassAssignment
 
-from . import insights
+from . import forecasts, insights
 from .insights import LEVELS, PASSING, level_of
 
 ACTIVE = ['Enrolled', 'Transferred_In']
 LEVEL_HEX = {'beginning': '#C62828', 'developing': '#E65100', 'approaching': '#1565C0', 'proficient': '#123499', 'advanced': '#2E7D32'}
 VALIDATED = ('Validated', 'Finalized')
 PERIOD_WORD = {'Q': 'Quarter', 'T': 'Trimester', 'S': 'Semester'}
+GRADE_SCOPES = {'jhs': 'All Junior High', 'shs': 'All Senior High'}
 
 
 def period_name(q):
@@ -81,84 +83,159 @@ def kpup(avg):
 # Academic Dashboard
 # =============================================================================================
 
+def _grade_scope(key, grade_levels):
+    """The grade levels a selection covers: (levels, or None for every level; option value; label)."""
+    if key in GRADE_SCOPES:
+        chosen = [g for g in grade_levels if bool(g.is_senior_high) == (key == 'shs')]
+        if chosen:
+            numbers = sorted(g.grade_number for g in chosen)
+            span = f'Grades {numbers[0]} to {numbers[-1]}' if len(numbers) > 1 else f'Grade {numbers[0]}'
+            return chosen, key, f'{GRADE_SCOPES[key]} ({span})'
+    one = next((g for g in grade_levels if str(g.id) == str(key)), None)
+    if one:
+        return [one], str(one.id), one.grade_name
+    return None, 'all', 'All grade levels'
+
+
+def _ladder(items):
+    """The five proficiency levels, Beginning first, each listing the items whose average falls in it."""
+    total = len(items) or 1
+    ladder = []
+    for lv in reversed(LEVELS):
+        mine = sorted([i for i in items if i['level']['key'] == lv['key']], key=lambda i: -i['average'])
+        ladder.append({'level': lv, 'items': mine, 'count': len(mine), 'share': round(100 * len(mine) / total)})
+    return ladder
+
+
 def _dashboard_data(params, school):
     school_years = list(SchoolYear.objects.filter(school=school).order_by('-year_start'))
     sy = next((s for s in school_years if str(s.id) == params.get('school_year')), None) or \
         next((s for s in school_years if s.is_current), None) or (school_years[0] if school_years else None)
     periods = list(Quarter.objects.filter(school_year=sy).order_by('quarter_number')) if sy else []
     wanted = params.get('quarter')
-    period = next((q for q in periods if wanted and (q.quarter_label == wanted or str(q.id) == wanted)), None) \
-        or _default_period(periods, school)
+    latest = _default_period(periods, school)
+    # "All periods": each learner's grade in a subject is the average of its periods so far (the final grade once all are in)
+    all_periods = wanted == 'all' and latest is not None
+    period = None if all_periods else (next((q for q in periods if wanted and (q.quarter_label == wanted or str(q.id) == wanted)), None) or latest)
+    ref_period = period or latest                                # links and the forecast point at a real grading period
+    span = [q for q in periods if latest and q.quarter_number <= latest.quarter_number] if all_periods else []
     earlier = [q for q in periods if period and q.quarter_number < period.quarter_number]
     prev_period = earlier[-1] if earlier else None
+    quarter_value = 'all' if all_periods else (period.quarter_label if period else '')
+    shown_period = (f'{period_name(span[0])} to {period_name(span[-1])}' if len(span) > 1 else period_name(span[0])) \
+        if all_periods else period_name(period)
 
     grade_levels = list(GradeLevel.objects.filter(school=school).order_by('sort_order'))
     families = list(SubjectFamily.objects.filter(school=school, is_active=True).order_by('sort_order', 'family_name'))
     subjects = list(Subject.objects.filter(school=school, is_active=True).select_related('grade_level')
                     .order_by('grade_level__sort_order', 'subject_code'))
+    subject_by_id = {s.id: s for s in subjects}
     mode = 'subject' if params.get('view_mode') in ('subject', 'all') else 'family'
-    grade_id = params.get('grade_level', 'all')
-    grade_obj = next((gl for gl in grade_levels if str(gl.id) == grade_id), None)
+    grade_set, grade_key, grade_label = _grade_scope(params.get('grade_level', 'all'), grade_levels)
     family = subject = None
+    all_families = False
     if mode == 'family':
-        family = next((f for f in families if str(f.id) == params.get('subject_family')), None) or (families[0] if families else None)
-        scope = [s for s in subjects if family and s.subject_family_id == family.id and (grade_obj is None or s.grade_level_id == grade_obj.id)]
-        scope_name = family.family_name if family else 'No discipline'
-        scope_detail = grade_obj.grade_name if grade_obj else 'All grade levels'
+        all_families = params.get('subject_family') == 'all'
+        if not all_families:
+            family = next((f for f in families if str(f.id) == params.get('subject_family')), None) or (families[0] if families else None)
+        grade_ids = {g.id for g in grade_set} if grade_set else None
+        scope = [s for s in subjects if (grade_ids is None or s.grade_level_id in grade_ids)
+                 and (all_families or (family and s.subject_family_id == family.id))]
+        scope_name = 'All disciplines' if all_families else (family.family_name if family else 'No discipline')
+        scope_detail = grade_label
     else:
-        grade_obj = None
+        grade_set, grade_key, grade_label = None, 'all', 'All grade levels'      # a subject belongs to one grade level
         subject = next((s for s in subjects if str(s.id) == params.get('subject')), None) or (subjects[0] if subjects else None)
         scope = [subject] if subject else []
         scope_name = subject.subject_name if subject else 'No subject'
         scope_detail = subject.grade_level.grade_name if subject and subject.grade_level_id else ''
     ids = [s.id for s in scope]
+    sections_view = mode == 'family' and all_families                         # every discipline: one row per section
+    query = {'school_year': sy.id if sy else '', 'quarter': quarter_value}
+    brief = lambda section_id, subject_id: reverse('heads-ai-section-detail', args=[section_id, subject_id, ref_period.id]) if ref_period else ''
 
-    base = GradeComponent.objects.filter(subject_id__in=ids, enrollment__school_year=sy, enrollment__status__in=ACTIVE,
-                                         enrollment__section__school=school, initial_grade__isnull=False)
-    rows = list(base.filter(quarter=period).values(
-        'enrollment__student_id', 'enrollment__student__first_name', 'enrollment__student__last_name',
-        'enrollment__section_id', 'enrollment__section__section_name', 'enrollment__section__grade_level__grade_name',
-        'enrollment__section__grade_level__sort_order', 'subject_id', 'subject__subject_code', 'subject__subject_name',
-        'initial_grade')) if ids and period else []
+    base = GradeComponent.objects.filter(HAS_GRADE, subject_id__in=ids, enrollment__school_year=sy, enrollment__status__in=ACTIVE,
+                                         enrollment__section__school=school)
+    fields = ('enrollment_id', 'enrollment__student_id', 'enrollment__student__first_name', 'enrollment__student__last_name',
+              'enrollment__section_id', 'enrollment__section__section_name', 'enrollment__section__grade_level__grade_name',
+              'enrollment__section__grade_level__sort_order', 'subject_id', 'subject__subject_code', 'subject__subject_name')
+    rows = []
+    if ids and (period or all_periods):
+        found = list((base.filter(quarter__in=span) if all_periods else base.filter(quarter=period)).values(*fields, grade=GRADE))
+        if all_periods:
+            merged = {}
+            for r in found:
+                merged.setdefault((r['enrollment_id'], r['subject_id']), dict(r, grades=[]))['grades'].append(float(r['grade']))
+            rows = [dict(m, grade=mean(m['grades'])) for m in merged.values()]
+        else:
+            rows = found
     prev, prev_sum, prev_n = {}, 0.0, 0
     if ids and prev_period:
-        for r in base.filter(quarter=prev_period).values('enrollment__section_id', 'subject_id').annotate(avg=Avg('initial_grade'), n=Count('id')):
-            prev[(r['enrollment__section_id'], r['subject_id'])] = float(r['avg'])
+        for r in base.filter(quarter=prev_period).values('enrollment__section_id', 'subject_id').annotate(avg=Avg(GRADE), n=Count('id')):
+            prev[(r['enrollment__section_id'], r['subject_id'])] = (float(r['avg']), r['n'])
             prev_sum += float(r['avg']) * r['n']
             prev_n += r['n']
 
     classes, failing = {}, {}
     for r in rows:
-        grade = float(r['initial_grade'])
+        grade = float(r['grade'])
         key = (r['enrollment__section_id'], r['subject_id'])
         c = classes.setdefault(key, {
             'section_id': key[0], 'subject_id': key[1], 'section_name': r['enrollment__section__section_name'],
             'grade_level': r['enrollment__section__grade_level__grade_name'] or '',
             'sort': r['enrollment__section__grade_level__sort_order'] or 0,
-            'subject_code': r['subject__subject_code'], 'subject_name': r['subject__subject_name'], 'grades': []})
+            'subject_code': r['subject__subject_code'], 'subject_name': r['subject__subject_name'], 'grades': [], 'students': set()})
         c['grades'].append(grade)
+        c['students'].add(r['enrollment__student_id'])
         if grade < PASSING:
             sid = r['enrollment__student_id']
             f = failing.setdefault(sid, {'name': f"{r['enrollment__student__last_name']}, {r['enrollment__student__first_name']}",
-                                         'section': r['enrollment__section__section_name'], 'items': []})
-            f['items'].append({'subject': r['subject__subject_code'], 'grade': grade,
-                               'url': reverse('heads-ai-section-detail', args=[key[0], key[1], period.id])})
+                                         'section': r['enrollment__section__section_name'], 'section_id': key[0], 'items': []})
+            f['items'].append({'subject': r['subject__subject_code'], 'grade': grade, 'url': brief(*key)})
 
-    table = []
-    for c in sorted(classes.values(), key=lambda c: (c['sort'], c['section_name'], c['subject_code'])):
+    def class_row(c):
         avg = mean(c['grades'])
         before = prev.get((c['section_id'], c['subject_id']))
-        table.append({
+        return {
             'section_id': c['section_id'], 'subject_id': c['subject_id'], 'section_name': c['section_name'],
             'grade_level': c['grade_level'], 'subject_code': c['subject_code'], 'subject_name': c['subject_name'],
             'learners': len(c['grades']), 'overall': round(avg, 1), 'level': level_of(avg),
             'below': sum(1 for g in c['grades'] if g < PASSING),
-            'delta': _r1(avg - before) if before is not None else None,
-            'delta_abs': _r1(abs(avg - before)) if before is not None else None,
+            'delta': _r1(avg - before[0]) if before else None, 'delta_abs': _r1(abs(avg - before[0])) if before else None,
             'label': c['section_name'] if mode == 'subject' else f"{c['section_name']} ({c['subject_code']})",
-            'url': reverse('heads-ai-section-detail', args=[c['section_id'], c['subject_id'], period.id]),
-            **kpup(avg),
-        })
+            'url': brief(c['section_id'], c['subject_id']), **kpup(avg),
+        }
+
+    class_rows = [class_row(c) for c in sorted(classes.values(), key=lambda c: (c['sort'], c['section_name'], c['subject_code']))]
+    if sections_view:
+        grouped = {}
+        for c, row in zip(sorted(classes.values(), key=lambda c: (c['sort'], c['section_name'], c['subject_code'])), class_rows):
+            s = grouped.setdefault(c['section_id'], {'section_name': c['section_name'], 'grade_level': c['grade_level'],
+                                                     'grades': [], 'students': set(), 'failing': set(), 'subjects': [], 'prev': []})
+            s['grades'] += c['grades']
+            s['students'] |= c['students']
+            s['subjects'].append(row)
+            before = prev.get((c['section_id'], c['subject_id']))
+            if before:
+                s['prev'].append(before)
+        failing_by_section = defaultdict(set)
+        for sid, f in failing.items():
+            failing_by_section[f['section_id']].add(sid)
+        table = []
+        for section_id, s in grouped.items():
+            avg = mean(s['grades'])
+            before = sum(a * n for a, n in s['prev']) / sum(n for _, n in s['prev']) if s['prev'] else None
+            s['subjects'].sort(key=lambda r: r['overall'])
+            table.append({
+                'section_id': section_id, 'subject_id': None, 'section_name': s['section_name'], 'grade_level': s['grade_level'],
+                'subject_code': '', 'subject_name': f'{len(s["subjects"])} subjects', 'learners': len(s['students']),
+                'overall': round(avg, 1), 'level': level_of(avg), 'below': len(failing_by_section[section_id]),
+                'delta': _r1(avg - before) if before is not None else None,
+                'delta_abs': _r1(abs(avg - before)) if before is not None else None,
+                'label': s['section_name'], 'url': f'#section-{section_id}', 'subjects': s['subjects'], **kpup(avg),
+            })
+    else:
+        table = class_rows
 
     at_risk = []
     for f in failing.values():
@@ -168,8 +245,33 @@ def _dashboard_data(params, school):
         at_risk.append(f)
     at_risk.sort(key=lambda f: (f['lowest'], f['name']))
 
-    grades = [float(r['initial_grade']) for r in rows]
+    # where each item stands (the status card's level chart): disciplines, subjects or sections, by selection
+    item_rows = defaultdict(list)
+    if sections_view:
+        item_word, family_of = 'discipline', {s.id: s.subject_family_id for s in scope}
+        for r in rows:
+            item_rows[family_of.get(r['subject_id'])].append(float(r['grade']))
+        names = {f.id: f.family_name for f in families}
+        link = lambda fid: '?' + urlencode({'view_mode': 'family', 'subject_family': fid, 'grade_level': grade_key, **query})
+        items = [{'name': names.get(fid, 'Other subjects'), 'average': round(mean(g), 1), 'level': level_of(mean(g)),
+                  'learners': len(g), 'url': link(fid) if fid else ''} for fid, g in item_rows.items()]
+    elif mode == 'family' and len({r['subject_id'] for r in rows}) > 1:
+        item_word = 'subject'
+        for r in rows:
+            item_rows[r['subject_id']].append(float(r['grade']))
+        link = lambda sid: '?' + urlencode({'view_mode': 'subject', 'subject': sid, **query})
+        items = [{'name': subject_by_id[sid].subject_name, 'average': round(mean(g), 1), 'level': level_of(mean(g)),
+                  'learners': len(g), 'url': link(sid)} for sid, g in item_rows.items()]
+    else:
+        item_word = 'section'
+        items = [{'name': f'{r["grade_level"]} {r["section_name"]}' if mode == 'family' else r['section_name'],
+                  'average': r['overall'], 'level': r['level'], 'learners': r['learners'], 'url': r['url']} for r in class_rows]
+    ladder = _ladder(items) if items else []
+
+    grades = [float(r['grade']) for r in rows]
     status = None
+    forecast_spec = None
+    table_, meta = forecasts.year_table(school, sy) if ids else ({}, None)
     if grades:
         average = mean(grades)
         prev_avg = prev_sum / prev_n if prev_n else None
@@ -177,20 +279,64 @@ def _dashboard_data(params, school):
             'level': level_of(average), 'average': round(average, 1),
             'delta': _r1(average - prev_avg) if prev_avg is not None else None,
             'delta_abs': _r1(abs(average - prev_avg)) if prev_avg is not None else None,
-            'learners': len({r['enrollment__student_id'] for r in rows}), 'classes': len(table),
+            'learners': len({r['enrollment__student_id'] for r in rows}), 'classes': len(class_rows),
+            'sections': len({r['enrollment__section_id'] for r in rows}),
             'passing_rate': round(100 * sum(1 for g in grades if g >= PASSING) / len(grades), 1),
             'below': len(failing),
         }
-        status['insight'] = insights.dashboard_insight(
-            scope_name=scope_name + (f' ({scope_detail})' if mode == 'family' and grade_obj else ''),
-            period_name=period_name(period), prev_period_name=period_name(prev_period),
-            average=average, delta=status['delta'], learners=status['learners'], below=status['below'],
-            rows=[{'label': r['label'], 'overall': r['overall']} for r in table])
+
+    # the forecast chart: disciplines, grade levels or sections over the school year, with what comes next
+    if ids and periods and table_:
+        in_scope = {k for k, v in table_.items() if v['subject'] in set(ids)}
+        if sections_view:
+            fam = {s.id: s.subject_family_id for s in scope}
+            items_fc = [{'key': f'family-{f.id}', 'name': f.family_name, 'keys': [k for k in in_scope if fam.get(table_[k]['subject']) == f.id],
+                         'url': '?' + urlencode({'view_mode': 'family', 'subject_family': f.id, 'grade_level': grade_key, **query})}
+                        for f in families]
+            level, fc_word = 'group', 'learning area'
+        elif mode == 'family':
+            levels_in = grade_set or grade_levels
+            items_fc = [{'key': f'grade-{g.id}', 'name': g.grade_name,
+                         'keys': [k for k in in_scope if subject_by_id.get(table_[k]['subject']) and subject_by_id[table_[k]['subject']].grade_level_id == g.id],
+                         'url': '?' + urlencode({'view_mode': 'family', 'subject_family': family.id if family else 'all', 'grade_level': g.id, **query})}
+                        for g in levels_in]
+            level, fc_word = 'group', 'grade level'
+        else:
+            names = dict(Section.objects.filter(id__in={table_[k]['section'] for k in in_scope}).values_list('id', 'section_name'))
+            items_fc = [{'key': f'section-{sid}', 'name': names.get(sid, 'Section'), 'keys': [k for k in in_scope if table_[k]['section'] == sid],
+                         'url': brief(sid, subject.id)} for sid in sorted(names, key=lambda i: names[i])]
+            level, fc_word = 'class', 'section'
+        forecast_spec = forecasts.chart(
+            table=table_, meta=meta, periods=periods, items=items_fc, level=level, step_sd=insights.typical_step_sd(school.id),
+            reference={'key': 'all', 'name': scope_name if mode == 'subject' or all_families or not grade_set else f'{scope_name}, {grade_label}',
+                       'keys': list(in_scope)},
+            selected=None if all_periods else (period.quarter_number if period else None), period_name=period_name)
+        forecast_spec['word'] = fc_word
+
+    if status:
+        overall = next((s for s in (forecast_spec or {}).get('series', []) if s.get('reference')), None)
+        upcoming = None
+        if overall and overall['future'] and ref_period and ref_period.quarter_number == overall['last']:
+            p = min(overall['future'])
+            upcoming = {'name': period_name(next((q for q in periods if q.quarter_number == p), None)), 'value': overall['future'][p][0]}
+        status['insight_scope'] = (grade_label.replace('All ', '', 1) if grade_set else 'The school') if all_families else \
+            scope_name + (f' ({grade_label})' if mode == 'family' and grade_set else '')
+        status['insight'], status['insight_names'] = insights.dashboard_insight(
+            scope_name=status['insight_scope'],
+            period_name=shown_period, prev_period_name=period_name(prev_period),
+            average=mean(grades), delta=status['delta'], below=status['below'], items=items, item_word=item_word, upcoming=upcoming,
+            over_periods=len(span) > 1)
 
     chart = [{'order': i, 'section': r['section_name'], 'grade': r['grade_level'], 'subject': r['subject_name'],
               'code': r['subject_code'], 'url': r['url'], 'level': r['level']['key'], 'level_name': r['level']['name'],
               'k': r['k'], 'p': r['p'], 'u': r['u'], 'pd': r['pd'], 'overall': r['overall'],
               'learners': r['learners'], 'below': r['below'], 'delta': r['delta']} for i, r in enumerate(table)]
+    sections_json = {str(r['section_id']): {'name': f'{r["grade_level"]} {r["section_name"]}', 'overall': r['overall'],
+                                           'level': r['level']['name'], 'subjects': [
+                                               {'code': c['subject_code'], 'name': c['subject_name'], 'overall': c['overall'],
+                                                'level': c['level']['key'], 'level_short': c['level']['short'], 'letter': c['level']['letter'],
+                                                'below': c['below'], 'delta': c['delta'], 'url': c['url']} for c in r['subjects']]}
+                     for r in table} if sections_view else None
 
     subject_groups = []
     for s in subjects:
@@ -201,12 +347,16 @@ def _dashboard_data(params, school):
 
     return {
         'school_years': school_years, 'sy': sy, 'periods': periods, 'period': period, 'prev_period': prev_period,
-        'period_name': period_name(period), 'prev_period_name': period_name(prev_period),
+        'all_periods': all_periods, 'ref_period': ref_period, 'quarter_value': quarter_value,
+        'period_name': shown_period, 'prev_period_name': period_name(prev_period),
         'period_options': [{'value': q.quarter_label, 'name': period_name(q), 'current': q.is_current_quarter} for q in periods],
-        'view_mode': mode, 'families': families, 'family': family, 'subject': subject, 'subject_groups': subject_groups,
-        'grade_levels': grade_levels, 'grade_id': str(grade_obj.id) if grade_obj else 'all', 'grade_obj': grade_obj,
-        'scope_name': scope_name, 'scope_detail': scope_detail,
+        'view_mode': mode, 'families': families, 'family': family, 'all_families': all_families, 'subject': subject,
+        'subject_groups': subject_groups, 'grade_levels': grade_levels, 'grade_id': grade_key, 'grade_label': grade_label,
+        'grade_scopes': [{'value': k, 'name': _grade_scope(k, grade_levels)[2]} for k in GRADE_SCOPES
+                         if any(bool(g.is_senior_high) == (k == 'shs') for g in grade_levels)],
+        'scope_name': scope_name, 'scope_detail': scope_detail, 'sections_view': sections_view,
         'status': status, 'table': table, 'at_risk': at_risk, 'chart': chart, 'levels': LEVELS,
+        'ladder': ladder, 'ladder_word': item_word if items else '', 'forecast': forecast_spec, 'sections_json': sections_json,
     }
 
 
@@ -220,6 +370,9 @@ def academic_dashboard(request):
     data = _dashboard_data(request.GET, school)
     data['export_url'] = reverse('heads-ai-dashboard-export') + ('?' + request.GET.urlencode() if request.GET else '')
     data['live_fingerprint'] = school_fingerprint(school)
+    status = data['status']
+    data['poro_token'] = insights.narrative_token(
+        status['insight'], keep=[status['level']['name'], status['insight_scope']] + [i['name'] for i in status['insight_names']]) if status else ''
     return render(request, 'heads/ai_dashboard/index.html', data)
 
 
@@ -244,20 +397,37 @@ def dashboard_export(request):
         sh.heading('What Poro sees')
         sh.paragraph(st['insight'])
         sh.paragraph(st['level']['meaning'], color='4A5568', size=10)
+        if d['ladder']:
+            sh.heading(f'Where each {d["ladder_word"]} stands')
+            for step in d['ladder']:
+                names = ', '.join(f'{i["name"]} ({i["average"]:.1f})' for i in step['items']) or 'None'
+                sh.paragraph(f'{step["level"]["name"]} ({step["level"]["letter"]}, {step["level"]["range"]}): {names}', size=10)
     else:
         sh.paragraph('No grades for this selection yet.')
-    sh.heading('Classes')
+    sh.heading('Sections' if d['sections_view'] else 'Classes')
     sh.paragraph('K, Pr, U and Pd (Knowledge, Process, Understanding, Product) are estimated from each class average '
                  'with the DepEd Order No. 73, s. 2012 weights; the average and level come from the actual grades.',
                  color='4A5568', size=9)
-    sh.table(
-        [{'title': 'Section', 'wrap': True}, {'title': 'Subject', 'wrap': True}, {'title': 'Learners', 'format': 'int'},
-         {'title': 'K', 'format': 'grade'}, {'title': 'Pr', 'format': 'grade'}, {'title': 'U', 'format': 'grade'},
-         {'title': 'Pd', 'format': 'grade'}, {'title': 'Average', 'format': 'grade'}, {'title': 'Level'},
-         {'title': f'Change vs {d["prev_period_name"] or "previous"}', 'format': 'delta'}],
-        [[f'{r["grade_level"]} {r["section_name"]}', r['subject_name'], r['learners'], r['k'], r['p'], r['u'], r['pd'],
-          r['overall'], (f'{r["level"]["name"]} ({r["level"]["letter"]})', r['level']['key']),
-          r['delta'] if r['delta'] is not None else '—'] for r in d['table']])
+    columns = [{'title': 'Section', 'wrap': True}, {'title': 'Subject', 'wrap': True}, {'title': 'Learners', 'format': 'int'},
+               {'title': 'K', 'format': 'grade'}, {'title': 'Pr', 'format': 'grade'}, {'title': 'U', 'format': 'grade'},
+               {'title': 'Pd', 'format': 'grade'}, {'title': 'Average', 'format': 'grade'}, {'title': 'Level'},
+               {'title': f'Change vs {d["prev_period_name"] or "previous"}', 'format': 'delta'}]
+    line = lambda r: [f'{r["grade_level"]} {r["section_name"]}', r['subject_name'], r['learners'], r['k'], r['p'], r['u'], r['pd'],
+                      r['overall'], (f'{r["level"]["name"]} ({r["level"]["letter"]})', r['level']['key']),
+                      r['delta'] if r['delta'] is not None else '—']
+    sh.table(columns, [line(r) for r in d['table']])
+    if d['sections_view']:
+        classes = report.sheet('Classes', [20, 26, 11, 9, 9, 9, 9, 11, 28, 13], subtitle=scope, meta=meta, title='Every class')
+        classes.table(columns, [line(c) for r in d['table'] for c in r['subjects']])
+    fc = d['forecast']
+    if fc and fc['series']:
+        labels = [p['label'] for p in fc['periods']]
+        sh_fc = report.sheet('Forecast', [30] + [13] * len(labels), subtitle=scope, meta=meta, title='Averages by grading period, with forecast')
+        sh_fc.paragraph(fc['method']['text'], color='4A5568', size=9)
+        cell = lambda s, p: (f'{s["actual"][p]:.1f}' if p in s['actual'] else
+                             f'{s["future"][p][0]:.1f} (forecast, {s["future"][p][1]:.1f} to {s["future"][p][2]:.1f})' if p in s['future'] else '—')
+        sh_fc.table([{'title': 'Series', 'wrap': True}] + [{'title': lab, 'wrap': True} for lab in labels],
+                    [[s['name']] + [cell(s, p['p']) for p in fc['periods']] for s in fc['series']])
     if d['at_risk']:
         sh2 = report.sheet('Learners below 75', [30, 22, 40, 14], subtitle=scope, meta=meta,
                            title='Learners below 75 (remediation required, DepEd Order No. 8, s. 2015)', landscape=False)
@@ -266,7 +436,7 @@ def dashboard_export(request):
                   [[f['name'], f['section'], ', '.join(f'{i["subject"]} ({i["grade"]:.1f})' for i in f['items']),
                     (f['lowest'], 'beginning')] for f in d['at_risk']])
     name = safe_filename(school.short_name or 'school', 'academic-dashboard', d['scope_name'],
-                         d['period'].quarter_label if d['period'] else '')
+                         'all-periods' if d['all_periods'] else (d['period'].quarter_label if d['period'] else ''))
     return report.response(f'{name}.xlsx')
 
 
@@ -304,10 +474,10 @@ def _section_data(school, section_id, subject_id, quarter_id):
     enrollments = list(Enrollment.objects.filter(section=section, school_year=sy, status__in=ACTIVE)
                        .select_related('student').order_by('student__last_name', 'student__first_name'))
     history, validated = defaultdict(dict), 0
-    for r in GradeComponent.objects.filter(enrollment_id__in=[e.id for e in enrollments], subject=subject,
-                                           quarter__school_year=sy, initial_grade__isnull=False) \
-            .values('enrollment_id', 'quarter__quarter_number', 'initial_grade', 'validation_status'):
-        history[r['enrollment_id']][r['quarter__quarter_number']] = float(r['initial_grade'])
+    for r in GradeComponent.objects.filter(HAS_GRADE, enrollment_id__in=[e.id for e in enrollments], subject=subject,
+                                           quarter__school_year=sy) \
+            .values('enrollment_id', 'quarter__quarter_number', 'validation_status', grade=GRADE):
+        history[r['enrollment_id']][r['quarter__quarter_number']] = float(r['grade'])
         if r['quarter__quarter_number'] == q and r['validation_status'] in VALIDATED:
             validated += 1
     class_means = {}
@@ -315,21 +485,37 @@ def _section_data(school, section_id, subject_id, quarter_id):
         class_means[num] = mean(h[num] for h in history.values() if num in h)
     is_latest = bool(class_means) and q >= max(class_means) and q in class_means
 
-    forecast_points, projected = [], {}
+    # forecasts: the grade model when it is trained (learner by learner), otherwise the damped trend
+    table, meta = forecasts.year_table(school, sy)
+    class_keys = [(e.id, subject.id) for e in enrollments]
+    numbers = [p.quarter_number for p in periods]
+    step_sd = insights.typical_step_sd(school.id)
+    forecast_points, projected, chances = [], {}, {}
     if is_latest and periods and q < periods[-1].quarter_number:
-        forecast_points = insights.project_series([(n, v) for n, v in class_means.items() if n <= q],
-                                                  periods[-1].quarter_number, insights.typical_step_sd(school.id))
-        projected, _ = insights.project_learners({eid: [(n, v) for n, v in h.items() if n <= q]
-                                                  for eid, h in history.items() if q in h})
+        values = forecasts.series_values(table, class_keys, numbers, 'class', meta, step_sd) if meta else None
+        if values and values[3] == q:
+            forecast_points = [{'period': p, 'value': round(v, 1), 'low': round(lo, 1), 'high': round(hi, 1)}
+                               for p, (v, lo, hi) in sorted(values[1].items())]
+            for e in enrollments:
+                nxt, chance = forecasts.learner_outlook(table, meta, (e.id, subject.id), q)
+                if nxt is not None:
+                    projected[e.id], chances[e.id] = nxt, chance
+        else:
+            forecast_points = insights.project_series([(n, v) for n, v in class_means.items() if n <= q], periods[-1].quarter_number, step_sd)
+            projected, _ = insights.project_learners({eid: [(n, v) for n, v in h.items() if n <= q]
+                                                      for eid, h in history.items() if q in h})
     forecast_next = next((f for f in forecast_points if f['period'] == q + 1), None)
+    model_used = bool(meta) and bool(chances)
+    parts = {e: (ww, pt, qa) for e, ww, pt, qa in GradeComponent.objects.filter(
+        enrollment_id__in=[e.id for e in enrollments], subject=subject, quarter=period).values_list(
+        'enrollment_id', 'written_work_percent', 'performance_task_percent', 'quarterly_assessment_percent')}
 
     level_grades = GradeComponent.objects.filter(
-        subject=subject, quarter__school_year=sy, enrollment__school_year=sy, enrollment__status__in=ACTIVE,
-        enrollment__section__school=school, enrollment__section__grade_level_id=section.grade_level_id,
-        initial_grade__isnull=False)
+        HAS_GRADE, subject=subject, quarter__school_year=sy, enrollment__school_year=sy, enrollment__status__in=ACTIVE,
+        enrollment__section__school=school, enrollment__section__grade_level_id=section.grade_level_id)
     level_means = {r['quarter__quarter_number']: float(r['avg'])
-                   for r in level_grades.values('quarter__quarter_number').annotate(avg=Avg('initial_grade'))}
-    section_avgs = [float(r['avg']) for r in level_grades.filter(quarter=period).values('enrollment__section_id').annotate(avg=Avg('initial_grade'))]
+                   for r in level_grades.values('quarter__quarter_number').annotate(avg=Avg(GRADE))}
+    section_avgs = [float(r['avg']) for r in level_grades.filter(quarter=period).values('enrollment__section_id').annotate(avg=Avg(GRADE))]
     my_avg = class_means.get(q)
     rank = (sum(1 for a in section_avgs if a > my_avg + 1e-9) + 1) if my_avg is not None else None
 
@@ -341,9 +527,12 @@ def _section_data(school, section_id, subject_id, quarter_id):
     for e in enrollments:
         h, st = history.get(e.id, {}), e.student
         grade = h.get(q)
+        ww, pt, qa = parts.get(e.id, (None, None, None))
         row = {'enrollment_id': e.id, 'lrn': st.lrn or '', 'name': f'{st.last_name}, {st.first_name}',
                'middle_initial': f'{st.middle_name[:1]}.' if st.middle_name else '',
-               'grade': grade, 'previous': h.get(q - 1), 'projected': projected.get(e.id)}
+               'grade': grade, 'previous': h.get(q - 1), 'projected': projected.get(e.id), 'chance': chances.get(e.id),
+               'ww': float(ww) if ww is not None else None, 'pt': float(pt) if pt is not None else None,
+               'qa': float(qa) if qa is not None else None}
         row['change'] = _r1(grade - row['previous']) if grade is not None and row['previous'] is not None else None
         if grade is not None:
             learners.append(row)
@@ -358,7 +547,8 @@ def _section_data(school, section_id, subject_id, quarter_id):
             teacher_name=_person(teacher), adviser_name=_person(section.adviser),
             learners=learners, enrolled=len(enrollments), validated=validated,
             grade_level_avg=level_means.get(q), rank=rank, rank_of=len(section_avgs),
-            prev_avg=class_means.get(q - 1), forecast=forecast_next, quarters_with_data=len([n for n in class_means if n <= q]))
+            prev_avg=class_means.get(q - 1), forecast=forecast_next, quarters_with_data=len([n for n in class_means if n <= q]),
+            method=forecasts.method_note(meta)['text'] if model_used else '')
     for row in roster:
         row['support'] = support_text(row)
         if row['grade'] is not None and 'level' not in row:
@@ -383,19 +573,13 @@ def _section_data(school, section_id, subject_id, quarter_id):
         history_rows.append({'name': period_name(by_num.get(f['period'])), 'average': f['value'], 'low': f['low'],
                              'high': f['high'], 'projected': True})
 
-    labels, actual, level_line, fc, fc_low, fc_high = [], [], [], [], [], []
-    fc_by = {f['period']: f for f in forecast_points}
-    for p in periods:
-        labels.append(p.quarter_label)
-        actual.append(round(class_means[p.quarter_number], 1) if p.quarter_number in class_means else None)
-        level_line.append(round(level_means[p.quarter_number], 1) if p.quarter_number in level_means else None)
-        if forecast_points and p.quarter_number == q:
-            fc.append(round(class_means[q], 1)); fc_low.append(round(class_means[q], 1)); fc_high.append(round(class_means[q], 1))
-        elif p.quarter_number in fc_by:
-            f = fc_by[p.quarter_number]
-            fc.append(f['value']); fc_low.append(f['low']); fc_high.append(f['high'])
-        else:
-            fc.append(None); fc_low.append(None); fc_high.append(None)
+    # the forecast chart: this section and its grade level's average, both with what comes next
+    grade_name = section.grade_level.grade_name if section.grade_level_id else 'Grade level'
+    same_grade = set(Section.objects.filter(school_year=sy, school=school, grade_level_id=section.grade_level_id).values_list('id', flat=True))
+    grade_keys = [k for k, v in table.items() if v['subject'] == subject.id and v['section'] in same_grade]
+    forecast_spec = forecasts.chart(table=table, meta=meta, periods=periods, step_sd=step_sd, selected=q, period_name=period_name, items=[
+        {'key': 'section', 'name': section.section_name, 'keys': class_keys, 'level': 'class'},
+        {'key': 'grade', 'name': f'{grade_name} average', 'keys': grade_keys, 'level': 'group'}])
 
     return {
         'section': section, 'subject': subject, 'quarter': period, 'school_year': sy, 'period_name': period_name(period),
@@ -408,8 +592,7 @@ def _section_data(school, section_id, subject_id, quarter_id):
         'improvement': _r1(my_avg - class_means[q - 1]) if my_avg is not None and (q - 1) in class_means else None,
         'distribution': distribution, 'distribution_json': distribution_json, 'history_rows': history_rows,
         'forecast_next': forecast_next, 'prev_label': prev_period.quarter_label if prev_period else '',
-        'trend': {'labels': labels, 'actual': actual, 'level': level_line, 'forecast': fc, 'low': fc_low, 'high': fc_high,
-                  'level_name': section.grade_level.grade_name if section.grade_level_id else 'Grade level'},
+        'forecast': forecast_spec, 'model_used': model_used,
         'is_latest': is_latest, 'has_grades': bool(learners), 'levels': LEVELS,
     }
 
@@ -421,7 +604,7 @@ def section_brief(request, section_id, subject_id, quarter_id):
     if school is None:
         return _denied(request)
     data = _section_data(school, section_id, subject_id, quarter_id)
-    data['poro_token'] = insights.narrative_token(data['brief']['summary']) if data['brief'] else ''
+    data['poro_token'] = insights.narrative_token(data['brief']['summary'], keep=data['brief']['keep']) if data['brief'] else ''
     data['export_url'] = reverse('heads-ai-section-export', args=[section_id, subject_id, quarter_id])
     data['live_fingerprint'] = school_fingerprint(school)
     return render(request, 'heads/ai_dashboard/section_detail.html', data)
@@ -469,6 +652,20 @@ def section_export(request, section_id, subject_id, quarter_id):
             sh.table([{'title': 'Action', 'wrap': True}, {'title': 'Why', 'wrap': True}, {'title': 'Who', 'wrap': True},
                       {'title': 'When', 'wrap': True}, {'title': 'Measure of success', 'wrap': True}],
                      [[a['title'], a['why'], a['who'], a['when'], a['measure']] for a in b['actions']])
+        if b['plan']:
+            plan = report.sheet('Level-up plan', [22, 10, 22, 14, 52, 26, 14, 30], subtitle=f'{class_name} · {subj.subject_name} · {d["period_name"]}',
+                                meta=meta, title='Level-up plan: one step up for every level in the class')
+            plan.paragraph('Each group\'s weakest grade component is the one furthest below the class average for it (DepEd Order No. 8, '
+                           's. 2015 components). Levels follow DepEd Order No. 31, s. 2012.', color='4A5568', size=9)
+            plan.table([{'title': 'Level', 'wrap': True}, {'title': 'Learners', 'format': 'int'}, {'title': 'Next level', 'wrap': True},
+                        {'title': 'Points needed', 'wrap': True}, {'title': 'What to do', 'wrap': True}, {'title': 'Who', 'wrap': True},
+                        {'title': 'When', 'wrap': True}, {'title': 'Measure of success', 'wrap': True}],
+                       [[(f'{s["level"]["name"]} ({s["level"]["letter"]})', s['level']['key']), s['count'],
+                         s['target']['name'] if s['target'] else 'Stay at Advanced',
+                         f'{s["gap"][0]} to {s["gap"][1]}' if s['gap'] else '—', s['how'], s['who'], s['when'], s['measure']]
+                        for s in b['plan']])
+            for s in b['plan']:
+                plan.paragraph(f'{s["level"]["name"]}: ' + ', '.join(f'{l["name"]} ({l["grade"]:.1f})' for l in s['learners']), size=9.5)
         if b['targets']:
             sh.heading(f'Targets for {d["next_period_name"]}' if d['next_period_name'] else 'Targets')
             for t in b['targets']:
@@ -539,7 +736,7 @@ def school_fingerprint(school):
     value = local.get(key)
     if value is None:
         agg = GradeComponent.objects.filter(enrollment__section__school=school).aggregate(
-            n=Count('id'), total=Sum('initial_grade'), last=Max('updated_at'),
+            n=Count('id'), total=Sum(GRADE), last=Max('updated_at'),
             validated=Count('id', filter=Q(validation_status__in=VALIDATED)), locked=Count('id', filter=Q(is_locked=True)))
         value = hashlib.sha1(repr(sorted(agg.items())).encode()).hexdigest()[:16]
         local.set(key, value, 15)

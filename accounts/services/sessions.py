@@ -1,4 +1,5 @@
-"""One active session per user, without scanning the whole session table on every sign-in."""
+"""One active session per user, without scanning the whole session table on every sign-in;
+and "Remember me" on the sign-in page."""
 from importlib import import_module
 
 from django.conf import settings
@@ -32,3 +33,9 @@ def end_other_sessions(user, keep_key):
             if owner == str(user.pk):
                 SessionStore(session_key=session.session_key).delete()
     cache.set(_key(user), keep_key, settings.SESSION_COOKIE_AGE)
+
+
+def remember_session(request, remember):
+    """Call right after login. "Remember me" keeps the user signed in on this device for
+    REMEMBER_ME_DAYS; otherwise the session ends when the browser closes (the default policy)."""
+    request.session.set_expiry(settings.REMEMBER_ME_DAYS * 24 * 60 * 60 if remember else None)

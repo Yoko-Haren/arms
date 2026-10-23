@@ -2,114 +2,130 @@
 {% load static %}
 
 {% block title %}Registrar Dashboard - ARMS{% endblock %}
-{% block subtitle %}Registrar Portal — {{ school.school_name|default:"No school assigned" }}{% if current_sy %} · SY {{ current_sy.year_label }}{% endif %}{% endblock %}
+{% block subtitle %}Dashboard{% if current_sy %} &bull; SY {{ current_sy.year_label }}{% endif %}{% if current_period_name %} &bull; {{ current_period_name }}{% endif %}{% endblock %}
 
 {% block extra_css %}
 <style>
-    .action-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
-    @media (max-width: 1200px) { .action-grid { grid-template-columns: repeat(2, 1fr); } }
-    .action-tile {
-        display: flex; align-items: center; gap: 0.9rem; padding: 1rem 1.1rem;
-        border: 2px solid var(--border-color); border-radius: 16px;
-        text-decoration: none; color: var(--text-primary); transition: all var(--transition-speed);
-    }
-    .action-tile:hover { border-color: var(--secondary-green); transform: translateY(-2px); box-shadow: var(--card-shadow-hover); }
-    .action-icon {
-        width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
-        display: flex; align-items: center; justify-content: center;
-        background: var(--ai-gradient); color: white; font-size: 1.15rem;
-    }
-    .action-tile strong { display: block; font-size: 0.85rem; color: var(--rich-black); }
-    .action-tile span { font-size: 0.72rem; color: var(--text-secondary); }
-    @media (max-width: 768px) { .action-grid { grid-template-columns: 1fr; } }
+    .db-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+    @media (max-width: 1100px) { .db-grid { grid-template-columns: 1fr; } }
+    .todo { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+    .todo li { display: flex; gap: 0.7rem; align-items: flex-start; padding: 0.65rem 0; border-top: 1px solid #f0f3f7; }
+    .todo li:first-child { border-top: 0; padding-top: 0.1rem; }
+    .todo .ico { width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+                 background: var(--info-bg); color: var(--info); font-size: 0.9rem; }
+    .todo li.risk .ico { background: var(--risk-bg); color: var(--risk); }
+    .todo li.warn .ico { background: var(--warn-bg); color: var(--warn); }
+    .todo li.good .ico { background: var(--good-bg); color: var(--good); }
+    .todo li.muted .ico { background: var(--soft); color: var(--muted); }
+    .todo a { font-weight: 650; font-size: 0.88rem; color: var(--ink); text-decoration: none; }
+    .todo a:hover { color: var(--brand); text-decoration: underline; }
+    .todo small { display: block; font-size: 0.78rem; color: var(--muted); margin-top: 0.1rem; }
+    .stack { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: #edf1f7; margin: 0.4rem 0 0.8rem; }
+    .stack i { display: block; height: 100%; }
+    .legend { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem 1rem; font-size: 0.82rem; }
+    .legend li { display: flex; align-items: center; gap: 0.45rem; }
+    .legend i { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+    .legend b { margin-left: auto; font-variant-numeric: tabular-nums; }
+    .due { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 0.9rem; }
+    .due div { background: var(--soft); border-radius: 12px; padding: 0.6rem 0.75rem; }
+    .due small { display: block; font-size: 0.68rem; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .due b { font-size: 0.86rem; }
+    .recent .table td { white-space: nowrap; }
+    .recent .table td.name { white-space: normal; }
 </style>
 {% endblock %}
 
 {% block content %}
+<div class="tp">
+    <section class="card tp-head">
+        <div>
+            <h2><i class="fi fi-rr-dashboard" style="color:#123499;"></i> {% if current_sy %}SY {{ current_sy.year_label }} at a glance{% else %}Dashboard{% endif %}</h2>
+            <p class="hint">
+                {% if not current_sy %}There is no current school year yet. Learners can be enrolled once your system administrator sets it.
+                {% elif current_period %}{{ current_period_name }} is the current grading period{% if period.locked %}, and its grades are locked{% endif %}.
+                    {% if not period.locked and current_period.grade_encoding_deadline %}Teachers submit grades by {{ current_period.grade_encoding_deadline|date:"M j" }}{% if current_period.grade_validation_deadline %} and you validate them by {{ current_period.grade_validation_deadline|date:"M j" }}{% endif %}.{% endif %}
+                {% else %}No grading period is open yet.{% endif %}
+            </p>
+        </div>
+        <div class="actions">
+            {% if current_sy %}<a class="btn btn-line" href="{% url 'registrars:upload_class_list' %}"><i class="fi fi-rr-user-add"></i> Enroll from SF1</a>{% endif %}
+            <a class="btn btn-main" href="{% url 'registrars:teacher_create' %}"><i class="fi fi-rr-user-add"></i> Add teacher</a>
+        </div>
+    </section>
 
-{% if not current_sy %}
-<div class="flash warning">
-    <i class="fi fi-rr-triangle-warning"></i>
-    <div class="flash-body">
-        <strong>No current school year.</strong> Class lists cannot be uploaded until your system administrator sets the current school year for {{ school.school_name|default:"your school" }}.
+    <div class="tiles" style="--tiles:4">
+        <div class="card tile"><span class="tile-ico"><i class="fi fi-rr-graduation-cap"></i></span>
+            <div><span>Learners enrolled</span><b>{{ numbers.students }}</b><small>in {{ numbers.sections }} section{{ numbers.sections|pluralize }}</small></div></div>
+        <div class="card tile {% if numbers.sections_without_teacher %}warn{% endif %}"><span class="tile-ico"><i class="fi fi-rr-users-alt"></i></span>
+            <div><span>Classes</span><b>{{ numbers.classes }}</b><small>{% if numbers.sections_without_teacher %}{{ numbers.sections_without_teacher }} section{{ numbers.sections_without_teacher|pluralize }} without a teacher{% else %}{{ numbers.subjects }} subject{{ numbers.subjects|pluralize }} offered{% endif %}</small></div></div>
+        <div class="card tile {% if numbers.teachers_without_classes %}warn{% endif %}"><span class="tile-ico"><i class="fi fi-rr-chalkboard-user"></i></span>
+            <div><span>Teachers</span><b>{{ numbers.teachers }}</b><small>{% if numbers.teachers_without_classes %}{{ numbers.teachers_without_classes }} with no class yet{% else %}every teacher has a class{% endif %}</small></div></div>
+        <div class="card tile {% if ready_to_validate %}good{% endif %}"><span class="tile-ico"><i class="fi fi-rr-shield-check"></i></span>
+            <div><span>Ready to validate</span><b>{{ ready_to_validate }}</b><small>{% if current_period %}class{{ ready_to_validate|pluralize:"es" }} in {{ current_period_name }}{% else %}no open period{% endif %}</small></div></div>
     </div>
-</div>
-{% endif %}
 
-<!-- Stats -->
-<div class="four-col" style="margin-bottom:1.5rem;">
-    <div class="stat-card blue"><h3>{{ total_students }}</h3><small>Enrolled Students</small></div>
-    <div class="stat-card green"><h3>{{ total_sections }}</h3><small>Sections</small></div>
-    <div class="stat-card orange"><h3>{{ total_teachers }}</h3><small>Teachers</small></div>
-    <div class="stat-card purple"><h3>{{ total_subjects }}</h3><small>Subjects</small></div>
-</div>
-
-{% if teachers_without_classes %}
-<div class="flash warning">
-    <i class="fi fi-rr-triangle-warning"></i>
-    <div class="flash-body">
-        <strong>{{ teachers_without_classes }} teacher{{ teachers_without_classes|pluralize }}</strong> {{ teachers_without_classes|pluralize:"has,have" }} no class this school year, so their class records are empty.
-        Upload the class list that names them as instructor. <a href="{% url 'registrars:teacher_list' %}" style="color:var(--caribbean-blue);font-weight:600;">View teachers</a>
-    </div>
-</div>
-{% endif %}
-
-<!-- Quick Actions -->
-<div class="card">
-    <div class="section-header">
-        <h2><i class="fi fi-rr-bolt"></i> Quick Actions</h2>
-    </div>
-    <div class="action-grid">
-        <a href="{% url 'registrars:upload_class_list' %}" class="action-tile">
-            <div class="action-icon"><i class="fi fi-rr-upload"></i></div>
-            <div><strong>Upload Class List</strong><span>Create sections and enroll students from a CSV</span></div>
-        </a>
-        <a href="{% url 'registrars:section_list' %}" class="action-tile">
-            <div class="action-icon"><i class="fi fi-rr-users-alt"></i></div>
-            <div><strong>View Sections</strong><span>Enrollment, subjects and assigned teachers</span></div>
-        </a>
-        <a href="{% url 'registrars:teacher_create' %}" class="action-tile">
-            <div class="action-icon"><i class="fi fi-rr-user-add"></i></div>
-            <div><strong>Add Teacher Account</strong><span>Create a sign-in for a teacher of your school</span></div>
-        </a>
-        <a href="{% url 'registrars:grade_validation' %}" class="action-tile">
-            <div class="action-icon"><i class="fi fi-rr-shield-check"></i></div>
-            <div><strong>Validate Grades</strong><span>{% if current_period %}{{ current_period.quarter_label }}{% if current_period.is_grades_locked %} is locked{% else %} is open for encoding{% endif %}{% else %}Review and lock each grading period{% endif %}</span></div>
-        </a>
-    </div>
-</div>
-
-<!-- Recent Enrollments -->
-<div class="card">
-    <div class="section-header">
-        <h2><i class="fi fi-rr-time-past"></i> Recent Enrollments</h2>
-        <a href="{% url 'registrars:section_list' %}" class="btn-outline btn-sm">All sections</a>
-    </div>
-    {% if recent_enrollments %}
-    <div class="table-responsive">
-        <table>
-            <thead><tr><th>Student ID</th><th>Name</th><th>Section</th></tr></thead>
-            <tbody>
-                {% for e in recent_enrollments %}
-                <tr>
-                    <td>{{ e.student.lrn }}</td>
-                    <td><strong>{{ e.student.last_name }}</strong>, {{ e.student.first_name }}</td>
-                    <td><span class="badge badge-info">{{ e.section.section_name }}</span></td>
-                </tr>
+    <div class="db-grid">
+        <section class="card panel" aria-labelledby="todoTitle">
+            <div class="panel-head"><h3 id="todoTitle"><i class="fi fi-rr-checkbox" style="color:#123499;"></i> To do</h3></div>
+            {% if todo %}
+            <ul class="todo">
+                {% for t in todo %}
+                <li class="{{ t.tone }}"><span class="ico"><i class="fi {{ t.icon }}"></i></span>
+                    <div><a href="{{ t.url }}">{{ t.title }}</a><small>{{ t.detail }}</small></div></li>
                 {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="empty-state">
-        <i class="fi fi-rr-folder-open"></i>
-        <h5>No Enrollments Yet</h5>
-        <p>Upload a class list to enroll students into sections.</p>
-        {% if current_sy %}
-        <a href="{% url 'registrars:upload_class_list' %}" class="btn-primary"><i class="fi fi-rr-upload"></i> Upload Class List</a>
-        {% endif %}
-    </div>
-    {% endif %}
-</div>
+            </ul>
+            {% else %}
+            <p class="empty"><i class="fi fi-rr-badge-check"></i>You are all caught up. No class is waiting for you, and every section and teacher is set.</p>
+            {% endif %}
+        </section>
 
+        <section class="card panel" aria-labelledby="gradesTitle">
+            <div class="panel-head"><h3 id="gradesTitle"><i class="fi fi-rr-shield-check" style="color:#123499;"></i> {% if period.name %}{{ period.name }} grades{% else %}Grades{% endif %}</h3>
+                <a class="btn btn-ghost btn-sm" href="{% url 'registrars:grade_validation' %}">Grade validation <i class="fi fi-rr-angle-small-right"></i></a></div>
+            {% if period.total %}
+            <p class="hint" style="margin:0;"><b>{{ period.done }} of {{ period.total }}</b> class{{ period.total|pluralize:"es" }} validated{% if period.locked %}; the period is locked{% endif %}.</p>
+            <div class="stack" role="img" aria-label="{% for s in period.states %}{{ s.label }}: {{ s.count }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                {% for s in period.states %}<i style="width:{{ s.percent }}%;background:{{ s.color }}" title="{{ s.label }}: {{ s.count }}"></i>{% endfor %}
+            </div>
+            <ul class="legend">
+                {% for s in period.states %}<li><i style="background:{{ s.color }}"></i>{{ s.label }}<b>{{ s.count }}</b></li>{% endfor %}
+            </ul>
+            {% if not period.locked %}
+            <div class="due">
+                <div><small>Teachers submit by</small><b>{{ current_period.grade_encoding_deadline|date:"M j, Y"|default:"No deadline" }}</b></div>
+                <div><small>Validate by</small><b>{{ current_period.grade_validation_deadline|date:"M j, Y"|default:"No deadline" }}</b></div>
+            </div>
+            {% endif %}
+            {% else %}
+            <p class="empty"><i class="fi fi-rr-chalkboard-user"></i>{% if current_period %}No classes yet. They appear once sections have teachers.{% else %}No grading period is open.{% endif %}</p>
+            {% endif %}
+        </section>
+    </div>
+
+    <section class="card panel recent" aria-labelledby="recentTitle">
+        <div class="panel-head"><h3 id="recentTitle"><i class="fi fi-rr-time-past" style="color:#123499;"></i> Recently enrolled</h3>
+            <a class="btn btn-ghost btn-sm" href="{% url 'registrars:section_list' %}">All sections <i class="fi fi-rr-angle-small-right"></i></a></div>
+        {% if recent_enrollments %}
+        <div style="overflow-x:auto;">
+            <table class="table">
+                <thead><tr><th>Learner</th><th>LRN</th><th>Section</th><th>Status</th><th>Enrolled</th></tr></thead>
+                <tbody>
+                    {% for e in recent_enrollments %}
+                    <tr>
+                        <td class="name"><b>{{ e.student.last_name }}</b>, {{ e.student.first_name }}</td>
+                        <td class="mono muted">{{ e.student.lrn|default:"—" }}</td>
+                        <td><a href="{% url 'registrars:section_detail' e.section_id %}" style="color:var(--ink);text-decoration:none;font-weight:600;">{{ e.section.grade_level.grade_name }} {{ e.section.section_name }}</a></td>
+                        <td>{% if e.status == 'Enrolled' or e.status == 'Transferred_In' %}<span class="pill good">{% if e.status == 'Enrolled' %}Enrolled{% else %}Transferred in{% endif %}</span>{% else %}<span class="pill risk">{{ e.status|cut:"_" }}</span>{% endif %}</td>
+                        <td class="muted">{{ e.created_at|date:"M j, Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty"><i class="fi fi-rr-folder-open"></i>No learners enrolled yet. Upload a section's SF1 (School Register) to enroll its learners.
+            {% if current_sy %}<span style="display:block;margin-top:0.8rem;"><a class="btn btn-main" href="{% url 'registrars:upload_class_list' %}"><i class="fi fi-rr-user-add"></i> Enroll from SF1</a></span>{% endif %}</p>
+        {% endif %}
+    </section>
+</div>
 {% endblock %}

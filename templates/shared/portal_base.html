@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}ARMS{% endblock %}</title>
-    
+    {% include 'shared/_favicon.html' %}
+
     <!-- Flaticon Uicons -->
     <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
     <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
@@ -237,7 +238,7 @@
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <a href="{% block home_url %}#{% endblock %}" class="logo-area">
-                <i class="fi {% block brand_icon %}fi-rr-graduation-cap{% endblock %}"></i>
+                <img class="brand-mark" src="{% static 'shared/logo/arms-mark.svg' %}" alt="" width="38" height="38">
                 <h2>ARMS <span>{% block portal_label %}Portal{% endblock %}</span></h2>
             </a>
             <button class="fold-btn" id="foldBtn" title="Toggle sidebar"><i class="fi fi-rr-angle-left"></i></button>

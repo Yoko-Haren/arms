@@ -1,0 +1,115 @@
+{% extends 'heads/base.html' %}
+{% load static %}
+
+{% block title %}Page Proposals{% endblock %}
+
+{% block subtitle %}Page Proposals &bull; for discussion{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pp-head { padding: 1.05rem 1.25rem; }
+    .pp-head h1 { font-size: 1.12rem; font-weight: 700; margin: 0 0 0.25rem; color: var(--ink); display: flex; gap: 0.5rem; align-items: center; }
+    .pp-head h1 i { color: var(--brand); }
+    .pp-key { display: flex; gap: 0.5rem 1.1rem; flex-wrap: wrap; margin-top: 0.6rem; font-size: 0.78rem; color: var(--muted); }
+    .pp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 1rem; }
+    @media (max-width: 520px) { .pp-grid { grid-template-columns: 1fr; } }
+    .pp-card { padding: 1.05rem 1.2rem 1rem; display: flex; flex-direction: column; gap: 0.7rem; }
+    .pp-top { display: flex; justify-content: space-between; gap: 0.6rem; align-items: flex-start; }
+    .pp-name { display: flex; gap: 0.6rem; align-items: center; }
+    .pp-ico { width: 38px; height: 38px; border-radius: 11px; background: #e8eeff; color: #123499; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .pp-ico i { display: inline-flex; }
+    .pp-name h3 { font-size: 0.98rem; }
+    .pp-name small { display: block; font-size: 0.74rem; color: var(--muted); font-weight: 500; margin-top: 0.1rem; }
+    .ready { font-size: 0.72rem; font-weight: 650; padding: 0.18rem 0.6rem; border-radius: 20px; white-space: nowrap; }
+    .ready.ready-ready { background: #e8eeff; color: #123499; } .ready.ready-partial { background: #fff3e0; color: #B45309; }
+    .pp-q { font-size: 0.9rem; font-weight: 650; color: var(--ink); line-height: 1.45; margin: 0; }
+    .pp-body { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 0.9rem; align-items: start; }
+    @media (max-width: 520px) { .pp-body { grid-template-columns: 1fr; } }
+    .pp-body ul { margin: 0; padding-left: 1.1rem; font-size: 0.8rem; color: #2d3748; line-height: 1.55; }
+    .pp-meta { display: grid; gap: 0.35rem; font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+    .pp-meta b { color: var(--ink); font-weight: 650; }
+    .pp-decide { background: var(--soft); border-radius: 12px; padding: 0.55rem 0.75rem; font-size: 0.78rem; color: #2d3748; }
+    .pp-decide b { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 0.2rem; }
+    .pp-decide ul { margin: 0; padding-left: 1.05rem; line-height: 1.5; }
+
+    /* a rough sketch of each page (illustration only) */
+    .sketch { border: 1px solid var(--line); border-radius: 10px; padding: 0.5rem; background: #fbfcfe; height: 112px; display: flex; flex-direction: column; gap: 0.3rem; overflow: hidden; }
+    .sk-line { height: 6px; border-radius: 3px; background: #dbe2ee; }
+    .sk-row { display: flex; gap: 0.3rem; align-items: center; }
+    .sk-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .sk-cols { display: flex; align-items: flex-end; gap: 4px; flex: 1; }
+    .sk-cols i { flex: 1; border-radius: 3px 3px 0 0; background: #8fb4ea; }
+    .sk-cols i.alt { background: #f2a17a; }
+    .sk-cols i.fc { background: repeating-linear-gradient(45deg, #b9cdf0, #b9cdf0 3px, #dde7f8 3px, #dde7f8 6px); }
+    .sk-chip { height: 12px; border-radius: 6px; background: #e8eeff; flex: 1; }
+    .sk-chip.r { background: #ffebee; } .sk-chip.g { background: #ece6fb; } .sk-chip.o { background: #fff3e0; }
+    .sk-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; flex: 1; }
+    .sk-cal i { background: #edf1f7; border-radius: 3px; } .sk-cal i.on { background: #8fb4ea; }
+    .sk-svg { width: 100%; flex: 1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hp">
+    <section class="card pp-head">
+        <h1><i class="fi fi-rr-bulb"></i> Page proposals for the School Head portal</h1>
+        <p class="hint">Pages that could come next, to discuss with the team and the adviser before anything is built. Each card says what the page would answer, what it would show, how much of its data ARMS already keeps for {{ school.school_name }}, its DepEd basis and the size of the work. The sketches are illustrations, not real data.</p>
+        <div class="pp-key">
+            <span><span class="ready ready-ready">Data ready</span> ARMS already keeps what the page needs</span>
+            <span><span class="ready ready-partial">Partly ready</span> some records would be new</span>
+            <span><b>Size:</b> Small (days), Medium (1 to 2 weeks), Large (more)</span>
+        </div>
+    </section>
+
+    <div class="pp-grid">
+        {% for c in cards %}
+        <section class="card pp-card" aria-labelledby="pp-{{ c.key }}">
+            <div class="pp-top">
+                <div class="pp-name">
+                    <span class="pp-ico"><i class="fi {{ c.icon }}"></i></span>
+                    <div><h3 id="pp-{{ c.key }}">{{ c.name }}</h3><small>Size: {{ c.size }}</small></div>
+                </div>
+                <span class="ready ready-{{ c.ready }}">{% if c.ready == 'ready' %}Data ready{% else %}Partly ready{% endif %}</span>
+            </div>
+            <p class="pp-q">{{ c.question }}</p>
+            <div class="pp-body">
+                <ul>{% for s in c.shows %}<li>{{ s }}</li>{% endfor %}</ul>
+                <div class="sketch" aria-hidden="true">
+                    {% if c.key == 'profile' %}
+                        <div class="sk-row"><span class="sk-dot" style="background:#123499"></span><span class="sk-line" style="flex:1"></span></div>
+                        <div class="sk-row"><span class="sk-chip g"></span><span class="sk-chip"></span><span class="sk-chip o"></span></div>
+                        <svg class="sk-svg" viewBox="0 0 100 40" preserveAspectRatio="none"><polyline points="2,30 25,24 50,20 75,16" fill="none" stroke="#2a78d6" stroke-width="2"/><polyline points="75,16 98,12" fill="none" stroke="#2a78d6" stroke-width="2" stroke-dasharray="4 3"/></svg>
+                    {% elif c.key == 'tracker' %}
+                        <div class="sk-row"><span class="sk-dot" style="background:#C62828"></span><span class="sk-line" style="flex:2"></span><span class="sk-chip o"></span></div>
+                        <div class="sk-row"><span class="sk-dot" style="background:#C62828"></span><span class="sk-line" style="flex:2"></span><span class="sk-chip g"></span></div>
+                        <div class="sk-row"><span class="sk-dot" style="background:#B45309"></span><span class="sk-line" style="flex:2"></span><span class="sk-chip"></span></div>
+                        <div class="sk-row"><span class="sk-dot" style="background:#B45309"></span><span class="sk-line" style="flex:2"></span><span class="sk-chip g"></span></div>
+                    {% elif c.key == 'attendance' %}
+                        <div class="sk-cols"><i style="height:80%"></i><i style="height:72%"></i><i class="alt" style="height:48%"></i><i style="height:76%"></i><i style="height:70%"></i><i class="alt" style="height:52%"></i><i style="height:82%"></i></div>
+                    {% elif c.key == 'honors' %}
+                        <div class="sk-row"><span class="sk-chip g"></span><span class="sk-chip g"></span><span class="sk-chip g"></span></div>
+                        <div class="sk-cols"><i style="height:90%"></i><i style="height:45%"></i><i style="height:18%"></i><i class="fc" style="height:30%"></i></div>
+                    {% elif c.key == 'accuracy' %}
+                        <svg class="sk-svg" viewBox="0 0 100 60" preserveAspectRatio="none"><polyline points="4,40 30,34 56,30 82,26" fill="none" stroke="#2a78d6" stroke-width="2"/><g fill="#fff" stroke="#2a78d6" stroke-width="1.5"><path d="M30,30 l3,3 l-3,3 l-3,-3z"/><path d="M56,27 l3,3 l-3,3 l-3,-3z"/><path d="M82,22 l3,3 l-3,3 l-3,-3z"/></g></svg>
+                    {% elif c.key == 'coaching' %}
+                        <div class="sk-row"><span class="sk-line" style="width:30%"></span><span class="sk-chip" style="flex:3"></span></div>
+                        <div class="sk-row"><span class="sk-line" style="width:30%"></span><span class="sk-chip o" style="flex:2"></span></div>
+                        <div class="sk-row"><span class="sk-line" style="width:30%"></span><span class="sk-chip g" style="flex:4"></span></div>
+                        <div class="sk-row"><span class="sk-line" style="width:30%"></span><span class="sk-chip r" style="flex:1"></span></div>
+                    {% elif c.key == 'lac' %}
+                        <div class="sk-cal">{% for _ in "123456789012345678901" %}<i class="{% if forloop.counter == 4 or forloop.counter == 11 or forloop.counter == 18 %}on{% endif %}"></i>{% endfor %}</div>
+                    {% else %}
+                        <div class="sk-cols"><i style="height:60%"></i><i style="height:66%"></i><i style="height:70%"></i><i class="fc" style="height:76%"></i></div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="pp-meta">
+                <span><b>Data in ARMS.</b> {{ c.data }}</span>
+                <span><b>DepEd basis.</b> {{ c.basis }}</span>
+            </div>
+            <div class="pp-decide"><b>To decide</b><ul>{% for d in c.decide %}<li>{{ d }}</li>{% endfor %}</ul></div>
+        </section>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

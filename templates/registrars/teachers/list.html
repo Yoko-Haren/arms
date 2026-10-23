@@ -2,153 +2,177 @@
 {% load static %}
 
 {% block title %}Teachers - ARMS{% endblock %}
-{% block subtitle %}Teacher Accounts — {{ request.user.profile.school_name }}{% endblock %}
+{% block subtitle %}Teachers &bull; {{ request.user.profile.school_name }}{% endblock %}
 
 {% block extra_css %}
 <style>
-    .search-box { max-width: 320px; }
-    #teacherTable { min-width: 860px; }
-    .teacher-cell { display: flex; align-items: center; gap: 0.7rem; }
-    .teacher-avatar {
-        width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
-        background: var(--ai-gradient); color: white; font-size: 0.75rem; font-weight: 700;
-        display: flex; align-items: center; justify-content: center;
+    .tl { container-type: inline-size; }
+    .tl-rows { list-style: none; margin: 0.9rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+    .tl-row { display: grid; grid-template-columns: minmax(220px, 1.3fr) minmax(220px, 1.5fr) minmax(130px, 0.8fr) 8.5rem auto; gap: 0.6rem 1.1rem;
+              grid-template-areas: "who classes load state more"; align-items: center; padding: 0.75rem 0.9rem; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+    .tl-row:hover { border-color: #cfd8ea; }
+    .tl-row.off { background: #fafbfd; }
+    .tl-who { grid-area: who; display: flex; gap: 0.7rem; align-items: center; min-width: 0; }
+    .tl-who b { display: block; font-size: 0.9rem; }
+    .tl-who small { display: block; font-size: 0.76rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tl-classes { grid-area: classes; display: flex; flex-wrap: wrap; gap: 0.3rem; min-width: 0; }
+    .code { display: inline-block; padding: 0.12rem 0.5rem; border-radius: 8px; background: var(--brand-soft); color: var(--brand); font-size: 0.74rem; font-weight: 650; }
+    .tl-load { grid-area: load; font-size: 0.8rem; }
+    .tl-load .bar { margin-top: 0.35rem; max-width: 150px; }
+    .tl-load small { color: var(--muted); }
+    .tl-state { grid-area: state; }
+    .tl-more { grid-area: more; justify-self: end; }
+    .tl-none { display: none; }
+    @container (max-width: 960px) {
+        .tl-row { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "who state more" "classes classes classes" "load load load"; }
     }
-    .teacher-avatar.off { background: #cbd5e0; }
-    .teacher-name { font-weight: 600; color: var(--rich-black); }
-    .teacher-sub { font-size: 0.7rem; color: var(--text-secondary); }
-    .badge-class { background: #f0f0ff; color: var(--caribbean-blue); margin: 1px 2px; }
-    .row-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
-    .row-actions form { display: inline; }
-    tr.inactive-row td { opacity: 0.6; }
-    tr.inactive-row td:last-child { opacity: 1; }
 </style>
 {% endblock %}
 
 {% block content %}
+<div class="tp">
+    <section class="card tp-head">
+        <div>
+            <h2><i class="fi fi-rr-chalkboard-user" style="color:#123499;"></i> Teacher accounts</h2>
+            <p class="hint">Teachers sign in with these accounts to upload class records and give assessments.{% if current_sy %} Classes shown are for SY {{ current_sy.year_label }}.{% endif %}</p>
+        </div>
+        <div class="actions">
+            <a class="btn btn-line" href="{% url 'registrars:teacher_import' %}"><i class="fi fi-rr-users-medical"></i> Import from CSV</a>
+            <a class="btn btn-main" href="{% url 'registrars:teacher_create' %}"><i class="fi fi-rr-user-add"></i> Add teacher</a>
+        </div>
+    </section>
 
-<div class="page-head">
-    <h3><i class="fi fi-rr-chalkboard-user"></i> Teacher Accounts</h3>
-    <div class="page-head-actions">
-        <a href="{% url 'registrars:teacher_import' %}" class="btn-outline">
-            <i class="fi fi-rr-users-medical"></i> Import from CSV
-        </a>
-        <a href="{% url 'registrars:teacher_create' %}" class="btn-primary">
-            <i class="fi fi-rr-user-add"></i> Add Teacher
-        </a>
-    </div>
-</div>
-
-<div class="summary-strip">
-    <div class="summary-item"><span class="dot blue"></span> <strong>{{ total_teachers }}</strong> Total</div>
-    <div class="summary-item"><span class="dot green"></span> <strong>{{ active_teachers }}</strong> Active</div>
-    <div class="summary-item"><span class="dot red"></span> <strong>{{ inactive_teachers }}</strong> Inactive</div>
-    <div class="summary-item"><span class="dot orange"></span> <strong>{{ without_classes }}</strong> Without classes this SY</div>
-    {% if pending_password %}<div class="summary-item"><span class="dot purple"></span> <strong>{{ pending_password }}</strong> Not signed in yet (temporary password)</div>{% endif %}
-</div>
-
-<div class="card">
-    {% if teachers %}
-    <div class="toolbar">
-        <input type="text" class="form-input search-box" id="searchInput" data-remember="search" placeholder="Filter by name, email or class..." onkeyup="filterTeachers()">
-        <span class="muted" id="rowCount"></span>
+    <div class="tiles" style="--tiles:4">
+        <div class="card tile good"><span class="tile-ico"><i class="fi fi-rr-circle-user"></i></span>
+            <div><span>Active</span><b>{{ active_teachers }} <small style="display:inline;font-size:0.8rem;">of {{ total_teachers }}</small></b><small>can sign in</small></div></div>
+        <div class="card tile {% if without_classes %}warn{% endif %}"><span class="tile-ico"><i class="fi fi-rr-user-time"></i></span>
+            <div><span>No class yet</span><b>{{ without_classes }}</b><small>this school year</small></div></div>
+        <div class="card tile {% if pending_password %}warn{% endif %}"><span class="tile-ico"><i class="fi fi-rr-key"></i></span>
+            <div><span>Not signed in yet</span><b>{{ pending_password }}</b><small>still on the temporary password</small></div></div>
+        <div class="card tile"><span class="tile-ico"><i class="fi fi-rr-ban"></i></span>
+            <div><span>Inactive</span><b>{{ inactive_teachers }}</b><small>cannot sign in</small></div></div>
     </div>
 
-    <div class="table-responsive">
-        <table id="teacherTable">
-            <thead>
-                <tr>
-                    <th>Teacher</th>
-                    <th>Username</th>
-                    <th>Employee No.</th>
-                    <th>Classes{% if current_sy %} (SY {{ current_sy.year_label }}){% endif %}</th>
-                    <th>Weekly Load</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for t in teachers %}
-                <tr class="{% if not t.account_active %}inactive-row{% endif %}"
-                    data-search="{{ t.full_name|lower }} {{ t.user.username|lower }} {{ t.user.email|lower }} {% for c in t.classes %}{{ c|lower }} {% endfor %}">
-                    <td>
-                        <div class="teacher-cell">
-                            <div class="teacher-avatar {% if not t.account_active %}off{% endif %}">{{ t.user.first_name|first|upper }}{{ t.user.last_name|first|upper }}</div>
-                            <div>
-                                <div class="teacher-name">{{ t.user.last_name }}, {{ t.user.first_name }}</div>
-                                <div class="teacher-sub">{{ t.designation|default:"Teacher" }}{% if t.teaching_area %} · {{ t.teaching_area }}{% endif %}</div>
-                            </div>
+    <section class="card panel tl" aria-labelledby="tlTitle">
+        <h3 id="tlTitle" class="sr-only">All teachers</h3>
+        {% if teachers %}
+        <div class="toolbar">
+            <label class="search"><i class="fi fi-rr-search"></i><input type="search" id="tlSearch" data-remember="search" placeholder="Find a name, email or class" aria-label="Find a name, email or class"></label>
+            <label class="sort">Sort by
+                <select id="tlSort">
+                    <option value="name">Surname A to Z</option>
+                    <option value="heavy">Heaviest load first</option>
+                    <option value="light">Lightest load first</option>
+                    <option value="classes">Most classes</option>
+                </select>
+            </label>
+        </div>
+        <div class="toolbar" style="margin-top:0.7rem;">
+            <div class="chips" role="group" aria-label="Show">
+                <button type="button" data-show="" aria-pressed="true">All<em>{{ total_teachers }}</em></button>
+                <button type="button" data-show="active" aria-pressed="false">Active<em>{{ active_teachers }}</em></button>
+                <button type="button" data-show="noclasses" aria-pressed="false">No class<em>{{ without_classes }}</em></button>
+                <button type="button" data-show="temporary" aria-pressed="false">Not signed in<em>{{ pending_password }}</em></button>
+                <button type="button" data-show="inactive" aria-pressed="false">Inactive<em>{{ inactive_teachers }}</em></button>
+            </div>
+            <span class="count" id="tlCount" aria-live="polite"></span>
+        </div>
+
+        <ol class="tl-rows" id="tlRows">
+            {% for t in teachers %}
+            <li>
+                <article class="tl-row {% if not t.account_active %}off{% endif %}" data-order="{{ forloop.counter0 }}" data-name="{{ t.user.last_name|lower }} {{ t.user.first_name|lower }}"
+                         data-minutes="{{ t.load.minutes|default:0 }}" data-classes="{{ t.classes|length }}"
+                         data-flags="{% if t.account_active %}active{% if not t.classes %} noclasses{% endif %}{% if t.must_change_password %} temporary{% endif %}{% else %}inactive{% endif %}"
+                         data-text="{{ t.full_name|lower }} {{ t.user.username|lower }} {{ t.user.email|lower }} {{ t.employee_number|default:''|lower }} {% for c in t.classes %}{{ c|lower }} {% endfor %}">
+                    <div class="tl-who">
+                        <span class="avatar {% if not t.account_active %}off{% endif %}" aria-hidden="true">{{ t.user.first_name|first|upper }}{{ t.user.last_name|first|upper }}</span>
+                        <div style="min-width:0;">
+                            <b>{{ t.user.last_name }}, {{ t.user.first_name }}</b>
+                            <small title="{{ t.user.username }}">{{ t.user.username }}</small>
+                            <small>{{ t.designation|default:"Teacher" }}{% if t.teaching_area %} · {{ t.teaching_area }}{% endif %}{% if t.employee_number %} · {{ t.employee_number }}{% endif %}</small>
                         </div>
-                    </td>
-                    <td>{{ t.user.username }}</td>
-                    <td>{{ t.employee_number|default:"—" }}</td>
-                    <td>
-                        {% for c in t.classes %}
-                            <span class="badge badge-class">{{ c }}</span>
-                        {% empty %}
-                            <span class="badge badge-warning">No classes</span>
-                        {% endfor %}
-                    </td>
-                    <td>{% if t.load %}{{ t.load.hours }} hrs<div class="muted">{{ t.load.classes }} class{{ t.load.classes|pluralize:"es" }}</div>{% else %}—{% endif %}</td>
-                    <td>
-                        {% if t.account_active and t.must_change_password %}
-                            <span class="badge badge-warning" title="Has not replaced the temporary password yet">Temporary password</span>
-                        {% elif t.account_active %}
-                            <span class="badge badge-success">Active</span>
-                        {% else %}
-                            <span class="badge badge-danger">Inactive</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <div class="row-actions">
-                            <form method="POST" action="{% url 'registrars:teacher_reset_password' t.id %}" data-confirm-title="Reset password" data-confirm="Reset the password of {{ t.full_name }}? A new temporary password will be shown once.">
-                                {% csrf_token %}
-                                <button type="submit" class="btn-outline btn-sm" title="Reset password"><i class="fi fi-rr-key"></i> Reset</button>
+                    </div>
+                    <div class="tl-classes">
+                        {% for c in t.classes|slice:":4" %}<span class="code">{{ c }}</span>{% empty %}<span class="pill {% if t.account_active %}warn{% endif %}">No class this year</span>{% endfor %}
+                        {% if t.classes|length > 4 %}<span class="muted" style="font-size:0.76rem;" title="{% for c in t.classes %}{{ c }}{% if not forloop.last %}, {% endif %}{% endfor %}">+{{ t.classes|length|add:"-4" }} more</span>{% endif %}
+                    </div>
+                    <div class="tl-load">
+                        {% if t.load and t.load.classes %}<b>{{ t.load.hours }} hrs</b> <small>a week, {{ t.load.classes }} class{{ t.load.classes|pluralize:"es" }}</small>
+                        <div class="bar {% if t.load_percent >= 100 %}warn{% endif %}" aria-hidden="true" title="{{ t.load_percent }}% of a 30-hour week"><i style="width:{{ t.load_percent }}%"></i></div>
+                        {% else %}<span class="muted">No load</span>{% endif %}
+                    </div>
+                    <div class="tl-state">
+                        {% if not t.account_active %}<span class="pill risk">Inactive</span>
+                        {% elif t.must_change_password %}<span class="pill warn" title="Has not replaced the temporary password yet">Not signed in yet</span>
+                        {% else %}<span class="pill good">Active</span>{% endif %}
+                    </div>
+                    <details class="more tl-more">
+                        <summary class="btn btn-ghost btn-sm" aria-label="Actions for {{ t.full_name }}"><i class="fi fi-rr-menu-dots"></i></summary>
+                        <div class="menu">
+                            <form method="POST" action="{% url 'registrars:teacher_reset_password' t.id %}" data-confirm-title="Reset password" data-confirm-ok="Reset" data-confirm="Reset the password of {{ t.full_name }}? A new temporary password is shown once, and they set their own at the next sign-in.">
+                                {% csrf_token %}<button type="submit"><i class="fi fi-rr-key"></i> Reset password</button>
                             </form>
-                            <form method="POST" action="{% url 'registrars:teacher_toggle_status' t.id %}" data-confirm="{% if t.account_active %}Deactivate{% else %}Activate{% endif %} {{ t.full_name }}?">
+                            <hr>
+                            <form method="POST" action="{% url 'registrars:teacher_toggle_status' t.id %}" data-confirm-title="{% if t.account_active %}Deactivate account{% else %}Activate account{% endif %}"
+                                  data-confirm-ok="{% if t.account_active %}Deactivate{% else %}Activate{% endif %}" data-confirm="{% if t.account_active %}Deactivate {{ t.full_name }}? They can no longer sign in until you activate them again.{% else %}Activate {{ t.full_name }} so they can sign in again?{% endif %}" {% if t.account_active %}data-confirm-danger{% endif %}>
                                 {% csrf_token %}
-                                {% if t.account_active %}
-                                <button type="submit" class="btn-outline btn-sm btn-danger-outline" title="Deactivate"><i class="fi fi-rr-ban"></i> Deactivate</button>
-                                {% else %}
-                                <button type="submit" class="btn-outline btn-sm" title="Activate"><i class="fi fi-rr-check"></i> Activate</button>
-                                {% endif %}
+                                {% if t.account_active %}<button type="submit" class="danger"><i class="fi fi-rr-ban"></i> Deactivate account</button>
+                                {% else %}<button type="submit"><i class="fi fi-rr-check"></i> Activate account</button>{% endif %}
                             </form>
                         </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="empty-state">
-        <i class="fi fi-rr-chalkboard-user"></i>
-        <h5>No Teacher Accounts Yet</h5>
-        <p>Create accounts so teachers can sign in and upload their class records.</p>
-        <a href="{% url 'registrars:teacher_create' %}" class="btn-primary"><i class="fi fi-rr-user-add"></i> Add Teacher</a>
-    </div>
-    {% endif %}
+                    </details>
+                </article>
+            </li>
+            {% endfor %}
+        </ol>
+        <p class="empty tl-none" id="tlNone"><i class="fi fi-rr-search"></i>No teacher matches. Try another filter or search.</p>
+        {% else %}
+        <div class="empty"><i class="fi fi-rr-chalkboard-user"></i>No teacher accounts yet. Create accounts so teachers can sign in and upload their class records.
+            <div style="margin-top:0.9rem;display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;">
+                <a class="btn btn-line" href="{% url 'registrars:teacher_import' %}"><i class="fi fi-rr-users-medical"></i> Import from CSV</a>
+                <a class="btn btn-main" href="{% url 'registrars:teacher_create' %}"><i class="fi fi-rr-user-add"></i> Add teacher</a></div></div>
+        {% endif %}
+    </section>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    function teacherRows() {
-        return Array.from(document.querySelectorAll('#teacherTable tbody tr'));
-    }
-    function filterTeachers() {
-        var query = document.getElementById('searchInput').value.toLowerCase();
-        var rows = teacherRows();
-        var visible = 0;
-        rows.forEach(function(row) {
-            var match = (row.getAttribute('data-search') || '').includes(query);
-            row.style.display = match ? '' : 'none';
-            if (match) visible++;
+(function () {
+    document.addEventListener('click', function (e) {
+        document.querySelectorAll('.more[open]').forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute('open'); });
+    });
+    var list = document.getElementById('tlRows');
+    if (!list) return;
+    var items = Array.prototype.slice.call(list.children);
+    var search = document.getElementById('tlSearch'), sort = document.getElementById('tlSort');
+    var chips = Array.prototype.slice.call(document.querySelectorAll('.chips button'));
+    var show = new URLSearchParams(location.search).get('show') || '';
+    if (!chips.some(function (c) { return c.dataset.show === show; })) show = '';
+    var num = function (el, k) { return +el.dataset[k]; };
+    var SORTS = {
+        name: function (a, b) { return a.dataset.name.localeCompare(b.dataset.name); },
+        heavy: function (a, b) { return (num(b, 'minutes') - num(a, 'minutes')) || (num(a, 'order') - num(b, 'order')); },
+        light: function (a, b) { return (num(a, 'minutes') - num(b, 'minutes')) || (num(a, 'order') - num(b, 'order')); },
+        classes: function (a, b) { return (num(b, 'classes') - num(a, 'classes')) || (num(a, 'order') - num(b, 'order')); }
+    };
+    function apply() {
+        var q = search.value.trim().toLowerCase(), shown = 0;
+        items.map(function (li) { return li.firstElementChild; }).sort(SORTS[sort.value]).forEach(function (row) {
+            var ok = (!q || row.dataset.text.indexOf(q) > -1) && (!show || (' ' + row.dataset.flags + ' ').indexOf(' ' + show + ' ') > -1);
+            row.parentElement.hidden = !ok;
+            if (ok) shown++;
+            list.appendChild(row.parentElement);
         });
-        document.getElementById('rowCount').textContent = visible + ' of ' + rows.length + ' teachers';
+        chips.forEach(function (c) { c.setAttribute('aria-pressed', c.dataset.show === show ? 'true' : 'false'); });
+        document.getElementById('tlCount').textContent = 'Showing ' + shown + ' of ' + items.length;
+        document.getElementById('tlNone').style.display = shown ? 'none' : 'block';
     }
-    var rowCount = document.getElementById('rowCount');
-    if (rowCount) rowCount.textContent = teacherRows().length + ' teachers';
+    chips.forEach(function (c) { c.addEventListener('click', function () { show = c.dataset.show; apply(); }); });
+    search.addEventListener('input', apply);
+    sort.addEventListener('change', apply);
+    apply();
+})();
 </script>
 {% endblock %}

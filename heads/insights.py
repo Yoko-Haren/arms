@@ -46,6 +46,7 @@ LEVELS = (
 )
 LEVEL_BY_KEY = {lv['key']: lv for lv in LEVELS}
 LEVEL_RANK = {lv['key']: len(LEVELS) - i for i, lv in enumerate(LEVELS)}   # beginning 1 ... advanced 5
+NEXT_LEVEL = {'beginning': 'developing', 'developing': 'approaching', 'approaching': 'proficient', 'proficient': 'advanced'}
 
 
 def level_of(value):
@@ -148,6 +149,7 @@ def typical_step_sd(school_id):
 
     Measured on this school's own records (all school years), cached until data changes.
     """
+    from core.periods import GRADE, HAS_GRADE
     from grades.models import GradeComponent
 
     key = f'insights:step-sd:{school_id}:{data_version()}'
@@ -156,9 +158,9 @@ def typical_step_sd(school_id):
     if cached is not None:
         return cached
     rows = (GradeComponent.objects
-            .filter(enrollment__section__school_id=school_id, initial_grade__isnull=False)
+            .filter(HAS_GRADE, enrollment__section__school_id=school_id)
             .values('enrollment__section_id', 'subject_id', 'quarter__school_year_id', 'quarter__quarter_number')
-            .annotate(avg=Avg('initial_grade'), n=Count('id')))
+            .annotate(avg=Avg(GRADE), n=Count('id')))
     series = defaultdict(dict)
     for r in rows:
         if r['n'] >= 5:
@@ -195,6 +197,70 @@ TIER_INFO = {
     'core': {'name': 'On track', 'hint': 'Regular class instruction.'},
 }
 
+# the grade components of DepEd Order No. 8, s. 2015, and what lifts each one
+COMPONENTS = (('ww', 'written work'), ('pt', 'performance tasks'), ('qa', 'the quarterly assessment'))
+COMPONENT_TIPS = {
+    'ww': 'short quizzes and seatwork with quick feedback, and a retake of missed items',
+    'pt': 'performance tasks broken into steps, with the rubric shared at the start and feedback on a draft',
+    'qa': 'practice in the quarterly assessment format and a review of the least-mastered competencies before the exam',
+}
+# one step up the proficiency levels (DepEd Order No. 31, s. 2012): what to do, and how soon
+LEVEL_PLAN = {
+    'beginning': ('Remediation, which DepEd Order No. 8, s. 2015 requires: small-group or one-on-one sessions every week', 'This week'),
+    'developing': ('Targeted practice in small groups twice a week', 'Within 2 weeks'),
+    'approaching': ('Tasks that apply the lesson to new situations, with feedback on each attempt', 'This quarter'),
+    'proficient': ('Enrichment: harder problems, projects and independent work', 'This quarter'),
+    'advanced': ('Extension work, and peer-tutor roles with classmates at Developing', 'This quarter'),
+}
+
+
+def level_plan(learners, *, teacher, teacher_name, adviser_name, next_period_name):
+    """One step up for every proficiency level present in a class, Beginning first.
+
+    Each step names its learners, how many points they need, the grade component that holds the group back most
+    (against the class's own average for it), what to do, who does it, by when, and how success is measured. With
+    the grade forecaster, it also counts who is forecast to reach the next level and who may slip below 75.
+    """
+    class_parts = {}
+    for key, _ in COMPONENTS:
+        values = [l[key] for l in learners if l.get(key) is not None]
+        if values:
+            class_parts[key] = mean(values)
+    plan = []
+    for lv in reversed(LEVELS):
+        group = [l for l in learners if l['level']['key'] == lv['key']]
+        if not group:
+            continue
+        target = LEVEL_BY_KEY.get(NEXT_LEVEL.get(lv['key'], ''))
+        parts = []
+        for key, label in COMPONENTS:
+            values = [l[key] for l in group if l.get(key) is not None]
+            if values and key in class_parts:
+                parts.append({'key': key, 'label': label, 'average': round(mean(values), 1), 'class': round(class_parts[key], 1),
+                              'gap': mean(values) - class_parts[key]})
+        weak = None
+        if parts:
+            # the component furthest below the class average; when the group is the class itself, its lowest component
+            weak = min(parts, key=lambda p: p['gap']) if max(abs(p['gap']) for p in parts) >= 1 else min(parts, key=lambda p: p['average'])
+        how, when = LEVEL_PLAN[lv['key']]
+        if weak and target:
+            how += f', focused on {weak["label"]}: {COMPONENT_TIPS[weak["key"]]}'
+        gaps = [target['min'] - l['grade'] for l in group] if target else []
+        half = math.ceil(len(group) / 2)
+        both = adviser_name and adviser_name != teacher_name
+        plan.append({
+            'level': lv, 'target': target, 'count': len(group), 'how': how + '.', 'when': when, 'weak': weak,
+            'who': f'{teacher} with the adviser{", " + adviser_name if both else ""}' if lv['key'] == 'beginning' else teacher,
+            # Beginning: the lowest first (most urgent); every other level: the nearest to the next level first
+            'learners': sorted(group, key=lambda l: l['grade'] if lv['key'] == 'beginning' else -l['grade']),
+            'gap': (round(max(min(gaps), 0.1), 1), round(max(gaps), 1)) if gaps else None,
+            'measure': (f'{half} of the {len(group)} at {target["min"]} or above by {next_period_name or "the end of the quarter"}'
+                        if target else 'They stay at 90 or above'),
+            'likely_up': sum(1 for l in group if target and l.get('projected') is not None and l['projected'] >= target['min']),
+            'may_slip': sum(1 for l in group if lv['key'] != 'beginning' and (l.get('chance') or 0) >= 0.5),
+        })
+    return plan
+
 
 def learner_reason(learner):
     """A short, specific reason for a learner's tier."""
@@ -209,11 +275,12 @@ def learner_reason(learner):
 
 def build_section_brief(*, section_name, grade_label, subject_name, period_name, next_period_name,
                         prev_period_name, teacher_name, adviser_name, learners, enrolled, validated,
-                        grade_level_avg, rank, rank_of, prev_avg, forecast, quarters_with_data):
+                        grade_level_avg, rank, rank_of, prev_avg, forecast, quarters_with_data, method=''):
     """The full brief for one class in one period.
 
-    learners: [{'name', 'grade', 'previous' (or None), 'projected' (or None)}] for learners with a grade.
-    forecast: {'value', 'low', 'high'} for the next period, or None.
+    learners: [{'name', 'grade', 'previous', 'projected', 'chance' (of ending below 75), 'ww', 'pt', 'qa'
+    (component percents)}] for learners with a grade; any of the last five may be None.
+    forecast: {'value', 'low', 'high'} for the next period, or None. method: where the forecast comes from.
     """
     n = len(learners)
     if not n:
@@ -349,37 +416,44 @@ def build_section_brief(*, section_name, grade_label, subject_name, period_name,
         })
     actions = actions[:3]
 
-    # ---- headline and summary ----
+    # ---- level-up plan: one step up for every level present ----
+    plan = level_plan(learners, teacher=teacher, teacher_name=teacher_name, adviser_name=adviser_name, next_period_name=next_period_name)
+    near_next = [l for l in learners if l['level']['key'] in ('developing', 'approaching', 'proficient')
+                 and LEVEL_BY_KEY[NEXT_LEVEL[l['level']['key']]]['min'] - l['grade'] <= 2]
+
+    # ---- headline and summary: where the class stands, how its learners spread over the levels, where it heads ----
     nxt = next_period_name or 'the next quarter'
     if below and slipping:
         headline = f'{_s(len(below))} {_verb(len(below))} below 75 and {len(slipping)} more may slip in {nxt}. Remediation should start this week.'
     elif below:
-        headline = f'{_s(len(below))} {_verb(len(below))} below 75. Remediation should start this week.'
+        headline = f'{_s(len(below))} {_verb(len(below))} below 75. Remediation should start this week' + (
+            f', and {len(near_next)} more {_verb(len(near_next))} within 2 points of the next level.' if near_next else '.')
     elif slipping:
         headline = f'Everyone passes now, but {_s(len(slipping))} may fall below 75 in {nxt}. Check in early.'
     elif delta is not None and delta <= -2:
         headline = f'The average fell {abs(delta):.1f} points since {prev_period_name}. A short data conference is worth it.'
+    elif near_next:
+        headline = f'{section_name} is at the {level["name"]} level in {subject_name}, and {_s(len(near_next))} {_verb(len(near_next))} within 2 points of the next level.'
     elif level['key'] in ('advanced', 'proficient'):
         headline = f'{section_name} is {level["name"]} in {subject_name}. Keep it going and stretch the top learners.'
     else:
-        headline = f'{section_name} is at {level["name"]} in {subject_name} with no learner below 75.'
+        headline = f'{section_name} is at the {level["name"]} level in {subject_name} with no learner below 75.'
 
-    s1 = f'{section_name} is at {level["name"]} in {subject_name} with {_a(avg)} {_pct(avg)} average'
+    s1 = f'{section_name} is at the {level["name"]} level in {subject_name} with {_a(avg)} {_pct(avg)} average'
     if delta is not None and abs(delta) >= 0.1:
         s1 += f', {abs(delta):.1f} points {"higher" if delta > 0 else "lower"} than in {prev_period_name}'
     if diff is not None and abs(diff) >= 0.1:
         s1 += f', and {abs(diff):.1f} points {"above" if diff > 0 else "below"} the {grade_label} average of {_pct(grade_level_avg)}'
     summary = [s1 + '.']
-    if below:
-        summary.append(f'{_s(len(below))} {_verb(len(below))} below 75' + (f' and {len(near)} more {_verb(len(near))} within 2 points of it.' if near else '.'))
-    elif near:
-        summary.append(f'No learner is below 75, but {len(near)} {_verb(len(near))} within 2 points of it.')
-    else:
-        summary.append('No learner is below 75.')
+    present = [(lv, sum(1 for l in learners if l['level']['key'] == lv['key'])) for lv in LEVELS]
+    present = [(lv, count) for lv, count in present if count]
+    parts = [f'{count} at {lv["name"]}' for lv, count in present]
+    summary.append('By level: ' + (', '.join(parts[:-1]) + ' and ' + parts[-1] if len(parts) > 1 else parts[0]) + '.')
     if forecast:
-        summary.append(f'If nothing changes, {next_period_name} is projected at {_pct(forecast["value"])}'
+        summary.append(f'If nothing changes, {next_period_name} is forecast at {_pct(forecast["value"])}'
                        + (f', with {_s(len(projected_below))} below 75.' if projected_below else '.'))
     summary = ' '.join(summary)
+    keep_words = [level['name'], section_name, subject_name] + [lv['name'] for lv, _ in present]
 
     # ---- targets for the next period ----
     targets = []
@@ -411,11 +485,13 @@ def build_section_brief(*, section_name, grade_label, subject_name, period_name,
         'Proficiency levels follow DepEd Order No. 31, s. 2012. Remediation for grades below 75 follows DepEd Order No. 8, s. 2015.',
     ]
     if forecast:
-        notes.append(f'Projections continue this school year\'s trend ({_s(quarters_with_data, "quarter")}) with damping, '
-                     'and the range reflects how much section averages in this school usually move between quarters. '
-                     'They show where things are heading if nothing changes, not what any learner will get.')
+        notes.append((method + ' ' if method else f'Projections continue this school year\'s trend ({_s(quarters_with_data, "quarter")}) '
+                      'with damping, and the range reflects how much section averages in this school usually move between quarters. ')
+                     + 'Forecasts show where things are heading if nothing changes, not what any learner will get.')
     else:
         notes.append('No projection: this is the last grading period of the school year, or later periods already have grades.')
+    notes.append('The level-up plan compares each group\'s written work, performance task and quarterly assessment scores with '
+                 'the class average for each, and names the one furthest behind.')
 
     return {
         'headline': headline, 'summary': summary,
@@ -427,7 +503,7 @@ def build_section_brief(*, section_name, grade_label, subject_name, period_name,
         'confidence': confidence, 'forecast': forecast,
         'tiers': [{'key': key, 'name': TIER_INFO[key]['name'], 'hint': TIER_INFO[key]['hint'], 'learners': tiers[key]}
                   for key in ('intensive', 'targeted', 'enrichment') if tiers[key]],
-        'share_needing': round(100 * share_needing),
+        'share_needing': round(100 * share_needing), 'plan': plan, 'near_next': len(near_next), 'keep': keep_words,
     }
 
 
@@ -435,21 +511,53 @@ def build_section_brief(*, section_name, grade_label, subject_name, period_name,
 # Dashboard insight
 # --------------------------------------------------------------------------------------------
 
-def dashboard_insight(*, scope_name, period_name, prev_period_name, average, delta, learners, below, rows):
-    """Three plain sentences for the top of the dashboard."""
+def dashboard_insight(*, scope_name, period_name, prev_period_name, average, delta, below, items, item_word, upcoming=None,
+                      over_periods=False):
+    """Up to four short sentences for the top of the dashboard: where the selection stands, the quickest step up a
+    level, the forecast, and who needs remediation. over_periods: the average spans several grading periods.
+    Returns (text, the items it names)."""
     level = level_of(average)
-    s1 = f'{scope_name} is at {level["name"]} with {_a(average)} {_pct(average)} average across {_s(learners)} in {period_name}'
+    s1 = f'{scope_name} is at the {level["name"]} level with {_a(average)} {_pct(average)} average {"over" if over_periods else "in"} {period_name}'
+    if delta is not None and abs(delta) >= 0.1:
+        s1 += f', {abs(delta):.1f} points {"higher" if delta > 0 else "lower"} than in {prev_period_name}'
+    out, named = [s1 + '.'], []
+    # the quickest step up: the items nearest the next level (within 2 points)
+    steps = sorted(((LEVEL_BY_KEY[NEXT_LEVEL[i['level']['key']]]['min'] - i['average'], i) for i in items
+                    if i['level']['key'] in NEXT_LEVEL), key=lambda s: s[0])
+    close = [(gap, i) for gap, i in steps if gap <= 2][:2]
+    if close and len(items) > 1:
+        out.append(f'Closest to the next level: ' + ' and '.join(
+            f'{i["name"]} ({_pct(i["average"])}, {gap:.1f} points from {LEVEL_BY_KEY[NEXT_LEVEL[i["level"]["key"]]]["name"]})'
+            for gap, i in close) + '.')
+        named += [i for _, i in close]
+    lowest = min(items, key=lambda i: i['average']) if len(items) > 1 else None
+    if lowest and lowest['level']['key'] in ('beginning', 'developing') and lowest not in named:
+        out.append(f'Needs the most support: {lowest["name"]} ({_pct(lowest["average"])}).')
+        named.append(lowest)
+    if upcoming:
+        out.append(f'{upcoming["name"]} is forecast at {_pct(upcoming["value"])}.')
+    out.append(f'{_s(below)} {_verb(below)} below 75 and need remediation.' if below else 'No learner is below 75.')
+    return ' '.join(out), named
+
+
+def performance_insight(*, scope_name, period_name, prev_period_name, average, delta, learners, areas, remedial, retention, honors):
+    """Plain sentences for the top of School Performance: overall level, weakest learning areas, promotion outlook, honors."""
+    level = level_of(average)
+    s1 = f'{scope_name} is at the {level["name"]} level with {_a(average)} {_pct(average)} average across {_s(learners)} in {period_name}'
     if delta is not None and abs(delta) >= 0.1:
         s1 += f', {abs(delta):.1f} points {"higher" if delta > 0 else "lower"} than in {prev_period_name}'
     out = [s1 + '.']
-    watch = sorted([r for r in rows if r['overall'] < 80], key=lambda r: r['overall'])
-    if watch:
-        names = ', '.join(f'{r["label"]} ({_pct(r["overall"])})' for r in watch[:3])
-        more = f' and {len(watch) - 3} more' if len(watch) > 3 else ''
-        out.append(f'Classes to watch: {names}{more}.')
-    elif rows:
-        out.append('Every class averages 80 or above.')
-    out.append(f'{_s(below)} {_verb(below)} below 75 and need remediation.' if below else 'No learner is below 75.')
+    weakest = sorted(areas, key=lambda a: a['average'])[:2]
+    if len(areas) > 2 and weakest:
+        out.append('Lowest learning areas: ' + ' and '.join(f'{a["name"]} ({_pct(a["average"])})' for a in weakest) + '.')
+    if retention:
+        out.append(f'{_s(retention)} {_verb(retention)} below 75 in three or more learning areas and at risk of retention.')
+    if remedial:
+        out.append(f'{_s(remedial)} {"needs" if remedial == 1 else "need"} remedial classes.')
+    if not retention and not remedial:
+        out.append('No learner is below 75 in any learning area.')
+    if honors:
+        out.append(f'{_s(honors)} {"qualifies" if honors == 1 else "qualify"} for academic honors this quarter.')
     return ' '.join(out)
 
 
@@ -461,13 +569,16 @@ def _ai_settings():
     return getattr(settings, 'PORO_AI', {})
 
 
-def narrative_token(text):
+def narrative_token(text, keep=()):
     """Remember a system-written summary so the browser can ask Poro to reword it by token.
 
     Only text the server wrote can be reworded, so the endpoint cannot be used as an open AI proxy.
+    keep: names and level words the wording must carry unchanged; a small model once turned "Approaching
+    Proficiency" into "on track to reach Proficiency", which keeps every number and changes the meaning.
     """
-    token = hashlib.sha1(text.encode('utf-8')).hexdigest()[:24]
-    caches['default'].set(f'poro:src:{token}', text, 7 * 24 * 3600)
+    keep = sorted({k for k in keep if k}, key=len, reverse=True)
+    token = hashlib.sha1('|'.join([text] + keep).encode('utf-8')).hexdigest()[:24]
+    caches['default'].set(f'poro:src:{token}', {'text': text, 'keep': keep}, 7 * 24 * 3600)
     return token
 
 
@@ -491,14 +602,19 @@ _DRIFT = ('maintain', 'remain', 'unchanged', 'stable', 'steady', 'majority', 'mo
           'will definitely')
 
 
-def check_rewrite(source, rewrite):
-    """True when the rewrite keeps every figure of the source in the same order and adds no new claim."""
+def check_rewrite(source, rewrite, keep=()):
+    """True when the rewrite keeps every figure of the source in the same order, keeps the given names and level
+    words, names no proficiency level the source did not, and adds no new claim."""
     if not rewrite or not 0.6 * len(source) <= len(rewrite) <= 1.6 * len(source):
         return False
     if _figures(rewrite) != _figures(source):
         return False
     low_src, low_new = source.lower(), rewrite.lower()
     if any(word in low_new and word not in low_src for word in _DRIFT):
+        return False
+    if any(k.lower() not in low_new for k in keep):
+        return False
+    if any(lv['name'].lower() in low_new and lv['name'].lower() not in low_src for lv in LEVELS):
         return False
     return not re.search(r'https?://|[*#`]|\bI\b|\bas an ai\b', rewrite, re.I)
 
@@ -508,18 +624,22 @@ def polish(token):
     import requests
 
     cache = caches['default']
-    source = cache.get(f'poro:src:{token}')
-    if not source:
+    stored = cache.get(f'poro:src:{token}')
+    if not stored:
         return None
+    source, keep = (stored, []) if isinstance(stored, str) else (stored['text'], stored['keep'])
     done = cache.get(f'poro:out:{token}')
     if done is not None:
         return done
     conf = _ai_settings()
     result = {'text': source, 'source': 'rules', 'model': ''}
     if conf.get('ENABLED', True):
-        prompt = ('Rewrite this briefing for a school principal in a clear, supportive tone. Keep every number exactly as '
-                  'written and keep each number with the same meaning. Do not add any fact, number or advice. '
-                  'Keep it to 2 or 3 sentences.\n\nBRIEFING: ' + source)
+        sentences = max(2, min(4, source.count('. ') + 1))
+        prompt = ('Rewrite this briefing for a school principal in a clear, supportive tone, more briefly if you can. Keep '
+                  'every number exactly as written and keep each number with the same meaning. Do not add any fact, number '
+                  f'or advice. Use at most {sentences} sentences.'
+                  + (' Keep these words exactly as written: ' + '; '.join(keep) + '.' if keep else '')
+                  + '\n\nBRIEFING: ' + source)
         model = conf.get('MODEL', 'qwen2.5:1.5b')
         try:
             # two tries: a small model sometimes changes a figure, and that wording is thrown away
@@ -532,7 +652,7 @@ def polish(token):
                     timeout=conf.get('TIMEOUT', 45))
                 response.raise_for_status()
                 text = json.loads(response.json().get('response') or '{}').get('text', '').strip()
-                if check_rewrite(source, text):
+                if check_rewrite(source, text, keep):
                     result = {'text': text, 'source': 'ai', 'model': model}
                     break
         except Exception:

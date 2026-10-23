@@ -2,156 +2,197 @@
 {% load static %}
 
 {% block title %}Grade Validation - ARMS{% endblock %}
-{% block subtitle %}Grade Validation{% if current_sy %} — SY {{ current_sy.year_label }}{% endif %}{% endblock %}
+{% block subtitle %}Grade Validation{% if current_sy %} &bull; SY {{ current_sy.year_label }}{% endif %}{% if period_name %} &bull; {{ period_name }}{% endif %}{% endblock %}
 
 {% block extra_css %}
 <style>
-    .period-tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.2rem; }
-    .period-tab {
-        display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.1rem; border-radius: 12px;
-        background: white; border: 2px solid var(--border-color); color: var(--text-secondary);
-        font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: all var(--transition-speed);
+    .pc { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .pc .facts { flex: 1 1 520px; }
+    .pc-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .late { color: var(--risk) !important; font-weight: 650; }
+    .gv { container-type: inline-size; }
+    .gv-rows { list-style: none; margin: 0.9rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+    .gv-row { display: grid; grid-template-columns: minmax(200px, 1.3fr) minmax(150px, 1fr) minmax(130px, 0.8fr) 9rem minmax(120px, 0.8fr) auto; gap: 0.6rem 1rem;
+              grid-template-areas: "cls teacher grades state checks go"; align-items: center; padding: 0.75rem 0.9rem; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+    .gv-row:hover { border-color: #cfd8ea; }
+    .gv-cls { grid-area: cls; min-width: 0; }
+    .gv-cls b { display: block; font-size: 0.9rem; }
+    .gv-cls small { display: block; font-size: 0.76rem; color: var(--muted); }
+    .gv-teacher { grid-area: teacher; font-size: 0.84rem; min-width: 0; }
+    .gv-grades { grid-area: grades; font-size: 0.8rem; }
+    .gv-grades .bar { margin-top: 0.35rem; max-width: 140px; }
+    .gv-state { grid-area: state; }
+    .gv-checks { grid-area: checks; font-size: 0.8rem; font-weight: 650; }
+    .gv-go { grid-area: go; justify-self: end; }
+    .chk-ok { color: var(--good); } .chk-warn { color: var(--warn); } .chk-err { color: var(--risk); } .chk-none { color: #a0aec0; font-weight: 500; }
+    .gv-none { display: none; }
+    @container (max-width: 980px) {
+        .gv-row { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "cls state go" "teacher grades checks"; }
     }
-    .period-tab:hover { border-color: var(--secondary-green); color: var(--secondary-green); }
-    .period-tab.active { background: var(--secondary-green); border-color: var(--secondary-green); color: white; }
-    .period-card { display: flex; justify-content: space-between; align-items: center; gap: 1.2rem; flex-wrap: wrap; }
-    .period-facts { display: flex; gap: 2rem; flex-wrap: wrap; }
-    .period-fact small { display: block; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); font-weight: 600; }
-    .period-fact strong { font-size: 0.86rem; color: var(--rich-black); }
-    .lock-state { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.9rem; border-radius: 20px; font-size: 0.76rem; font-weight: 700; }
-    .lock-state.open { background: var(--success-bg); color: var(--success-text); }
-    .lock-state.locked { background: var(--danger-bg); color: var(--danger-text); }
-    .progress { background: var(--border-color); height: 6px; border-radius: 3px; width: 110px; margin-top: 4px; overflow: hidden; }
-    .progress > div { height: 100%; border-radius: 3px; background: var(--secondary-green); }
-    .progress.partial > div { background: var(--warning-orange); }
-    #gradeTable { min-width: 880px; }
-    .search-box { max-width: 320px; }
+    @container (max-width: 560px) {
+        .gv-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "cls go" "state state" "teacher teacher" "grades checks"; }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
+<div class="tp">
+    <section class="card tp-head">
+        <div>
+            <h2><i class="fi fi-rr-shield-check" style="color:#123499;"></i> Grade validation</h2>
+            <p class="hint">A class is ready to validate once its teacher submits it. ARMS checks each one first: every learner graded, valid quarterly grades that follow from their scores, saved by the class teacher, and no unusual jumps from the last period.</p>
+        </div>
+    </section>
 
-<div class="page-head">
-    <h3><i class="fi fi-rr-shield-check"></i> Grade Validation</h3>
-</div>
+    {% if not current_sy %}
+    <section class="card panel"><p class="empty"><i class="fi fi-rr-calendar"></i>There is no current school year yet. Your system administrator sets it.</p></section>
+    {% elif not periods %}
+    <section class="card panel"><p class="empty"><i class="fi fi-rr-calendar"></i>SY {{ current_sy.year_label }} has no grading periods yet. Your system administrator creates them.</p></section>
+    {% else %}
 
-{% if not current_sy %}
-<div class="card"><div class="empty-state"><i class="fi fi-rr-calendar"></i><h5>No Current School Year</h5><p>Your system administrator needs to set the current school year first.</p></div></div>
-{% elif not periods %}
-<div class="card"><div class="empty-state"><i class="fi fi-rr-calendar"></i><h5>No Grading Periods Yet</h5><p>Your system administrator needs to create the grading periods of SY {{ current_sy.year_label }}.</p></div></div>
-{% else %}
+    <nav aria-label="Grading periods"><div class="seg">
+        {% for p in periods %}
+        <a href="?period={{ p.period.id }}" {% if p.period.id == period.id %}aria-current="page"{% endif %}>
+            {% if p.period.is_grades_locked %}<i class="fi fi-rr-lock" aria-hidden="true"></i>{% endif %}{{ p.name }}{% if p.period.is_current_quarter %} <span class="pill info" style="padding:0.05rem 0.45rem;font-size:0.66rem;">Current</span>{% endif %}</a>
+        {% endfor %}
+    </div></nav>
 
-<!-- Period switcher -->
-<div class="period-tabs">
-    {% for p in periods %}
-    <a href="?period={{ p.id }}" class="period-tab {% if p.id == period.id %}active{% endif %}">
-        {% if p.is_grades_locked %}<i class="fi fi-rr-lock"></i>{% endif %}
-        {{ p.quarter_label }}{% if p.is_current_quarter %} · Current{% endif %}
-    </a>
-    {% endfor %}
-</div>
-
-<!-- Selected period -->
-<div class="card period-card">
-    <div class="period-facts">
-        <div class="period-fact"><small>Period</small><strong>{{ period.quarter_label }} · {{ period.date_start|date:"M d" }} – {{ period.date_end|date:"M d, Y" }}</strong></div>
-        <div class="period-fact"><small>Teachers encode until</small><strong>{{ period.grade_encoding_deadline|date:"M d, Y" }}</strong></div>
-        <div class="period-fact"><small>Validate by</small><strong>{{ period.grade_validation_deadline|date:"M d, Y" }}</strong></div>
-        <div class="period-fact"><small>Status</small>
+    <section class="card panel pc" aria-label="{{ period_name }}">
+        <div class="facts">
+            <div><small>{{ period_name }}</small><b>{{ period.date_start|date:"M j" }} to {{ period.date_end|date:"M j, Y" }}</b></div>
+            <div><small>Teachers submit by</small><b>{{ period.grade_encoding_deadline|date:"M j, Y"|default:"No deadline" }}</b>
+                {% if encode_days is not None and not period.is_grades_locked %}<span class="{% if encode_overdue %}late{% endif %}">{% if encode_overdue %}deadline passed{% elif encode_days == 0 %}today{% else %}in {{ encode_days }} day{{ encode_days|pluralize }}{% endif %}</span>{% endif %}</div>
+            <div><small>Validate by</small><b>{{ period.grade_validation_deadline|date:"M j, Y"|default:"No deadline" }}</b>
+                {% if validate_days is not None and not period.is_grades_locked %}<span class="{% if validate_overdue %}late{% endif %}">{% if validate_overdue %}deadline passed{% elif validate_days == 0 %}today{% else %}in {{ validate_days }} day{{ validate_days|pluralize }}{% endif %}</span>{% endif %}</div>
+            <div><small>Status</small>{% if period.is_grades_locked %}<b><span class="pill risk"><i class="fi fi-rr-lock"></i> Locked{% if period.locked_at %} {{ period.locked_at|date:"M j" }}{% endif %}</span></b>{% else %}<b><span class="pill good"><i class="fi fi-rr-unlock"></i> Open for encoding</span></b>{% endif %}</div>
+        </div>
+        <div class="pc-actions">
             {% if period.is_grades_locked %}
-            <span class="lock-state locked"><i class="fi fi-rr-lock"></i> Locked{% if period.locked_at %} {{ period.locked_at|date:"M d" }}{% endif %}</span>
+            <form method="POST" data-confirm="Unlock {{ period_name }}? Teachers will be able to upload grades for it again." data-confirm-title="Unlock period" data-confirm-ok="Unlock">
+                {% csrf_token %}<input type="hidden" name="period" value="{{ period.id }}"><input type="hidden" name="action" value="unlock">
+                <button type="submit" class="btn btn-line"><i class="fi fi-rr-unlock"></i> Unlock period</button>
+            </form>
             {% else %}
-            <span class="lock-state open"><i class="fi fi-rr-unlock"></i> Open for encoding</span>
+            <form method="POST" data-confirm="Remind {{ waiting_teachers }} teacher{{ waiting_teachers|pluralize }} about the {{ waiting_count }} class{{ waiting_count|pluralize:'es' }} not submitted yet? Each teacher gets one notification listing their classes." data-confirm-title="Remind teachers" data-confirm-ok="Send reminders">
+                {% csrf_token %}<input type="hidden" name="period" value="{{ period.id }}"><input type="hidden" name="action" value="remind_all">
+                <button type="submit" class="btn btn-line" {% if not waiting_teachers %}disabled{% endif %}><i class="fi fi-rr-bell-ring"></i> {% if waiting_teachers %}Remind {{ waiting_teachers }} teacher{{ waiting_teachers|pluralize }}{% else %}Remind teachers{% endif %}</button>
+            </form>
+            <form method="POST" data-confirm="Lock {{ period_name }}?{% if pending_count %} {{ pending_count }} class{{ pending_count|pluralize:'es' }} {{ pending_count|pluralize:'is,are' }} not validated yet and will be locked as {{ pending_count|pluralize:'it is,they are' }}.{% endif %} Teachers will no longer be able to change this period's grades." data-confirm-title="Lock period" data-confirm-ok="Lock" data-confirm-danger>
+                {% csrf_token %}<input type="hidden" name="period" value="{{ period.id }}"><input type="hidden" name="action" value="lock">
+                <button type="submit" class="btn btn-line"><i class="fi fi-rr-lock"></i> Lock period</button>
+            </form>
+            <form method="POST" data-confirm="Validate the {{ clean_count }} submitted class{{ clean_count|pluralize:'es' }} that passed every check?{% if held_count %} {{ held_count }} other submitted class{{ held_count|pluralize:'es' }} need{{ held_count|pluralize:'s,' }} a closer look and {{ held_count|pluralize:'is,are' }} left for you to open.{% endif %}" data-confirm-title="Validate checked classes" data-confirm-ok="Validate">
+                {% csrf_token %}<input type="hidden" name="period" value="{{ period.id }}"><input type="hidden" name="action" value="validate_all">
+                <button type="submit" class="btn btn-main" {% if not clean_count %}disabled{% endif %}><i class="fi fi-rr-shield-check"></i> Validate checked classes{% if clean_count %} ({{ clean_count }}){% endif %}</button>
+            </form>
             {% endif %}
         </div>
+    </section>
+
+    <div class="tiles" style="--tiles:4">
+        <div class="card tile {% if counts.submitted %}good{% endif %}"><span class="tile-ico"><i class="fi fi-rr-shield-check"></i></span>
+            <div><span>Ready to validate</span><b>{{ counts.submitted|default:0 }}</b><small>{% if counts.submitted %}{{ clean_count }} passed every check{% else %}none submitted yet{% endif %}</small></div></div>
+        <div class="card tile {% if waiting_count %}warn{% endif %}"><span class="tile-ico"><i class="fi fi-rr-time-quarter-past"></i></span>
+            <div><span>With the teachers</span><b>{{ waiting_count }}</b><small>not submitted yet</small></div></div>
+        <div class="card tile {% if counts.returned %}risk{% endif %}"><span class="tile-ico"><i class="fi fi-rr-undo"></i></span>
+            <div><span>Returned</span><b>{{ counts.returned|default:0 }}</b><small>being corrected</small></div></div>
+        <div class="card tile {% if rows and pending_count == 0 %}good{% endif %}"><span class="tile-ico"><i class="fi fi-rr-badge-check"></i></span>
+            <div><span>{% if period.is_grades_locked %}Finalized{% else %}Validated{% endif %}</span><b>{{ done_count }}</b><small>of {{ rows|length }} class{{ rows|length|pluralize:"es" }}</small></div></div>
     </div>
-    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-        {% if period.is_grades_locked %}
-        <form method="POST" data-confirm="Unlock {{ period.quarter_label }}? Teachers will be able to upload grades for it again." data-confirm-title="Unlock period" data-confirm-ok="Unlock">
-            {% csrf_token %}<input type="hidden" name="period" value="{{ period.id }}"><input type="hidden" name="action" value="unlock">
-            <button type="submit" class="btn-outline"><i class="fi fi-rr-unlock"></i> Unlock Period</button>
-        </form>
+
+    <section class="card panel gv" aria-labelledby="gvTitle">
+        <h3 id="gvTitle" class="sr-only">Classes in {{ period_name }}</h3>
+        {% if rows %}
+        <div class="toolbar">
+            <label class="search"><i class="fi fi-rr-search"></i><input type="search" id="gvSearch" data-remember="search" placeholder="Find a section, subject or teacher" aria-label="Find a section, subject or teacher"></label>
+            <label class="sort">Sort by
+                <select id="gvSort">
+                    <option value="attention">Needs attention first</option>
+                    <option value="section">Grade level and section</option>
+                    <option value="subject">Subject</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="progress">Least complete first</option>
+                </select>
+            </label>
+        </div>
+        <div class="toolbar" style="margin-top:0.7rem;">
+            <div class="chips" role="group" aria-label="Show">
+                <button type="button" data-show="" aria-pressed="true">All<em>{{ rows|length }}</em></button>
+                {% for f in filters %}<button type="button" data-show="{{ f.key }}" aria-pressed="false">{{ f.label }}<em>{{ f.count }}</em></button>{% endfor %}
+            </div>
+            <span class="count" id="gvCount" aria-live="polite"></span>
+        </div>
+
+        <ol class="gv-rows" id="gvRows">
+            {% for row in rows %}{% with a=row.assignment r=row.review %}
+            <li>
+                <article class="gv-row" data-state="{{ row.state }}" data-order="{{ forloop.counter0 }}" data-percent="{{ row.percent }}"
+                         data-subject="{{ a.subject.subject_code|lower }}" data-teacher="{{ a.teacher.last_name|default:''|lower }} {{ a.teacher.first_name|default:''|lower }}"
+                         data-problems="{% if row.state == 'submitted' %}{{ r.errors|add:r.warnings }}{% else %}0{% endif %}"
+                         data-text="{{ a.section.grade_level.grade_name|lower }} {{ a.section.section_name|lower }} {{ a.subject.subject_code|lower }} {{ a.subject.subject_name|lower }} {{ a.teacher.get_full_name|lower }}">
+                    <div class="gv-cls"><b>{{ a.section.grade_level.grade_name }} {{ a.section.section_name }}</b><small>{{ a.subject.subject_code }} · {{ a.subject.subject_name }}</small></div>
+                    <div class="gv-teacher">{{ a.teacher.get_full_name|default:a.teacher.username|default:"No teacher" }}</div>
+                    <div class="gv-grades"><b>{{ row.encoded }}</b> of {{ row.enrolled }} graded
+                        <div class="bar {% if row.percent == 100 %}good{% else %}warn{% endif %}" aria-hidden="true"><i style="width:{{ row.percent }}%"></i></div></div>
+                    <div class="gv-state"><span class="pill {{ row.tone }}" title="{{ row.hint }}">{{ row.label }}</span></div>
+                    <div class="gv-checks">
+                        {% if row.state == 'submitted' or row.state == 'validated' or row.state == 'locked' %}
+                            {% if r.errors %}<span class="chk-err"><i class="fi fi-rr-cross-circle"></i> {{ r.errors }} problem{{ r.errors|pluralize }}</span>
+                            {% elif r.warnings %}<span class="chk-warn"><i class="fi fi-rr-triangle-warning"></i> {{ r.warnings }} to look at</span>
+                            {% else %}<span class="chk-ok"><i class="fi fi-rr-check-circle"></i> Passed</span>{% endif %}
+                        {% else %}<span class="chk-none">After submission</span>{% endif %}
+                    </div>
+                    <div class="gv-go"><a class="btn {% if row.state == 'submitted' %}btn-main{% else %}btn-line{% endif %} btn-sm" href="{% url 'registrars:grade_class_detail' a.id period.id %}">{% if row.state == 'submitted' %}Review{% else %}Open{% endif %} <i class="fi fi-rr-angle-small-right"></i></a></div>
+                </article>
+            </li>
+            {% endwith %}{% endfor %}
+        </ol>
+        <p class="empty gv-none" id="gvNone"><i class="fi fi-rr-search"></i>No class matches. Try another filter or search.</p>
         {% else %}
-        <form method="POST" data-confirm="Validate every class of {{ period.quarter_label }} whose grades are complete? Incomplete classes are left as they are." data-confirm-title="Validate complete classes" data-confirm-ok="Validate">
-            {% csrf_token %}<input type="hidden" name="period" value="{{ period.id }}"><input type="hidden" name="action" value="validate_all">
-            <button type="submit" class="btn-outline"><i class="fi fi-rr-shield-check"></i> Validate Complete Classes</button>
-        </form>
-        <form method="POST" data-confirm="Lock {{ period.quarter_label }}?{% if pending_count %} {{ pending_count }} class{{ pending_count|pluralize:'es' }} {{ pending_count|pluralize:'is,are' }} not validated yet.{% endif %} Teachers will no longer be able to change this period's grades." data-confirm-title="Lock period" data-confirm-ok="Lock" data-confirm-danger>
-            {% csrf_token %}<input type="hidden" name="period" value="{{ period.id }}"><input type="hidden" name="action" value="lock">
-            <button type="submit" class="btn-primary"><i class="fi fi-rr-lock"></i> Lock Period</button>
-        </form>
+        <div class="empty"><i class="fi fi-rr-chalkboard-user"></i>No classes yet. Classes appear here once sections have teachers.
+            <div style="margin-top:0.9rem;"><a class="btn btn-main" href="{% url 'registrars:section_list' %}"><i class="fi fi-rr-users-alt"></i> Go to sections</a></div></div>
         {% endif %}
-    </div>
-</div>
-
-<div class="summary-strip">
-    <div class="summary-item"><span class="dot blue"></span> <strong>{{ rows|length }}</strong> classes</div>
-    <div class="summary-item"><span class="dot green"></span> <strong>{{ counts.validated|default:0 }}</strong> validated</div>
-    <div class="summary-item"><span class="dot purple"></span> <strong>{{ counts.ready|default:0 }}</strong> ready to validate</div>
-    <div class="summary-item"><span class="dot orange"></span> <strong>{{ counts.incomplete|default:0 }}</strong> incomplete</div>
-    <div class="summary-item"><span class="dot orange"></span> <strong>{{ counts.returned|default:0 }}</strong> returned</div>
-    <div class="summary-item"><span class="dot red"></span> <strong>{{ counts.not_started|default:0 }}</strong> not started</div>
-</div>
-
-<div class="card">
-    {% if rows %}
-    <div class="toolbar">
-        <input type="text" class="form-input search-box" id="searchInput" data-remember="search" placeholder="Filter by section, subject or teacher..." onkeyup="filterRows()">
-        <span class="muted" id="rowCount"></span>
-    </div>
-    <div class="table-responsive">
-        <table id="gradeTable">
-            <thead><tr><th>Section</th><th>Subject</th><th>Teacher</th><th>Grades in</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-                {% for row in rows %}
-                <tr data-search="{{ row.assignment.section.section_name|lower }} {{ row.assignment.subject.subject_code|lower }} {{ row.assignment.subject.subject_name|lower }} {{ row.assignment.teacher.get_full_name|lower }}">
-                    <td><strong>{{ row.assignment.section.section_name }}</strong><div class="muted">{{ row.assignment.section.grade_level.grade_name }}</div></td>
-                    <td><strong>{{ row.assignment.subject.subject_code }}</strong><div class="muted">{{ row.assignment.subject.subject_name }}</div></td>
-                    <td>{{ row.assignment.teacher.get_full_name|default:row.assignment.teacher.username }}</td>
-                    <td>
-                        {{ row.encoded }} / {{ row.enrolled }}
-                        <div class="progress {% if row.percent < 100 %}partial{% endif %}"><div style="width: {{ row.percent }}%"></div></div>
-                    </td>
-                    <td>
-                        {% if row.state == 'validated' %}<span class="badge badge-success">{% if period.is_grades_locked %}Finalized{% else %}Validated{% endif %}</span>
-                        {% elif row.state == 'ready' %}<span class="badge badge-info">Ready to validate</span>
-                        {% elif row.state == 'returned' %}<span class="badge badge-warning">Returned to teacher</span>
-                        {% elif row.state == 'incomplete' %}<span class="badge badge-warning">Incomplete</span>
-                        {% else %}<span class="badge badge-danger">Not started</span>{% endif %}
-                    </td>
-                    <td><a href="{% url 'registrars:grade_class_detail' row.assignment.id period.id %}" class="btn-outline btn-sm"><i class="fi fi-rr-eye"></i> Review</a></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="empty-state">
-        <i class="fi fi-rr-chalkboard-user"></i>
-        <h5>No Classes Yet</h5>
-        <p>Classes appear here once sections have teachers assigned.</p>
-        <a href="{% url 'registrars:section_list' %}" class="btn-primary"><i class="fi fi-rr-users-alt"></i> Go to Sections</a>
-    </div>
+    </section>
     {% endif %}
 </div>
-{% endif %}
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    function gradeRows() { return Array.from(document.querySelectorAll('#gradeTable tbody tr')); }
-    function filterRows() {
-        var query = document.getElementById('searchInput').value.toLowerCase();
-        var rows = gradeRows(), visible = 0;
-        rows.forEach(function(row) {
-            var match = (row.getAttribute('data-search') || '').includes(query);
-            row.style.display = match ? '' : 'none';
-            if (match) visible++;
+(function () {
+    var list = document.getElementById('gvRows');
+    if (!list) return;
+    var items = Array.prototype.slice.call(list.children);
+    var search = document.getElementById('gvSearch'), sort = document.getElementById('gvSort');
+    var chips = Array.prototype.slice.call(document.querySelectorAll('.chips button'));
+    var show = new URLSearchParams(location.search).get('show') || '';
+    if (!chips.some(function (c) { return c.dataset.show === show; })) show = '';
+    var RANK = { submitted: 0, returned: 1, ready: 2, encoding: 3, not_started: 4, validated: 5, locked: 6 };
+    var num = function (el, k) { return +el.dataset[k]; };
+    var SORTS = {
+        attention: function (a, b) { return (RANK[a.dataset.state] - RANK[b.dataset.state]) || (num(b, 'problems') - num(a, 'problems')) || (num(a, 'order') - num(b, 'order')); },
+        section: function (a, b) { return num(a, 'order') - num(b, 'order'); },
+        subject: function (a, b) { return a.dataset.subject.localeCompare(b.dataset.subject) || (num(a, 'order') - num(b, 'order')); },
+        teacher: function (a, b) { return a.dataset.teacher.localeCompare(b.dataset.teacher) || (num(a, 'order') - num(b, 'order')); },
+        progress: function (a, b) { return (num(a, 'percent') - num(b, 'percent')) || (num(a, 'order') - num(b, 'order')); }
+    };
+    try { var saved = localStorage.getItem('arms:validation:sort'); if (saved && SORTS[saved]) sort.value = saved; } catch (e) {}
+    function apply() {
+        var q = search.value.trim().toLowerCase(), shown = 0;
+        items.map(function (li) { return li.firstElementChild; }).sort(SORTS[sort.value]).forEach(function (row) {
+            var ok = (!q || row.dataset.text.indexOf(q) > -1) && (!show || row.dataset.state === show);
+            row.parentElement.hidden = !ok;
+            if (ok) shown++;
+            list.appendChild(row.parentElement);
         });
-        document.getElementById('rowCount').textContent = visible + ' of ' + rows.length + ' classes';
+        chips.forEach(function (c) { c.setAttribute('aria-pressed', c.dataset.show === show ? 'true' : 'false'); });
+        document.getElementById('gvCount').textContent = 'Showing ' + shown + ' of ' + items.length;
+        document.getElementById('gvNone').style.display = shown ? 'none' : 'block';
     }
-    var rowCount = document.getElementById('rowCount');
-    if (rowCount) rowCount.textContent = gradeRows().length + ' classes';
+    chips.forEach(function (c) { c.addEventListener('click', function () { show = c.dataset.show; apply(); }); });
+    search.addEventListener('input', apply);
+    sort.addEventListener('change', function () { try { localStorage.setItem('arms:validation:sort', sort.value); } catch (e) {} apply(); });
+    apply();
+})();
 </script>
 {% endblock %}

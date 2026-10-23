@@ -1,6 +1,6 @@
 # evaluation/models.py
 """
-Phase 12: Teacher Evaluation (RPMS) models for Formify LIS.
+Phase 12: Teacher Evaluation (RPMS) models for ARMS.
 Classroom observations with per-criteria scoring on 1-5 scale,
 self-assessments, supervisor assessments, peer reviews, and IPCRF
 record management with three-signature workflow.

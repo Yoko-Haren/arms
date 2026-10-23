@@ -1,6 +1,6 @@
 # transfers/models.py
 """
-Phase 10: Transfer Management models for Formify LIS.
+Phase 10: Transfer Management models for ARMS.
 Student transfers (incoming/outgoing) with document tracking,
 SF9/SF10 release management, and approval workflow.
 """

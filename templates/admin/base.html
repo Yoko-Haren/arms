@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ARMS Admin Panel - {% block title %}Dashboard{% endblock %}</title>
+    {% include 'shared/_favicon.html' %}
 
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -158,7 +159,7 @@
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <a href="{% url 'admin_panel:dashboard' %}" class="logo-area">
-                <i class="fi fi-rr-graduation-cap"></i>
+                <img class="brand-mark" src="{% static 'shared/logo/arms-mark.svg' %}" alt="" width="38" height="38">
                 <h2>ARMS <span>Admin Portal</span></h2>
             </a>
             <button class="fold-btn" id="foldBtn" title="Toggle sidebar"><i class="fi fi-rr-angle-left"></i></button>
@@ -179,6 +180,7 @@
             <li class="nav-item"><a href="{% url 'admin_panel:grade_level_list' %}" class="nav-link {% if '/grade-levels/' in path %}active{% endif %}"><i class="fi fi-rr-layers"></i><span>Grade Levels</span></a></li>
             <li class="nav-item"><a href="{% url 'admin_panel:school_year_manage' %}" class="nav-link {% if '/school-years/' in path %}active{% endif %}"><i class="fi fi-rr-calendar"></i><span>School Years</span></a></li>
             <li class="nav-item"><a href="{% url 'admin_panel:quarter_manage' %}" class="nav-link {% if '/quarters/' in path %}active{% endif %}"><i class="fi fi-rr-clock"></i><span>Grading Periods</span></a></li>
+            <li class="nav-item"><a href="{% url 'admin_panel:request_list' %}" class="nav-link {% if '/requests/' in path %}active{% endif %}"><i class="fi fi-rr-envelope"></i><span>Requests</span>{% if new_contact_requests %}<em class="nav-badge" title="{{ new_contact_requests }} new">{{ new_contact_requests }}</em>{% endif %}</a></li>
         </ul>
         {% endwith %}
         <ul class="nav-menu nav-footer">

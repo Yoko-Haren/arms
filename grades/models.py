@@ -1,6 +1,6 @@
 # grades/models.py
 """
-Phase 7: Grade Encoding models for Formify LIS.
+Phase 7: Grade Encoding models for ARMS.
 DepEd Order 8, s. 2015 compliant grading with WW/PT/QA components,
 transmutation, quarterly grades, final grades, honor records
 (combined current + history), and immutable change logs.

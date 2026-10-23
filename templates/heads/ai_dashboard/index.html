@@ -7,115 +7,37 @@
 
 {% block extra_css %}
 <style>
-    .ad { --ink: #1a1a2e; --muted: #4a5568; --line: #e8ecf1; --soft: #f5f7fb; --brand: #123499;
-          --lv-advanced: #2E7D32; --lv-advanced-bg: #e8f5e9; --lv-proficient: #123499; --lv-proficient-bg: #e3f2fd;
-          --lv-approaching: #1565C0; --lv-approaching-bg: #e8eaf6; --lv-developing: #B45309; --lv-developing-bg: #fff3e0;
-          --lv-beginning: #C62828; --lv-beginning-bg: #ffebee; display: flex; flex-direction: column; gap: 1.25rem; }
-    .ad .card { background: #fff; border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
-    .ad h3 { font-size: 1rem; font-weight: 700; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.5rem; }
-    .ad .hint { font-size: 0.8rem; color: var(--muted); margin: 0.2rem 0 0; }
-    .ad .muted { color: var(--muted); font-weight: 600; }
-
-    /* ---------- guided filters ---------- */
-    .guide { padding: 1rem 1.25rem 0.9rem; }
-    .guide-row { display: flex; flex-wrap: wrap; gap: 0.9rem 1.2rem; align-items: flex-end; }
-    .step { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
-    .step.grow { flex: 1 1 240px; }
-    .step-label { font-size: 0.76rem; font-weight: 700; color: var(--muted); display: flex; align-items: center; gap: 0.45rem; }
-    .step-no { width: 20px; height: 20px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 0.68rem;
-               display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .guide select { width: 100%; min-width: 150px; padding: 0.6rem 2rem 0.6rem 0.8rem; border: 2px solid #e0e5ea; border-radius: 10px;
-                    font-size: 0.88rem; font-family: inherit; color: var(--ink); background-color: var(--soft); cursor: pointer; }
-    .guide select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(18,52,153,0.12); background-color: #fff; }
-    .pair { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-    .pair select { width: auto; min-width: 165px; }
-    .pair select:first-child { min-width: 205px; }
-    .seg { display: inline-flex; border: 2px solid #e0e5ea; border-radius: 10px; overflow: hidden; background: var(--soft); }
-    .seg button { border: 0; background: transparent; padding: 0.58rem 0.95rem; font: inherit; font-size: 0.86rem; font-weight: 600;
-                  color: var(--muted); cursor: pointer; white-space: nowrap; }
-    .seg button[aria-checked="true"] { background: var(--brand); color: #fff; }
-    .seg button:not([aria-checked="true"]):hover { background: #e8ecf1; color: var(--ink); }
-    .guide-summary { margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px dashed var(--line); font-size: 0.84rem; color: var(--muted);
-                     display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; }
-    .guide-summary strong { color: var(--ink); }
-    .guide-summary .reset { margin-left: auto; color: var(--brand); font-weight: 600; text-decoration: none; }
-    .guide-summary .reset:hover { text-decoration: underline; }
-
-    /* ---------- status ---------- */
-    .top-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 1.25rem; align-items: stretch; }
-    @media (max-width: 1100px) { .top-grid { grid-template-columns: 1fr; } }
-    .status { padding: 1.3rem 1.4rem; border-top: 5px solid var(--lv); }
-    .status .eyebrow { font-size: 0.74rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
-    .status-main { display: flex; gap: 1rem; align-items: center; margin: 0.8rem 0 1rem; }
-    .status-badge { width: 68px; height: 68px; border-radius: 18px; background: var(--lv-bg); color: var(--lv); font-size: 1.45rem;
-                    font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 2px solid var(--lv); }
-    .status-level { font-size: 1.6rem; font-weight: 800; color: var(--lv); line-height: 1.15; }
-    .status-meaning { font-size: 0.86rem; color: var(--muted); margin-top: 0.25rem; line-height: 1.5; max-width: 70ch; }
-    .status-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.6rem; }
-    @media (max-width: 640px) { .status-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    .fact { background: var(--soft); border-radius: 12px; padding: 0.7rem 0.85rem; }
-    .fact b { display: block; font-size: 1.3rem; color: var(--ink); line-height: 1.2; }
-    .fact span { font-size: 0.78rem; color: var(--muted); }
-    .fact .chg { display: inline-flex; align-items: center; gap: 0.15rem; font-size: 0.76rem; font-weight: 700; font-style: normal; }
-    .up { color: #2E7D32; } .down { color: #C62828; } .flat { color: var(--muted); }
-    .fact.alert b { color: #C62828; }
-    .poro-line { display: flex; gap: 0.8rem; align-items: flex-start; margin-top: 1rem; padding: 0.9rem 1rem; border-radius: 14px;
-                 background: linear-gradient(135deg, #f0f4ff, #e8eeff); border: 1px solid rgba(18,52,153,0.15); }
-    .poro-line img { width: 40px; height: 40px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
-    .poro-line p { margin: 0; font-size: 0.9rem; color: var(--ink); line-height: 1.6; }
-    .poro-tag { display: block; font-size: 0.7rem; font-weight: 700; color: var(--brand); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 0.15rem; }
-    .level-advanced { --lv: var(--lv-advanced); --lv-bg: var(--lv-advanced-bg); }
-    .level-proficient { --lv: var(--lv-proficient); --lv-bg: var(--lv-proficient-bg); }
-    .level-approaching { --lv: var(--lv-approaching); --lv-bg: var(--lv-approaching-bg); }
-    .level-developing { --lv: var(--lv-developing); --lv-bg: var(--lv-developing-bg); }
-    .level-beginning { --lv: var(--lv-beginning); --lv-bg: var(--lv-beginning-bg); }
+    /* Shared parts (filters, status, tables, plots, dialogs, forecast charts, level ladder) are in static/heads/css/head-portal.css. */
 
     /* ---------- learners below 75 ---------- */
-    .watch { padding: 1.2rem 1.2rem 1rem; display: flex; flex-direction: column; }
-    .count { background: #ffebee; color: #C62828; border-radius: 20px; padding: 0.05rem 0.55rem; font-size: 0.78rem; }
-    .watch ul { list-style: none; margin: 0.8rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
-    .watch li a { display: flex; justify-content: space-between; gap: 0.6rem; padding: 0.55rem 0.7rem; border: 1px solid var(--line);
+    .watch { padding: 1.1rem 1.15rem 0.95rem; display: flex; flex-direction: column; }
+    .watch ul { list-style: none; margin: 0.75rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+    .watch li a { display: flex; justify-content: space-between; gap: 0.6rem; padding: 0.5rem 0.7rem; border: 1px solid var(--line);
                   border-radius: 10px; text-decoration: none; color: var(--ink); transition: border-color 0.15s, background 0.15s; }
     .watch li a:hover, .watch li a:focus-visible { border-color: #C62828; background: #fffafa; outline: none; }
-    .watch .who { font-size: 0.86rem; font-weight: 600; }
-    .watch .where { display: block; font-size: 0.76rem; color: var(--muted); font-weight: 400; margin-top: 0.1rem; }
-    .watch .low { font-size: 0.86rem; font-weight: 800; color: #C62828; white-space: nowrap; }
-    .link-btn { background: none; border: 0; padding: 0.5rem 0 0; color: var(--brand); font: inherit; font-size: 0.84rem; font-weight: 600; cursor: pointer; text-align: left; }
-    .link-btn:hover { text-decoration: underline; }
-    .empty-good { margin-top: 0.8rem; font-size: 0.86rem; color: #2E7D32; display: flex; gap: 0.5rem; align-items: center; }
+    .watch .who { font-size: 0.84rem; font-weight: 600; }
+    .watch .where { display: block; font-size: 0.74rem; color: var(--muted); font-weight: 400; margin-top: 0.1rem; }
+    .watch .low { font-size: 0.84rem; font-weight: 700; color: #C62828; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+    /* ---------- Poro AI line: computed first, reworded by the local model when it passes the checks ---------- */
+    .poro-line p { transition: opacity 0.3s; }
+    .poro-line p.fading { opacity: 0.35; }
+    .poro-src { display: block; margin-top: 0.35rem; font-size: 0.72rem; color: var(--muted); }
+    .poro-src.ai { color: var(--brand); font-weight: 600; }
 
     /* ---------- sections table ---------- */
-    .classes { padding: 1.2rem 1.3rem 1rem; container-type: inline-size; }
-    .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
-    .head-actions { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
-    .kpup-key { font-size: 0.78rem; color: var(--muted); }
+    .classes { padding: 1.1rem 1.25rem 0.95rem; container-type: inline-size; }
+    .kpup-key { font-size: 0.76rem; color: var(--muted); }
     .kpup-key b { color: var(--ink); }
-    .sec-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 0.88rem; }
-    .sec-table th { text-align: left; padding: 0.6rem 0.55rem; font-size: 0.74rem; font-weight: 700; color: var(--muted);
-                    text-transform: uppercase; letter-spacing: 0.4px; background: var(--soft); border-bottom: 2px solid var(--line); }
-    .sec-table th:first-child { border-radius: 10px 0 0 0; } .sec-table th:last-child { border-radius: 0 10px 0 0; }
-    .sec-table th button { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; }
-    .sec-table th button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 4px; }
-    .sec-table th button i { font-size: 0.7rem; opacity: 0.45; }
-    .sec-table th[aria-sort] button i { opacity: 1; color: var(--brand); }
-    .sec-table td { padding: 0.7rem 0.55rem; border-bottom: 1px solid #f0f3f7; color: var(--ink); vertical-align: middle; overflow-wrap: anywhere; }
-    .sec-table .num { text-align: right; }
     .sec-table col.c-section { width: 24%; } .sec-table col.c-learners { width: 11%; } .sec-table col.c-k { width: 8%; }
     .sec-table col.c-avg { width: 13%; } .sec-table col.c-level { width: 16%; } .sec-table col.c-go { width: 4%; }
     .sec-row { cursor: pointer; transition: background 0.15s; }
     .sec-row:hover, .sec-row:focus-visible { background: #eef2ff; outline: none; box-shadow: inset 3px 0 0 var(--brand); }
-    .sec-name { font-weight: 700; color: var(--ink); text-decoration: none; }
+    .sec-name { font-weight: 650; color: var(--ink); text-decoration: none; }
     .sec-row:hover .sec-name { color: var(--brand); }
-    .sub { display: block; font-size: 0.76rem; color: var(--muted); margin-top: 0.1rem; font-weight: 400; }
-    .sub.danger { color: #C62828; font-weight: 600; }
-    .delta { display: inline-flex; align-items: center; gap: 0.1rem; font-size: 0.76rem; font-weight: 700; margin-left: 0.3rem; }
-    .lvl { display: inline-block; padding: 0.22rem 0.6rem; border-radius: 20px; font-size: 0.78rem; font-weight: 700; white-space: nowrap;
-           background: var(--lv-bg); color: var(--lv); }
     .go { text-align: right; color: #a0aec0; }
     .sec-row:hover .go { color: var(--brand); }
     .row-low td:first-child { box-shadow: inset 4px 0 0 #C62828; }
-    .footnote { font-size: 0.76rem; color: var(--muted); margin: 0.8rem 0 0; }
-    .empty-row td { text-align: center; padding: 2.5rem 1rem; color: var(--muted); font-size: 0.9rem; }
     /* narrow: each row becomes a small card, the text keeps its size */
     @container (max-width: 760px) {
         .sec-table, .sec-table tbody { display: block; }
@@ -123,8 +45,8 @@
         .sec-table tr.sec-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.35rem 0.6rem; padding: 0.8rem 0.9rem;
                                 border: 1px solid var(--line); border-radius: 14px; margin-bottom: 0.6rem; }
         .sec-table td { display: block; border: 0; padding: 0; text-align: left !important; }
-        .sec-table td[data-label]::before { content: attr(data-label); display: block; font-size: 0.7rem; font-weight: 700; color: var(--muted);
-                                            text-transform: uppercase; letter-spacing: 0.4px; }
+        .sec-table td[data-label]::before { content: attr(data-label); display: block; font-size: 0.68rem; font-weight: 650; color: var(--muted);
+                                            text-transform: uppercase; letter-spacing: 0.05em; }
         .sec-table td.cell-section { grid-column: 1 / 3; grid-row: 1; } .sec-table td.cell-section::before { display: none; }
         .sec-table td.cell-level { grid-column: 3 / 5; grid-row: 1; text-align: right !important; } .sec-table td.cell-level::before { display: none; }
         .sec-table td.cell-avg { grid-column: 1 / 3; grid-row: 2; } .sec-table td.cell-learners { grid-column: 3 / 5; grid-row: 2; }
@@ -136,101 +58,38 @@
         .row-low td:first-child { box-shadow: none; } .sec-table tr.row-low { border-left: 4px solid #C62828; }
     }
 
-    /* ---------- KPUP by section: one dot plot, one row per class ---------- */
-    .chart-card { padding: 1.2rem 1.3rem; container-type: inline-size; }
-    .kp-legend { display: flex; flex-wrap: wrap; gap: 0.45rem 1.1rem; font-size: 0.8rem; color: var(--muted); margin: 0 0 0.6rem; }
-    .kp-legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
-    .kp-key { width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
-    .kp-key.avg { width: 3px; height: 14px; border-radius: 2px; background: var(--ink); }
-    .kp-key.pass { width: 0; height: 14px; border-radius: 0; border-left: 2px dashed rgba(198,40,40,0.6); }
-    .k-color { background: #2E7D32; } .p-color { background: #123499; } .u-color { background: #E65100; } .pd-color { background: #6A1B9A; }
-    .kp { --name-w: 220px; --val-w: 118px; }
-    .kp-axis, .kp-link { display: grid; grid-template-columns: var(--name-w) minmax(0, 1fr) var(--val-w); align-items: center; gap: 0.9rem; }
-    .kp-axis { padding: 0 0.6rem 0.35rem; font-size: 0.74rem; font-weight: 700; color: var(--muted); border-bottom: 1px solid var(--line); }
-    .kp-axis .kp-head-val { text-align: right; }
-    .kp-ticks { position: relative; height: 1.1rem; }
-    .kp-ticks span { position: absolute; top: 0; transform: translateX(-50%); font-weight: 600; }
-    .kp-rows { list-style: none; margin: 0; padding: 0; }
-    .kp-row + .kp-row { border-top: 1px solid #f0f3f7; }
-    .kp-link { padding: 0.5rem 0.6rem; text-decoration: none; color: var(--ink); border-radius: 10px; }
-    .kp-link:hover, .kp-link:focus-visible { background: #f3f6ff; outline: none; box-shadow: inset 3px 0 0 var(--brand); }
-    .kp-name { min-width: 0; }
-    .kp-name b { display: block; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .kp-name small { display: block; font-size: 0.76rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .kp-flag { font-style: normal; font-size: 0.7rem; font-weight: 700; color: #C62828; background: #ffebee; border-radius: 10px;
-               padding: 0.05rem 0.45rem; margin-left: 0.35rem; vertical-align: 1px; }
-    .kp-track { position: relative; height: 30px; border-right: 1px solid #e9edf4; }
-    .kp-track > span { position: absolute; }
-    .kp-grid { top: 0; bottom: 0; border-left: 1px solid #e9edf4; }
-    .kp-pass { top: 0; bottom: 0; border-left: 2px dashed rgba(198,40,40,0.45); }
-    .kp-range { top: 50%; height: 4px; transform: translateY(-50%); background: #cfd8e8; border-radius: 4px; }
-    .kp-avg { top: 4px; bottom: 4px; width: 3px; margin-left: -1.5px; background: var(--ink); border-radius: 2px; }
-    .kp-dot { top: 50%; width: 13px; height: 13px; border-radius: 50%; transform: translate(-50%, -50%); border: 2px solid #fff;
-              box-shadow: 0 0 0 1px rgba(0,0,0,0.12); }
-    .kp-dot:hover, .kp-avg:hover { z-index: 5; }
-    .kp-dot:hover::after, .kp-avg:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
-              white-space: nowrap; background: #1a1a2e; color: #fff; font-size: 0.74rem; font-weight: 600; padding: 0.25rem 0.5rem; border-radius: 6px;
-              pointer-events: none; }
-    .kp-val { justify-self: end; display: inline-flex; align-items: center; gap: 0.35rem; }
-    .kp-delta { display: inline-flex; align-items: center; gap: 0.1rem; font-size: 0.74rem; font-weight: 700; }
-    .kp-empty { padding: 1.5rem 0.6rem; text-align: center; color: var(--muted); font-size: 0.88rem; }
-    .kp-note { font-size: 0.76rem; color: var(--muted); margin: 0.7rem 0 0; }
-    .ad-modal-body.kp-body { padding-top: 0; }
-    .kp-body .kp-legend { margin-top: 0.8rem; }
-    .kp-body .kp-axis { position: sticky; top: 0; z-index: 4; background: #fff; padding-top: 0.5rem; }
-    @container (max-width: 640px) {
-        .kp { --val-w: 64px; }
-        .kp-axis, .kp-link { grid-template-columns: minmax(0, 1fr) var(--val-w); gap: 0.3rem 0.7rem; }
-        .kp-name { grid-column: 1 / -1; }
-        .kp-axis .kp-spacer { display: none; }
-        .kp-val { flex-direction: column; align-items: flex-end; gap: 0.1rem; }
-    }
+    /* ---------- one section's subjects (every-discipline view) ---------- */
+    .subj-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+    .subj-list a { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 0.2rem 0.8rem; align-items: center; padding: 0.55rem 0.8rem;
+                   border: 1px solid var(--line); border-radius: 12px; text-decoration: none; color: var(--ink); }
+    .subj-list a:hover, .subj-list a:focus-visible { border-color: var(--brand); background: #f3f6ff; outline: none; }
+    .subj-list .nm { font-weight: 650; font-size: 0.88rem; min-width: 0; }
+    .subj-list .nm small { display: block; font-weight: 400; font-size: 0.76rem; color: var(--muted); }
+    .subj-list .av { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .subj-list .lvl { justify-self: end; }
 
-    /* ---------- dialogs (all learners below 75, all sections) ---------- */
-    .ad-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); display: flex; align-items: center; justify-content: center;
-                z-index: 3000; padding: 1.5rem; }
-    .ad-modal[hidden] { display: none; }
-    .ad-modal-card { background: #fff; border-radius: 20px; width: min(900px, 100%); max-height: calc(100vh - 3rem); display: flex;
-                     flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.25); container-type: inline-size; }
-    .ad-modal-card.wide { width: min(1120px, 100%); }
-    .ad-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.1rem 1.3rem 0.8rem; }
-    .ad-modal-tools { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; padding: 0 1.3rem 0.9rem; border-bottom: 1px solid var(--line); }
-    .ad-modal-body { padding: 0.8rem 1.3rem 1.2rem; overflow-y: auto; }
-    .tools-count { margin-left: auto; font-size: 0.82rem; color: var(--muted); }
-    .ad-search { position: relative; flex: 0 1 340px; min-width: 0; }
-    .ad-search i { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 0.8rem; }
-    .ad-search input { width: 100%; padding: 0.55rem 0.8rem 0.55rem 2.1rem; border: 2px solid #e0e5ea; border-radius: 20px; font: inherit; font-size: 0.86rem;
-                    background: var(--soft); }
-    .ad-sortby { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.82rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
-    .ad-sortby select { padding: 0.5rem 0.8rem; border: 2px solid #e0e5ea; border-radius: 20px; font: inherit; font-size: 0.86rem; background: var(--soft); color: var(--ink); }
-    .ad-search input:focus, .ad-sortby select:focus { outline: none; border-color: var(--brand); background: #fff; }
-    .icon-btn { width: 36px; height: 36px; border-radius: 10px; border: 2px solid var(--line); background: #fff; cursor: pointer; font-size: 1rem;
-                display: inline-flex; align-items: center; justify-content: center; color: var(--muted); flex-shrink: 0; }
-    .icon-btn:hover { border-color: #dc3545; color: #dc3545; }
+    /* ---------- KPUP colors ---------- */
+    .k-color { background: #2E7D32; } .p-color { background: #123499; } .u-color { background: #E65100; } .pd-color { background: #6A1B9A; }
+
+    /* ---------- every learner below 75 (dialog list) ---------- */
     .watch-all { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
-    .watch-all a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.2rem 0.8rem; align-items: center; padding: 0.6rem 0.8rem;
+    .watch-all a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.2rem 0.8rem; align-items: center; padding: 0.55rem 0.8rem;
                    border: 1px solid var(--line); border-radius: 12px; text-decoration: none; color: var(--ink); }
     .watch-all a:hover, .watch-all a:focus-visible { border-color: #C62828; background: #fffafa; outline: none; }
-    .watch-all .who { font-weight: 700; font-size: 0.9rem; }
-    .watch-all .where { font-size: 0.8rem; color: var(--muted); }
+    .watch-all .who { font-weight: 650; font-size: 0.88rem; }
+    .watch-all .where { font-size: 0.78rem; color: var(--muted); }
     .watch-all .chips { grid-column: 1 / 2; display: flex; flex-wrap: wrap; gap: 0.3rem; }
-    .watch-all .chip { font-size: 0.74rem; font-weight: 700; padding: 0.12rem 0.5rem; border-radius: 12px; background: #ffebee; color: #C62828; }
-    .watch-all .low { grid-row: 1 / 3; grid-column: 2; font-size: 1.05rem; font-weight: 800; color: #C62828; }
-    .ad-none { padding: 1.5rem; text-align: center; color: var(--muted); font-size: 0.88rem; }
-    @container (max-width: 560px) {
-        .ad-search, .ad-sortby { flex: 1 1 100%; } .tools-count { margin-left: 0; }
-        .ad-sortby select { flex: 1 1 auto; min-width: 0; }
-    }
-    .ad-modal-card:focus { outline: none; }
+    .watch-all .chip { font-size: 0.72rem; font-weight: 650; padding: 0.12rem 0.5rem; border-radius: 12px; background: #ffebee; color: #C62828; }
+    .watch-all .low { grid-row: 1 / 3; grid-column: 2; font-size: 1rem; font-weight: 700; color: #C62828; font-variant-numeric: tabular-nums; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div id="armsLive" data-fingerprint="{{ live_fingerprint }}" hidden></div>
-<div class="ad">
+<div class="ad hp">
 
     <!-- 1. Guided filters: what to review, then which grade, then which period -->
-    <section class="card guide" aria-label="Choose what to review">
+    <section class="card guide" aria-label="Choose what to review" data-skel-keep>
         <form method="get" id="filterForm" class="guide-row">
             <input type="hidden" name="view_mode" id="viewMode" value="{{ view_mode }}">
             <div class="step">
@@ -245,14 +104,18 @@
             <label class="step grow">
                 <span class="step-label"><span class="step-no">2</span> Discipline</span>
                 <select name="subject_family" class="auto-submit">
+                    <option value="all" {% if all_families %}selected{% endif %}>All disciplines</option>
                     {% for f in families %}<option value="{{ f.id }}" {% if family and f.id == family.id %}selected{% endif %}>{{ f.family_name }}</option>{% endfor %}
                 </select>
             </label>
             <label class="step">
                 <span class="step-label"><span class="step-no">3</span> Grade level</span>
                 <select name="grade_level" class="auto-submit">
-                    <option value="all">All grade levels</option>
-                    {% for gl in grade_levels %}<option value="{{ gl.id }}" {% if grade_id == gl.id|stringformat:"s" %}selected{% endif %}>{{ gl.grade_name }}</option>{% endfor %}
+                    <option value="all" {% if grade_id == 'all' %}selected{% endif %}>All grade levels</option>
+                    {% for g in grade_scopes %}<option value="{{ g.value }}" {% if grade_id == g.value %}selected{% endif %}>{{ g.name }}</option>{% endfor %}
+                    <optgroup label="One grade level">
+                        {% for gl in grade_levels %}<option value="{{ gl.id }}" {% if grade_id == gl.id|stringformat:"s" %}selected{% endif %}>{{ gl.grade_name }}</option>{% endfor %}
+                    </optgroup>
                 </select>
             </label>
             {% else %}
@@ -272,6 +135,7 @@
                 <span class="step-label"><span class="step-no">{% if view_mode == 'family' %}4{% else %}3{% endif %}</span> Period</span>
                 <div class="pair">
                     <select name="quarter" class="auto-submit" aria-label="Grading period">
+                        {% if period_options %}<option value="all" {% if all_periods %}selected{% endif %}>All periods (school year so far)</option>{% endif %}
                         {% for p in period_options %}<option value="{{ p.value }}" {% if period and p.value == period.quarter_label %}selected{% endif %}>{{ p.name }}{% if p.current %} (current){% endif %}</option>{% endfor %}
                     </select>
                     <select name="school_year" class="auto-submit" aria-label="School year">
@@ -283,12 +147,13 @@
         <div class="guide-summary">
             <i class="fi fi-rr-eye"></i>
             <span>Showing <strong>{{ scope_name }}</strong>{% if scope_detail %} &middot; {{ scope_detail }}{% endif %}{% if period_name %} &middot; {{ period_name }}{% endif %}{% if sy %} &middot; SY {{ sy.year_label }}{% endif %}</span>
+            {% if all_periods %}<span class="explain">Each learner's grade is the average of their grading periods so far.</span>{% endif %}
             <a class="reset" href="?reset=1">Start over</a>
         </div>
     </section>
 
     {% if status %}
-    <!-- 2. One status for the selection, and who needs help now -->
+    <!-- 2. One status for the selection, where each item stands, and who needs help now -->
     <div class="top-grid">
         <section class="card status level-{{ status.level.key }}" aria-labelledby="statusTitle">
             <span class="eyebrow">School status &middot; {{ scope_name }}{% if scope_detail %} &middot; {{ scope_detail }}{% endif %} &middot; {{ period_name }}</span>
@@ -296,7 +161,7 @@
                 <div class="status-badge" aria-hidden="true">{{ status.level.letter }}</div>
                 <div>
                     <div class="status-level" id="statusTitle">{{ status.level.name }}</div>
-                    <div class="status-meaning">{{ status.level.meaning }}</div>
+                    <div class="status-meaning explain">{{ status.level.meaning }}</div>
                 </div>
             </div>
             <div class="status-facts">
@@ -311,18 +176,46 @@
                 </div>
                 <div class="fact"><b>{{ status.passing_rate }}%</b><span>Passing (75 and above)</span></div>
                 <div class="fact {% if status.below %}alert{% endif %}"><b>{{ status.below }}</b><span>Learners below 75</span></div>
-                <div class="fact"><b>{{ status.learners }}</b><span>Learners in {{ status.classes }} class{{ status.classes|pluralize:"es" }}</span></div>
+                <div class="fact"><b>{{ status.learners }}</b><span>{% if sections_view %}Learners in {{ status.sections }} section{{ status.sections|pluralize }}{% else %}Learners in {{ status.classes }} class{{ status.classes|pluralize:"es" }}{% endif %}</span></div>
             </div>
+
+            {% if ladder %}
+            <div class="ladder" aria-labelledby="ladderTitle">
+                <div class="ladder-head">
+                    <h4 id="ladderTitle">Where each {{ ladder_word }} stands</h4>
+                    <span class="explain">Placed by average on the DepEd Order No. 31, s. 2012 levels{% if ladder_word != 'section' %}; open one to review it{% endif %}.</span>
+                </div>
+                <div class="ladder-cols">
+                    {% for step in ladder %}
+                    <div class="ladder-col level-{{ step.level.key }}">
+                        <div class="ladder-top"><b>{{ step.level.letter }}</b><span>{{ step.level.short }}<small>{{ step.level.range }}</small></span></div>
+                        <div class="ladder-bar" aria-hidden="true"><i style="width: {{ step.share }}%"></i></div>
+                        <div class="ladder-count">{{ step.count }} {{ ladder_word }}{{ step.count|pluralize }}</div>
+                        {% if step.items %}
+                        <ul class="ladder-items" id="ladder-{{ step.level.key }}">
+                            {% for i in step.items %}
+                            <li{% if forloop.counter > 5 %} hidden{% endif %}>{% if i.url %}<a href="{{ i.url }}" title="{{ i.name }}: {{ i.average }}%"><span class="nm">{{ i.name }}</span><span class="vl">{{ i.average }}</span></a>{% else %}<span class="item"><span class="nm">{{ i.name }}</span><span class="vl">{{ i.average }}</span></span>{% endif %}</li>
+                            {% endfor %}
+                        </ul>
+                        {% if step.items|length > 5 %}<button type="button" class="ladder-more" aria-controls="ladder-{{ step.level.key }}" aria-expanded="false">Show {{ step.items|length|add:"-5" }} more</button>{% endif %}
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <div class="poro-line">
                 <img src="{% static 'shared/poro/Poro.png' %}" alt="" onerror="this.remove()">
-                <p><span class="poro-tag">Poro AI</span>{{ status.insight }}</p>
+                <p><span class="poro-tag">Poro AI</span><span id="poroDash" data-token="{{ poro_token }}">{{ status.insight }}</span>
+                    <span class="poro-src" id="poroDashSrc">Computed from the grades</span></p>
             </div>
         </section>
 
         <aside class="card watch" id="watchCard" aria-labelledby="watchTitle">
             <h3 id="watchTitle"><i class="fi fi-rr-user-time" style="color:#C62828;"></i> Learners below 75 {% if at_risk %}<span class="count">{{ at_risk|length }}</span>{% endif %}</h3>
             {% if at_risk %}
-            <p class="hint">Remediation is required (DepEd Order No. 8, s. 2015). Open a name to see the class.</p>
+            <p class="hint explain">Remediation is required (DepEd Order No. 8, s. 2015). Open a name to see the class.</p>
             <ul>
                 {% for f in at_risk %}{% if forloop.counter <= 6 %}
                 <li>
@@ -387,7 +280,7 @@
         <div class="card-head">
             <div>
                 <h3 id="classesTitle"><i class="fi fi-rr-users-alt" style="color:#123499;"></i> Sections <span class="muted">{{ table|length }}</span></h3>
-                <p class="hint">Open a row to see the section's Poro AI brief, trend and learners. Rows marked red average below 75.</p>
+                <p class="hint explain">{% if sections_view %}Each row is one section across every discipline; open it to see its subjects and their Poro AI briefs.{% else %}Open a row to see the section's Poro AI brief, trend and learners.{% endif %} Rows marked red average below 75.</p>
             </div>
             <div class="head-actions">
                 <span class="kpup-key"><b>K</b> Knowledge &middot; <b>Pr</b> Process &middot; <b>U</b> Understanding &middot; <b>Pd</b> Product</span>
@@ -434,16 +327,46 @@
                 {% endfor %}
             </tbody>
         </table>
-        {% if table %}<p class="footnote">K, Pr, U and Pd are estimated from each class average with the DepEd Order No. 73, s. 2012 weights. The average and level come from the actual grades.</p>{% endif %}
+        {% if table %}<p class="footnote explain">K, Pr, U and Pd are estimated from each {% if sections_view %}section{% else %}class{% endif %} average with the DepEd Order No. 73, s. 2012 weights. The average and level come from the actual grades.</p>{% endif %}
     </section>
 
+    {% if sections_view and table %}
+    <div class="ad-modal" id="sectionModal" role="dialog" aria-modal="true" aria-labelledby="sectionModalTitle" hidden>
+        <div class="ad-modal-card" tabindex="-1">
+            <div class="ad-modal-head">
+                <div>
+                    <h3 id="sectionModalTitle"><i class="fi fi-rr-users-alt" style="color:#123499;"></i> <span id="sectionModalName"></span></h3>
+                    <p class="hint"><span id="sectionModalSummary"></span> Open a subject to see its Poro AI brief.</p>
+                </div>
+                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
+            </div>
+            <div class="ad-modal-body"><ul class="subj-list" id="sectionModalList"></ul></div>
+        </div>
+    </div>
+    {{ sections_json|json_script:"sectionsData" }}
+    {% endif %}
+
+    {% if forecast and forecast.series %}
+    <!-- 4. Averages over the school year, and the forecast for the periods ahead -->
+    <section class="card chart-card" aria-labelledby="fcTitle">
+        <div class="card-head" style="margin-bottom:0.3rem">
+            <div>
+                <h3 id="fcTitle"><i class="fi fi-rr-chart-line-up" style="color:#123499;"></i> {{ scope_name }}: averages and forecast{% if sy %} &middot; SY {{ sy.year_label }}{% endif %}</h3>
+                <p class="hint explain">One line per {{ forecast.word }}, and a thicker dark line for the whole selection. Solid lines are averages so far, dashed lines the forecast and the band its likely range; diamonds show what the model forecast a period earlier. Point at a period to read every line, or switch to Bar or Table.</p>
+            </div>
+        </div>
+        <div data-forecast="dashForecast"></div>
+    </section>
+    {{ forecast|json_script:"dashForecast" }}
+    {% endif %}
+
     {% if table %}
-    <!-- 4. KPUP by section: one row per class on a shared scale; the lowest six here, every class in the dialog -->
+    <!-- 5. KPUP by section: one row per class on a shared scale; the lowest six here, every class in the dialog -->
     <section class="card chart-card" aria-labelledby="chartTitle">
         <div class="card-head">
             <div>
                 <h3 id="chartTitle"><i class="fi fi-rr-chart-scatter" style="color:#123499;"></i> KPUP by section</h3>
-                <p class="hint">One row per class, all on the same scale. Lowest averages first{% if table|length > 6 %}, 6 of {{ table|length }} shown{% endif %}. Point at a dot for its score.</p>
+                <p class="hint explain">One row per {% if sections_view %}section{% else %}class{% endif %}, all on the same scale. Lowest averages first{% if table|length > 6 %}, 6 of {{ table|length }} shown{% endif %}. Point at a dot for its score.</p>
             </div>
             {% if table|length > 6 %}<button type="button" class="btn-outline btn-sm" id="openChart" aria-haspopup="dialog" aria-controls="kpModal"><i class="fi fi-rr-expand"></i> View all {{ table|length }} sections</button>{% endif %}
         </div>
@@ -453,7 +376,7 @@
             <span><i class="kp-key avg"></i>Class average</span><span><i class="kp-key pass"></i>Passing (75)</span>
         </div>
         <div class="kp" id="kpInline" data-prev="{{ prev_period_name }}"></div>
-        <p class="kp-note">K, Pr, U and Pd are estimated from each class average, so the dots keep the same spacing in every row. Compare where the rows sit.</p>
+        <p class="kp-note explain">K, Pr, U and Pd are estimated from each average, so the dots keep the same spacing in every row. Compare where the rows sit.</p>
     </section>
 
     {% if table|length > 6 %}
@@ -462,7 +385,7 @@
             <div class="ad-modal-head">
                 <div>
                     <h3 id="kpModalTitle"><i class="fi fi-rr-chart-scatter" style="color:#123499;"></i> KPUP by section &middot; all {{ table|length }}</h3>
-                    <p class="hint">{{ scope_name }}{% if scope_detail %} &middot; {{ scope_detail }}{% endif %} &middot; {{ period_name }}. Open a row to see that class's Poro AI brief.</p>
+                    <p class="hint">{{ scope_name }}{% if scope_detail %} &middot; {{ scope_detail }}{% endif %} &middot; {{ period_name }}. Open a row to see {% if sections_view %}that section's subjects{% else %}that class's Poro AI brief{% endif %}.</p>
                 </div>
                 <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
             </div>
@@ -497,16 +420,20 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'heads/js/forecast-chart.js' %}"></script>
 <script>
 (function () {
     var form = document.getElementById('filterForm');
+    // navigation shows the skeleton of the next page while it loads (static/heads/js/head-skeleton.js)
+    var go = function (f) { if (window.ArmsSkeleton) ArmsSkeleton.submit(f); else f.submit(); };
+    var open = function (href) { if (window.ArmsSkeleton) ArmsSkeleton.go(href); else window.location.href = href; };
     var esc = function (v) {
         return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     };
 
     // Filters: each change applies at once; switching between discipline and subject starts that picker fresh.
     document.querySelectorAll('.auto-submit').forEach(function (el) {
-        el.addEventListener('change', function () { form.submit(); });
+        el.addEventListener('change', function () { go(form); });
     });
     document.querySelectorAll('.seg button[data-mode]').forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -515,15 +442,94 @@
             ['subject', 'subject_family', 'grade_level'].forEach(function (n) {
                 var f = form.querySelector('[name="' + n + '"]'); if (f) f.disabled = true;
             });
-            form.submit();
+            go(form);
         });
     });
 
-    // Rows open the section brief (mouse, Enter or Space)
+    // ---------- a level with more than five items shows the rest on request ----------
+    document.querySelectorAll('.ladder-more').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var list = document.getElementById(btn.getAttribute('aria-controls'));
+            list.querySelectorAll('li[hidden]').forEach(function (li) { li.hidden = false; });
+            btn.setAttribute('aria-expanded', 'true');
+            btn.hidden = true;
+        });
+    });
+
+    // ---------- Poro AI: the computed wording shows at once; the local model's wording replaces it when every check passes ----------
+    var poro = document.getElementById('poroDash'), poroSrc = document.getElementById('poroDashSrc');
+    if (poro && poro.dataset.token) {
+        poroSrc.textContent = 'Poro AI is wording the summary…';
+        fetch('{% url "heads-poro-narrative" "TOKEN" %}'.replace('TOKEN', poro.dataset.token), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) {
+                if (d && d.source === 'ai' && d.text) {
+                    poro.parentNode.classList.add('fading');
+                    setTimeout(function () { poro.textContent = d.text; poro.parentNode.classList.remove('fading'); }, 250);
+                    poroSrc.className = 'poro-src ai';
+                    poroSrc.textContent = 'Worded by Poro AI (' + d.model + '); every figure, name and level checked against the grades';
+                } else {
+                    poroSrc.textContent = d && d.unavailable ? 'Computed from the grades (Poro AI is not running)' : 'Computed from the grades';
+                }
+            })
+            .catch(function () { poroSrc.textContent = 'Computed from the grades'; });
+    }
+
+    // ---------- dialogs: Esc or the backdrop closes them, focus stays inside and returns to the button ----------
+    var opener = null;
+    function openDialog(dialog, from) {
+        opener = from; dialog.hidden = false; document.body.style.overflow = 'hidden';
+        dialog.querySelector('.ad-modal-card').focus();
+    }
+    function closeDialog(dialog) {
+        dialog.hidden = true; document.body.style.overflow = '';
+        if (opener) opener.focus();
+    }
+    document.querySelectorAll('.ad-modal').forEach(function (dialog) {
+        dialog.addEventListener('click', function (e) { if (e.target === dialog || e.target.closest('[data-close]')) closeDialog(dialog); });
+    });
+    document.addEventListener('keydown', function (e) {
+        var shown = document.querySelector('.ad-modal:not([hidden])');
+        if (shown && e.key === 'Escape') closeDialog(shown);
+    });
+    document.addEventListener('focusin', function (e) {
+        var shown = document.querySelector('.ad-modal:not([hidden])');
+        if (shown && !shown.contains(e.target)) shown.querySelector('.ad-modal-card').focus();
+    });
+
+    // ---------- every discipline: a section row opens its subjects ----------
+    var sectionsEl = document.getElementById('sectionsData'), sectionModal = document.getElementById('sectionModal');
+    var sections = sectionsEl ? JSON.parse(sectionsEl.textContent) : {};
+    function openSection(href, from) {
+        var id = href.replace('#section-', ''), s = sections[id];
+        if (!s || !sectionModal) return false;
+        document.getElementById('sectionModalName').textContent = s.name;
+        document.getElementById('sectionModalSummary').textContent = s.overall.toFixed(1) + '% across ' + s.subjects.length + ' subjects, ' + s.level + '.';
+        var list = document.getElementById('sectionModalList');
+        list.textContent = '';
+        s.subjects.forEach(function (c) {
+            var li = document.createElement('li'), a = document.createElement('a');
+            a.href = c.url;
+            var nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = c.name;
+            var sm = document.createElement('small'); sm.textContent = c.code + (c.below ? ' · ' + c.below + ' below 75' : ''); nm.appendChild(sm);
+            var av = document.createElement('span'); av.className = 'av'; av.textContent = c.overall.toFixed(1) + '%';
+            var lv = document.createElement('span'); lv.className = 'lvl level-' + c.level; lv.textContent = c.level_short + ' (' + c.letter + ')';
+            a.appendChild(nm); a.appendChild(av); a.appendChild(lv);
+            li.appendChild(a); list.appendChild(li);
+        });
+        openDialog(sectionModal, from);
+        return true;
+    }
+    function follow(href, from) {
+        if (href && href.indexOf('#section-') === 0) { openSection(href, from); return; }
+        if (href) open(href);
+    }
+
+    // Rows open the section brief, or the section's subjects (mouse, Enter or Space)
     document.querySelectorAll('.sec-row').forEach(function (row) {
-        row.addEventListener('click', function (e) { if (!e.target.closest('a')) window.location.href = row.dataset.href; });
+        row.addEventListener('click', function (e) { var a = e.target.closest('a'); if (a) { e.preventDefault(); } follow(row.dataset.href, row); });
         row.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.location.href = row.dataset.href; }
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); follow(row.dataset.href, row); }
         });
     });
 
@@ -546,28 +552,6 @@
             rows.sort(function (a, b) { return dir === 'ascending' ? val(a) - val(b) : val(b) - val(a); });
             rows.forEach(function (r) { tbody.appendChild(r); });
         });
-    });
-
-    // ---------- dialogs: Esc or the backdrop closes them, focus stays inside and returns to the button ----------
-    var opener = null;
-    function openDialog(dialog, from) {
-        opener = from; dialog.hidden = false; document.body.style.overflow = 'hidden';
-        dialog.querySelector('.ad-modal-card').focus();
-    }
-    function closeDialog(dialog) {
-        dialog.hidden = true; document.body.style.overflow = '';
-        if (opener) opener.focus();
-    }
-    document.querySelectorAll('.ad-modal').forEach(function (dialog) {
-        dialog.addEventListener('click', function (e) { if (e.target === dialog || e.target.closest('[data-close]')) closeDialog(dialog); });
-    });
-    document.addEventListener('keydown', function (e) {
-        var open = document.querySelector('.ad-modal:not([hidden])');
-        if (open && e.key === 'Escape') closeDialog(open);
-    });
-    document.addEventListener('focusin', function (e) {
-        var open = document.querySelector('.ad-modal:not([hidden])');
-        if (open && !open.contains(e.target)) open.querySelector('.ad-modal-card').focus();
     });
 
     // ---------- every learner below 75 ----------
@@ -623,7 +607,7 @@
             '<i class="fi fi-rr-caret-' + (r.delta > 0 ? 'up' : 'down') + '"></i>' + Math.abs(r.delta).toFixed(1) + '</span>' : '';
         return '<li class="kp-row level-' + esc(r.level) + '"><a class="kp-link" href="' + esc(r.url) + '" aria-label="' + esc(said) + '">' +
             '<span class="kp-name"><b>' + esc(r.section) + (r.below ? '<em class="kp-flag">' + r.below + ' below 75</em>' : '') + '</b>' +
-            '<small>' + esc(mixed ? r.grade + ' \u00b7 ' + r.subject : r.level_name) + '</small></span>' +
+            '<small>' + esc(mixed ? r.grade + ' · ' + r.subject : r.level_name) + '</small></span>' +
             '<span class="kp-track" aria-hidden="true">' + grid +
                 '<span class="kp-pass" style="left:' + at(75) + '"></span>' +
                 '<span class="kp-range" style="left:' + at(low) + ';width:calc(' + at(high) + ' - ' + at(low) + ')"></span>' +
@@ -638,6 +622,16 @@
         box.innerHTML = '<div class="kp-axis" aria-hidden="true"><span class="kp-spacer">Section</span><span class="kp-ticks">' + ticks + '</span><span class="kp-head-val">Average</span></div>' +
             (list.length ? '<ol class="kp-rows">' + list.map(rowHtml).join('') + '</ol>' : '<p class="kp-empty">No class matches.</p>');
     }
+    // in the every-discipline view a row opens the section's subjects instead of a brief
+    document.addEventListener('click', function (e) {
+        var a = e.target.closest('a.kp-link');
+        if (a && a.getAttribute('href').indexOf('#section-') === 0) {
+            e.preventDefault();
+            var shown = document.querySelector('.ad-modal:not([hidden])');
+            if (shown) { shown.hidden = true; document.body.style.overflow = ''; }
+            openSection(a.getAttribute('href'), a);
+        }
+    });
     var byLowest = function (a, b) { return a.overall - b.overall || a.order - b.order; };
     draw(document.getElementById('kpInline'), rows.slice().sort(byLowest).slice(0, 6));
 

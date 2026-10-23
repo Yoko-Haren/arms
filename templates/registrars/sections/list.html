@@ -2,212 +2,164 @@
 {% load static %}
 
 {% block title %}Sections - ARMS{% endblock %}
-{% block subtitle %}All Sections — SY {{ current_sy.year_label|default:"N/A" }}{% endblock %}
+{% block subtitle %}Sections &bull; SY {{ current_sy.year_label|default:"N/A" }}{% endblock %}
 
 {% block extra_css %}
 <style>
-    .search-box { max-width: 320px; }
-    #sectionTable { min-width: 900px; }
-    #sectionTable thead th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
-    #sectionTable thead th.sortable:hover { background: #eef1f5; }
-    .sort-icon { margin-left: 0.3rem; font-size: 0.6rem; opacity: 0.3; }
-    th.sorted .sort-icon { opacity: 1; color: var(--caribbean-blue); }
-
-    .section-link { color: var(--rich-black); text-decoration: none; }
-    .section-link:hover { color: var(--caribbean-blue); text-decoration: underline; }
-    .badge-subject { background: #f0f0ff; color: var(--caribbean-blue); margin: 1px 2px; }
-
-    .mini-bar { background: var(--border-color); height: 4px; border-radius: 2px; width: 60px; margin-top: 3px; }
-    .mini-bar-fill { height: 100%; border-radius: 2px; max-width: 100%; }
-    .mini-bar-fill.green { background: var(--secondary-green); }
-    .mini-bar-fill.orange { background: var(--warning-orange); }
-    .mini-bar-fill.red { background: var(--danger-red); }
-
-    .teacher-popup {
-        position: relative; cursor: pointer; color: var(--caribbean-blue);
-        text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px;
+    .sl { container-type: inline-size; }
+    .sl-rows { list-style: none; margin: 0.9rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+    .sl-row { display: grid; grid-template-columns: minmax(190px, 1.2fr) minmax(150px, 0.9fr) minmax(200px, 1.5fr) 7.5rem auto; gap: 0.6rem 1.1rem;
+              grid-template-areas: "who fill subjects state go"; align-items: center; padding: 0.8rem 0.95rem; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+    .sl-row:hover { border-color: #cfd8ea; }
+    .sl-who { grid-area: who; min-width: 0; }
+    .sl-who a { font-size: 0.93rem; font-weight: 650; color: var(--ink); text-decoration: none; }
+    .sl-who a:hover { color: var(--brand); text-decoration: underline; }
+    .sl-who small { display: block; font-size: 0.78rem; color: var(--muted); margin-top: 0.15rem; }
+    .sl-fill { grid-area: fill; font-size: 0.8rem; }
+    .sl-fill b { font-weight: 650; }
+    .sl-fill .bar { margin-top: 0.35rem; max-width: 170px; }
+    .sl-subjects { grid-area: subjects; display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; min-width: 0; }
+    .code { display: inline-block; padding: 0.12rem 0.5rem; border-radius: 8px; background: var(--brand-soft); color: var(--brand); font-size: 0.74rem; font-weight: 650; }
+    .sl-subjects .who { font-size: 0.76rem; color: var(--muted); width: 100%; }
+    .sl-state { grid-area: state; }
+    .sl-go { grid-area: go; justify-self: end; }
+    .sl-none { display: none; }
+    @container (max-width: 940px) {
+        .sl-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "who state" "fill go" "subjects subjects"; }
     }
-    .teacher-popup:hover .teacher-list { display: block; }
-    .teacher-list {
-        display: none; position: absolute; bottom: 100%; left: 0;
-        background: var(--rich-black); color: white; padding: 0.6rem 0.8rem;
-        border-radius: 8px; font-size: 0.7rem; white-space: nowrap; z-index: 10;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    @container (max-width: 520px) {
+        .sl-row { grid-template-columns: minmax(0, 1fr); grid-template-areas: "who" "state" "fill" "subjects" "go"; }
+        .sl-go { justify-self: start; }
     }
-
-    tr.row-empty td:first-child { border-left: 3px solid var(--warning-orange); }
-    tr.row-full td:first-child { border-left: 3px solid var(--danger-red); }
-    tr.row-active td:first-child { border-left: 3px solid var(--secondary-green); }
 </style>
 {% endblock %}
 
 {% block content %}
+<div class="tp">
+    <section class="card tp-head">
+        <div>
+            <h2><i class="fi fi-rr-users-alt" style="color:#123499;"></i> Sections</h2>
+            <p class="hint">{% if current_sy %}SY {{ current_sy.year_label }}: {{ total_sections }} section{{ total_sections|pluralize }} with {{ total_enrolled }} learner{{ total_enrolled|pluralize }}. Open a section to manage its learners, classes and adviser.{% else %}There is no current school year yet.{% endif %}</p>
+        </div>
+        <div class="actions">
+            {% if current_sy %}<a class="btn btn-main" href="{% url 'registrars:upload_class_list' %}"><i class="fi fi-rr-user-add"></i> Enroll from SF1</a>{% endif %}
+        </div>
+    </section>
 
-<div class="page-head">
-    <h3><i class="fi fi-rr-users-alt"></i> All Sections</h3>
-    <div class="page-head-actions">
-        <a href="{% url 'registrars:upload_class_list' %}" class="btn-primary">
-            <i class="fi fi-rr-upload"></i> Upload Class List
-        </a>
+    <div class="tiles" style="--tiles:4">
+        <div class="card tile"><span class="tile-ico"><i class="fi fi-rr-users-alt"></i></span>
+            <div><span>Sections</span><b>{{ total_sections }}</b><small>{{ sections_with_students }} with learners</small></div></div>
+        <div class="card tile"><span class="tile-ico"><i class="fi fi-rr-graduation-cap"></i></span>
+            <div><span>Learners</span><b>{{ total_enrolled }}</b><small>enrolled this school year</small></div></div>
+        <div class="card tile {% if sections_without_teacher %}warn{% else %}good{% endif %}"><span class="tile-ico"><i class="fi fi-rr-chalkboard-user"></i></span>
+            <div><span>Without a teacher</span><b>{{ sections_without_teacher }}</b><small>{% if sections_without_teacher %}need their classes set{% else %}every section has classes{% endif %}</small></div></div>
+        <div class="card tile {% if sections_empty %}warn{% endif %}"><span class="tile-ico"><i class="fi fi-rr-folder-open"></i></span>
+            <div><span>Empty</span><b>{{ sections_empty }}</b><small>{% if sections_full %}{{ sections_full }} full{% else %}none full{% endif %}</small></div></div>
     </div>
+
+    <section class="card panel sl" aria-labelledby="slTitle">
+        <h3 id="slTitle" class="sr-only">All sections</h3>
+        {% if sections %}
+        <div class="toolbar">
+            <label class="search"><i class="fi fi-rr-search"></i><input type="search" id="slSearch" data-remember="search" placeholder="Find a section, teacher or subject" aria-label="Find a section, teacher or subject"></label>
+            <label class="sort">Grade level
+                <select id="slGrade"><option value="">All</option>{% for order, name in grade_levels %}<option value="{{ name|lower }}">{{ name }}</option>{% endfor %}</select>
+            </label>
+            <label class="sort">Sort by
+                <select id="slSort">
+                    <option value="order">Grade level and section</option>
+                    <option value="most">Most learners</option>
+                    <option value="fewest">Fewest learners</option>
+                    <option value="fullest">Fullest first</option>
+                    <option value="name">Section name A to Z</option>
+                </select>
+            </label>
+        </div>
+        <div class="toolbar" style="margin-top:0.7rem;">
+            <div class="chips" role="group" aria-label="Show">
+                <button type="button" data-show="" aria-pressed="true">All<em>{{ total_sections }}</em></button>
+                <button type="button" data-show="active" aria-pressed="false">With learners<em>{{ sections_with_students }}</em></button>
+                <button type="button" data-show="empty" aria-pressed="false">Empty<em>{{ sections_empty }}</em></button>
+                <button type="button" data-show="full" aria-pressed="false">Full<em>{{ sections_full }}</em></button>
+                <button type="button" data-show="noteacher" aria-pressed="false">No teacher<em>{{ sections_without_teacher }}</em></button>
+            </div>
+            <span class="count" id="slCount" aria-live="polite"></span>
+        </div>
+
+        <ol class="sl-rows" id="slRows">
+            {% for item in sections %}
+            <li>
+                <article class="sl-row" data-order="{{ forloop.counter0 }}" data-name="{{ item.section.section_name|lower }}" data-enrolled="{{ item.enrolled_count }}" data-fill="{{ item.fill }}"
+                         data-status="{{ item.status }}" data-noteacher="{% if not item.teachers %}1{% endif %}" data-grade="{{ item.section.grade_level.grade_name|default:'No grade level'|lower }}"
+                         data-text="{{ item.section.section_name|lower }} {{ item.section.grade_level.grade_name|lower }} {{ item.adviser|lower }} {% for t in item.teachers %}{{ t.name|lower }} {% endfor %}{% for s in item.subjects %}{{ s.code|lower }} {{ s.name|lower }} {% endfor %}">
+                    <div class="sl-who">
+                        <a href="{% url 'registrars:section_detail' item.section.id %}">{{ item.section.grade_level.grade_name|default:"" }} {{ item.section.section_name }}</a>
+                        <small>{% if item.adviser %}Adviser: {{ item.adviser }}{% else %}No adviser yet{% endif %}</small>
+                    </div>
+                    <div class="sl-fill">
+                        <b>{{ item.enrolled_count }}</b>{% if item.max_capacity %} of {{ item.max_capacity }}{% endif %} learner{{ item.enrolled_count|pluralize }}
+                        {% if item.max_capacity %}<div class="bar {% if item.is_full %}warn{% endif %}" aria-hidden="true"><i style="width:{{ item.fill }}%"></i></div>{% endif %}
+                    </div>
+                    <div class="sl-subjects">
+                        {% for subj in item.subjects|slice:":6" %}<span class="code" title="{{ subj.name }}">{{ subj.code }}</span>{% empty %}<span class="muted" style="font-size:0.8rem;">No classes yet</span>{% endfor %}
+                        {% if item.subjects|length > 6 %}<span class="muted" style="font-size:0.76rem;">+{{ item.subjects|length|add:"-6" }} more</span>{% endif %}
+                        {% if item.teachers %}<span class="who" title="{% for t in item.teachers %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">{{ item.teachers|length }} teacher{{ item.teachers|length|pluralize }}</span>{% endif %}
+                    </div>
+                    <div class="sl-state">
+                        {% if not item.teachers %}<span class="pill warn">No teacher</span>
+                        {% elif item.is_empty %}<span class="pill">Empty</span>
+                        {% elif item.is_full %}<span class="pill risk">Full</span>
+                        {% else %}<span class="pill good">Active</span>{% endif %}
+                    </div>
+                    <div class="sl-go"><a class="btn btn-line btn-sm" href="{% url 'registrars:section_detail' item.section.id %}">Open <i class="fi fi-rr-angle-small-right"></i></a></div>
+                </article>
+            </li>
+            {% endfor %}
+        </ol>
+        <p class="empty sl-none" id="slNone"><i class="fi fi-rr-search"></i>No section matches. Try another filter or search.</p>
+        {% else %}
+        <div class="empty"><i class="fi fi-rr-folder-open"></i>No sections yet. Upload a section's SF1 to create it with its learners.
+            {% if current_sy %}<div style="margin-top:0.9rem;"><a class="btn btn-main" href="{% url 'registrars:upload_class_list' %}"><i class="fi fi-rr-user-add"></i> Enroll from SF1</a></div>{% endif %}</div>
+        {% endif %}
+    </section>
 </div>
-
-<div class="summary-strip">
-    <div class="summary-item"><span class="dot blue"></span> <strong>{{ total_sections }}</strong> Total Sections</div>
-    <div class="summary-item"><span class="dot green"></span> <strong>{{ sections_with_students }}</strong> Active</div>
-    <div class="summary-item"><span class="dot orange"></span> <strong>{{ sections_empty }}</strong> Empty</div>
-    <div class="summary-item"><span class="dot purple"></span> <strong>{{ total_enrolled }}</strong> Students</div>
-    {% if sections_without_teacher %}<div class="summary-item"><span class="dot red"></span> <strong>{{ sections_without_teacher }}</strong> Without a teacher</div>{% endif %}
-</div>
-
-<div class="card">
-    {% if sections %}
-    <div class="toolbar">
-        <input type="text" class="form-input search-box" id="searchInput" data-remember="search" placeholder="Filter by section, teacher or subject..." onkeyup="filterTable()">
-        <span class="muted" id="rowCount"></span>
-    </div>
-
-    <div class="table-responsive">
-        <table id="sectionTable">
-            <thead>
-                <tr>
-                    <th class="sortable" onclick="sortTable(0, this)">Section <span class="sort-icon">↕</span></th>
-                    <th class="sortable" onclick="sortTable(1, this)">Grade Level <span class="sort-icon">↕</span></th>
-                    <th class="sortable" onclick="sortTable(2, this)">Enrolled <span class="sort-icon">↕</span></th>
-                    <th>Capacity</th>
-                    <th>Subjects</th>
-                    <th>Teachers</th>
-                    <th class="sortable" onclick="sortTable(6, this)">Status <span class="sort-icon">↕</span></th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in sections %}
-                <tr class="{% if item.is_empty %}row-empty{% elif item.is_full %}row-full{% else %}row-active{% endif %}"
-                    data-section="{{ item.section.section_name|lower }}"
-                    data-teachers="{% for t in item.teachers %}{{ t.name|lower }} {% endfor %}"
-                    data-subjects="{% for s in item.subjects %}{{ s.code|lower }} {{ s.name|lower }} {% endfor %}"
-                    data-status="{% if item.is_empty %}empty{% elif item.is_full %}full{% else %}active{% endif %}"
-                    data-enrolled="{{ item.enrolled_count }}">
-
-                    <td><a href="{% url 'registrars:section_detail' item.section.id %}" class="section-link"><strong>{{ item.section.section_name }}</strong></a></td>
-                    <td>{{ item.section.grade_level.grade_name|default:"—" }}</td>
-                    <td>
-                        {{ item.enrolled_count }}
-                        {% if item.max_capacity > 0 %}
-                        <div class="mini-bar">
-                            <div class="mini-bar-fill {% if item.enrolled_count >= item.max_capacity %}red{% elif item.enrolled_count > item.max_capacity|add:'-5' %}orange{% else %}green{% endif %}"
-                                 style="width: {% widthratio item.enrolled_count item.max_capacity 100 %}%"></div>
-                        </div>
-                        {% endif %}
-                    </td>
-                    <td>{{ item.max_capacity }}</td>
-                    <td>
-                        {% for subj in item.subjects %}
-                            <span class="badge badge-subject" title="{{ subj.name }}">{{ subj.code }}</span>
-                        {% empty %}
-                            <span style="color:#718096;">—</span>
-                        {% endfor %}
-                    </td>
-                    <td>
-                        {% if item.teachers %}
-                            <span class="teacher-popup">
-                                {{ item.teachers|length }} teacher{{ item.teachers|length|pluralize }}
-                                <span class="teacher-list">
-                                    {% for t in item.teachers %}
-                                        {{ t.name }}{% if not forloop.last %}<br>{% endif %}
-                                    {% endfor %}
-                                </span>
-                            </span>
-                        {% else %}
-                            <a href="{% url 'registrars:section_detail' item.section.id %}" class="badge badge-warning" style="text-decoration:none;">No teacher — assign</a>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if item.is_empty %}
-                            <span class="badge badge-warning">Empty</span>
-                        {% elif item.is_full %}
-                            <span class="badge badge-danger">Full</span>
-                        {% else %}
-                            <span class="badge badge-success">Active</span>
-                        {% endif %}
-                    </td>
-                    <td><a href="{% url 'registrars:section_detail' item.section.id %}" class="btn-outline btn-sm"><i class="fi fi-rr-eye"></i> Open</a></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="empty-state">
-        <i class="fi fi-rr-folder-open"></i>
-        <h5>No Sections Found</h5>
-        <p>Upload a class list CSV to create sections.</p>
-        <a href="{% url 'registrars:upload_class_list' %}" class="btn-primary"><i class="fi fi-rr-upload"></i> Upload Class List</a>
-    </div>
-    {% endif %}
-</div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    function sectionRows() {
-        return Array.from(document.querySelectorAll('#sectionTable tbody tr'));
-    }
-
-    // ===== FILTER =====
-    function filterTable() {
-        var query = document.getElementById('searchInput').value.toLowerCase();
-        var rows = sectionRows();
-        var visible = 0;
-        rows.forEach(function(row) {
-            var text = (row.getAttribute('data-section') || '') + ' ' +
-                       (row.getAttribute('data-teachers') || '') + ' ' +
-                       (row.getAttribute('data-subjects') || '');
-            var match = text.includes(query);
-            row.style.display = match ? '' : 'none';
-            if (match) visible++;
+(function () {
+    var list = document.getElementById('slRows');
+    if (!list) return;
+    var items = Array.prototype.slice.call(list.children);
+    var search = document.getElementById('slSearch'), sort = document.getElementById('slSort'), grade = document.getElementById('slGrade');
+    var show = new URLSearchParams(location.search).get('show') || '';
+    var num = function (el, k) { return +el.dataset[k]; };
+    var SORTS = {
+        order: function (a, b) { return num(a, 'order') - num(b, 'order'); },
+        most: function (a, b) { return (num(b, 'enrolled') - num(a, 'enrolled')) || (num(a, 'order') - num(b, 'order')); },
+        fewest: function (a, b) { return (num(a, 'enrolled') - num(b, 'enrolled')) || (num(a, 'order') - num(b, 'order')); },
+        fullest: function (a, b) { return (num(b, 'fill') - num(a, 'fill')) || (num(a, 'order') - num(b, 'order')); },
+        name: function (a, b) { return a.dataset.name.localeCompare(b.dataset.name); }
+    };
+    var chips = Array.prototype.slice.call(document.querySelectorAll('.chips button'));
+    if (!chips.some(function (c) { return c.dataset.show === show; })) show = '';
+    function apply() {
+        var q = search.value.trim().toLowerCase(), shown = 0;
+        items.map(function (li) { return li.firstElementChild; }).sort(SORTS[sort.value]).forEach(function (row) {
+            var ok = (!q || row.dataset.text.indexOf(q) > -1) && (!grade.value || row.dataset.grade === grade.value) &&
+                     (!show || (show === 'noteacher' ? row.dataset.noteacher === '1' : show === 'active' ? num(row, 'enrolled') > 0 : row.dataset.status === show));
+            row.parentElement.hidden = !ok;
+            if (ok) shown++;
+            list.appendChild(row.parentElement);
         });
-        document.getElementById('rowCount').textContent = visible + ' of ' + rows.length + ' sections';
+        chips.forEach(function (c) { c.setAttribute('aria-pressed', c.dataset.show === show ? 'true' : 'false'); });
+        document.getElementById('slCount').textContent = 'Showing ' + shown + ' of ' + items.length;
+        document.getElementById('slNone').style.display = shown ? 'none' : 'block';
     }
-
-    // ===== SORT =====
-    function sortTable(colIndex, th) {
-        var table = document.getElementById('sectionTable');
-        var tbody = table.querySelector('tbody');
-        var rows = sectionRows();
-        var dir = th.classList.contains('sorted-asc') ? 'desc' : 'asc';
-
-        table.querySelectorAll('th').forEach(function(h) {
-            h.classList.remove('sorted', 'sorted-asc', 'sorted-desc');
-        });
-        th.classList.add('sorted', dir === 'asc' ? 'sorted-asc' : 'sorted-desc');
-
-        rows.sort(function(a, b) {
-            var aVal, bVal;
-            if (colIndex === 2) { // Enrolled (numeric)
-                aVal = parseInt(a.getAttribute('data-enrolled')) || 0;
-                bVal = parseInt(b.getAttribute('data-enrolled')) || 0;
-            } else if (colIndex === 6) { // Status
-                var order = {'empty': 0, 'active': 1, 'full': 2};
-                aVal = order[a.getAttribute('data-status')] || 0;
-                bVal = order[b.getAttribute('data-status')] || 0;
-            } else { // Text columns
-                aVal = (a.cells[colIndex] ? a.cells[colIndex].textContent : '').trim().toLowerCase();
-                bVal = (b.cells[colIndex] ? b.cells[colIndex].textContent : '').trim().toLowerCase();
-            }
-
-            if (typeof aVal === 'string') {
-                return dir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-            }
-            return dir === 'asc' ? aVal - bVal : bVal - aVal;
-        });
-
-        rows.forEach(function(row) { tbody.appendChild(row); });
-    }
-
-    var rowCount = document.getElementById('rowCount');
-    if (rowCount) rowCount.textContent = sectionRows().length + ' sections';
+    chips.forEach(function (c) { c.addEventListener('click', function () { show = c.dataset.show; apply(); }); });
+    [search, grade].forEach(function (el) { el.addEventListener('input', apply); });
+    sort.addEventListener('change', apply);
+    apply();
+})();
 </script>
 {% endblock %}

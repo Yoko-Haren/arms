@@ -2,26 +2,40 @@
 from django.core.management.base import BaseCommand
 
 class Command(BaseCommand):
-    help = 'Train ML models for grade prediction, risk classification, and student clustering'
-    
+    help = ('Train ML models. The default, forecast, is the grade forecaster every School Head page uses '
+            '(ml_engine/forecast.py); grade, risk and cluster are the earlier experiments.')
+
     def add_arguments(self, parser):
         parser.add_argument(
             '--model',
             type=str,
-            choices=['grade', 'risk', 'cluster', 'both', 'all'],
-            default='both',
-            help='Which model to train (both = grade + risk, all = grade + risk + cluster)'
+            choices=['forecast', 'grade', 'risk', 'cluster', 'both', 'all'],
+            default='forecast',
+            help='Which model to train (forecast = the grade forecaster; both = grade + risk; all = every model)'
         )
-    
+
     def handle(self, *args, **options):
         model_type = options['model']
-        
+
         self.stdout.write(self.style.SUCCESS('=' * 60))
         self.stdout.write(self.style.SUCCESS('STARTING ML TRAINING'))
         self.stdout.write(self.style.SUCCESS('=' * 60))
-        
+
         results = {}
-        
+
+        # Grade forecaster (XGBoost, every period ahead, scored on held-out periods)
+        if model_type in ['forecast', 'all']:
+            self.stdout.write('\nTraining the grade forecaster (XGBoost)...')
+            try:
+                from ml_engine.forecast import train as train_forecast
+                meta = train_forecast(log=self.stdout.write)
+                latest = meta['evaluation'][-1]
+                results['forecast'] = {'success': True, 'model_version': meta['version'], 'samples': meta['samples'],
+                                       'mae': latest['model']['mae'], 'split': latest['split']}
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f'  Forecaster training failed: {e}'))
+                results['forecast'] = {'success': False, 'error': str(e)}
+
         # Grade Predictor (XGBoost)
         if model_type in ['grade', 'both', 'all']:
             self.stdout.write('\nTraining Grade Predictor (XGBoost)...')
@@ -62,7 +76,12 @@ class Command(BaseCommand):
         
         for name, result in results.items():
             if result.get('success'):
-                if name == 'cluster':
+                if name == 'forecast':
+                    self.stdout.write(self.style.SUCCESS(
+                        f"  forecast: v{result['model_version']} trained on {result['samples']:,} samples; "
+                        f"off by {result['mae']:.2f} points on average for {result['split']}"
+                    ))
+                elif name == 'cluster':
                     self.stdout.write(self.style.SUCCESS(
                         f"  {name}: {result.get('n_clusters', '?')} clusters ({result.get('samples', 0)} students)"
                     ))

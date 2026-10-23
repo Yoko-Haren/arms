@@ -1,5 +1,5 @@
 """
-Phase 1: Academic Structure models for Formify LIS.
+Phase 1: Academic Structure models for ARMS.
 School years, curriculum, sections, rooms, and RPMS cycles.
 """
 
@@ -14,6 +14,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from django.utils import timezone
 
 
 # =============================================================================
@@ -1363,11 +1364,23 @@ class SubjectFamily(models.Model):
 
 
 class Assessment(models.Model):
-    """Teacher-created quiz/assessment."""
+    """A quiz, test or assignment a teacher gives one section; learners answer it online through its link.
+
+    It is open from opens_at (or as soon as it is published) until closes_at, the deadline. Each learner
+    answers once, identified by their LRN on the section's class list. Learners never see the answer key.
+    """
     STATUS_CHOICES = [
         ('draft', 'Draft'),
         ('published', 'Published'),
         ('closed', 'Closed'),
+    ]
+    TYPE_CHOICES = [
+        ('quiz', 'Quiz'),
+        ('long_test', 'Long test'),
+        ('unit_test', 'Unit test'),
+        ('quarterly', 'Quarterly assessment'),
+        ('assignment', 'Assignment'),
+        ('practice', 'Practice'),
     ]
     
     teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='assessments')
@@ -1377,13 +1390,19 @@ class Assessment(models.Model):
     quarter = models.ForeignKey(Quarter, on_delete=models.SET_NULL, null=True)
     
     title = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
+    assessment_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='quiz')
+    description = models.TextField(blank=True, help_text='Instructions shown to learners before they start.')
     total_items = models.PositiveSmallIntegerField()
     points_per_item = models.DecimalField(max_digits=5, decimal_places=2, default=1.0)
     passing_score = models.DecimalField(max_digits=5, decimal_places=2, default=60.0)
     
     # Time limit (optional)
     time_limit_minutes = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    opens_at = models.DateTimeField(null=True, blank=True, help_text='When learners can start. Empty: as soon as it is published.')
+    closes_at = models.DateTimeField(null=True, blank=True, help_text='The deadline. No answers are accepted after it.')
+    shuffle = models.BooleanField(default=True, help_text='Each learner gets the questions and choices in their own order.')
+    show_score = models.BooleanField(default=True, help_text='Learners see their score (never the answers) after submitting.')
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     
@@ -1413,22 +1432,43 @@ class Assessment(models.Model):
     
     def get_share_url(self):
         return f"/quiz/{self.access_code}/"
-    
+
+    def state(self, now=None):
+        """'draft', 'scheduled' (published, not open yet), 'open' or 'closed'."""
+        now = now or timezone.now()
+        if self.status == 'draft':
+            return 'draft'
+        if self.status == 'closed' or (self.closes_at and now >= self.closes_at):
+            return 'closed'
+        if self.opens_at and now < self.opens_at:
+            return 'scheduled'
+        return 'open'
+
     def __str__(self):
         return f"{self.title} — {self.subject.subject_code}"
 
 
 class AssessmentQuestion(models.Model):
     """Individual question in an assessment."""
+    TYPE_CHOICES = [
+        ('multiple_choice', 'Multiple choice'),
+        ('true_false', 'True or false'),
+        ('identification', 'Identification'),
+    ]
     assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE, related_name='questions')
+    question_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='multiple_choice')
     question_text = models.TextField()
+    points = models.DecimalField(max_digits=5, decimal_places=2, default=1)
     order_number = models.PositiveSmallIntegerField()  # Original order (before shuffle)
     
     # Number of choices teacher wants
     num_choices = models.PositiveSmallIntegerField(default=4)
     
-    # Correct answer (stored as index 0-5)
-    correct_answer_index = models.PositiveSmallIntegerField()
+    # Correct answer: index of the right choice in `choices` as the teacher wrote them (not as shown to a learner)
+    correct_answer_index = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    # Identification: every answer accepted (compared without case, accents or extra spaces)
+    accepted_answers = models.JSONField(default=list, blank=True)
     
     # Choices stored as JSON (shuffled when assessment is published)
     # Format: [{"text": "Choice A", "order": 0}, {"text": "Choice B", "order": 1}, ...]
@@ -1470,6 +1510,11 @@ class AssessmentResponse(models.Model):
     
     # Or link to actual student if they exist in system
     student = models.ForeignKey('students.Student', on_delete=models.SET_NULL, null=True, blank=True)
+    # The learner's enrollment in the assessment's section (identified by LRN); one response each
+    enrollment = models.ForeignKey('enrollment.Enrollment', on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='assessment_responses')
+    # Questions and choices in the order this learner saw them: [[question id, [choice index, ...]], ...]
+    item_order = models.JSONField(default=list, blank=True)
     
     score = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     total_points = models.DecimalField(max_digits=6, decimal_places=2, default=0)
@@ -1480,7 +1525,11 @@ class AssessmentResponse(models.Model):
     
     class Meta:
         ordering = ['-submitted_at']
-    
+        constraints = [
+            models.UniqueConstraint(fields=['assessment', 'enrollment'], condition=models.Q(enrollment__isnull=False),
+                                    name='one_response_per_learner'),
+        ]
+
     def __str__(self):
         name = self.student_name or self.student_email or f"Student #{self.id}"
         return f"{name} — {self.assessment.title} ({self.score}/{self.total_points})"
@@ -1491,8 +1540,10 @@ class AssessmentAnswer(models.Model):
     response = models.ForeignKey(AssessmentResponse, on_delete=models.CASCADE, related_name='answers')
     question = models.ForeignKey(AssessmentQuestion, on_delete=models.CASCADE)
     
-    # The index the student selected (from shuffled display)
-    selected_index = models.PositiveSmallIntegerField()
+    # The choice the learner picked, as its index in the question's `choices` (whatever order they saw)
+    selected_index = models.PositiveSmallIntegerField(null=True, blank=True)
+    # Identification: what the learner typed
+    text_answer = models.CharField(max_length=255, blank=True)
     
     # Whether it was correct
     is_correct = models.BooleanField(default=False)
@@ -1503,7 +1554,7 @@ class AssessmentAnswer(models.Model):
         unique_together = ['response', 'question']
     
     def __str__(self):
-        return f"Q{self.question.order_number}: {'✅' if self.is_correct else '❌'}"
+        return f"Q{self.question.order_number}: {'correct' if self.is_correct else 'wrong'}"
 
 
 

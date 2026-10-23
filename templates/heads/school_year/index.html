@@ -1,0 +1,205 @@
+{% extends 'heads/base.html' %}
+{% load static %}
+
+{% block title %}School Year{% endblock %}
+
+{% block subtitle %}School Year &bull; {{ school.school_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Shared cards, dialogs, pills and folds are in static/heads/css/head-portal.css. */
+    .sy-head { padding: 1.05rem 1.25rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .sy-head h1 { font-size: 1.12rem; font-weight: 700; margin: 0 0 0.2rem; color: var(--ink); display: flex; gap: 0.5rem; align-items: center; }
+    .sy-head h1 i { color: var(--brand); }
+    .sy-list { display: flex; flex-direction: column; gap: 1rem; }
+    .sy-card { padding: 1.05rem 1.25rem 0.9rem; }
+    .sy-card.is-current { border-color: #b9c7ef; box-shadow: 0 0 0 3px rgba(18,52,153,0.08); }
+    .sy-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; flex-wrap: wrap; }
+    .sy-name { font-size: 1.05rem; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; }
+    .pill { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.72rem; font-weight: 650; padding: 0.15rem 0.6rem; border-radius: 20px; }
+    .pill.current { background: #e8eeff; color: #123499; } .pill.upcoming { background: #fff3e0; color: #B45309; }
+    .pill.completed { background: #f1f3f6; color: #4a5568; } .pill.running { background: #fff; color: #123499; box-shadow: inset 0 0 0 1px #c9d3ea; }
+    .sy-dates { font-size: 0.82rem; color: var(--muted); margin-top: 0.25rem; }
+    .sy-counts { display: flex; gap: 0.4rem 1.1rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); margin-top: 0.45rem; }
+    .sy-counts b { color: var(--ink); font-variant-numeric: tabular-nums; }
+    .sy-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    .sy-actions form { margin: 0; }
+    .btn-plain { background: #fff; border: 1.5px solid #dfe4ec; color: var(--ink); border-radius: 10px; padding: 0.42rem 0.8rem; font: inherit;
+                 font-size: 0.78rem; font-weight: 600; cursor: pointer; display: inline-flex; gap: 0.4rem; align-items: center; }
+    .btn-plain:hover { border-color: var(--brand); color: var(--brand); }
+    .btn-plain.danger { color: #dc3545; border-color: #f1aeb5; }
+    .btn-plain.danger:hover { background: #dc3545; color: #fff; border-color: #dc3545; }
+    .btn-plain[disabled] { opacity: 0.5; cursor: not-allowed; }
+    .periods { margin-top: 0.85rem; border-top: 1px solid var(--line); }
+    .period { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 0.45rem 1rem; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #f0f3f7; }
+    .period:last-child { border-bottom: 0; }
+    .period-name { font-weight: 650; font-size: 0.86rem; color: var(--ink); display: flex; gap: 0.4rem; align-items: center; }
+    .period-dates { font-size: 0.8rem; color: var(--muted); }
+    .period-flags { display: flex; gap: 0.35rem; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+    .btn-edit { all: unset; cursor: pointer; display: inline-flex; gap: 0.3rem; align-items: center; font-size: 0.74rem; font-weight: 600; color: var(--brand);
+                padding: 0.18rem 0.55rem; border-radius: 20px; }
+    .btn-edit:hover, .btn-edit[aria-expanded="true"] { background: #e8eeff; }
+    .btn-edit:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+    .edit-form { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.6rem 0.9rem; align-items: flex-end; padding: 0.65rem 0.75rem; background: var(--soft); border-radius: 12px; }
+    .edit-form[hidden] { display: none; }
+    .field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.74rem; font-weight: 650; color: var(--muted); }
+    .field input[type=date], .field input[type=number] { padding: 0.48rem 0.7rem; border: 1.5px solid #dfe4ec; border-radius: 10px; font: inherit; font-size: 0.84rem; color: var(--ink); background: #fff; }
+    .field input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(18,52,153,0.12); }
+    .check { display: inline-flex; gap: 0.45rem; align-items: center; font-size: 0.82rem; color: var(--ink); font-weight: 500; }
+    .no-periods { font-size: 0.82rem; color: var(--muted); padding: 0.7rem 0 0.2rem; }
+    .new-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; }
+    @media (max-width: 640px) { .new-form { grid-template-columns: 1fr; } .period { grid-template-columns: 1fr; } .period-flags { justify-content: flex-start; } }
+    .new-form .wide { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.5rem; }
+    .form-errors { background: #ffebee; color: #C62828; border-radius: 10px; padding: 0.6rem 0.8rem; font-size: 0.82rem; margin-bottom: 0.8rem; }
+    .field .err { color: #C62828; font-weight: 500; }
+    .dialog-foot { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 0.9rem 1.25rem 1.1rem; border-top: 1px solid var(--line); }
+    .empty-years { padding: 2rem 1.25rem; text-align: center; color: var(--muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hp">
+    <section class="card sy-head">
+        <div>
+            <h1><i class="fi fi-rr-calendar"></i> School years of {{ school.school_name }}</h1>
+            <p class="hint explain">Start the next school year here without waiting for the System Administrator, choose the current year and grading period, and adjust period dates. Grade locks stay with the registrar, and a year that already has sections, enrollments or grades is never deleted.</p>
+        </div>
+        <button type="button" class="btn-primary" id="newYearBtn" aria-haspopup="dialog" aria-controls="newYearModal"><i class="fi fi-rr-add"></i> Start a new school year</button>
+    </section>
+
+    <div class="sy-list">
+        {% for y in years %}
+        <section class="card sy-card{% if y.is_current %} is-current{% endif %}" aria-labelledby="sy{{ y.id }}">
+            <div class="sy-top">
+                <div>
+                    <div class="sy-name" id="sy{{ y.id }}">SY {{ y.year_label }}
+                        {% if y.is_current %}<span class="pill current"><i class="fi fi-rr-check-circle"></i> Current</span>{% endif %}
+                        {% if y.status == 'Upcoming' %}<span class="pill upcoming">Upcoming</span>{% elif y.status == 'Completed' or y.status == 'Archived' %}<span class="pill completed">{{ y.status }}</span>{% endif %}
+                        {% if y.running %}<span class="pill running">Classes running</span>{% endif %}
+                    </div>
+                    <div class="sy-dates">{{ y.date_start|date:"F j, Y" }} to {{ y.date_end|date:"F j, Y" }}</div>
+                    <div class="sy-counts"><span><b>{{ y.n_sections }}</b> section{{ y.n_sections|pluralize }}</span><span><b>{{ y.n_learners }}</b> enrollment{{ y.n_learners|pluralize }}</span><span><b>{{ y.n_grades }}</b> grade{{ y.n_grades|pluralize }} recorded</span></div>
+                </div>
+                <div class="sy-actions">
+                    {% if not y.is_current %}
+                    <form method="post" action="{% url 'heads-school-year-current' y.id %}" data-confirm="Make SY {{ y.year_label }} the current school year? The dashboards and the registrar will open it by default, and the registrars will be told.">
+                        {% csrf_token %}<button type="submit" class="btn-plain"><i class="fi fi-rr-check-circle"></i> Make current</button>
+                    </form>
+                    {% endif %}
+                    {% if y.missing %}
+                    <form method="post" action="{% url 'heads-school-year-periods' y.id %}">
+                        {% csrf_token %}<button type="submit" class="btn-plain"><i class="fi fi-rr-add"></i> Create the {{ y.missing }} missing {% if y.missing == 1 %}{{ cfg.noun|lower }}{% else %}{{ cfg.plural|lower }}{% endif %}</button>
+                    </form>
+                    {% endif %}
+                    {% if y.deletable %}
+                    <form method="post" action="{% url 'heads-school-year-delete' y.id %}" data-confirm="Delete SY {{ y.year_label }}? It has no sections, enrollments or grades. This cannot be undone.">
+                        {% csrf_token %}<button type="submit" class="btn-plain danger"><i class="fi fi-rr-trash"></i> Delete</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="periods">
+                {% for q in y.periods %}
+                <div class="period">
+                    <span class="period-name">{{ q.name }}</span>
+                    <span class="period-dates">{{ q.date_start|date:"M j, Y" }} to {{ q.date_end|date:"M j, Y" }}{% if q.grade_encoding_deadline %}<span class="explain"> &middot; grades due {{ q.grade_encoding_deadline|date:"M j" }}</span>{% endif %}</span>
+                    <span class="period-flags">
+                        {% if q.is_current_quarter %}<span class="pill current">Current period</span>{% endif %}
+                        {% if q.is_grades_locked %}<span class="pill completed" title="Locked by the registrar on Grade Validation"><i class="fi fi-rr-lock"></i> Grades locked</span>{% endif %}
+                        <button type="button" class="btn-edit" aria-expanded="false" aria-controls="edit{{ q.id }}" title="Change the dates of {{ q.name }} or make it the current period"><i class="fi fi-rr-edit"></i> Edit</button>
+                    </span>
+                    <form method="post" action="{% url 'heads-period-update' q.id %}" class="edit-form" id="edit{{ q.id }}" aria-label="Edit {{ q.name }} of SY {{ y.year_label }}" hidden>
+                        {% csrf_token %}
+                        <label class="field">First day{{ q.form.date_start }}</label>
+                        <label class="field">Last day{{ q.form.date_end }}</label>
+                        <label class="check">{{ q.form.is_current_quarter }} Current period</label>
+                        <button type="submit" class="btn-primary btn-sm"><i class="fi fi-rr-disk"></i> Save</button>
+                    </form>
+                </div>
+                {% empty %}
+                <p class="no-periods">No grading periods yet. Create them above, split evenly over the year's dates.</p>
+                {% endfor %}
+            </div>
+        </section>
+        {% empty %}
+        <section class="card empty-years">
+            <i class="fi fi-rr-calendar" style="font-size:2rem;color:#123499;"></i>
+            <h3 style="justify-content:center;margin-top:0.6rem;">No school year yet</h3>
+            <p class="hint">Start the school's first school year with the button above.</p>
+        </section>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="ad-modal hp" id="newYearModal" role="dialog" aria-modal="true" aria-labelledby="newYearTitle" {% if not open_form %}hidden{% endif %}>
+    <div class="ad-modal-card" tabindex="-1">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="ad-modal-head">
+                <div>
+                    <h3 id="newYearTitle"><i class="fi fi-rr-calendar" style="color:#123499;"></i> Start a new school year</h3>
+                    <p class="hint">Only the starting year and the class dates are needed; the rest follows, as in the admin panel.</p>
+                </div>
+                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
+            </div>
+            <div class="ad-modal-body">
+                {% if form_errors %}<div class="form-errors" role="alert">{{ form_errors }}</div>{% endif %}
+                <div class="new-form">
+                    <label class="field">Starting year{{ form.year_start }}{% for e in form.year_start.errors %}<span class="err">{{ e }}</span>{% endfor %}</label>
+                    <label class="field">First day of classes{{ form.date_start }}{% for e in form.date_start.errors %}<span class="err">{{ e }}</span>{% endfor %}</label>
+                    <label class="field">Last day of classes{{ form.date_end }}{% for e in form.date_end.errors %}<span class="err">{{ e }}</span>{% endfor %}</label>
+                    <div class="wide">
+                        <label class="check">{{ form.create_periods }} Create the {{ cfg.count }} {{ cfg.plural|lower }} now, split evenly over these dates</label>
+                        <label class="check">{{ form.is_current }} Make it the current school year now</label>
+                        <p class="hint explain">Leave it unticked to prepare the year ahead; make it current when classes start. The registrars are told either way.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="dialog-foot">
+                <button type="button" class="btn-outline btn-sm" data-close>Cancel</button>
+                <button type="submit" class="btn-primary btn-sm"><i class="fi fi-rr-check"></i> Start the school year</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    // ---------- the new-year dialog: Esc or the backdrop closes it; focus returns to the button ----------
+    var modal = document.getElementById('newYearModal'), opener = document.getElementById('newYearBtn');
+    function openModalDialog() { modal.hidden = false; document.body.style.overflow = 'hidden'; var first = modal.querySelector('input'); if (first) first.focus(); }
+    function closeModalDialog() { modal.hidden = true; document.body.style.overflow = ''; opener.focus(); }
+    opener.addEventListener('click', openModalDialog);
+    modal.addEventListener('click', function (e) { if (e.target === modal || e.target.closest('[data-close]')) closeModalDialog(); });
+    document.addEventListener('keydown', function (e) { if (!modal.hidden && e.key === 'Escape') closeModalDialog(); });
+    if (!modal.hidden) { document.body.style.overflow = 'hidden'; }
+
+    // ---------- a period's edit form opens under its row ----------
+    document.querySelectorAll('.btn-edit').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var form = document.getElementById(btn.getAttribute('aria-controls')), open = form.hidden;
+            form.hidden = !open;
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            if (open) form.querySelector('input').focus();
+        });
+    });
+
+    // ---------- making a year current and deleting one ask first ----------
+    document.querySelectorAll('form[data-confirm]').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            if (form.dataset.confirmed) return;
+            e.preventDefault();
+            var text = document.createElement('p');
+            text.textContent = form.dataset.confirm;
+            window.openModal(form.querySelector('button').textContent.trim(), text.outerHTML, function () {
+                form.dataset.confirmed = '1';
+                form.submit();
+            });
+        });
+    });
+})();
+</script>
+{% endblock %}

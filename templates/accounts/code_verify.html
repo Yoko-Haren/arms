@@ -1,21 +1,30 @@
 {% extends 'accounts/auth_base.html' %}
 {% block title %}{{ title }} - ARMS{% endblock %}
 {% block icon %}{{ icon }}{% endblock %}
+{% block aside_title %}Faster sign-in with Google.{% endblock %}
+{% block aside_text %}Link your school Google account once. After that, one click signs you in, with no password to type.{% endblock %}
+{% block aside_points %}
+<ul class="auth-points">
+    <li><i class="fi fi-rr-link-alt" aria-hidden="true"></i>Link your Google account once</li>
+    <li><i class="fi fi-rr-envelope" aria-hidden="true"></i>A code confirms the address is yours</li>
+    <li><i class="fi fi-rr-sign-in-alt" aria-hidden="true"></i>Then sign in with one click</li>
+</ul>
+{% endblock %}
 {% block content %}
 <h1>{{ title }}</h1>
 <p class="lead">{{ lead }} <strong>{{ sent_to }}</strong>. {{ note }} The code expires in 15 minutes.</p>
 
-{% if error %}<div class="notice error" role="alert">{{ error }}</div>{% endif %}
+{% if error %}<div class="notice error" role="alert"><i class="fi fi-rr-exclamation" aria-hidden="true"></i><span>{{ error }}</span></div>{% endif %}
 
-<form method="post" autocomplete="off">
+<form method="post" autocomplete="off" data-busy="Checking...">
     {% csrf_token %}
     <label for="code">6-digit code</label>
-    <input type="text" id="code" name="code" class="code-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" autofocus required>
-    <button type="submit" class="btn"><i class="fi fi-rr-check-circle"></i> {{ submit_label }}</button>
+    <input type="text" id="code" name="code" class="code-input" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" autofocus required>
+    <button type="submit" class="btn"><i class="fi fi-rr-check-circle" aria-hidden="true"></i>{{ submit_label }}</button>
 </form>
 
 <div class="link-row">
     <a href="{% url back_url %}">{{ back_label }}</a>
-    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="resend"><button type="submit" class="link-btn">Send a new code</button></form>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="resend"><button type="submit" class="link-btn"><i class="fi fi-rr-refresh" aria-hidden="true"></i>Send a new code</button></form>
 </div>
 {% endblock %}

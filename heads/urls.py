@@ -1,7 +1,7 @@
 from django.urls import path
 from django.views.generic import RedirectView
 
-from . import views, views_academic, views_users
+from . import views, views_academic, views_performance, views_proposals, views_school_year, views_users
 
 urlpatterns = [
     # Academic Dashboard (the principal's landing page) and the section brief
@@ -21,8 +21,10 @@ urlpatterns = [
     path('ai-remark/<int:enrollment_id>/<int:subject_id>/<int:quarter_id>/',
          views.get_ai_remark, name='get-ai-remark'),
 
-    path('performance/', views.school_performance, name='heads-school-performance'),
-    path('performance/<int:school_year_id>/', views.school_performance, name='heads-school-performance-sy'),
+    # School Performance: the whole school across learning areas and grade levels
+    path('performance/', views_performance.school_performance, name='heads-school-performance'),
+    path('performance/export/', views_performance.performance_export, name='heads-school-performance-export'),
+    path('performance/<int:school_year_id>/', views_performance.school_performance, name='heads-school-performance-sy'),
 
     path('kpup/', views.kpup_dashboard, name='heads-kpup-dashboard'),
     path('kpup/subject/<int:subject_id>/', views.kpup_subject_detail, name='heads-kpup-subject-detail'),
@@ -36,6 +38,16 @@ urlpatterns = [
     path('users/<int:user_id>/update/', views_users.user_update, name='heads-user-update'),
     path('users/<int:user_id>/toggle-status/', views_users.user_toggle_status, name='heads-user-toggle-status'),
     path('users/<int:user_id>/reset-password/', views_users.user_reset_password, name='heads-user-reset-password'),
+
+    # School Year: the school's own years and grading periods (the admin can still do the same)
+    path('school-year/', views_school_year.school_year, name='heads-school-year'),
+    path('school-year/<int:sy_id>/current/', views_school_year.school_year_make_current, name='heads-school-year-current'),
+    path('school-year/<int:sy_id>/periods/', views_school_year.school_year_periods, name='heads-school-year-periods'),
+    path('school-year/<int:sy_id>/delete/', views_school_year.school_year_delete, name='heads-school-year-delete'),
+    path('school-year/period/<int:period_id>/', views_school_year.period_update, name='heads-period-update'),
+
+    # Page Proposals: pages that could come next, for discussion
+    path('proposals/', views_proposals.proposals, name='heads-proposals'),
 
     path('mark-notifications-read/', views.mark_notifications_read, name='heads-mark-notifications-read'),
 

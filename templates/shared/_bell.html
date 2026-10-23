@@ -1,0 +1,20 @@
+{% load static %}
+{# Notification bell for the teacher and registrar portals. Needs: updates_url, read_url, foot_url, foot_label, empty. #}
+<div class="live" data-portal-bell data-updates-url="{{ updates_url }}" data-read-url="{{ read_url }}" data-empty="{{ empty }}">
+    <button type="button" class="live-btn" id="liveBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="livePanel" aria-label="Notifications">
+        <i class="fi fi-rr-bell"></i>
+        <span class="live-badge" id="liveBadge" hidden>0</span>
+    </button>
+    <div class="live-panel" id="livePanel" role="dialog" aria-labelledby="liveTitle" hidden>
+        <div class="live-head">
+            <strong id="liveTitle">Notifications</strong>
+            <button type="button" class="live-link" id="liveReadAll">Mark all as read</button>
+        </div>
+        <ul class="live-list" id="liveList" aria-busy="true">
+            {% for _ in "123" %}<li class="live-skel" aria-hidden="true"><span class="skel skel-circle"></span><span class="live-skel-text"><span class="skel skel-line"></span><span class="skel skel-line sm"></span></span></li>{% endfor %}
+            <li class="sr-only">Loading notifications</li>
+        </ul>
+        <div class="live-foot"><span id="livePeriod"></span><a class="live-link" href="{{ foot_url }}">{{ foot_label }}</a></div>
+    </div>
+</div>
+<script src="{% static 'shared/js/portal-bell.js' %}" defer></script>

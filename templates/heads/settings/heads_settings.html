@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Settings - Formify School Head Portal</title>
+    <title>Settings - ARMS School Head Portal</title>
     
     <!-- Flaticon UIcons -->
     <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
@@ -553,7 +553,7 @@
             <div class="sidebar-header">
                 <div class="logo-area">
                     <i class="fi fi-rr-graduation-cap"></i>
-                    <h2>Formify <span>School Head Portal</span></h2>
+                    <h2>ARMS <span>School Head Portal</span></h2>
                 </div>
                 <button class="fold-btn" id="foldBtn" title="Toggle sidebar">
                     <i class="fi fi-rr-angle-left"></i>
@@ -989,7 +989,7 @@
                 const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = `formify_backup_${new Date().toISOString().slice(0,19)}.json`;
+                link.download = `arms_backup_${new Date().toISOString().slice(0,19)}.json`;
                 link.click();
                 showToast('Backup Created', 'System backup has been downloaded.');
             };

@@ -1,1094 +1,633 @@
+{% extends 'heads/base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>School Performance - ARMS School Head Portal</title>
-    
-    <!-- Flaticon UIcons -->
-    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
-    <link rel="stylesheet" href="{% static 'heads/css/head-live.css' %}">
-    
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', 'AvantGarde', 'Century Gothic', sans-serif;
-        }
 
-        :root {
-            --rich-black: #00072D;
-            --dark-blue: #051650;
-            --bangladesh-blue: #0A2472;
-            --caribbean-blue: #123499;
-            --secondary-green: #123499;
-            --gray-bg: #f5f7fb;
-            --border-color: #e9ecef;
-            --text-primary: #2d3748;
-            --text-secondary: #4a5568;
-            --warning-bg: #fff3cd;
-            --warning-text: #856404;
-            --success-bg: #d4edda;
-            --success-text: #155724;
-            --sidebar-width: 280px;
-            --sidebar-collapsed-width: 80px;
-        }
-
-        body {
-            background: var(--gray-bg);
-            min-height: 100vh;
-        }
-
-        .dashboard {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        /* ========== FOLDABLE SIDEBAR ========== */
-        .sidebar {
-            width: var(--sidebar-width);
-            background: linear-gradient(180deg, var(--rich-black) 0%, var(--dark-blue) 100%);
-            color: white;
-            position: fixed;
-            height: 100vh;
-            overflow-y: auto;
-            overflow-x: hidden;
-            transition: width 0.3s ease;
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .sidebar.collapsed {
-            width: var(--sidebar-collapsed-width);
-        }
-
-        .sidebar.collapsed .sidebar-header h2,
-        .sidebar.collapsed .user-details,
-        .sidebar.collapsed .nav-link span,
-        .sidebar.collapsed .logo-area span {
-            display: none;
-        }
-
-        .sidebar.collapsed .sidebar-header {
-            justify-content: center;
-            padding: 1.5rem 0.5rem;
-        }
-
-        .sidebar.collapsed .sidebar-header .logo-area {
-            justify-content: center;
-            display: none;
-        }
-
-        .sidebar.collapsed .user-info {
-            justify-content: center;
-            padding: 0.8rem;
-            margin: 0 0.5rem 1.5rem 0.5rem;
-        }
-
-        .sidebar.collapsed .nav-link {
-            justify-content: center;
-            padding: 0.85rem 0;
-            gap: 0;
-        }
-
-        .sidebar.collapsed .nav-link i {
-            margin: 0;
-            width: auto;
-            font-size: 1.3rem;
-        }
-
-        .sidebar.collapsed .user-avatar {
-            margin: 0;
-        }
-
-        .sidebar.collapsed .nav-footer .nav-link {
-            justify-content: center;
-        }
-
-        .sidebar.collapsed .fold-btn {
-            margin: 0 auto;
-        }
-
-        .sidebar::-webkit-scrollbar { width: 5px; }
-        .sidebar::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
-        .sidebar::-webkit-scrollbar-thumb { background: var(--secondary-green); border-radius: 5px; }
-
-        .sidebar-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1.5rem;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            transition: all 0.3s ease;
-        }
-
-        .sidebar-header .logo-area {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            overflow: hidden;
-            white-space: nowrap;
-        }
-
-        .sidebar-header i.fi {
-            font-size: 2rem;
-            color: var(--secondary-green);
-            flex-shrink: 0;
-        }
-
-        .sidebar-header h2 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            line-height: 1.3;
-            transition: opacity 0.2s ease;
-        }
-
-        .sidebar-header h2 span {
-            font-size: 0.7rem;
-            opacity: 0.7;
-            display: block;
-        }
-
-        .fold-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: white;
-            cursor: pointer;
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            flex-shrink: 0;
-            font-size: 1rem;
-        }
-
-        .fold-btn:hover {
-            background: rgba(255, 255, 255, 0.25);
-            transform: scale(1.05);
-        }
-
-        .fold-btn i {
-            transition: transform 0.3s ease;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem;
-            margin: 0 1rem 1.5rem 1rem;
-            background: rgba(255,255,255,0.1);
-            border-radius: 12px;
-            transition: all 0.3s ease;
-            overflow: hidden;
-            white-space: nowrap;
-        }
-
-        .user-avatar {
-            width: 45px;
-            height: 45px;
-            background: var(--secondary-green);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.3rem;
-            font-weight: 600;
-            color: var(--rich-black);
-            flex-shrink: 0;
-        }
-
-        .user-details h4 { font-size: 0.9rem; margin-bottom: 0.2rem; }
-        .user-details p { font-size: 0.7rem; opacity: 0.7; }
-
-        .nav-menu {
-            list-style: none;
-            padding: 0 0.75rem;
-            flex: 1;
-        }
-
-        .nav-item { margin-bottom: 0.25rem; }
-
-        .nav-link {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 0.75rem 1rem;
-            color: rgba(255,255,255,0.8);
-            text-decoration: none;
-            border-radius: 10px;
-            transition: all 0.3s ease;
-            font-size: 0.9rem;
-            cursor: pointer;
-            white-space: nowrap;
-            overflow: hidden;
-        }
-
-        .nav-link:hover { background: rgba(18,52,153,0.2); color: white; }
-        .nav-link.active { background: var(--secondary-green); color: var(--rich-black); font-weight: 600; }
-        .nav-link i.fi { width: 22px; font-size: 1.1rem; text-align: center; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
-
-        .nav-footer {
-            margin-top: auto;
-            padding-top: 1rem;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            padding-bottom: 1rem;
-        }
-
-        /* Main Content */
-        .main-content {
-            flex: 1;
-            margin-left: var(--sidebar-width);
-            padding: 1.5rem;
-            transition: margin-left 0.3s ease;
-            min-height: 100vh;
-        }
-
-        .sidebar.collapsed ~ .main-content {
-            margin-left: var(--sidebar-collapsed-width);
-        }
-
-        /* Top Bar */
-        .top-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-            background: white;
-            padding: 1rem 1.5rem;
-            border-radius: 16px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-
-        .welcome h1 { font-size: 1.3rem; color: var(--rich-black); display: flex; align-items: center; gap: 0.5rem; }
-        .welcome p { color: var(--text-secondary); font-size: 0.8rem; }
-
-        .top-bar-actions { display: flex; align-items: center; gap: 1rem; position: relative; }
-        .date-display {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: var(--text-secondary);
-            font-size: 0.8rem;
-            background: var(--gray-bg);
-            padding: 0.4rem 0.8rem;
-            border-radius: 8px;
-        }
-
-        /* Notification Dropdown */
-        .notification-dropdown { position: relative; }
-
-        .notification-badge {
-            position: relative;
-            cursor: pointer;
-            background: none;
-            border: none;
-            padding: 0.3rem;
-            display: flex;
-            align-items: center;
-        }
-
-        .notification-badge i.fi { font-size: 1.3rem; color: var(--text-primary); transition: color 0.2s; }
-        .notification-badge:hover i.fi { color: var(--secondary-green); }
-
-        .badge-count {
-            position: absolute;
-            top: -5px;
-            right: -8px;
-            background: #dc3545;
-            color: white;
-            font-size: 0.6rem;
-            padding: 0.15rem 0.4rem;
-            border-radius: 10px;
-            min-width: 16px;
-            text-align: center;
-            font-weight: 700;
-        }
-
-        .dropdown-menu {
-            position: absolute;
-            top: 45px;
-            right: 0;
-            width: 340px;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            z-index: 200;
-            display: none;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
-        }
-
-        .dropdown-menu.show {
-            display: block;
-            animation: fadeInDown 0.25s ease;
-        }
-
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .dropdown-header {
-            padding: 0.9rem 1.2rem;
-            background: var(--gray-bg);
-            border-bottom: 1px solid var(--border-color);
-            font-weight: 700;
-            font-size: 0.85rem;
-            color: var(--rich-black);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .notification-list { max-height: 380px; overflow-y: auto; }
-
-        .notification-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.8rem;
-            padding: 0.9rem 1.2rem;
-            border-bottom: 1px solid var(--border-color);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .notification-item:hover { background: var(--gray-bg); }
-        .notification-item.unread { background: rgba(18,52,153, 0.06); border-left: 3px solid var(--secondary-green); }
-
-        .notification-icon {
-            width: 36px;
-            height: 36px;
-            background: rgba(18,52,153, 0.12);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--secondary-green);
-            flex-shrink: 0;
-            font-size: 0.85rem;
-        }
-
-        .notification-content { flex: 1; min-width: 0; }
-        .notification-title { font-size: 0.8rem; font-weight: 600; color: var(--rich-black); margin-bottom: 0.15rem; }
-        .notification-message { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; }
-        .notification-time { font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.3rem; }
-
-        .dropdown-footer {
-            padding: 0.7rem;
-            text-align: center;
-            border-top: 1px solid var(--border-color);
-            background: var(--gray-bg);
-        }
-
-        .dropdown-footer a {
-            color: var(--secondary-green);
-            text-decoration: none;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .dropdown-footer a:hover { text-decoration: underline; }
-
-        /* Poro Greeting Banner */
-        .poro-greeting {
-            background: linear-gradient(135deg, #f0f9f0 0%, #e8f5e9 100%);
-            border-radius: 20px;
-            padding: 1rem 1.5rem;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border: 1px solid rgba(18,52,153, 0.3);
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .poro-greeting-content { display: flex; align-items: center; gap: 1rem; }
-
-        .character-icon {
-            width: 50px;
-            height: 50px;
-            background: var(--secondary-green);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            box-shadow: 0 4px 12px rgba(18,52,153, 0.3);
-            animation: bounce 2s ease infinite;
-            overflow: hidden;
-        }
-
-        .character-icon img { width: 100%; height: 100%; object-fit: cover; }
-
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-4px); }
-        }
-
-        .poro-message h3 { font-size: 1rem; color: var(--rich-black); margin-bottom: 0.2rem; }
-        .poro-message p { font-size: 0.75rem; color: var(--text-secondary); }
-
-        /* Stats Cards */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 1rem;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: transform 0.3s ease;
-            cursor: pointer;
-        }
-
-        .stat-card:hover { transform: translateY(-3px); }
-
-        .stat-icon {
-            width: 45px;
-            height: 45px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.3rem;
-        }
-
-        .stat-icon.blue { background: rgba(18,52,153,0.1); color: var(--caribbean-blue); }
-        .stat-icon.green { background: rgba(18,52,153,0.1); color: var(--secondary-green); }
-        .stat-icon.orange { background: rgba(243,156,18,0.1); color: #f39c12; }
-        .stat-icon.purple { background: rgba(128,0,128,0.1); color: #9b59b6; }
-
-        .stat-info h3 { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; }
-        .stat-info .value { font-size: 1.5rem; font-weight: 700; color: var(--rich-black); }
-        .stat-info .sub { font-size: 0.65rem; color: var(--text-secondary); }
-
-        /* Filter Bar */
-        .filter-bar {
-            background: white;
-            border-radius: 16px;
-            padding: 0.8rem 1rem;
-            margin-bottom: 1.5rem;
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-
-        .filter-group { display: flex; gap: 0.5rem; align-items: center; }
-        .filter-group label { font-size: 0.8rem; color: var(--text-secondary); }
-
-        select {
-            padding: 0.4rem 1.5rem 0.4rem 0.8rem;
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            background: white;
-            font-size: 0.8rem;
-            cursor: pointer;
-        }
-
-        select:focus {
-            outline: none;
-            border-color: var(--secondary-green);
-        }
-
-        .btn-apply {
-            padding: 0.4rem 1.2rem;
-            background: var(--secondary-green);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background 0.2s;
-        }
-
-        .btn-apply:hover {
-            background: #4a8b5d;
-        }
-
-        /* Two Column Layout */
-        .two-col {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .card {
-            background: white;
-            border-radius: 20px;
-            padding: 1.2rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .section-header h2 {
-            font-size: 1rem;
-            color: var(--rich-black);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .section-header h2 i { color: var(--secondary-green); }
-
-        .view-all { color: var(--secondary-green); text-decoration: none; font-size: 0.75rem; cursor: pointer; }
-        .view-all:hover { text-decoration: underline; }
-
-        /* Honor Roll Table */
-        .honor-table { width: 100%; border-collapse: collapse; }
-        .honor-table th, .honor-table td {
-            text-align: left;
-            padding: 0.6rem 0.3rem;
-            font-size: 0.75rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .honor-table th { color: var(--text-secondary); font-weight: 600; }
-        .honor-table tbody tr { cursor: pointer; transition: background 0.2s; }
-        .honor-table tbody tr:hover { background: var(--gray-bg); }
-
-        /* Progress Bars */
-        .subject-item { margin-bottom: 1rem; }
-        .subject-header { display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 0.2rem; }
-        .progress-bar { height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden; }
-        .progress-fill { height: 100%; background: var(--secondary-green); border-radius: 4px; transition: width 0.5s ease; }
-
-        .chart-legend { display: flex; justify-content: center; gap: 1rem; margin-top: 1rem; font-size: 0.7rem; }
-
-        .legend-dot {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 4px;
-        }
-
-        /* Toast Notification */
-        .toast-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 2000;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .toast {
-            background: white;
-            border-radius: 12px;
-            padding: 1rem 1.5rem;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
-            min-width: 300px;
-            animation: slideInRight 0.3s ease;
-            border-left: 4px solid var(--secondary-green);
-        }
-
-        .toast.success { border-left-color: var(--secondary-green); }
-        .toast i { color: var(--secondary-green); }
-        .toast-content { flex: 1; }
-        .toast-content h4 { font-size: 0.85rem; color: var(--rich-black); margin-bottom: 0.1rem; }
-        .toast-content p { font-size: 0.7rem; color: var(--text-secondary); }
-        .toast-close { background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 0.9rem; }
-
-        @keyframes slideInRight {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        /* No Data State */
-        .no-data {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-secondary);
-        }
-
-        .no-data i {
-            font-size: 2.5rem;
-            color: var(--border-color);
-            margin-bottom: 0.5rem;
-        }
-
-        /* Mobile Overlay */
-        .mobile-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 99;
-            display: none;
-        }
-        .mobile-overlay.show { display: block; }
-
-        @media (max-width: 1200px) {
-            .stats-grid { grid-template-columns: repeat(2, 1fr); }
-        }
-
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.3s ease;
-                width: var(--sidebar-width) !important;
-            }
-            .sidebar.mobile-open { transform: translateX(0); }
-            .sidebar.collapsed { width: var(--sidebar-width) !important; }
-            .main-content { margin-left: 0 !important; }
-            .stats-grid { grid-template-columns: 1fr; }
-            .two-col { grid-template-columns: 1fr; }
-            .filter-bar { flex-direction: column; align-items: stretch; }
-            .dropdown-menu { width: 290px; right: -20px; }
-            .toast-container { left: 10px; right: 10px; }
-            .toast { min-width: auto; }
-        }
-    </style>
-</head>
-<body>
-    <div class="mobile-overlay" id="mobileOverlay"></div>
-    <div class="toast-container" id="toastContainer"></div>
-
-    <div class="dashboard">
-        <!-- Sidebar -->
-    {% include 'heads/_sidebar.html' %}
-
-        <!-- Main Content -->
-        <div class="main-content" id="mainContent">
-            <div id="armsLive" data-fingerprint="{{ live_fingerprint }}" hidden></div>
-            <!-- Top Bar -->
-            <div class="top-bar">
-                <div class="welcome">
-                    <h1 id="greetingText">School Performance</h1>
-                    <p>Academic indicators, enrollment trends, and student achievement</p>
-                </div>
-                <div class="top-bar-actions">
-                    <div class="date-display"><i class="fi fi-rr-calendar"></i><span id="currentDate"></span></div>
-                    {% include 'heads/_live.html' %}
-                </div>
-            </div>
-
-            <!-- Poro Greeting Banner -->
-            <div class="poro-greeting">
-                <div class="poro-greeting-content">
-                    <div class="character-icon">
-                        <!-- Using a simple icon fallback since static may not be configured -->
-                        <i class="fi fi-rr-smile" style="font-size:1.8rem; color:white;"></i>
-                    </div>
-                    <div class="poro-message">
-                        <h3>School Performance Overview</h3>
-                        <p id="poroMessage">{{ poro_message }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Filter Bar -->
-            <div class="filter-bar">
-                <div class="filter-group">
-                    <label>School Year:</label>
-                    <select id="schoolYearFilter" onchange="applyFilters()">
-                        {% for sy in available_sy %}
-                        <option value="{{ sy.id }}" {% if sy.id == current_sy_id %}selected{% endif %}>{{ sy }}</option>
-                        {% endfor %}
+{% block title %}School Performance{% endblock %}
+
+{% block subtitle %}School Performance{% if sy %} &bull; SY {{ sy.year_label }}{% endif %}{% if period_name %} &bull; {{ period_name }}{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Shared parts (filters, status, tables, plots, dialogs) are in static/heads/css/head-portal.css. */
+    .guide-summary .btn-outline { margin-left: auto; }
+    .guide-summary .btn-outline + .reset { margin-left: 0.7rem; }
+
+    /* promotion outlook */
+    .outlook { padding: 1.1rem 1.15rem 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    .stack { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--soft); gap: 2px; }
+    .stack span { display: block; height: 100%; min-width: 0; }
+    .on_track-bg { background: #2E7D32; } .remedial-bg { background: #D97706; } .retention-bg { background: #C62828; }
+    .on_track-fg { color: #2E7D32; } .remedial-fg { color: #B45309; } .retention-fg { color: #C62828; }
+    .outlook-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
+    .outlook-list li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 0.6rem; align-items: start; }
+    .outlook-list .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 0.3rem; }
+    .outlook-list b { font-size: 0.84rem; font-weight: 650; display: block; }
+    .outlook-list small { font-size: 0.74rem; color: var(--muted); line-height: 1.4; display: block; }
+    .outlook-list .n { font-size: 1.05rem; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; line-height: 1.2; }
+    .outlook-list .n em { display: block; font-style: normal; font-size: 0.72rem; font-weight: 500; color: var(--muted); }
+    .outlook .link-btn { padding-top: 0; }
+
+    /* learning areas: one dot per area, the bar spans its lowest to highest class */
+    .area-dot { background: var(--lv); }
+    .sp .kp { --name-w: 270px; }
+    .sp .kp-name b { white-space: normal; overflow: visible; line-height: 1.3; }
+
+    /* grade levels (or the sections of one grade level) */
+    .levels { padding: 1.1rem 1.25rem 0.95rem; container-type: inline-size; }
+    .lv-table col.c-name { width: 19%; } .lv-table col.c-avg { width: 12%; } .lv-table col.c-level { width: 15%; }
+    .lv-table col.c-outlook { width: 30%; } .lv-table col.c-honors { width: 9%; } .lv-table col.c-att { width: 11%; } .lv-table col.c-go { width: 4%; }
+    .lv-row[data-href] { cursor: pointer; transition: background 0.15s; }
+    .lv-row[data-href]:hover, .lv-row[data-href]:focus-visible { background: #eef2ff; outline: none; box-shadow: inset 3px 0 0 var(--brand); }
+    .lv-name { font-weight: 650; color: var(--ink); text-decoration: none; }
+    .lv-row[data-href]:hover .lv-name { color: var(--brand); }
+    .mini { display: flex; flex-direction: column; gap: 0.3rem; }
+    .mini .stack { height: 8px; }
+    .mini-key { display: flex; flex-wrap: wrap; gap: 0.15rem 0.75rem; font-size: 0.72rem; color: var(--muted); }
+    .mini-key i { font-style: normal; display: inline-flex; align-items: center; gap: 0.3rem; font-variant-numeric: tabular-nums; }
+    .mini-key i::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .mini-key i b { color: var(--ink); font-weight: 650; }
+    .go { text-align: right; color: #a0aec0; }
+    .lv-row[data-href]:hover .go { color: var(--brand); }
+    @container (max-width: 760px) {
+        .lv-table, .lv-table tbody { display: block; }
+        .lv-table colgroup, .lv-table thead { display: none; }
+        .lv-table tr.lv-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.45rem 0.6rem; padding: 0.8rem 0.9rem;
+                              border: 1px solid var(--line); border-radius: 14px; margin-bottom: 0.6rem; }
+        .lv-table td { display: block; border: 0; padding: 0; text-align: left !important; overflow-wrap: normal; }
+        .lv-table td[data-label]::before { content: attr(data-label); display: block; font-size: 0.68rem; font-weight: 650; color: var(--muted);
+                                           text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+        .lv-table td.cell-name { grid-column: 1 / 4; grid-row: 1; } .lv-table td.cell-name::before { display: none; }
+        .lv-table td.cell-level { grid-column: 4 / 7; grid-row: 1; text-align: right !important; } .lv-table td.cell-level::before { display: none; }
+        .lv-table td.cell-outlook { grid-column: 1 / 7; grid-row: 2; }
+        .lv-table td.cell-avg { grid-column: 1 / 3; } .lv-table td.cell-honors { grid-column: 3 / 5; } .lv-table td.cell-att { grid-column: 5 / 7; }
+        .lv-table td.go { display: none; }
+    }
+
+    /* enrollment and the same period last year */
+    .sp .two-col { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 1rem; }
+    @media (max-width: 1100px) { .sp .two-col { grid-template-columns: 1fr; } }
+    .trend-tools { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    .chart-box { position: relative; height: 250px; margin-top: 0.6rem; }
+    .trend-note { margin: 0.6rem 0 0; font-size: 0.8rem; color: var(--muted); }
+    .trend-note b { color: var(--ink); font-weight: 650; }
+    .cmp-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; margin-top: 0.7rem; font-variant-numeric: tabular-nums; }
+    .cmp-table th { text-align: right; padding: 0.5rem 0.6rem; background: var(--soft); color: var(--muted); font-size: 0.68rem; font-weight: 650;
+                    text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+    .cmp-table th:first-child { text-align: left; border-radius: 10px 0 0 0; } .cmp-table th:last-child { border-radius: 0 10px 0 0; }
+    .cmp-table td { padding: 0.6rem 0.6rem; border-bottom: 1px solid #f0f3f7; text-align: right; color: var(--ink); }
+    .cmp-table td:first-child { text-align: left; }
+    .cmp-table td:first-child span { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; }
+    .cmp-table td:first-child i { color: var(--brand); font-size: 0.85rem; display: inline-flex; }
+    .cmp-table .now { font-weight: 650; }
+    @container (max-width: 440px) {
+        .cmp-table { font-size: 0.8rem; }
+        .cmp-table th { white-space: normal; padding: 0.45rem 0.35rem; }
+        .cmp-table td { padding: 0.55rem 0.35rem; }
+        .cmp-table td:first-child i { display: none; }
+    }
+
+    /* learners who need support (dialog list) */
+    .need-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+    .need-list li > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.25rem 0.8rem; align-items: center; padding: 0.55rem 0.8rem;
+                          border: 1px solid var(--line); border-radius: 12px; }
+    .need-list .who { font-weight: 650; font-size: 0.88rem; }
+    .need-list .where { font-size: 0.78rem; color: var(--muted); }
+    .need-list .chips { grid-column: 1 / 2; display: flex; flex-wrap: wrap; gap: 0.3rem; }
+    .need-list .chip { font-size: 0.72rem; font-weight: 650; padding: 0.12rem 0.5rem; border-radius: 12px; background: #ffebee; color: #C62828; font-variant-numeric: tabular-nums; }
+    .need-list .tag { grid-row: 1 / 3; grid-column: 2; font-size: 0.72rem; font-weight: 650; padding: 0.2rem 0.6rem; border-radius: 12px; white-space: nowrap; }
+    .need-list .tag.retention { background: #ffebee; color: #C62828; } .need-list .tag.remedial { background: #fff3e0; color: #B45309; }
+    .ad-filter { padding: 0.45rem 0.8rem; border: 1.5px solid #dfe4ec; border-radius: 20px; font: inherit; font-size: 0.84rem; background: var(--soft); color: var(--ink); }
+    .ad-filter:focus { outline: none; border-color: var(--brand); background: #fff; }
+
+    .empty-card { padding: 2.2rem 1.5rem; text-align: center; }
+    .empty-card i { font-size: 2rem; color: var(--brand); }
+    .empty-card h3 { justify-content: center; margin-top: 0.6rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="armsLive" data-fingerprint="{{ live_fingerprint }}" hidden></div>
+<div class="sp hp">
+
+    <!-- 1. The period, then (if wanted) one grade level -->
+    <section class="card guide" aria-label="Choose the period and grade level" data-skel-keep>
+        <form method="get" id="filterForm" class="guide-row">
+            <div class="step">
+                <span class="step-label"><span class="step-no">1</span> Period</span>
+                <div class="pair">
+                    <select name="quarter" class="auto-submit" aria-label="Grading period">
+                        {% for p in period_options %}<option value="{{ p.value }}" {% if period and p.value == period.quarter_label %}selected{% endif %}>{{ p.name }}{% if p.current %} (current){% endif %}</option>{% endfor %}
+                    </select>
+                    <select name="school_year" class="auto-submit" aria-label="School year">
+                        {% for y in school_years %}<option value="{{ y.id }}" {% if sy and y.id == sy.id %}selected{% endif %}>SY {{ y.year_label }}</option>{% endfor %}
                     </select>
                 </div>
-                <div class="filter-group">
-                    <label>Semester / Quarter:</label>
-                    <select id="semesterFilter" onchange="applyFilters()">
-                        <option value="Q1" {% if quarter_label == 'Q1' %}selected{% endif %}>Quarter 1</option>
-                        <option value="Q2" {% if quarter_label == 'Q2' %}selected{% endif %}>Quarter 2</option>
-                        <option value="Q3" {% if quarter_label == 'Q3' %}selected{% endif %}>Quarter 3</option>
-                        <option value="Q4" {% if quarter_label == 'Q4' %}selected{% endif %}>Quarter 4</option>
-                        <option value="EoSY" {% if quarter_label == 'EoSY' %}selected{% endif %}>End of School Year</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Grade Level:</label>
-                    <select id="gradeFilter" onchange="applyFilters()">
-                        <option value="all" {% if selected_grade == 'all' %}selected{% endif %}>All Levels</option>
-                        {% for gl in grade_levels %}
-                        <option value="{{ gl.id }}" {% if selected_grade == gl.id|stringformat:"s" %}selected{% endif %}>Grade {{ gl.grade_number }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <button class="btn-apply" onclick="applyFilters()">Apply Filters</button>
             </div>
-
-            {% if has_data %}
-            <!-- Stats Summary Cards -->
-            <div class="stats-grid">
-                <div class="stat-card" onclick="showToast('Average Grade', 'Overall average grade across all levels is {{ avg_grade }}%{% if avg_grade_change != 0 %}, {% if avg_grade_change > 0 %}up{% else %}down{% endif %} {{ avg_grade_change|floatformat:1 }} points from last Q{% endif %}.')">
-                    <div class="stat-icon blue"><i class="fi fi-rr-chart-line-up"></i></div>
-                    <div class="stat-info">
-                        <h3>Average Grade (All)</h3>
-                        <div class="value">{{ avg_grade }}%</div>
-                        <div class="sub">{% if avg_grade_change > 0 %}+{% endif %}{{ avg_grade_change|floatformat:1 }} vs last Q</div>
-                    </div>
-                </div>
-                <div class="stat-card" onclick="showToast('Honor Students', '{{ honor_count }} students achieved honors status across all grade levels this quarter.')">
-                    <div class="stat-icon green"><i class="fi fi-rr-trophy"></i></div>
-                    <div class="stat-info">
-                        <h3>Honor Students</h3>
-                        <div class="value">{{ honor_count }}</div>
-                        <div class="sub">Across all levels</div>
-                    </div>
-                </div>
-                <div class="stat-card" onclick="showToast('Passing Rate', '{{ passing_rate }}% of students passed this quarter{% if passing_rate_change != 0 %}, {% if passing_rate_change > 0 %}up{% else %}down{% endif %} {{ passing_rate_change|floatformat:1 }}% from Q2{% endif %}.')">
-                    <div class="stat-icon orange"><i class="fi fi-rr-presentation"></i></div>
-                    <div class="stat-info">
-                        <h3>Passing Rate</h3>
-                        <div class="value">{{ passing_rate }}%</div>
-                        <div class="sub">{% if passing_rate_change > 0 %}+{% endif %}{{ passing_rate_change|floatformat:1 }}% from Q2</div>
-                    </div>
-                </div>
-                <div class="stat-card" onclick="showToast('Attendance Rate', 'Overall attendance rate for {{ quarter_name }} is {{ attendance_rate }}%.')">
-                    <div class="stat-icon purple"><i class="fi fi-rr-calendar-check"></i></div>
-                    <div class="stat-info">
-                        <h3>Attendance Rate</h3>
-                        <div class="value">{{ attendance_rate }}%</div>
-                        <div class="sub">{{ quarter_name }} average</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Two Column Charts -->
-            <div class="two-col">
-                <div class="card">
-                    <div class="section-header">
-                        <h2><i class="fi fi-rr-chart-line-up"></i> Enrollment Trend (5-Year)</h2>
-                        <span class="view-all">SY 2021-2026</span>
-                    </div>
-                    <canvas id="enrollmentTrendChart" style="max-height: 200px;"></canvas>
-                </div>
-                <div class="card">
-                    <div class="section-header">
-                        <h2><i class="fi fi-rr-chart-histogram"></i> Promotion Rate by Grade Level</h2>
-                        <span class="view-all">{{ quarter_name }} {{ current_sy_label }}</span>
-                    </div>
-                    <canvas id="promotionRateChart" style="max-height: 200px;"></canvas>
-                </div>
-            </div>
-
-            <!-- Honor Roll Summary Table -->
-            <div class="card" style="margin-bottom: 1.5rem;">
-                <div class="section-header">
-                    <h2><i class="fi fi-rr-medal"></i> Honor Roll Summary (Current Quarter)</h2>
-                    <a class="view-all" onclick="showToast('Detailed List', 'Viewing complete honor roll for all grade levels.')">View detailed list</a>
-                </div>
-                <div style="overflow-x: auto;">
-                    <table class="honor-table">
-                        <thead>
-                            <tr>
-                                <th>Grade Level</th>
-                                <th>Total Students</th>
-                                <th>With Highest Honors</th>
-                                <th>With High Honors</th>
-                                <th>With Honors</th>
-                                <th>Honor Rate</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if honor_breakdown %}
-                                {% for h in honor_breakdown %}
-                                <tr onclick="showToast('{{ h.grade }} Details', 'Total: {{ h.total }} | Highest: {{ h.highest }} | High: {{ h.high }} | With: {{ h.with }} | Rate: {{ h.rate }}%')">
-                                    <td>{{ h.grade }}</td>
-                                    <td>{{ h.total }}</td>
-                                    <td>{{ h.highest }}</td>
-                                    <td>{{ h.high }}</td>
-                                    <td>{{ h.with }}</td>
-                                    <td>{{ h.rate }}%</td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr>
-                                    <td colspan="6" style="text-align:center; padding:2rem; color: var(--text-secondary);">
-                                        <i class="fi fi-rr-info" style="font-size: 1.5rem;"></i>
-                                        <p>No honor roll data available for this quarter.</p>
-                                    </td>
-                                </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Two Column: Subject Performance + Comparative -->
-            <div class="two-col">
-                <div class="card">
-                    <div class="section-header">
-                        <h2><i class="fi fi-rr-book-open-cover"></i> Subject Performance (Average)</h2>
-                        <span class="view-all">{{ quarter_name }} {{ current_sy_label }}</span>
-                    </div>
-                    <div id="subjectPerformance">
-                        {% if subject_averages %}
-                            {% for s in subject_averages %}
-                            <div class="subject-item">
-                                <div class="subject-header">
-                                    <span>{{ s.subject }}</span>
-                                    <span>{{ s.avg }}%</span>
-                                </div>
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: {{ s.avg }}%; background: {% if s.avg >= 90 %}#27ae60{% elif s.avg >= 85 %}#123499{% elif s.avg >= 75 %}#f39c12{% else %}#e74c3c{% endif %};"></div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="no-data">
-                                <i class="fi fi-rr-book-open-cover"></i>
-                                <p>No subject performance data available.</p>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="section-header">
-                        <h2><i class="fi fi-rr-chart-histogram"></i> Year-over-Year Comparison</h2>
-                        <span class="view-all">Key metrics</span>
-                    </div>
-                    <canvas id="yearOverYearChart" style="max-height: 200px;"></canvas>
-                    <div class="chart-legend">
-                        <span><span class="legend-dot" style="background:#123499;"></span> Previous Year</span>
-                        <span><span class="legend-dot" style="background:#123499;"></span> {{ current_sy_label }}</span>
-                    </div>
-                </div>
-            </div>
-
-            {% else %}
-            <!-- No Data State -->
-            <div style="text-align:center; padding: 4rem 2rem; background: white; border-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-                <i class="fi fi-rr-chart-histogram" style="font-size: 4rem; color: var(--border-color);"></i>
-                <h2 style="margin-top: 1rem; color: var(--rich-black);">No School Year Data Available</h2>
-                <p style="color: var(--text-secondary); margin-top: 0.5rem;">
-                    Please set up the current school year to view performance metrics.
-                </p>
-                <a href="{% url 'heads-ai-dashboard' %}" style="display: inline-block; margin-top: 1rem; padding: 0.6rem 1.5rem; background: var(--secondary-green); color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-                    Back to Academic Dashboard
-                </a>
-            </div>
-            {% endif %}
+            <label class="step">
+                <span class="step-label"><span class="step-no">2</span> Grade level</span>
+                <select name="grade_level" class="auto-submit">
+                    <option value="all">All grade levels</option>
+                    {% for gl in grade_levels %}<option value="{{ gl.id }}" {% if grade_id == gl.id|stringformat:"s" %}selected{% endif %}>{{ gl.grade_name }}</option>{% endfor %}
+                </select>
+            </label>
+        </form>
+        <div class="guide-summary">
+            <i class="fi fi-rr-eye"></i>
+            <span>Showing <strong>{{ scope_name }}</strong>{% if period_name %} &middot; {{ period_name }}{% endif %}{% if sy %} &middot; SY {{ sy.year_label }}{% endif %} &middot; every learning area</span>
+            {% if status %}<a class="btn-outline btn-sm" href="{{ export_url }}"><i class="fi fi-rr-download"></i> Download report</a>{% endif %}
+            <a class="reset" href="?reset=1">Start over</a>
         </div>
+    </section>
+
+    {% if status %}
+    <!-- 2. One status for the school (or grade level), and the promotion outlook -->
+    <div class="top-grid">
+        <section class="card status level-{{ status.level.key }}" aria-labelledby="statusTitle">
+            <span class="eyebrow">School status &middot; {{ scope_name }} &middot; {{ period_name }}</span>
+            <div class="status-main">
+                <div class="status-badge" aria-hidden="true">{{ status.level.letter }}</div>
+                <div>
+                    <div class="status-level" id="statusTitle">{{ status.level.name }}</div>
+                    <div class="status-meaning explain">{{ status.level.meaning }}</div>
+                </div>
+            </div>
+            <div class="status-facts">
+                <div class="fact">
+                    <b>{{ status.average }}%</b>
+                    <span>Average grade</span>
+                    {% if status.delta is not None %}
+                    <span class="chg {% if status.delta > 0 %}up{% elif status.delta < 0 %}down{% else %}flat{% endif %}">
+                        {% if status.delta > 0 %}<i class="fi fi-rr-caret-up"></i>{{ status.delta }}{% elif status.delta < 0 %}<i class="fi fi-rr-caret-down"></i>{{ status.delta|stringformat:".1f"|slice:"1:" }}{% else %}no change{% endif %} vs {{ prev_period_name }}
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="fact">
+                    <b>{{ status.passing_all }}%</b>
+                    <span>Passing all subjects</span>
+                    {% if status.passing_delta is not None %}
+                    <span class="chg {% if status.passing_delta > 0 %}up{% elif status.passing_delta < 0 %}down{% else %}flat{% endif %}">
+                        {% if status.passing_delta > 0 %}<i class="fi fi-rr-caret-up"></i>{{ status.passing_delta }}{% elif status.passing_delta < 0 %}<i class="fi fi-rr-caret-down"></i>{{ status.passing_delta|stringformat:".1f"|slice:"1:" }}{% else %}no change{% endif %} vs {{ prev_period_name }}
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="fact" title="{% for cut, key, name in honors_legend %}{{ name }}: {% if key == 'highest' %}{{ status.honors_by.highest }}{% elif key == 'high' %}{{ status.honors_by.high }}{% else %}{{ status.honors_by.honors }}{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                    <b>{{ status.honors }}</b>
+                    <span>With honors ({{ status.honors_rate }}%)</span>
+                </div>
+                <div class="fact">
+                    <b>{% if status.attendance is not None %}{{ status.attendance }}%{% else %}&mdash;{% endif %}</b>
+                    <span>Attendance{% if status.attendance is None %} not recorded{% endif %}</span>
+                </div>
+            </div>
+            <div class="poro-line">
+                <img src="{% static 'shared/poro/Poro.png' %}" alt="" onerror="this.remove()">
+                <p><span class="poro-tag">Poro AI</span>{{ status.insight }}</p>
+            </div>
+        </section>
+
+        <aside class="card outlook" aria-labelledby="outlookTitle">
+            <div>
+                <h3 id="outlookTitle"><i class="fi fi-rr-graduation-cap" style="color:#123499;"></i> Promotion outlook</h3>
+                <p class="hint explain">If the year ended with {{ period_name }} grades. {{ status.learners }} of {{ status.enrolled }} learner{{ status.enrolled|pluralize }} graded (DepEd Order No. 8, s. 2015).</p>
+            </div>
+            <div class="stack" role="img" aria-label="{% for o in outlook %}{{ o.name }} {{ o.count }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                {% for o in outlook %}{% if o.count %}<span class="{{ o.key }}-bg" style="flex: {{ o.count }}" title="{{ o.name }}: {{ o.count }}"></span>{% endif %}{% endfor %}
+            </div>
+            <ul class="outlook-list">
+                {% for o in outlook %}
+                <li><span class="dot {{ o.key }}-bg"></span><span><b class="{% if o.key != 'on_track' and o.count %}{{ o.key }}-fg{% endif %}">{{ o.name }}</b><small>{{ o.hint }}</small></span>
+                    <span class="n">{{ o.count }}<em>{{ o.share }}%</em></span></li>
+                {% endfor %}
+            </ul>
+            {% if needs %}<button type="button" class="link-btn" id="needsOpen" aria-haspopup="dialog" aria-controls="needsModal">See the {{ needs|length }} learner{{ needs|length|pluralize }} below 75</button>
+            {% else %}<p class="empty-good"><i class="fi fi-rr-check-circle"></i> Every learner passes every learning area.</p>{% endif %}
+        </aside>
     </div>
 
-    <!-- CSRF Token for AJAX -->
-    {% csrf_token %}
-    <script>
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    {% if forecast and forecast.series %}
+    <!-- School performance forecast: each grade level (or section) over the year, and the periods ahead -->
+    <section class="card chart-card" aria-labelledby="spFcTitle">
+        <div class="card-head" style="margin-bottom:0.3rem">
+            <div>
+                <h3 id="spFcTitle"><i class="fi fi-rr-chart-line-up" style="color:#123499;"></i> {{ scope_name }}: performance forecast &middot; SY {{ sy.year_label }}</h3>
+                <p class="hint explain">One line per {{ forecast.word }} across every learning area, and a thicker dark line for {% if grade %}{{ grade.grade_name }}{% else %}the whole school{% endif %}. Solid lines are averages so far, dashed lines the forecast and the band its likely range; diamonds show what the model forecast a period earlier.</p>
+            </div>
+        </div>
+        <div data-forecast="spForecast"></div>
+    </section>
+    {{ forecast|json_script:"spForecast" }}
+    {% endif %}
 
-        (function() {
-            // ========== SIDEBAR FOLD FUNCTIONALITY ==========
-            const sidebar = document.getElementById('sidebar');
-            const foldBtn = document.getElementById('foldBtn');
-            const mainContent = document.getElementById('mainContent');
-            const mobileOverlay = document.getElementById('mobileOverlay');
-            let sidebarCollapsed = false;
+    <!-- 3. Learning areas, lowest first; every subject in the dialog -->
+    <section class="card chart-card" aria-labelledby="areasTitle">
+        <div class="card-head">
+            <div>
+                <h3 id="areasTitle"><i class="fi fi-rr-book-open-cover" style="color:#123499;"></i> Learning areas</h3>
+                <p class="hint explain">One row per learning area: the dot is its average, the bar runs from its lowest to its highest class. Lowest first. Open a row to review it on the Academic Dashboard.</p>
+            </div>
+            {% if subjects %}<button type="button" class="btn-outline btn-sm" id="subjectsOpen" aria-haspopup="dialog" aria-controls="subjectsModal"><i class="fi fi-rr-expand"></i> View all {{ subjects|length }} subjects</button>{% endif %}
+        </div>
+        <div class="kp-legend" aria-hidden="true">
+            <span><i class="kp-key" style="background:#1565C0"></i>Average (colored by level)</span>
+            <span><i class="kp-key range"></i>Lowest to highest class</span>
+            <span><i class="kp-key pass"></i>Passing (75)</span>
+        </div>
+        <div class="kp" id="areaPlot" data-prev="{{ prev_period_name }}"></div>
+    </section>
 
-            function updateSidebarState() {
-                const isMobile = window.innerWidth <= 768;
-                if (isMobile) {
-                    sidebar.classList.remove('collapsed');
-                    sidebarCollapsed = false;
-                    foldBtn.querySelector('i').className = 'fi fi-rr-angle-left';
-                    if (!sidebar.classList.contains('mobile-open')) mobileOverlay.classList.remove('show');
-                } else {
-                    sidebar.classList.remove('mobile-open');
-                    mobileOverlay.classList.remove('show');
-                    if (sidebarCollapsed) { 
-                        sidebar.classList.add('collapsed'); 
-                        foldBtn.querySelector('i').className = 'fi fi-rr-angle-right'; 
-                    } else { 
-                        sidebar.classList.remove('collapsed'); 
-                        foldBtn.querySelector('i').className = 'fi fi-rr-angle-left'; 
-                    }
-                }
-                adjustMainMargin();
-            }
+    <!-- 4. Grade levels (or the sections of the chosen grade level) -->
+    <section class="card levels" aria-labelledby="levelsTitle">
+        <div class="card-head">
+            <div>
+                <h3 id="levelsTitle"><i class="fi fi-rr-school" style="color:#123499;"></i> {% if grade %}Sections in {{ grade.grade_name }}{% else %}Grade levels{% endif %}</h3>
+                <p class="hint explain">{% if grade %}Every section's average, promotion outlook, honors and attendance in {{ period_name }}.{% else %}Open a grade level to see its sections, learning areas and learners.{% endif %}</p>
+            </div>
+            <div class="mini-key" aria-hidden="true">{% for o in outlook %}<i class="{{ o.key }}-fg">{{ o.name }}</i>{% endfor %}</div>
+        </div>
+        <table class="sec-table lv-table" id="lvTable">
+            <colgroup><col class="c-name"><col class="c-avg"><col class="c-level"><col class="c-outlook"><col class="c-honors"><col class="c-att"><col class="c-go"></colgroup>
+            <thead>
+                <tr>
+                    <th scope="col">{% if grade %}Section{% else %}Grade level{% endif %}</th>
+                    <th scope="col" class="num">Average</th>
+                    <th scope="col">Level</th>
+                    <th scope="col">Promotion outlook</th>
+                    <th scope="col" class="num">Honors</th>
+                    <th scope="col" class="num">Attendance</th>
+                    <th scope="col"><span class="sr-only">Open</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in table %}
+                <tr class="lv-row{% if r.level %} level-{{ r.level.key }}{% endif %}"{% if r.url %} tabindex="0" data-href="{{ r.url }}"{% endif %}>
+                    <td class="cell-name" data-label="{% if grade %}Section{% else %}Grade level{% endif %}">
+                        {% if r.url %}<a class="lv-name" href="{{ r.url }}" tabindex="-1">{{ r.name }}</a>{% else %}<span class="lv-name">{{ r.name }}</span>{% endif %}
+                        <span class="sub">{{ r.graded }} of {{ r.enrolled }} learner{{ r.enrolled|pluralize }} graded</span>
+                    </td>
+                    <td class="num cell-avg" data-label="Average">
+                        {% if r.average is not None %}<strong>{{ r.average }}%</strong>{% if r.delta %}<span class="delta {% if r.delta > 0 %}up{% else %}down{% endif %}" title="Change vs {{ prev_period_name }}"><i class="fi {% if r.delta > 0 %}fi-rr-caret-up{% else %}fi-rr-caret-down{% endif %}"></i>{{ r.delta|stringformat:".1f"|cut:"-" }}</span>{% endif %}{% else %}&mdash;{% endif %}
+                    </td>
+                    <td class="cell-level" data-label="Level">{% if r.level %}<span class="lvl">{{ r.level.short }} ({{ r.level.letter }})</span>{% else %}No grades{% endif %}</td>
+                    <td class="cell-outlook" data-label="Promotion outlook">
+                        {% if r.graded %}
+                        <div class="mini">
+                            <div class="stack" role="img" aria-label="On track {{ r.outlook.on_track }}, remedial {{ r.outlook.remedial }}, retention risk {{ r.outlook.retention }}">
+                                {% if r.outlook.on_track %}<span class="on_track-bg" style="flex: {{ r.outlook.on_track }}"></span>{% endif %}{% if r.outlook.remedial %}<span class="remedial-bg" style="flex: {{ r.outlook.remedial }}"></span>{% endif %}{% if r.outlook.retention %}<span class="retention-bg" style="flex: {{ r.outlook.retention }}"></span>{% endif %}
+                            </div>
+                            <div class="mini-key"><i class="on_track-fg"><b>{{ r.outlook.on_track }}</b></i><i class="remedial-fg"><b>{{ r.outlook.remedial }}</b></i>{% if not r.senior %}<i class="retention-fg"><b>{{ r.outlook.retention }}</b></i>{% endif %}</div>
+                        </div>
+                        {% else %}<span class="sub">No grades yet</span>{% endif %}
+                    </td>
+                    <td class="num cell-honors" data-label="Honors">{{ r.honors }}</td>
+                    <td class="num cell-att" data-label="Attendance">{% if r.attendance is not None %}{{ r.attendance }}%{% else %}&mdash;{% endif %}</td>
+                    <td class="go">{% if r.url %}<i class="fi fi-rr-angle-small-right"></i>{% endif %}</td>
+                </tr>
+                {% empty %}
+                <tr class="empty-row"><td colspan="7">No learners for this selection.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p class="footnote explain">Honors follow DepEd Order No. 36, s. 2016: a quarterly average of 90 to 94 (With Honors), 95 to 97 (With High Honors) or 98 to 100 (With Highest Honors), rounded to a whole number, with every learning area passed. Attendance counts school days present in {{ period_name }}.</p>
+    </section>
+    {% else %}
+    <section class="card empty-card">
+        <i class="fi fi-rr-chart-line-up"></i>
+        <h3>No grades for {{ period_name|default:"this period" }} yet</h3>
+        <p class="hint">Choose another grading period above, or come back when teachers have submitted their grades. Enrollment over the years is shown below.</p>
+    </section>
+    {% endif %}
 
-            function adjustMainMargin() {
-                if (window.innerWidth <= 768) mainContent.style.marginLeft = '0';
-                else mainContent.style.marginLeft = sidebar.classList.contains('collapsed') ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)';
-            }
-
-            function toggleSidebar() {
-                if (window.innerWidth <= 768) {
-                    const isOpen = sidebar.classList.toggle('mobile-open');
-                    if (isOpen) mobileOverlay.classList.add('show'); 
-                    else mobileOverlay.classList.remove('show');
-                } else {
-                    sidebarCollapsed = !sidebarCollapsed;
-                    if (sidebarCollapsed) { 
-                        sidebar.classList.add('collapsed'); 
-                        foldBtn.querySelector('i').className = 'fi fi-rr-angle-right'; 
-                    } else { 
-                        sidebar.classList.remove('collapsed'); 
-                        foldBtn.querySelector('i').className = 'fi fi-rr-angle-left'; 
-                    }
-                    adjustMainMargin();
-                }
-            }
-
-            foldBtn.addEventListener('click', toggleSidebar);
-            mobileOverlay.addEventListener('click', () => { 
-                sidebar.classList.remove('mobile-open'); 
-                mobileOverlay.classList.remove('show'); 
-            });
-            window.addEventListener('resize', updateSidebarState);
-
-            // ========== DYNAMIC GREETING ==========
-            function updateGreeting() {
-                const hour = new Date().getHours();
-                let greeting = 'Good morning';
-                if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
-                if (hour >= 17 || hour < 5) greeting = 'Good evening';
-                document.getElementById('greetingText').innerHTML = `${greeting}, {{ request.user.first_name }}!`;
-            }
-
-            function updateDateTime() { 
-                document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                }); 
-            }
-
-            // ========== TOAST NOTIFICATION ==========
-            window.showToast = function(title, message) {
-                const container = document.getElementById('toastContainer');
-                const toast = document.createElement('div');
-                toast.className = 'toast success';
-                toast.innerHTML = `<i class="fi fi-rr-check-circle"></i><div class="toast-content"><h4>${title}</h4><p>${message}</p></div><button class="toast-close" onclick="this.parentElement.remove()">&times;</button>`;
-                container.appendChild(toast);
-                setTimeout(() => { if (toast.parentElement) toast.remove(); }, 4000);
-            };
-
-            // ========== FILTERS ==========
-            window.applyFilters = function() {
-                const schoolYear = document.getElementById('schoolYearFilter').value;
-                const quarter = document.getElementById('semesterFilter').value;
-                const gradeLevel = document.getElementById('gradeFilter').value;
-                
-                let url = '{% url "heads-school-performance" %}?';
-                url += 'school_year=' + schoolYear;
-                url += '&quarter=' + quarter;
-                url += '&grade_level=' + gradeLevel;
-                
-                window.location.href = url;
-            };
-
-            // ========== CHARTS ==========
-            {% if has_data %}
-            // Enrollment Trend Chart
-            const enrollmentCtx = document.getElementById('enrollmentTrendChart').getContext('2d');
-            new Chart(enrollmentCtx, {
-                type: 'line', 
-                data: { 
-                    labels: {{ enrollment_trend_labels|safe }}, 
-                    datasets: [{ 
-                        label: 'Enrollment', 
-                        data: {{ enrollment_trend_data|safe }}, 
-                        borderColor: '#5EA173', 
-                        backgroundColor: 'rgba(94,161,115,0.1)', 
-                        fill: true, 
-                        tension: 0.3, 
-                        pointBackgroundColor: '#5EA173', 
-                        pointRadius: 5 
-                    }] 
-                },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: true, 
-                    plugins: { legend: { display: false } } 
-                }
-            });
-
-            // Promotion Rate Chart
-            const promotionCtx = document.getElementById('promotionRateChart').getContext('2d');
-            new Chart(promotionCtx, {
-                type: 'bar', 
-                data: { 
-                    labels: {{ promotion_labels|safe }}, 
-                    datasets: [{ 
-                        label: 'Promotion Rate (%)', 
-                        data: {{ promotion_data|safe }}, 
-                        backgroundColor: '#123499', 
-                        borderRadius: 6 
-                    }] 
-                },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: true, 
-                    plugins: { legend: { display: false } }, 
-                    scales: { y: { min: 80, max: 100 } } 
-                }
-            });
-
-            // Year-over-Year Chart
-            const yoyCtx = document.getElementById('yearOverYearChart').getContext('2d');
-            new Chart(yoyCtx, {
-                type: 'bar', 
-                data: { 
-                    labels: {{ yoy_labels|safe }}, 
-                    datasets: [
-                        { 
-                            label: 'Previous Year', 
-                            data: {{ prev_year_data|safe }}, 
-                            backgroundColor: '#5EA173', 
-                            borderRadius: 6 
-                        },
-                        { 
-                            label: '{{ current_sy_label|escapejs }}', 
-                            data: {{ curr_year_data|safe }}, 
-                            backgroundColor: '#123499', 
-                            borderRadius: 6 
-                        }
-                    ] 
-                },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: true, 
-                    plugins: { legend: { position: 'top' } } 
-                }
-            });
+    <!-- 5. Enrollment over the years, and the same period last school year -->
+    <div class="two-col">
+        <section class="card chart-card" aria-labelledby="trendTitle">
+            <div class="card-head" style="margin-bottom:0">
+                <div>
+                    <h3 id="trendTitle"><i class="fi fi-rr-users-alt" style="color:#123499;"></i> Enrollment over the years</h3>
+                    <p class="hint">{% if grade %}{{ grade.grade_name }} learners{% else %}Learners{% endif %} enrolled in each school year, up to SY {{ sy.year_label }}.</p>
+                </div>
+                <div class="trend-tools">
+                    <div class="seg small" role="radiogroup" aria-label="School years shown" id="trendRange" hidden></div>
+                    {% if not grade %}<div class="seg small" role="radiogroup" aria-label="Show" id="trendView">
+                        <button type="button" role="radio" data-view="total" aria-checked="true">Total</button>
+                        <button type="button" role="radio" data-view="levels" aria-checked="false">By grade level</button>
+                    </div>{% endif %}
+                </div>
+            </div>
+            {% if trend %}
+            <div class="chart-box is-loading"><canvas id="trendChart" role="img" aria-label="Learners enrolled per school year"></canvas></div>
+            <p class="trend-note" id="trendNote"></p>
+            {% else %}
+            <p class="hint" style="margin-top:1rem">No enrollment recorded yet.</p>
             {% endif %}
+        </section>
 
-            // Initialize
-            updateSidebarState();
-            updateGreeting();
-            updateDateTime();
-            setInterval(updateDateTime, 1000);
-            setInterval(updateGreeting, 60000);
-        })();
-    </script>
-<script src="{% static 'shared/js/arms-ui.js' %}"></script>
-</body>
-</html>
+        <section class="card chart-card" aria-labelledby="cmpTitle">
+            <h3 id="cmpTitle"><i class="fi fi-rr-time-past" style="color:#123499;"></i> Compared with last school year</h3>
+            {% if last_year %}
+            <p class="hint">{{ period_name }} this year against {{ last_year.name }}{% if grade %}, {{ grade.grade_name }}{% endif %}.</p>
+            <table class="cmp-table">
+                <thead><tr><th>Measure</th><th>Last year</th><th>This year</th><th>Change</th></tr></thead>
+                <tbody>
+                    {% for row in last_year.rows %}
+                    <tr>
+                        <td><span><i class="fi {{ row.icon }}"></i>{{ row.name }}</span></td>
+                        <td>{% if row.then is not None %}{{ row.then }}{{ row.unit }}{% else %}&mdash;{% endif %}</td>
+                        <td class="now">{% if row.now is not None %}{{ row.now }}{{ row.unit }}{% else %}&mdash;{% endif %}</td>
+                        <td>{% if row.change is None %}&mdash;{% else %}<span class="{% if row.change > 0 %}up{% elif row.change < 0 %}down{% else %}flat{% endif %}">{% if row.change > 0 %}+{% endif %}{% if row.unit %}{{ row.change }}{% else %}{{ row.change|floatformat:0 }}{% endif %}</span>{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="hint">No grades for the same grading period last school year, so there is nothing to compare yet.</p>
+            {% endif %}
+        </section>
+    </div>
+
+    {% if subjects %}
+    <div class="ad-modal" id="subjectsModal" role="dialog" aria-modal="true" aria-labelledby="subjectsTitle" hidden>
+        <div class="ad-modal-card wide" tabindex="-1">
+            <div class="ad-modal-head">
+                <div>
+                    <h3 id="subjectsTitle"><i class="fi fi-rr-book-open-cover" style="color:#123499;"></i> Every subject &middot; {{ subjects|length }}</h3>
+                    <p class="hint">{{ scope_name }} &middot; {{ period_name }}. The dot is the subject's average; the bar runs from its lowest to its highest class. Open a row to review the subject.</p>
+                </div>
+                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
+            </div>
+            <div class="ad-modal-tools">
+                <label class="ad-search"><i class="fi fi-rr-search"></i><input type="search" id="subjectsSearch" placeholder="Find a subject or grade level" aria-label="Find a subject or grade level"></label>
+                <label class="ad-sortby">Sort by
+                    <select id="subjectsSort">
+                        <option value="low">Lowest average first</option>
+                        <option value="high">Highest average first</option>
+                        <option value="below">Most learners below 75</option>
+                        <option value="spread">Widest gap between classes</option>
+                        {% if prev_period_name %}<option value="drop">Biggest drop since {{ prev_period_name }}</option>{% endif %}
+                        <option value="grade">Grade level</option>
+                        <option value="name">Subject name (A to Z)</option>
+                    </select>
+                </label>
+                <span class="tools-count" id="subjectsCount" aria-live="polite"></span>
+            </div>
+            <div class="ad-modal-body kp-body">
+                <div class="kp-legend" aria-hidden="true">
+                    <span><i class="kp-key" style="background:#1565C0"></i>Average (colored by level)</span>
+                    <span><i class="kp-key range"></i>Lowest to highest class</span>
+                    <span><i class="kp-key pass"></i>Passing (75)</span>
+                </div>
+                <div class="kp" id="subjectPlot"></div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if needs %}
+    <div class="ad-modal" id="needsModal" role="dialog" aria-modal="true" aria-labelledby="needsTitle" hidden>
+        <div class="ad-modal-card" tabindex="-1">
+            <div class="ad-modal-head">
+                <div>
+                    <h3 id="needsTitle"><i class="fi fi-rr-user-time" style="color:#C62828;"></i> Learners below 75 <span class="count">{{ needs|length }}</span></h3>
+                    <p class="hint">{{ scope_name }} &middot; {{ period_name }}. Remedial classes are required (DepEd Order No. 8, s. 2015); three or more learning areas below 75 means retention in Grades 7 to 10.</p>
+                </div>
+                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
+            </div>
+            <div class="ad-modal-tools">
+                <label class="ad-search"><i class="fi fi-rr-search"></i><input type="search" id="needsSearch" placeholder="Find a learner, section or subject" aria-label="Find a learner, section or subject"></label>
+                <select id="needsOutlook" class="ad-filter" aria-label="Outlook">
+                    <option value="">Remedial and retention risk</option>
+                    <option value="retention">At risk of retention</option>
+                    <option value="remedial">Remedial classes</option>
+                </select>
+                {% if not grade %}<select id="needsGrade" class="ad-filter" aria-label="Grade level">
+                    <option value="">All grade levels</option>
+                    {% for gl in grade_levels %}<option value="{{ gl.id }}">{{ gl.grade_name }}</option>{% endfor %}
+                </select>{% endif %}
+                <a class="btn-outline btn-sm" href="{{ export_url }}"><i class="fi fi-rr-download"></i> Download</a>
+                <span class="tools-count" id="needsCount" aria-live="polite"></span>
+            </div>
+            <div class="ad-modal-body">
+                <ul class="need-list" id="needsList">
+                    {% for n in needs %}
+                    <li data-outlook="{{ n.outlook }}" data-grade="{{ n.grade_level_id }}" data-text="{{ n.name|lower }} {{ n.section|lower }} {{ n.grade_level|lower }} {% for i in n.items %}{{ i.code|lower }} {% endfor %}">
+                        <div>
+                            <span><span class="who">{{ n.name }}</span> <span class="where">&middot; {{ n.grade_level }} {{ n.section }} &middot; average {{ n.average }}</span></span>
+                            <span class="chips">{% for i in n.items %}<span class="chip">{{ i.code }} {{ i.grade|floatformat:0 }}</span>{% endfor %}</span>
+                            <span class="tag {{ n.outlook }}">{% if n.outlook == 'retention' %}Retention risk &middot; {{ n.count }}{% else %}Remedial &middot; {{ n.count }}{% endif %}</span>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <p class="ad-none" id="needsNone" hidden>No learner matches.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {{ areas|json_script:"areaData" }}
+    {{ subjects|json_script:"subjectData" }}
+    {{ trend|json_script:"trendData" }}
+    {{ trend_levels|json_script:"trendLevels" }}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'heads/js/forecast-chart.js' %}"></script>
+<script>
+(function () {
+    var form = document.getElementById('filterForm');
+    var esc = function (v) {
+        return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    };
+    var data = function (id) { var el = document.getElementById(id); return el ? JSON.parse(el.textContent) : []; };
+    // navigation shows the skeleton of the next page while it loads (static/heads/js/head-skeleton.js)
+    var go = function (f) { if (window.ArmsSkeleton) ArmsSkeleton.submit(f); else f.submit(); };
+    var open = function (href) { if (window.ArmsSkeleton) ArmsSkeleton.go(href); else window.location.href = href; };
+
+    document.querySelectorAll('.auto-submit').forEach(function (el) {
+        el.addEventListener('change', function () { go(form); });
+    });
+    document.querySelectorAll('.lv-row[data-href]').forEach(function (row) {
+        row.addEventListener('click', function (e) { if (!e.target.closest('a')) open(row.dataset.href); });
+        row.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(row.dataset.href); }
+        });
+    });
+
+    // ---------- dialogs: Esc or the backdrop closes them, focus stays inside and returns to the button ----------
+    var opener = null;
+    function openDialog(dialog, from) {
+        opener = from; dialog.hidden = false; document.body.style.overflow = 'hidden';
+        dialog.querySelector('.ad-modal-card').focus();
+    }
+    function closeDialog(dialog) {
+        dialog.hidden = true; document.body.style.overflow = '';
+        if (opener) opener.focus();
+    }
+    document.querySelectorAll('.ad-modal').forEach(function (dialog) {
+        dialog.addEventListener('click', function (e) { if (e.target === dialog || e.target.closest('[data-close]')) closeDialog(dialog); });
+    });
+    document.addEventListener('keydown', function (e) {
+        var shown = document.querySelector('.ad-modal:not([hidden])');
+        if (shown && e.key === 'Escape') closeDialog(shown);
+    });
+    document.addEventListener('focusin', function (e) {
+        var shown = document.querySelector('.ad-modal:not([hidden])');
+        if (shown && !shown.contains(e.target)) shown.querySelector('.ad-modal-card').focus();
+    });
+
+    // ---------- one row per learning area or subject: a dot for the average, a bar from the lowest to the highest class ----------
+    var areas = data('areaData'), subjects = data('subjectData');
+    var prev = (document.getElementById('areaPlot') || {}).dataset ? document.getElementById('areaPlot').dataset.prev : '';
+    // each plot gets its own scale: from just below its lowest class (and 75) up to 100, labels every 10
+    function scaleFor(rows) {
+        var values = [75];
+        rows.forEach(function (r) { values.push(r.low, r.high, r.average); });
+        var lo = Math.max(0, Math.floor((Math.min.apply(null, values) - 2) / 5) * 5), hi = 100;
+        var at = function (v) { return ((v - lo) / (hi - lo) * 100).toFixed(2) + '%'; };
+        var ticks = '', grid = '';
+        for (var v = Math.ceil(lo / 10) * 10; v <= hi; v += 10) {
+            ticks += '<span style="left:' + at(v) + '">' + v + '</span>';
+            if (v > lo && v < hi) grid += '<span class="kp-grid" style="left:' + at(v) + '"></span>';
+        }
+        return { at: at, ticks: ticks, grid: grid };
+    }
+    function rowHtml(r, sc) {
+        var at = sc.at;
+        var said = r.name + ' (' + r.detail + '): average ' + r.average.toFixed(1) + ', ' + r.classes + ' classes from ' + r.low.toFixed(1) + ' to ' + r.high.toFixed(1) +
+            (r.below ? ', ' + r.below + ' learners below 75' : '') +
+            (r.delta ? ', ' + (r.delta > 0 ? 'up ' : 'down ') + Math.abs(r.delta).toFixed(1) + ' since ' + prev : '');
+        var change = r.delta ? '<span class="kp-delta ' + (r.delta > 0 ? 'up' : 'down') + '" title="Change since ' + esc(prev) + '">' +
+            '<i class="fi fi-rr-caret-' + (r.delta > 0 ? 'up' : 'down') + '"></i>' + Math.abs(r.delta).toFixed(1) + '</span>' : '';
+        var inner = '<span class="kp-name"><b>' + esc(r.name) + (r.below ? '<em class="kp-flag">' + r.below + ' below 75</em>' : '') + '</b>' +
+            '<small>' + esc(r.detail) + '</small></span>' +
+            '<span class="kp-track" aria-hidden="true">' + sc.grid +
+                '<span class="kp-pass" style="left:' + at(75) + '"></span>' +
+                '<span class="kp-range" style="left:' + at(r.low) + ';width:calc(' + at(r.high) + ' - ' + at(r.low) + ')" data-tip="Classes from ' + r.low.toFixed(1) + '% to ' + r.high.toFixed(1) + '%"></span>' +
+                '<span class="kp-dot area-dot" style="left:' + at(r.average) + '" data-tip="Average ' + r.average.toFixed(1) + '%"></span>' +
+            '</span>' +
+            '<span class="kp-val"><span class="lvl">' + r.average.toFixed(1) + '%</span>' + change + '</span>';
+        return '<li class="kp-row level-' + esc(r.level) + '">' + (r.url ? '<a class="kp-link" href="' + esc(r.url) + '" aria-label="' + esc(said) + '">' + inner + '</a>'
+                                                                       : '<div class="kp-link" aria-label="' + esc(said) + '">' + inner + '</div>') + '</li>';
+    }
+    function draw(box, list, empty, sc) {
+        if (!box) return;
+        box.innerHTML = '<div class="kp-axis" aria-hidden="true"><span class="kp-spacer">' + (box.id === 'areaPlot' ? 'Learning area' : 'Subject') +
+            '</span><span class="kp-ticks">' + sc.ticks + '</span><span class="kp-head-val">Average</span></div>' +
+            (list.length ? '<ol class="kp-rows">' + list.map(function (r) { return rowHtml(r, sc); }).join('') + '</ol>' : '<p class="kp-empty">' + empty + '</p>');
+    }
+    var subjectScale = scaleFor(subjects);
+    draw(document.getElementById('areaPlot'), areas, 'No grades for this selection.', scaleFor(areas));
+
+    var subjectsModal = document.getElementById('subjectsModal');
+    if (subjectsModal) {
+        var sSearch = document.getElementById('subjectsSearch'), sSort = document.getElementById('subjectsSort');
+        var byLowest = function (a, b) { return a.average - b.average || a.order - b.order; };
+        var SORTS = {
+            low: byLowest,
+            high: function (a, b) { return b.average - a.average || a.order - b.order; },
+            below: function (a, b) { return b.below - a.below || a.average - b.average; },
+            spread: function (a, b) { return (b.high - b.low) - (a.high - a.low) || a.average - b.average; },
+            drop: function (a, b) { return (a.delta == null) - (b.delta == null) || (a.delta || 0) - (b.delta || 0) || a.order - b.order; },
+            grade: function (a, b) { return a.order - b.order; },
+            name: function (a, b) { return a.name.localeCompare(b.name) || a.order - b.order; }
+        };
+        var showSubjects = function () {
+            var q = sSearch.value.trim().toLowerCase();
+            var list = subjects.filter(function (r) { return !q || (r.name + ' ' + r.detail).toLowerCase().indexOf(q) > -1; })
+                               .sort(SORTS[sSort.value] || byLowest);
+            draw(document.getElementById('subjectPlot'), list, 'No subject matches.', subjectScale);
+            document.getElementById('subjectsCount').textContent = 'Showing ' + list.length + ' of ' + subjects.length + ' subjects';
+        };
+        sSearch.addEventListener('input', showSubjects);
+        sSort.addEventListener('change', showSubjects);
+        document.getElementById('subjectsOpen').addEventListener('click', function (e) { showSubjects(); openDialog(subjectsModal, e.currentTarget); });
+    }
+
+    // ---------- learners below 75 ----------
+    var needsModal = document.getElementById('needsModal');
+    if (needsModal) {
+        var items = Array.prototype.slice.call(document.querySelectorAll('#needsList li'));
+        var nSearch = document.getElementById('needsSearch'), nOutlook = document.getElementById('needsOutlook'), nGrade = document.getElementById('needsGrade');
+        var showNeeds = function () {
+            var q = nSearch.value.trim().toLowerCase(), o = nOutlook.value, g = nGrade ? nGrade.value : '', shown = 0;
+            items.forEach(function (li) {
+                li.hidden = (q && li.dataset.text.indexOf(q) === -1) || (o && li.dataset.outlook !== o) || (g && li.dataset.grade !== g);
+                if (!li.hidden) shown++;
+            });
+            document.getElementById('needsNone').hidden = shown > 0;
+            document.getElementById('needsCount').textContent = 'Showing ' + shown + ' of ' + items.length;
+        };
+        [nSearch, nOutlook, nGrade].forEach(function (el) { if (el) el.addEventListener(el === nSearch ? 'input' : 'change', showNeeds); });
+        document.getElementById('needsOpen').addEventListener('click', function (e) { showNeeds(); openDialog(needsModal, e.currentTarget); });
+    }
+
+    // ---------- enrollment over the years: any range, total or by grade level ----------
+    var trend = data('trendData'), levels = data('trendLevels'), canvas = document.getElementById('trendChart');
+    if (!canvas || !trend.length) return;
+    var box = canvas.closest('.chart-box');
+    if (!window.Chart) { box.classList.remove('is-loading'); return; }
+    Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+    Chart.defaults.color = '#4a5568';
+    var PALETTE = ['#123499', '#3657b8', '#5b7bd1', '#8aa2e3', '#b7c6f0', '#dce4f8'];
+    var range = trend.length > 5 ? 5 : trend.length, view = 'total', chart = null, first = true;
+    try { var saved = JSON.parse(localStorage.getItem('arms-enrollment-view') || '{}'); if (saved.range) range = saved.range; if (saved.view) view = saved.view; } catch (e) {}
+
+    var rangeBox = document.getElementById('trendRange');
+    var presets = [3, 5, 10].filter(function (n) { return n < trend.length; });
+    if (presets.length) {
+        rangeBox.hidden = false;
+        rangeBox.innerHTML = presets.map(function (n) { return '<button type="button" role="radio" data-range="' + n + '">' + n + ' years</button>'; }).join('') +
+            '<button type="button" role="radio" data-range="' + trend.length + '">All ' + trend.length + '</button>';
+    }
+    function sync() {
+        if (range > trend.length || (presets.indexOf(range) < 0 && range !== trend.length)) range = trend.length > 5 && presets.indexOf(5) > -1 ? 5 : trend.length;
+        rangeBox.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-checked', +b.dataset.range === range ? 'true' : 'false'); });
+        document.querySelectorAll('#trendView button').forEach(function (b) { b.setAttribute('aria-checked', b.dataset.view === view ? 'true' : 'false'); });
+        try { localStorage.setItem('arms-enrollment-view', JSON.stringify({ range: range, view: view })); } catch (e) {}
+    }
+    function render() {
+        sync();
+        var shown = trend.slice(-range), labels = shown.map(function (t) { return 'SY ' + t.label; });
+        var stacked = view === 'levels' && document.getElementById('trendView');
+        var datasets = stacked ? levels.map(function (name, i) {
+            return { label: name, data: shown.map(function (t) { return t.by_level[name] || 0; }), backgroundColor: PALETTE[i % PALETTE.length], borderRadius: 4, stack: 'all' };
+        }) : [{ label: 'Learners enrolled', data: shown.map(function (t) { return t.count; }), borderColor: '#123499', backgroundColor: 'rgba(18,52,153,0.08)',
+                fill: true, tension: 0.25, borderWidth: 2.5, pointRadius: 5, pointBackgroundColor: shown.map(function (t) { return t.selected ? '#123499' : '#fff'; }),
+                pointBorderColor: '#123499', pointBorderWidth: 2 }];
+        if (chart) chart.destroy();
+        box.classList.remove('is-loading');
+        chart = new Chart(canvas, {
+            type: stacked ? 'bar' : 'line',
+            data: { labels: labels, datasets: datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false, animation: first ? false : { duration: 300 },
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: { stacked: !!stacked, offset: true, grid: { display: false }, ticks: { font: { size: 12, weight: '600' } } },
+                    y: { stacked: !!stacked, beginAtZero: true, ticks: { precision: 0, font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.05)' } }
+                },
+                plugins: {
+                    legend: { display: !!stacked, position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8, font: { size: 12 } } },
+                    tooltip: { callbacks: { footer: function (items) {
+                        if (!stacked) return '';
+                        return 'Total: ' + items.reduce(function (s, i) { return s + i.parsed.y; }, 0);
+                    } } }
+                }
+            }
+        });
+        first = false;
+        var start = shown[0], last = shown[shown.length - 1], note = document.getElementById('trendNote');
+        if (shown.length > 1) {
+            var diff = last.count - start.count, rate = start.count ? Math.round(diff / start.count * 1000) / 10 : 0;
+            note.innerHTML = '<b>' + last.count + '</b> learners in SY ' + esc(last.label) + ', ' + (diff === 0 ? 'the same as' : '<b>' + (diff > 0 ? '+' : '') + diff +
+                '</b> (' + (diff > 0 ? '+' : '') + rate + '%) compared with') + ' SY ' + esc(start.label) + '.';
+        } else {
+            note.innerHTML = '<b>' + last.count + '</b> learners in SY ' + esc(last.label) + '. Earlier school years will appear here once they have enrollment records.';
+        }
+    }
+    rangeBox.addEventListener('click', function (e) { var b = e.target.closest('button[data-range]'); if (b) { range = +b.dataset.range; render(); } });
+    var viewBox = document.getElementById('trendView');
+    if (viewBox) viewBox.addEventListener('click', function (e) { var b = e.target.closest('button[data-view]'); if (b) { view = b.dataset.view; render(); } });
+    render();
+})();
+</script>
+{% endblock %}

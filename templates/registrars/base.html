@@ -1,16 +1,31 @@
 {% extends 'shared/portal_base.html' %}
+{% load static %}
 
 {% block title %}ARMS - Registrar Portal{% endblock %}
 {% block home_url %}{% url 'registrars:dashboard' %}{% endblock %}
-{% block brand_icon %}fi-rr-clipboard-list{% endblock %}
 {% block portal_label %}Registrar Portal{% endblock %}
 {% block role_label %}Registrar{% endblock %}
 {% block subtitle %}Registrar Portal — {{ request.user.profile.school_name }}{% endblock %}
 
+{% block portal_css %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap">
+    <link rel="stylesheet" href="{% static 'heads/css/head-live.css' %}">
+    <link rel="stylesheet" href="{% static 'shared/css/portal-live.css' %}">
+    <link rel="stylesheet" href="{% static 'shared/css/portal-pages.css' %}">
+{% endblock %}
+
 {% block sidebar_nav %}
 <li class="nav-item"><a href="{% url 'registrars:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
-<li class="nav-item"><a href="{% url 'registrars:upload_class_list' %}" class="nav-link {% if '/class-list/' in request.path %}active{% endif %}"><i class="fi fi-rr-upload"></i><span>Class Lists</span></a></li>
+<li class="nav-item"><a href="{% url 'registrars:upload_class_list' %}" class="nav-link {% if '/class-list/' in request.path %}active{% endif %}"><i class="fi fi-rr-user-add"></i><span>Enrollment</span></a></li>
 <li class="nav-item"><a href="{% url 'registrars:section_list' %}" class="nav-link {% if '/sections/' in request.path %}active{% endif %}"><i class="fi fi-rr-users-alt"></i><span>Sections</span></a></li>
 <li class="nav-item"><a href="{% url 'registrars:teacher_list' %}" class="nav-link {% if '/teachers/' in request.path %}active{% endif %}"><i class="fi fi-rr-chalkboard-user"></i><span>Teachers</span></a></li>
+<li class="nav-item"><a href="{% url 'registrars:school_forms' %}" class="nav-link {% if '/school-forms/' in request.path %}active{% endif %}"><i class="fi fi-rr-document"></i><span>School Forms</span></a></li>
 <li class="nav-item"><a href="{% url 'registrars:grade_validation' %}" class="nav-link {% if '/grades/' in request.path %}active{% endif %}"><i class="fi fi-rr-shield-check"></i><span>Grade Validation</span></a></li>
+{% endblock %}
+
+{% block top_bar_actions %}
+{% url 'registrars:updates' as updates_url %}{% url 'registrars:read_all' as read_url %}{% url 'registrars:grade_validation' as grades_url %}
+{% include 'shared/_bell.html' with updates_url=updates_url read_url=read_url foot_url=grades_url foot_label='Open grade validation' empty='You are all caught up. No class is waiting for you.' %}
 {% endblock %}

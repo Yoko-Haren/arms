@@ -1,6 +1,6 @@
 # promotion/models.py
 """
-Phase 8: Promotion & Graduation models for Formify LIS.
+Phase 8: Promotion & Graduation models for ARMS.
 Promotion recommendations with remedial tracking (consolidates
 promotion_decisions and summer_remedial_records), retention records
 with intervention tracking, and graduation records with diploma

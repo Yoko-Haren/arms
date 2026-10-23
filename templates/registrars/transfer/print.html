@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transfer Request #{{ transfer.id }} - Formify LIS</title>
+    <title>Transfer Request #{{ transfer.id }} - ARMS</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #2d3748; max-width: 800px; margin: 0 auto; }
@@ -49,7 +49,7 @@
             <h1>{{ school_profile.school_name }}</h1>
             <p>{{ school_profile.school_address|default:'' }}</p>
         {% else %}
-            <h1>Formify LIS</h1>
+            <h1>ARMS</h1>
         {% endif %}
         <h2>STUDENT TRANSFER REQUEST</h2>
         <p>Request #{{ transfer.id }} | Date: {{ today|date:"F d, Y" }}</p>
@@ -112,7 +112,7 @@
     </div>
 
     <div class="footer">
-        <p>This is a computer-generated document from Formify LIS. | Generated on {{ today|date:"F d, Y" }}</p>
+        <p>This is a computer-generated document from ARMS. | Generated on {{ today|date:"F d, Y" }}</p>
         <p>Transfer Request #{{ transfer.id }} | School Year: {{ transfer.student.enrollments.first.school_year|default:'N/A' }}</p>
     </div>
 </body>

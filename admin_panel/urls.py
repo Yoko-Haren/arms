@@ -47,6 +47,10 @@ urlpatterns = [
     path('quarters/<int:quarter_id>/update/', views.quarter_update, name='quarter_update'),
     path('quarters/<int:quarter_id>/delete/', views.quarter_delete, name='quarter_delete'),
     
+    # Requests from the landing page and the sign-in help dialog
+    path('requests/', views.request_list, name='request_list'),
+    path('requests/<int:request_id>/status/', views.request_update, name='request_update'),
+
     # AJAX
     path('api/school/<int:school_id>/', views.get_school_details, name='get_school_details'),
     path('api/school/<int:school_id>/grade-levels/', views.get_grade_levels_for_school, name='get_grade_levels'),

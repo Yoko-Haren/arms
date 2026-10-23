@@ -1,6 +1,6 @@
 # scheduling/models.py
 """
-Phase 5: Class & Schedule models for Formify LIS.
+Phase 5: Class & Schedule models for ARMS.
 Teacher assignments, weekly schedules, substitution tracking,
 and denormalized workload summaries.
 """

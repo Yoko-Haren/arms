@@ -1,6 +1,6 @@
 # configuration/models.py
 """
-Phase 14: System Configuration models for Formify LIS.
+Phase 14: System Configuration models for ARMS.
 DepEd-specific operational configurations (LIS integration, BEIS reporting,
 division settings) and grading period management linking quarters/semesters
 to report card types with grade encoding workflow control.

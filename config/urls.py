@@ -1,13 +1,18 @@
 # config/urls.py
 from django.contrib import admin
 from django.urls import path, include
-from django.views.generic import RedirectView
+from django.templatetags.static import static as static_url
+from django.views.generic import RedirectView, TemplateView
 from assessments import views_public as quiz_views
+from communication import views_public as contact_views
+from communication.forms import POSITIONS
 
 
 
 urlpatterns = [
-    path('', RedirectView.as_view(url='/accounts/signin/', permanent=False), name='home'),
+    path('', TemplateView.as_view(template_name='shared/landing.html', extra_context={'positions': POSITIONS}), name='home'),
+    path('favicon.ico', RedirectView.as_view(url=static_url('shared/logo/favicon.ico'), permanent=False)),
+    path('contact/', contact_views.contact_submit, name='contact_submit'),
 
     # path('django-admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),

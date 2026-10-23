@@ -17,7 +17,7 @@ from django.views.decorators.http import require_http_methods
 
 from .models import LoginAttempt, UserProfile
 from .services import google_oauth
-from .services.sessions import end_other_sessions
+from .services.sessions import end_other_sessions, remember_session
 from .services.email_codes import CodeError, issue_code, latest_code, mask_email, verify_code
 from .views import _get_dashboard_url
 
@@ -28,6 +28,7 @@ RESET_USER_KEY = 'reset_user_id'    # user resetting a password (None when no ac
 RESET_SENT_KEY = 'reset_sent_to'
 RESET_VERIFIED_KEY = 'reset_verified'  # set once the emailed code was correct
 RESET_VERIFIED_MINUTES = 10
+REMEMBER_KEY = 'remember_me'       # "Remember me" ticked before going to Google
 
 
 def _client(request):
@@ -35,13 +36,14 @@ def _client(request):
 
 
 def _finish_login(request, user):
-    """Sign the user in the same way the password form does: log it, single session."""
+    """Sign the user in the same way the password form does: log it, Remember me, single session."""
     ip, user_agent = _client(request)
     LoginAttempt.objects.create(
         username_attempted=user.username, ip_address=ip or '0.0.0.0',
         user_agent=user_agent, attempt_result='SUCCESS', user=user,
     )
     login(request, user, backend=settings.AUTHENTICATION_BACKENDS[0])
+    remember_session(request, request.session.pop(REMEMBER_KEY, False))
     end_other_sessions(user, request.session.session_key)
 
 
@@ -60,6 +62,8 @@ def google_login(request):
         messages.error(request, 'Google sign-in is not set up yet. Please use your username and password.')
         return redirect('signin')
     intent = 'bind' if request.user.is_authenticated else 'login'
+    if intent == 'login':
+        request.session[REMEMBER_KEY] = request.GET.get('remember') == '1'
     return redirect(google_oauth.authorization_url(request, intent))
 
 

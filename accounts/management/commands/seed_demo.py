@@ -127,8 +127,9 @@ SECTIONS = [
     (11, 'STEM-A', 'STEM', 'shs_math', 26, 3.0), (11, 'HUMSS-A', 'HUMSS', 'shs_hum', 24, -0.5),
     (12, 'STEM-A', 'STEM', 'shs_sci', 25, 3.5), (12, 'HUMSS-A', 'HUMSS', 'shs_eng', 23, 0.0),
 ]
-# How far along each class is in the current (second) quarter, repeated over the classes.
-Q2_STATES = (['validated'] * 9 + ['ready'] * 4 + ['incomplete'] * 3 + ['returned'] + ['not_started'] * 3)
+# How far along each class is in the current (second) quarter, repeated over the classes: validated; submitted
+# by the teacher and waiting for the registrar; complete but not submitted (drafts); encoding; returned; not started.
+Q2_STATES = (['validated'] * 9 + ['submitted'] * 3 + ['ready'] + ['incomplete'] * 3 + ['returned'] + ['not_started'] * 3)
 
 FIRST_M = ['Juan', 'Jose', 'Miguel', 'Gabriel', 'Rafael', 'Andres', 'Carlos', 'Daniel', 'Joshua', 'Mark', 'John Paul',
            'Christian', 'Angelo', 'Kenneth', 'Jerome', 'Francis', 'Vincent', 'Adrian', 'Nathaniel', 'Elijah', 'Marco',
@@ -528,7 +529,7 @@ class Seeder:
                 if state == 'not_started':
                     continue
                 graded = active if state != 'incomplete' else active[:max(3, int(len(active) * self.rng.uniform(0.45, 0.8)))]
-                status = {'validated': 'Validated', 'ready': 'Draft', 'incomplete': 'Draft', 'returned': 'Returned'}[state]
+                status = {'validated': 'Validated', 'submitted': 'Submitted', 'ready': 'Draft', 'incomplete': 'Draft', 'returned': 'Returned'}[state]
                 note = 'Two students have grades far below their first quarter. Please re-check the class record and re-upload.' if state == 'returned' else ''
                 when = timezone.now() - timedelta(days=self.rng.randint(1, 6))
                 for member in graded:

@@ -484,8 +484,25 @@
 </div>
 
 <!-- ALERTS -->
-{% if schools_without_principal > 0 or schools_without_sy > 0 %}
+{% if schools_without_principal > 0 or schools_without_sy > 0 or new_request_count > 0 %}
 <div class="alerts-row">
+    {% if new_request_count > 0 %}
+    <div class="alert-card info-alert" onclick="window.location.href='{% url 'admin_panel:request_list' %}'">
+        <div class="alert-content">
+            <div class="alert-icon-circle">
+                <i class="fas fa-envelope"></i>
+            </div>
+            <div class="alert-text">
+                <strong>{{ new_request_count }} new request{{ new_request_count|pluralize }}</strong>
+                from the website: schools asking for ARMS or people who need help signing in
+            </div>
+        </div>
+        <a href="{% url 'admin_panel:request_list' %}" class="alert-action-btn">
+            <i class="fas fa-inbox"></i> Review
+        </a>
+    </div>
+    {% endif %}
+
     {% if schools_without_principal > 0 %}
     <div class="alert-card warning-alert" onclick="window.location.href='{% url 'admin_panel:principal_create' %}'">
         <div class="alert-content">

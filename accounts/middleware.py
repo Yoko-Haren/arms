@@ -8,6 +8,9 @@ class ForcePasswordChangeMiddleware:
 
     1. a temporary password must be replaced;
     2. a Google account must be linked and confirmed (when Google sign-in is required).
+
+    Public pages stay open: the landing page, and the contact form, so someone stuck at a gate
+    can still message the ARMS administrator.
     """
 
     def __init__(self, get_response):
@@ -15,7 +18,8 @@ class ForcePasswordChangeMiddleware:
 
     def __call__(self, request):
         user = getattr(request, 'user', None)
-        if user is not None and user.is_authenticated and not request.path.startswith('/static/'):
+        public = request.path.startswith('/static/') or request.path in (reverse('home'), reverse('contact_submit'), '/favicon.ico')
+        if user is not None and user.is_authenticated and not public:
             profile = getattr(user, 'profile', None)
             if profile is not None:
                 leaving = (reverse('signout'), reverse('logout'))

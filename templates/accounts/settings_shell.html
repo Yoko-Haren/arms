@@ -2,7 +2,6 @@
 
 {% block title %}Account Settings - ARMS{% endblock %}
 {% block home_url %}{{ dashboard_url }}{% endblock %}
-{% block brand_icon %}fi-rr-graduation-cap{% endblock %}
 {% block portal_label %}Account{% endblock %}
 {% block role_label %}{{ request.user.profile.get_role_display|default:"Administrator" }}{% endblock %}
 

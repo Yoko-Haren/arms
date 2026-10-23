@@ -1,0 +1,107 @@
+{% extends 'admin/base.html' %}
+{% block title %}Requests{% endblock %}
+{% block page_title %}Requests{% endblock %}
+
+{% block extra_css %}
+<style>
+    .rq-head p { color: #4a5568; font-size: 0.9rem; margin: 0.2rem 0 0; }
+    .rq-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.1rem 0 1rem; }
+    .rq-tabs a { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.45rem 0.85rem; border: 1px solid #e3e7f1; border-radius: 999px;
+                 background: #fff; color: #3d4766; font-size: 0.86rem; font-weight: 600; text-decoration: none; }
+    .rq-tabs a:hover { border-color: #c6cde4; color: #0b1230; }
+    .rq-tabs a em { padding: 0.05rem 0.45rem; border-radius: 999px; background: #eef1fd; color: #123499; font-size: 0.74rem; font-style: normal; }
+    .rq-tabs a.active { background: #123499; border-color: #123499; color: #fff; }
+    .rq-tabs a.active em { background: rgba(255, 255, 255, 0.2); color: #fff; }
+    .rq-search { max-width: 440px; margin-bottom: 1.1rem; }
+    .rq-card { padding: 1.1rem 1.2rem; border: 1px solid #e6e9f3; border-radius: 16px; background: #fff; }
+    .rq-card + .rq-card { margin-top: 0.8rem; }
+    .rq-card.is-new { border-left: 4px solid #123499; }
+    .rq-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    .rq-kind { display: inline-flex; align-items: center; gap: 0.4rem; color: #123499; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+    .rq-status { padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+    .rq-status.s-new { background: #eef1fd; color: #123499; }
+    .rq-status.s-contacted { background: #fffaeb; color: #93370d; }
+    .rq-status.s-done { background: #f2f4f7; color: #475467; }
+    .rq-title { margin: 0.5rem 0 0.25rem; color: #0b1230; font-size: 1.05rem; font-weight: 700; }
+    .rq-meta { display: flex; flex-wrap: wrap; gap: 0.3rem 1.1rem; color: #4a5568; font-size: 0.86rem; }
+    .rq-meta span { display: inline-flex; align-items: center; gap: 0.35rem; }
+    .rq-meta a { color: #123499; text-decoration: none; }
+    .rq-meta a:hover { text-decoration: underline; }
+    .rq-msg { margin: 0.75rem 0 0; padding: 0.75rem 0.9rem; border-radius: 12px; background: #f6f7fc; color: #3d4766; font-size: 0.9rem; white-space: pre-wrap; }
+    .rq-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-top: 0.9rem; }
+    .rq-actions form { display: flex; align-items: center; gap: 0.4rem; margin: 0; }
+    .rq-actions select { width: auto; }
+    .rq-by { color: #4a5568; font-size: 0.8rem; }
+    .rq-warn { display: inline-flex; align-items: center; gap: 0.35rem; color: #93370d; font-size: 0.8rem; }
+    .rq-empty { padding: 3rem 1rem; border: 1px dashed #d5dbeb; border-radius: 16px; background: #fff; color: #4a5568; text-align: center; }
+    .rq-empty i { font-size: 2rem; color: #123499; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rq-head">
+    <h2 class="h5 mb-0">Requests from the website</h2>
+    <p>Schools asking for ARMS, and people who need help signing in. Each request is also emailed to {{ contact_email }}.</p>
+</div>
+
+<nav class="rq-tabs" aria-label="Show requests">
+    {% for key, label, count in tabs %}
+    <a href="?show={{ key }}{% if search %}&amp;q={{ search|urlencode }}{% endif %}" class="{% if key == show %}active{% endif %}"{% if key == show %} aria-current="page"{% endif %}>{{ label }}<em>{{ count }}</em></a>
+    {% endfor %}
+</nav>
+
+<form method="get" class="rq-search" role="search">
+    <input type="hidden" name="show" value="{{ show }}">
+    <div class="input-group">
+        <input class="form-control" name="q" value="{{ search }}" placeholder="Search name, email, school or message" aria-label="Search requests">
+        <button class="btn btn-primary" type="submit" aria-label="Search"><i class="fi fi-rr-search"></i></button>
+    </div>
+</form>
+
+{% for item in page %}
+<article class="rq-card{% if item.status == 'new' %} is-new{% endif %}">
+    <div class="rq-top">
+        <span class="rq-kind"><i class="fi {% if item.topic == 'school' %}fi-rr-school{% else %}fi-rr-headset{% endif %}" aria-hidden="true"></i>{{ item.get_topic_display }}</span>
+        <span class="rq-status s-{{ item.status }}">{{ item.get_status_display }}</span>
+    </div>
+    <h3 class="rq-title">{% if item.topic == 'school' %}{{ item.school_name }}{% else %}{{ item.name }}{% endif %}</h3>
+    <div class="rq-meta">
+        {% if item.topic == 'school' %}<span><i class="fi fi-rr-user" aria-hidden="true"></i>{{ item.name }}{% if item.position %}, {{ item.position }}{% endif %}</span>
+        {% elif item.school_name %}<span><i class="fi fi-rr-school" aria-hidden="true"></i>{{ item.school_name }}</span>{% endif %}
+        <span><i class="fi fi-rr-envelope" aria-hidden="true"></i><a href="mailto:{{ item.email }}">{{ item.email }}</a></span>
+        {% if item.phone %}<span><i class="fi fi-rr-phone-call" aria-hidden="true"></i><a href="tel:{{ item.phone }}">{{ item.phone }}</a></span>{% endif %}
+        <span><i class="fi fi-rr-clock" aria-hidden="true"></i><time datetime="{{ item.created_at|date:'c' }}" title="{{ item.created_at|date:'F j, Y, g:i A' }}">{{ item.created_at|timesince }} ago</time></span>
+    </div>
+    {% if item.message %}<p class="rq-msg">{{ item.message }}</p>{% endif %}
+    <div class="rq-actions">
+        <a class="btn btn-primary btn-sm" href="mailto:{{ item.email }}?subject=Re%3A%20your%20ARMS%20{% if item.topic == 'school' %}request{% else %}sign-in%20question{% endif %}"><i class="fi fi-rr-reply-all" aria-hidden="true"></i> Reply by email</a>
+        <form method="post" action="{% url 'admin_panel:request_update' item.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <label class="visually-hidden" for="status{{ item.id }}">Status</label>
+            <select class="form-select form-select-sm" id="status{{ item.id }}" name="status">
+                {% for value, label in statuses %}<option value="{{ value }}"{% if value == item.status %} selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+            <button class="btn btn-outline-secondary btn-sm" type="submit">Save</button>
+        </form>
+        {% if item.handled_by %}<span class="rq-by">{{ item.get_status_display }} by {{ item.handled_by.get_full_name|default:item.handled_by.username }}, {{ item.handled_at|date:'M j' }}</span>{% endif %}
+        {% if not item.email_sent %}<span class="rq-warn"><i class="fi fi-rr-triangle-warning" aria-hidden="true"></i>The email to {{ contact_email }} was not sent. Check the email settings.</span>{% endif %}
+    </div>
+</article>
+{% empty %}
+<div class="rq-empty">
+    <i class="fi fi-rr-inbox" aria-hidden="true"></i>
+    <p class="mt-2 mb-0">{% if search %}No request matches "{{ search }}".{% elif show == 'new' %}No new requests. You are all caught up.{% else %}No requests yet.{% endif %}</p>
+</div>
+{% endfor %}
+
+{% if page.has_other_pages %}
+<nav class="mt-3" aria-label="Pages">
+    <ul class="pagination">
+        {% if page.has_previous %}<li class="page-item"><a class="page-link" href="?show={{ show }}&amp;q={{ search|urlencode }}&amp;page={{ page.previous_page_number }}">Previous</a></li>{% endif %}
+        <li class="page-item disabled"><span class="page-link">Page {{ page.number }} of {{ page.paginator.num_pages }}</span></li>
+        {% if page.has_next %}<li class="page-item"><a class="page-link" href="?show={{ show }}&amp;q={{ search|urlencode }}&amp;page={{ page.next_page_number }}">Next</a></li>{% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

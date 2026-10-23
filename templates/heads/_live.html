@@ -13,7 +13,7 @@
             <i class="fi fi-rr-refresh"></i><span>New grades are in.</span>
             <button type="button" class="live-link" id="liveApply">Update now</button>
         </div>
-        <ul class="live-list" id="liveList"><li class="live-empty">Loading&hellip;</li></ul>
+        <ul class="live-list" id="liveList" aria-busy="true">{% for _ in "123" %}<li class="live-skel" aria-hidden="true"><span class="skel skel-circle"></span><span class="live-skel-text"><span class="skel skel-line w-70"></span><span class="skel skel-line sm w-90"></span></span></li>{% endfor %}<li class="sr-only">Loading notifications</li></ul>
         <div class="live-foot">
             <label class="live-switch"><input type="checkbox" id="liveAuto" checked> Update pages automatically</label>
             <span id="liveTime"></span>

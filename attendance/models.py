@@ -1,6 +1,6 @@
 # attendance/models.py
 """
-Phase 6: Attendance models for Formify LIS.
+Phase 6: Attendance models for ARMS.
 Daily attendance records, monthly summaries, DepEd-mandated
 interventions, and SF2 reporting.
 """

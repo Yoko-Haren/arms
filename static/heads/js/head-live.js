@@ -44,6 +44,7 @@
         badge.hidden = !unread;
         badge.textContent = unread > 99 ? '99+' : String(unread);
         btn.setAttribute('aria-label', unread ? 'Notifications, ' + unread + ' unread' : 'Notifications');
+        list.removeAttribute('aria-busy');
         if (!data.notifications.length) {
             list.innerHTML = '<li class="live-empty">You are all caught up. Grade validations and locked periods will show here.</li>';
             return;

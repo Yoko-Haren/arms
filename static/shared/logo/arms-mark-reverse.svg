@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ARMS">
+  <defs>
+    <linearGradient id="arms-mark-ink" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#667eea"/>
+      <stop offset="1" stop-color="#764ba2"/>
+    </linearGradient>
+  </defs>
+  <path fill="#fff" d="M14 0H46L64 18V50A14 14 0 0 1 50 64H14A14 14 0 0 1 0 50V14A14 14 0 0 1 14 0Z"/>
+  <path fill="#764ba2" fill-opacity=".2" d="M46 0V13A5 5 0 0 0 51 18H64Z"/>
+  <g fill="none" stroke="url(#arms-mark-ink)" stroke-linecap="round" stroke-linejoin="round">
+    <path stroke-width="6.5" d="M29.5 26 18 52M32.5 26 44 52"/>
+    <path stroke-width="5.5" d="M22 43.5H40"/>
+    <path stroke-width="2.4" d="M45.5 23V32"/>
+  </g>
+  <path fill="url(#arms-mark-ink)" d="M31 14 46.5 22 31 30 15.5 22Z"/>
+  <circle cx="45.5" cy="33.5" r="2.4" fill="url(#arms-mark-ink)"/>
+</svg>

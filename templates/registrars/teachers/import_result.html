@@ -2,110 +2,114 @@
 {% load static %}
 
 {% block title %}Teachers Imported - ARMS{% endblock %}
-{% block subtitle %}Import finished — {{ school.school_name }}{% endblock %}
+{% block subtitle %}Teachers &bull; Import &bull; Done{% endblock %}
 
 {% block extra_css %}
 <style>
-    .cred-scroll { max-height: 520px; overflow-y: auto; border-radius: 14px; border: 1px solid var(--border-color); }
-    .cred-scroll thead th { position: sticky; top: 0; z-index: 1; }
-    .cred { font-family: Consolas, monospace; font-size: 0.8rem; background: var(--gray-bg); padding: 0.15rem 0.45rem; border-radius: 6px; }
+    .creds { overflow-x: auto; }
+    .creds .table td { white-space: nowrap; }
+    .cred { font-family: Consolas, 'Courier New', monospace; font-size: 0.82rem; background: var(--soft); padding: 0.18rem 0.5rem; border-radius: 6px; }
+    .reasons { list-style: none; margin: 0; padding: 0; font-size: 0.78rem; color: var(--risk); }
+    .reasons li::before { content: '\2022'; margin-right: 0.35rem; }
 </style>
 {% endblock %}
 
 {% block content %}
+<div class="tp">
+    <section class="card tp-head">
+        <div>
+            <h2><i class="fi fi-rr-{% if created %}check-circle{% else %}exclamation{% endif %}" style="color:{% if created %}#2E7D32{% else %}#C62828{% endif %};"></i>
+                {% if created %}{{ created|length }} teacher account{{ created|length|pluralize }} made{% else %}No account was made{% endif %}</h2>
+            <p class="hint">{% if created %}Give each teacher their username and temporary password. They set their own password the first time they sign in.{% else %}Every row had a problem. Fix the file and upload it again.{% endif %}</p>
+        </div>
+        <div class="actions">
+            {% if created %}<button type="button" class="btn btn-main" id="downloadBtn"><i class="fi fi-rr-download"></i> Download sign-in details (CSV)</button>{% endif %}
+            <a class="btn btn-line" href="{% url 'registrars:teacher_list' %}" {% if created %}data-confirm="The temporary passwords will not be shown again. Did you download or copy them?" data-confirm-title="Leave this page?" data-confirm-ok="Yes, leave"{% endif %}>
+                <i class="fi fi-rr-chalkboard-user"></i> Go to teachers</a>
+        </div>
+    </section>
 
-<div class="page-head">
-    <h3><i class="fi fi-rr-check-circle"></i> {{ created|length }} Teacher Account{{ created|length|pluralize }} Created</h3>
-    <div class="page-head-actions">
-        {% if created %}<button type="button" class="btn-primary" id="downloadBtn"><i class="fi fi-rr-download"></i> Download Credentials (CSV)</button>{% endif %}
-        <a href="{% url 'registrars:teacher_list' %}" class="btn-outline" {% if created %}data-confirm="The temporary passwords will not be shown again. Have you saved or downloaded them?" data-confirm-title="Leave this page?" data-confirm-ok="Yes, leave"{% endif %}>
-            <i class="fi fi-rr-chalkboard-user"></i> Go to Teachers
-        </a>
-    </div>
-</div>
+    {% if created %}
+    <div class="note warn"><i class="fi fi-rr-triangle-warning"></i><span><b>These temporary passwords are shown only once.</b> Download or copy them now, before you leave this page.</span></div>
 
-{% if created %}
-<div class="flash warning">
-    <i class="fi fi-rr-triangle-warning"></i>
-    <div class="flash-body">
-        <strong>These temporary passwords are shown only once.</strong> Download or copy them now and hand them to each teacher.
-        Every teacher is asked to set their own password the first time they sign in.
-    </div>
-</div>
+    <section class="card panel" aria-labelledby="credTitle">
+        <div class="panel-head"><h3 id="credTitle"><i class="fi fi-rr-key" style="color:#123499;"></i> Sign-in details</h3>
+            <button type="button" class="btn btn-line btn-sm" id="copyAll"><i class="fi fi-rr-copy"></i> Copy all</button></div>
+        <div class="creds">
+            <table class="table" id="credTable">
+                <thead><tr><th style="width:2.5rem;">#</th><th>Teacher</th><th>Username</th><th>Temporary password</th><th><span class="sr-only">Copy</span></th></tr></thead>
+                <tbody>
+                    {% for c in created %}
+                    <tr>
+                        <td class="muted">{{ forloop.counter }}</td>
+                        <td><b data-col="name">{{ c.name }}</b></td>
+                        <td><span class="cred" data-col="username">{{ c.username }}</span></td>
+                        <td><span class="cred" data-col="password">{{ c.password }}</span></td>
+                        <td style="text-align:right;"><button type="button" class="btn btn-ghost btn-sm" data-copy-row aria-label="Copy the sign-in details of {{ c.name }}"><i class="fi fi-rr-copy"></i></button></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% else %}
+    <section class="card panel"><p class="empty"><i class="fi fi-rr-folder-open"></i>No account was made.
+        <span style="display:block;margin-top:0.8rem;"><a class="btn btn-main" href="{% url 'registrars:teacher_import' %}"><i class="fi fi-rr-upload"></i> Upload again</a></span></p></section>
+    {% endif %}
 
-<div class="card">
-    <div class="cred-scroll">
-        <table id="credTable">
-            <thead><tr><th style="width:50px;">#</th><th>Teacher</th><th>Username</th><th>Temporary Password</th></tr></thead>
-            <tbody>
-                {% for c in created %}
-                <tr>
-                    <td style="color:#718096;">{{ forloop.counter }}</td>
-                    <td><strong>{{ c.name }}</strong></td>
-                    <td><span class="cred" data-col="username">{{ c.username }}</span></td>
-                    <td><span class="cred" data-col="password">{{ c.password }}</span></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    {% if skipped %}
+    <section class="card panel" aria-labelledby="skipTitle">
+        <div class="panel-head"><h3 id="skipTitle"><i class="fi fi-rr-ban" style="color:#C62828;"></i> Skipped rows ({{ skipped|length }})</h3></div>
+        <div style="overflow-x:auto;">
+            <table class="table">
+                <thead><tr><th>Name</th><th>Email</th><th>Why</th></tr></thead>
+                <tbody>
+                    {% for r in skipped %}
+                    <tr><td><b>{{ r.data.last_name|default:"—" }}</b>{% if r.data.first_name %}, {{ r.data.first_name }}{% endif %}</td>
+                        <td>{{ r.data.email|default:"—" }}</td>
+                        <td><ul class="reasons">{% for e in r.errors %}<li>{{ e }}</li>{% endfor %}</ul></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
 </div>
-{% else %}
-<div class="card">
-    <div class="empty-state">
-        <i class="fi fi-rr-folder-open"></i>
-        <h5>No Accounts Were Created</h5>
-        <p>Every row had a problem. Fix the file and try again.</p>
-        <a href="{% url 'registrars:teacher_import' %}" class="btn-primary"><i class="fi fi-rr-upload"></i> Upload Again</a>
-    </div>
-</div>
-{% endif %}
-
-{% if skipped %}
-<div class="card">
-    <div class="section-header"><h2><i class="fi fi-rr-exclamation"></i> Skipped Rows ({{ skipped|length }})</h2></div>
-    <div class="table-responsive">
-        <table>
-            <thead><tr><th>Name</th><th>Email</th><th>Reason</th></tr></thead>
-            <tbody>
-                {% for r in skipped %}
-                <tr>
-                    <td>{{ r.data.last_name|default:"—" }}{% if r.data.first_name %}, {{ r.data.first_name }}{% endif %}</td>
-                    <td>{{ r.data.email|default:"—" }}</td>
-                    <td>{% for error in r.errors %}<span class="badge badge-danger">{{ error }}</span> {% endfor %}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-{% endif %}
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    var downloadBtn = document.getElementById('downloadBtn');
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', function() {
-            function cell(text) { return '"' + String(text).replace(/"/g, '""') + '"'; }
-            var lines = ['name,username,temporary_password'];
-            document.querySelectorAll('#credTable tbody tr').forEach(function(row) {
-                lines.push([
-                    cell(row.cells[1].textContent.trim()),
-                    cell(row.querySelector('[data-col="username"]').textContent),
-                    cell(row.querySelector('[data-col="password"]').textContent)
-                ].join(','));
-            });
-            var blob = new Blob([lines.join('\r\n')], {type: 'text/csv'});
-            var link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'teacher_credentials.csv';
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            ARMS.toast('Credentials downloaded. Keep the file safe.', 'success');
+(function () {
+    var table = document.getElementById('credTable');
+    if (!table) return;
+    function rows() {
+        return Array.prototype.map.call(table.tBodies[0].rows, function (tr) {
+            return ['name', 'username', 'password'].map(function (k) { return tr.querySelector('[data-col="' + k + '"]').textContent.trim(); });
         });
     }
+    function copy(text, button) {
+        var done = function () { var old = button.innerHTML; button.innerHTML = '<i class="fi fi-rr-check"></i>' + (button.id === 'copyAll' ? ' Copied' : ''); setTimeout(function () { button.innerHTML = old; }, 1500); };
+        if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () { window.prompt('Copy this', text); });
+        else window.prompt('Copy this', text);
+    }
+    document.getElementById('copyAll').addEventListener('click', function () {
+        copy(rows().map(function (r) { return r[0] + '\t' + r[1] + '\t' + r[2]; }).join('\n'), this);
+    });
+    table.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-copy-row]');
+        if (!b) return;
+        var tr = b.closest('tr');
+        copy(['name', 'username', 'password'].map(function (k) { return tr.querySelector('[data-col="' + k + '"]').textContent.trim(); }).join('\t'), b);
+    });
+    document.getElementById('downloadBtn').addEventListener('click', function () {
+        var cell = function (t) { return '"' + String(t).replace(/"/g, '""') + '"'; };
+        var lines = ['name,username,temporary_password'].concat(rows().map(function (r) { return r.map(cell).join(','); }));
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(new Blob([lines.join('\r\n')], { type: 'text/csv' }));
+        link.download = 'teacher_sign_in_details.csv';
+        document.body.appendChild(link); link.click(); link.remove();
+        if (window.ARMS && ARMS.toast) ARMS.toast('Sign-in details downloaded. Keep the file safe.', 'success');
+    });
+})();
 </script>
 {% endblock %}

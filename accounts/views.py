@@ -10,10 +10,11 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout as auth_logout
 from django.contrib import messages
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.conf import settings
 from django.views.decorators.http import require_http_methods
 from .models import UserProfile, LoginAttempt
-from .services.sessions import end_other_sessions
+from .services.sessions import end_other_sessions, remember_session
 
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,26 @@ def _get_dashboard_url(role):
     return redirects.get(role, '/')
 
 
+def _safe_next(request):
+    """The page a signed-out visitor was trying to open (?next=...), if it is a page on this site."""
+    target = (request.POST.get('next') or request.GET.get('next') or '').strip()
+    if not target.startswith('/') or target.startswith('/accounts/signin'):
+        return ''
+    if not url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return ''
+    return target
+
+
+def _signin_page(request, error=None):
+    """The sign-in page, keeping what was typed: the username, Remember me and where to go next."""
+    return render(request, 'shared/accounts/signin.html', {
+        'error': error,
+        'username': request.POST.get('username', '').strip(),
+        'remember': request.POST.get('remember') == '1',
+        'next': _safe_next(request),
+    })
+
+
 def signin(request):
     # ── If already logged in, redirect to their dashboard ──
     if request.user.is_authenticated:
@@ -60,7 +81,7 @@ def signin(request):
             role = request.user.profile.role
         except UserProfile.DoesNotExist:
             role = 'teacher'
-        return redirect(_get_dashboard_url(role))
+        return redirect(_safe_next(request) or _get_dashboard_url(role))
 
     error_message = None
 
@@ -73,9 +94,7 @@ def signin(request):
         # ── 1. Basic input validation ──
         if not username or not password:
             error_message = 'Please enter both username and password.'
-            return render(request, 'shared/accounts/signin.html', {
-                'error': error_message,
-            })
+            return _signin_page(request, error_message)
 
         # ── 2. Check if account is locked ──
         if _is_account_locked(username):
@@ -89,9 +108,7 @@ def signin(request):
                 f'Account temporarily locked due to {MAX_LOGIN_ATTEMPTS} failed attempts. '
                 f'Please wait {LOCKOUT_DURATION_MINUTES} minutes or contact your administrator.'
             )
-            return render(request, 'shared/accounts/signin.html', {
-                'error': error_message,
-            })
+            return _signin_page(request, error_message)
 
         # ── 3. Pre-hash with salt (adds latency for brute-force) ──
         _hash_password_with_salt(password)
@@ -110,9 +127,7 @@ def signin(request):
                     user=user,
                 )
                 error_message = 'Your account has been deactivated. Contact your administrator.'
-                return render(request, 'shared/accounts/signin.html', {
-                    'error': error_message,
-                })
+                return _signin_page(request, error_message)
 
             # ── 6. Get user's role from profile (server-side, not client input) ──
             try:
@@ -132,10 +147,11 @@ def signin(request):
             )
 
             login(request, user)
+            remember_session(request, request.POST.get('remember') == '1')
             end_other_sessions(user, request.session.session_key)  # single session per user
 
-            # ── 8. Redirect based on actual role from database ──
-            return redirect(_get_dashboard_url(actual_role))
+            # ── 8. Back to the page they asked for, or their dashboard (role from the database) ──
+            return redirect(_safe_next(request) or _get_dashboard_url(actual_role))
 
         else:
             # ── 9. Failed login — log it ──
@@ -163,12 +179,10 @@ def signin(request):
             else:
                 error_message = 'Invalid username or password.'
 
-            return render(request, 'shared/accounts/signin.html', {
-                'error': error_message,
-            })
+            return _signin_page(request, error_message)
 
     # GET request — show empty form
-    return render(request, 'shared/accounts/signin.html', {'error': error_message})
+    return _signin_page(request, error_message)
 
 
 def signout(request):

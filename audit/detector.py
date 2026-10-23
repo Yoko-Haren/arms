@@ -1,5 +1,5 @@
 """
-Poro AI — Anomaly Detection Engine for Formify LIS
+Poro AI — Anomaly Detection Engine for ARMS
 Detects suspicious patterns in grades, logins, and data modifications.
 SQLite-compatible version.
 """

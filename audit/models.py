@@ -1,5 +1,5 @@
 """
-Phase 13: Audit Trail & Blockchain models for Formify LIS.
+Phase 13: Audit Trail & Blockchain models for ARMS.
 Immutable activity logs with cryptographic blockchain verification
 (SHA-256 chained hashes), anomaly detection events with AI model
 confidence scoring and investigation workflow, and formal data

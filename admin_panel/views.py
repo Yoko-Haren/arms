@@ -11,18 +11,22 @@ from django.db.models import ProtectedError
 from django.http import JsonResponse
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 from datetime import datetime, time, timedelta
+from urllib.parse import urlencode
 import secrets
 
 # ===== USE THE REAL MODELS =====
 from academics.models import School, GradeLevel, SchoolYear, Quarter, GradingSchema
 from accounts.models import UserProfile
+from accounts.views import _get_dashboard_url
+from communication.models import ContactRequest
 from enrollment.models import Enrollment
 
 from core.caching import remember_filters
 
 from .forms import (
-    AdminLoginForm, SchoolForm, PrincipalCreationForm, PrincipalEditForm,
+    SchoolForm, PrincipalCreationForm, PrincipalEditForm,
     RegistrarCreationForm, GradeLevelForm, SchoolYearForm, QuarterForm,
     QuarterUpdateForm, GRADE_NUMBERS, PERIOD_CONFIG, period_config,
     default_registrar_account,
@@ -57,42 +61,8 @@ def get_school_students(school):
     ).select_related('student', 'section__grade_level')
 
 
-def _period_deadlines(date_end):
-    """Default grade encoding / validation deadlines: 7 and 14 days after a period ends."""
-    end = datetime.combine(date_end, time(23, 59))
-    if settings.USE_TZ:
-        end = timezone.make_aware(end)
-    return end + timedelta(days=7), end + timedelta(days=14)
-
-
-def _generate_periods(sy):
-    """Create the missing grading periods of a school year, split evenly over its dates.
-
-    The number of periods and their labels follow the school's period type.
-    Returns (created, already_existing).
-    """
-    cfg = period_config(sy.school)
-    count = cfg['count']
-    length = ((sy.date_end - sy.date_start).days + 1) // count
-    created = 0
-    with transaction.atomic():
-        for i in range(count):
-            start = sy.date_start + timedelta(days=length * i)
-            end = sy.date_end if i == count - 1 else start + timedelta(days=length - 1)
-            encoding, validation = _period_deadlines(end)
-            _, was_created = Quarter.objects.get_or_create(
-                school_year=sy,
-                quarter_number=i + 1,
-                defaults={
-                    'quarter_label': f'{cfg["prefix"]}{i + 1}',
-                    'date_start': start,
-                    'date_end': end,
-                    'grade_encoding_deadline': encoding,
-                    'grade_validation_deadline': validation,
-                },
-            )
-            created += was_created
-    return created, count - created
+# Grading periods are created the same way here and on the School Head's School Year page.
+from academics.school_years import generate_periods as _generate_periods, period_deadlines as _period_deadlines  # noqa: E402
 
 
 def _with_period_info(school_years):
@@ -126,25 +96,18 @@ def _log_admin_action(request, action_type, description):
 # =============================================================================
 
 def admin_login(request):
-    if request.user.is_authenticated and is_admin(request.user):
-        return redirect('admin_panel:dashboard')
-    if request.method == 'POST':
-        form = AdminLoginForm(request.POST)
-        if form.is_valid():
-            username = form.cleaned_data['username']
-            password = form.cleaned_data['password']
-            user = authenticate(request, username=username, password=password)
-            if user and is_admin(user):
-                login(request, user)
-                messages.success(request, f'Welcome back, {user.get_full_name() or user.username}!')
-                return redirect(request.GET.get('next', 'admin_panel:dashboard'))
-            elif user:
-                messages.error(request, 'You do not have admin privileges.')
-            else:
-                messages.error(request, 'Invalid username or password.')
-    else:
-        form = AdminLoginForm()
-    return render(request, 'admin/login.html', {'form': form})
+    """The admin portal has no sign-in page of its own: everyone signs in on the shared page,
+    which sends administrators to the admin dashboard."""
+    if request.user.is_authenticated:
+        if is_admin(request.user):
+            return redirect('admin_panel:dashboard')
+        messages.error(request, 'That page is only for ARMS administrators.')
+        profile = getattr(request.user, 'profile', None)
+        return redirect(_get_dashboard_url(profile.role if profile else ''))
+    target = reverse('signin')
+    if request.GET.get('next'):
+        target += '?' + urlencode({'next': request.GET['next']})
+    return redirect(target)
 
 
 def admin_logout(request):
@@ -212,6 +175,7 @@ def dashboard(request):
         'school_distribution': school_distribution,  # ✅ Renamed from school_type_distribution
         'schools_without_principal': schools_without_principal,
         'schools_without_sy': schools_without_sy,
+        'new_request_count': ContactRequest.objects.filter(status=ContactRequest.STATUS_NEW).count(),
     }
     return render(request, 'admin/dashboard.html', context)
 
@@ -863,3 +827,59 @@ def check_school_id(request):
 @user_passes_test(is_admin, login_url='admin_panel:login')
 def check_username(request):
     return JsonResponse({'exists': User.objects.filter(username=request.GET.get('username', '')).exists()})
+
+
+# =============================================================================
+# REQUESTS (the landing page's "Contact us" form and the sign-in help dialog)
+# =============================================================================
+
+REQUEST_VIEWS = {
+    'new': ('New', Q(status=ContactRequest.STATUS_NEW)),
+    'school': ('School requests', Q(topic=ContactRequest.TOPIC_SCHOOL)),
+    'support': ('Sign-in help', Q(topic=ContactRequest.TOPIC_SUPPORT)),
+    'all': ('All', Q()),
+}
+
+
+@login_required
+@user_passes_test(is_admin, login_url='admin_panel:login')
+def request_list(request):
+    show = request.GET.get('show', 'new')
+    if show not in REQUEST_VIEWS:
+        show = 'new'
+    search = request.GET.get('q', '').strip()
+    requests_qs = ContactRequest.objects.filter(REQUEST_VIEWS[show][1]).select_related('handled_by')
+    if search:
+        requests_qs = requests_qs.filter(
+            Q(name__icontains=search) | Q(email__icontains=search) | Q(school_name__icontains=search) | Q(message__icontains=search)
+        )
+    counts = {key: ContactRequest.objects.filter(rule).count() for key, (_, rule) in REQUEST_VIEWS.items()}
+    page = Paginator(requests_qs, 20).get_page(request.GET.get('page'))
+    return render(request, 'admin/request_list.html', {
+        'page': page,
+        'show': show,
+        'search': search,
+        'tabs': [(key, label, counts[key]) for key, (label, _) in REQUEST_VIEWS.items()],
+        'statuses': ContactRequest.STATUS_CHOICES,
+        'contact_email': settings.ARMS_CONTACT_EMAIL,
+    })
+
+
+@login_required
+@user_passes_test(is_admin, login_url='admin_panel:login')
+@require_POST
+def request_update(request, request_id):
+    contact = get_object_or_404(ContactRequest, pk=request_id)
+    status = request.POST.get('status')
+    if status in dict(ContactRequest.STATUS_CHOICES):
+        contact.status = status
+        handled = status != ContactRequest.STATUS_NEW
+        contact.handled_by = request.user if handled else None
+        contact.handled_at = timezone.now() if handled else None
+        contact.save(update_fields=['status', 'handled_by', 'handled_at'])
+        messages.success(request, f'{contact.school_name or contact.name} is marked {contact.get_status_display().lower()}.')
+    back = request.POST.get('next', '')
+    if not back.startswith('/admin-panel/requests/'):
+        back = reverse('admin_panel:request_list')
+    return redirect(back)
+

@@ -1,6 +1,6 @@
 # documentation/models.py || forms/models.py
 """
-Phase 9: School Forms & Documentation models for Formify LIS.
+Phase 9: School Forms & Documentation models for ARMS.
 Form submissions and compliance tracking (SF1-SF10), SF10 permanent
 record history (Form 137-A), SF9 report card history, and document
 request management with tracking and release workflow.

@@ -3,7 +3,6 @@
 
 {% block title %}ARMS - Academic Records Management System{% endblock %}
 {% block home_url %}{% url 'heads-ai-dashboard' %}{% endblock %}
-{% block brand_icon %}fi-rr-graduation-cap{% endblock %}
 {% block portal_label %}School Head Portal{% endblock %}
 {% block role_label %}School Principal{% endblock %}
 {% block subtitle %}Academic Records Management System{% endblock %}
@@ -11,12 +10,15 @@
 {% block sidebar_nav %}{% include 'heads/_nav.html' %}{% endblock %}
 
 {% block portal_css %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap">
     <style>
-        * { 
-            margin: 0; 
-            padding: 0; 
-            box-sizing: border-box; 
-            font-family: 'Segoe UI', 'Century Gothic', sans-serif; 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
         }
         
         :root {
@@ -686,9 +688,15 @@
         @media print { .sidebar { display: none !important; } #mainContent { margin-left: 0 !important; } }
     </style>
     <link rel="stylesheet" href="{% static 'heads/css/head-live.css' %}">
+    <link rel="stylesheet" href="{% static 'heads/css/head-portal.css' %}">
+    <script>
+        /* explanations start hidden (the Details button in the top bar); set before the page paints, so nothing jumps */
+        try { document.documentElement.dataset.explain = localStorage.getItem('arms-explain') || 'off'; }
+        catch (e) { document.documentElement.dataset.explain = 'off'; }
+    </script>
 {% endblock %}
 
-{% block top_bar_actions %}{% include 'heads/_live.html' %}{% endblock %}
+{% block top_bar_actions %}{% include 'heads/_explain.html' %}{% include 'heads/_live.html' %}{% endblock %}
 
 {% block portal_body %}
     <!-- Modal Container -->
@@ -702,10 +710,11 @@
             </div>
         </div>
     </div>
-
+    {% include 'heads/_skeletons.html' %}
 {% endblock %}
 
 {% block portal_js %}
+    <script src="{% static 'heads/js/head-skeleton.js' %}"></script>
     <script>
     (function() {
         // ===== UTILITY FUNCTIONS =====

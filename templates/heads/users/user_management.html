@@ -33,21 +33,77 @@
     .um-input:focus, .um-select:focus { outline: none; border-color: #123499; background: white; box-shadow: 0 0 0 3px rgba(18,52,153,0.1); }
     .um-input.search { min-width: 240px; }
 
-    #userTable { min-width: 1040px; }
-    #userTable td { white-space: nowrap; }
+    /* The table fits its card: cells wrap, and narrow cards switch to one block per user (below) */
+    .um-table { container: um-table / inline-size; }
+    #userTable th, #userTable td { padding-left: 0.75rem; padding-right: 0.75rem; }
+    #userTable td { vertical-align: middle; }
+    #userTable .badge, .um-when, .um-signin { white-space: nowrap; }
     .um-user { display: flex; align-items: center; gap: 0.7rem; }
+    .um-who { min-width: 0; }
     .um-avatar { width: 36px; height: 36px; border-radius: 10px; background: var(--ai-gradient); color: white; font-size: 0.78rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .um-avatar.off { background: #cbd5e0; }
     .um-name { font-weight: 600; color: var(--rich-black); }
-    .um-sub { font-size: 0.74rem; color: var(--text-secondary); }
+    .um-sub { font-size: 0.74rem; color: var(--text-secondary); overflow-wrap: anywhere; }
+    .um-c-role .um-sub { margin-top: 0.25rem; }
     .um-signin { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: var(--text-primary); }
     .um-signin svg { width: 16px; height: 16px; flex-shrink: 0; }
     .um-signin i { color: var(--text-secondary); }
-    .um-actions { display: flex; gap: 0.35rem; }
-    .um-danger { border-color: var(--danger-bg) !important; color: var(--danger-red) !important; }
-    .um-danger:hover { border-color: var(--danger-red) !important; background: var(--danger-bg) !important; }
+    .um-c-seen { font-size: 0.78rem; }
+    #userTable .um-c-menu { width: 1%; text-align: right; }
     tr.um-off td { opacity: 0.6; }
     tr.um-off td:last-child { opacity: 1; }
+
+    /* Row actions: one button that opens a menu */
+    .um-kebab {
+        width: 34px; height: 34px; border-radius: 10px; border: 2px solid var(--border-color); background: white;
+        color: var(--text-primary); cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+        font-size: 0.95rem; transition: border-color 0.15s, color 0.15s;
+    }
+    .um-kebab i { display: inline-flex; }
+    .um-kebab:hover, .um-kebab[aria-expanded="true"] { border-color: #123499; color: #123499; }
+    .um-kebab:focus-visible { outline: 3px solid rgba(18,52,153,0.35); outline-offset: 2px; }
+    .um-menu {
+        position: fixed; z-index: 2800; min-width: 210px; padding: 0.35rem; background: white;
+        border: 1px solid #e8ecf1; border-radius: 14px; box-shadow: 0 18px 50px rgba(0,7,45,0.18);
+    }
+    .um-menu[hidden] { display: none; }
+    .um-menu-item {
+        display: flex; align-items: center; gap: 0.65rem; width: 100%; padding: 0.6rem 0.75rem; border: 0; border-radius: 10px;
+        background: none; color: var(--text-primary); font-family: inherit; font-size: 0.84rem; font-weight: 500; text-align: left; cursor: pointer;
+    }
+    .um-menu-item i { width: 18px; display: inline-flex; justify-content: center; color: var(--text-secondary); }
+    .um-menu-item:hover, .um-menu-item:focus-visible { background: var(--gray-bg); color: var(--rich-black); outline: none; }
+    .um-menu-item:focus-visible { box-shadow: inset 0 0 0 2px rgba(18,52,153,0.35); }
+    .um-menu-item.danger, .um-menu-item.danger i { color: var(--danger-red); }
+    .um-menu-item.danger:hover, .um-menu-item.danger:focus-visible { background: var(--danger-bg); color: #b02a37; }
+    .um-menu-sep { height: 1px; margin: 0.3rem 0.45rem; background: var(--border-color); }
+
+    /* Narrow card: one block per user instead of table columns, so nothing scrolls sideways.
+       The table needs about 745px with the longest badges ("School Head / Principal", "Temporary password"). */
+    @container um-table (max-width: 800px) {
+        #userTable thead { display: none; }
+        #userTable, #userTable tbody { display: block; }
+        #userTable tbody tr {
+            display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+            grid-template-areas: "user user menu" "role status status" "signin seen seen";
+            gap: 0.8rem 1rem; padding: 1rem 0.3rem; border-bottom: 1px solid var(--border-color);
+        }
+        #userTable tbody td { display: block; padding: 0; border: 0; min-width: 0; }
+        #userTable td[data-label]::before {
+            content: attr(data-label); display: block; margin-bottom: 0.3rem; font-size: 0.66rem; font-weight: 700;
+            letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-secondary);
+        }
+        #userTable td[colspan] { grid-column: 1 / -1; }
+        /* under its label the role reads as text, which can wrap in a narrow column */
+        #userTable .um-c-role .badge { display: inline; padding: 0; background: none; border-radius: 0; color: var(--rich-black); font-size: 0.82rem; white-space: normal; }
+        #userTable .um-signin { white-space: normal; }
+        #userTable .um-c-user { grid-area: user; }
+        #userTable .um-c-menu { grid-area: menu; width: auto; }
+        #userTable .um-c-role { grid-area: role; }
+        #userTable .um-c-status { grid-area: status; }
+        #userTable .um-c-signin { grid-area: signin; }
+        #userTable .um-c-seen { grid-area: seen; }
+    }
     .um-pager { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap; margin-top: 1rem; font-size: 0.8rem; color: var(--text-secondary); }
     .um-pager button { min-width: 34px; height: 34px; border-radius: 9px; border: 2px solid var(--border-color); background: white; cursor: pointer; font-family: inherit; font-size: 0.8rem; color: var(--text-primary); }
     .um-pager button.active { background: #123499; border-color: #123499; color: white; }
@@ -139,13 +195,13 @@
         <span id="userCount" style="font-size:0.8rem;color:var(--text-secondary);"></span>
     </div>
 
-    <div class="table-responsive">
+    <div class="table-responsive um-table">
         <table id="userTable">
             <thead>
-                <tr><th>Name</th><th>Email</th><th>Sign-in</th><th>Role</th><th>Status</th><th>Last Active</th><th>Actions</th></tr>
+                <tr><th>User</th><th>Sign-in</th><th>Role</th><th>Status</th><th>Last Active</th><th><span class="sr-only">Actions</span></th></tr>
             </thead>
             <tbody id="userTableBody">
-                <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-secondary);">Loading users...</td></tr>
+                {% for _ in "12345678" %}<tr class="skel-tr-row" aria-hidden="true"><td class="um-c-user"><span class="skel-who"><span class="skel skel-circle"></span><span style="display:flex;flex-direction:column;gap:0.4rem"><span class="skel" style="width:8rem"></span><span class="skel" style="width:11rem;height:0.6rem"></span></span></span></td><td class="um-c-signin"><span class="skel" style="width:6.5rem"></span></td><td class="um-c-role"><span class="skel skel-pill"></span></td><td class="um-c-status"><span class="skel skel-pill" style="width:4.5rem"></span></td><td class="um-c-seen"><span class="skel" style="width:6rem"></span></td><td class="um-c-menu"><span class="skel" style="width:34px;height:34px;border-radius:10px;margin-left:auto"></span></td></tr>{% endfor %}
             </tbody>
         </table>
     </div>
@@ -309,10 +365,25 @@
             search: document.getElementById('searchInput').value,
             page: page, per_page: perPage
         });
+        var table = document.getElementById('userTable');
+        table.setAttribute('aria-busy', 'true');
+        if (!table.querySelector('.skel-tr-row')) table.classList.add('is-busy');
+        var done = function() { table.removeAttribute('aria-busy'); table.classList.remove('is-busy'); };
+        // a failed first load must not leave the skeleton rows looking like it is still loading
+        var failed = function(message) {
+            done();
+            showToast(message || 'Error loading users', 'error');
+            var body = document.getElementById('userTableBody');
+            if (body.querySelector('.skel-tr-row')) {
+                body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-secondary);">The accounts could not be loaded. ' +
+                    '<button type="button" class="btn-outline btn-sm" onclick="loadUsers()" style="margin-left:0.5rem;"><i class="fi fi-rr-refresh"></i> Try again</button></td></tr>';
+            }
+        };
         fetch("{% url 'heads-user-list-data' %}?" + query.toString())
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                if (!data.success) { showToast(data.error || 'Error loading users', 'error'); return; }
+                done();
+                if (!data.success) { failed(data.error); return; }
                 page = data.page;
                 renderUsers(data.users, data.total);
                 renderPager(data.total, data.page, data.total_pages);
@@ -321,14 +392,22 @@
                 document.getElementById('statInactive').textContent = data.stats.inactive;
                 document.getElementById('statGoogle').textContent = data.stats.google;
             })
-            .catch(function() { showToast('Error loading users', 'error'); });
+            .catch(function() { failed(); });
     };
+
+    function lastActiveMarkup(value) {
+        if (!value) return 'Never';
+        // "Oct 17, 2026 12:34": the line may break between the date and the time, nowhere else
+        var cut = value.lastIndexOf(' ');
+        return '<span class="um-when">' + esc(value.slice(0, cut)) + '</span> <span class="um-when">' + esc(value.slice(cut + 1)) + '</span>';
+    }
 
     function renderUsers(users, total) {
         var body = document.getElementById('userTableBody');
+        closeMenu();
         document.getElementById('userCount').textContent = total + ' user' + (total === 1 ? '' : 's');
         if (!users.length) {
-            body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-secondary);">No users match these filters.</td></tr>';
+            body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-secondary);">No users match these filters.</td></tr>';
             return;
         }
         body.innerHTML = users.map(function(u) {
@@ -337,22 +416,21 @@
             var status = !active ? '<span class="badge badge-danger">Inactive</span>'
                 : (u.temporary_password ? '<span class="badge badge-warning" title="Has not replaced the temporary password yet">Temporary password</span>'
                                         : '<span class="badge badge-success">Active</span>');
-            var toggle = u.is_self ? '' : (active
-                ? '<button type="button" class="btn-outline btn-sm um-danger" data-act="toggle" data-id="' + u.id + '" data-name="' + esc(u.name) + '" data-active="1"><i class="fi fi-rr-ban"></i> Deactivate</button>'
-                : '<button type="button" class="btn-outline btn-sm" data-act="toggle" data-id="' + u.id + '" data-name="' + esc(u.name) + '"><i class="fi fi-rr-check"></i> Activate</button>');
+            // a long address may wrap before the @
+            var email = u.email ? esc(u.email).replace('@', '<wbr>@') : '—';
             return '<tr class="' + (active ? '' : 'um-off') + '">' +
-                '<td><div class="um-user"><div class="um-avatar ' + (active ? '' : 'off') + '">' + esc(initials) + '</div><div>' +
+                '<td class="um-c-user"><div class="um-user"><div class="um-avatar ' + (active ? '' : 'off') + '">' + esc(initials) + '</div><div class="um-who">' +
                     '<div class="um-name">' + esc(u.name) + (u.is_self ? ' <span class="badge badge-info">You</span>' : '') + '</div>' +
-                    '<div class="um-sub">' + esc(u.designation || u.employee_number || '—') + '</div></div></div></td>' +
-                '<td>' + esc(u.email || '—') + '</td>' +
-                '<td>' + signinMarkup(u) + '</td>' +
-                '<td><span class="badge badge-info">' + esc(u.role_display) + '</span></td>' +
-                '<td>' + status + '</td>' +
-                '<td style="font-size:0.78rem;">' + esc(u.last_active || 'Never') + '</td>' +
-                '<td><div class="um-actions">' +
-                    '<button type="button" class="btn-outline btn-sm" data-act="edit" data-id="' + u.id + '"><i class="fi fi-rr-pencil"></i> Edit</button>' +
-                    '<button type="button" class="btn-outline btn-sm" data-act="reset" data-id="' + u.id + '" data-name="' + esc(u.name) + '"><i class="fi fi-rr-key"></i> Reset</button>' +
-                    toggle + '</div></td></tr>';
+                    '<div class="um-sub">' + email + '</div></div></div></td>' +
+                '<td class="um-c-signin" data-label="Sign-in">' + signinMarkup(u) + '</td>' +
+                '<td class="um-c-role" data-label="Role"><span class="badge badge-info">' + esc(u.role_display) + '</span>' +
+                    (u.designation ? '<div class="um-sub">' + esc(u.designation) + '</div>' : '') + '</td>' +
+                '<td class="um-c-status" data-label="Status">' + status + '</td>' +
+                '<td class="um-c-seen" data-label="Last active">' + lastActiveMarkup(u.last_active) + '</td>' +
+                '<td class="um-c-menu"><button type="button" class="um-kebab" data-id="' + u.id + '" data-name="' + esc(u.name) + '"' +
+                    ' data-active="' + (active ? '1' : '0') + '" data-self="' + (u.is_self ? '1' : '0') + '"' +
+                    ' aria-haspopup="menu" aria-expanded="false" aria-label="Actions for ' + esc(u.name) + '" title="Actions">' +
+                    '<i class="fi fi-rr-menu-dots-vertical"></i></button></td></tr>';
         }).join('');
     }
 
@@ -371,13 +449,83 @@
         var button = e.target.closest('button[data-page]');
         if (button && !button.disabled) loadUsers(parseInt(button.dataset.page, 10));
     });
+
+    // ---------- row actions menu ----------
+    // One menu for the whole table, attached to <body> so the table box never clips it.
+    var menu = document.createElement('div');
+    menu.className = 'um-menu';
+    menu.setAttribute('role', 'menu');
+    menu.hidden = true;
+    document.body.appendChild(menu);
+    var menuOwner = null;
+
+    function menuItems(owner) {
+        var html = '<button type="button" class="um-menu-item" role="menuitem" data-act="edit"><i class="fi fi-rr-pencil"></i> Edit details</button>' +
+                   '<button type="button" class="um-menu-item" role="menuitem" data-act="reset"><i class="fi fi-rr-key"></i> Reset password</button>';
+        if (owner.dataset.self !== '1') {   // nobody deactivates their own account
+            html += '<div class="um-menu-sep" role="separator"></div>' + (owner.dataset.active === '1'
+                ? '<button type="button" class="um-menu-item danger" role="menuitem" data-act="toggle"><i class="fi fi-rr-ban"></i> Deactivate account</button>'
+                : '<button type="button" class="um-menu-item" role="menuitem" data-act="toggle"><i class="fi fi-rr-check"></i> Activate account</button>');
+        }
+        return html;
+    }
+    function placeMenu() {
+        var r = menuOwner.getBoundingClientRect(), gap = 6, edge = 8;
+        var width = menu.offsetWidth, height = menu.offsetHeight;
+        var top = r.bottom + gap;
+        if (top + height > window.innerHeight - edge && r.top - gap - height >= edge) top = r.top - gap - height;   // open upward near the bottom
+        var left = Math.min(Math.max(r.right - width, edge), document.documentElement.clientWidth - width - edge);
+        menu.style.top = top + 'px';
+        menu.style.left = left + 'px';
+    }
+    function openMenu(owner) {
+        closeMenu();
+        menuOwner = owner;
+        menu.innerHTML = menuItems(owner);
+        menu.setAttribute('aria-label', 'Actions for ' + owner.dataset.name);
+        menu.hidden = false;
+        owner.setAttribute('aria-expanded', 'true');
+        placeMenu();
+        menu.querySelector('[role="menuitem"]').focus();
+    }
+    function closeMenu(returnFocus) {
+        if (!menuOwner) return;
+        var owner = menuOwner;
+        menuOwner = null;
+        menu.hidden = true;
+        owner.setAttribute('aria-expanded', 'false');
+        if (returnFocus) owner.focus();
+    }
     document.getElementById('userTableBody').addEventListener('click', function(e) {
-        var button = e.target.closest('button[data-act]');
+        var button = e.target.closest('.um-kebab');
         if (!button) return;
-        if (button.dataset.act === 'edit') openEdit(button.dataset.id);
-        if (button.dataset.act === 'reset') openReset(button.dataset.id, button.dataset.name);
-        if (button.dataset.act === 'toggle') toggleStatus(button.dataset.id, button.dataset.name, button.dataset.active === '1');
+        if (menuOwner === button) closeMenu(); else openMenu(button);
     });
+    menu.addEventListener('click', function(e) {
+        var item = e.target.closest('[data-act]');
+        if (!item) return;
+        var owner = menuOwner;
+        closeMenu(true);
+        if (item.dataset.act === 'edit') openEdit(owner.dataset.id);
+        if (item.dataset.act === 'reset') openReset(owner.dataset.id, owner.dataset.name);
+        if (item.dataset.act === 'toggle') toggleStatus(owner.dataset.id, owner.dataset.name, owner.dataset.active === '1');
+    });
+    menu.addEventListener('keydown', function(e) {
+        var items = [].slice.call(menu.querySelectorAll('[role="menuitem"]'));
+        var i = items.indexOf(document.activeElement);
+        if (e.key === 'ArrowDown') items[(i + 1) % items.length].focus();
+        else if (e.key === 'ArrowUp') items[(i - 1 + items.length) % items.length].focus();
+        else if (e.key === 'Home') items[0].focus();
+        else if (e.key === 'End') items[items.length - 1].focus();
+        else if (e.key === 'Tab') { closeMenu(); return; }
+        else return;
+        e.preventDefault();
+    });
+    document.addEventListener('click', function(e) {
+        if (menuOwner && !menu.contains(e.target) && !menuOwner.contains(e.target)) closeMenu();
+    });
+    window.addEventListener('resize', function() { closeMenu(); });
+    window.addEventListener('scroll', function() { closeMenu(); }, true);
 
     // ---------- modals ----------
     window.closeModals = function() {
@@ -387,7 +535,11 @@
     document.querySelectorAll('.um-modal').forEach(function(modal) {
         modal.addEventListener('click', function(e) { if (e.target === modal && modal.id !== 'credModal') closeModals(); });
     });
-    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModals(); });
+    document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Escape') return;
+        if (menuOwner) { closeMenu(true); return; }
+        closeModals();
+    });
 
     window.openAddModal = function() {
         ['addFirst', 'addLast', 'addEmail', 'addEmployee'].forEach(function(id) { document.getElementById(id).value = ''; });

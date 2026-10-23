@@ -1,6 +1,6 @@
 # enrollment/models.py
 """
-Phase 4: Enrollment models for Formify LIS.
+Phase 4: Enrollment models for ARMS.
 The pivotal link between students and academic structure.
 """
 

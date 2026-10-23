@@ -1,0 +1,174 @@
+{% extends 'registrars/base.html' %}
+{% load static %}
+
+{% block title %}Review SF1 - ARMS{% endblock %}
+{% block subtitle %}Enrollment &bull; Review the SF1 &bull; SY {{ current_sy.year_label }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .rv-sec { padding: 1rem 1.15rem 1.05rem; }
+    .opts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+    @media (max-width: 860px) { .opts { grid-template-columns: 1fr; } }
+    .roster { max-height: 560px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; margin-top: 0.8rem; }
+    .roster .table th { position: sticky; top: 0; z-index: 1; }
+    .roster tr.warnrow td { background: #fffaf0; }
+    .roster tr.badrow td { background: #fff5f5; }
+    .roster td small { display: block; color: var(--muted); font-size: 0.74rem; margin-top: 0.1rem; }
+    .codes { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+    .codes .pill { font-size: 0.68rem; }
+    .why { margin: 0.3rem 0 0; padding: 0; list-style: none; font-size: 0.74rem; color: #92400e; }
+    .why li::before { content: '• '; }
+    .left-out { margin: 0.6rem 0 0; columns: 3 14rem; font-size: 0.8rem; color: #2d3748; padding-left: 1.1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<form class="tp" method="POST" id="confirmForm">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="confirm_sf1">
+    <input type="hidden" name="token" value="{{ token }}">
+
+    <section class="card tp-head">
+        <div>
+            <h2><i class="fi fi-rr-list-check" style="color:#123499;"></i> Review the SF1</h2>
+            <p class="hint"><span class="mono" title="{{ file_name }}">{{ file_name|truncatechars:60 }}</span> &middot; {% if plan.kind == 'SHS' %}Senior High register (SF1-SHS){% else %}Junior High register{% endif %} &middot; nothing has been saved yet.</p>
+        </div>
+        <a class="btn btn-line btn-sm" href="{% url 'registrars:upload_class_list' %}"><i class="fi fi-rr-arrow-small-left"></i> Choose another file</a>
+    </section>
+
+    {% for level, text in plan.checks %}
+    <div class="note {% if level == 'error' %}risk{% else %}warn{% endif %}"><i class="fi {% if level == 'error' %}fi-rr-cross-circle{% else %}fi-rr-triangle-warning{% endif %}"></i><span>{{ text }}</span></div>
+    {% endfor %}
+
+    <section class="card rv-sec" aria-labelledby="secTitle">
+        <div class="panel-head"><h3 id="secTitle"><i class="fi fi-rr-users-alt" style="color:#123499;"></i> This section</h3></div>
+        <div class="facts">
+            <div><small>Grade level</small><b>{{ plan.grade_level.grade_name|default:plan.meta.grade_level|default:"Not stated" }}</b>
+                {% if plan.grade_level %}<span class="pill info">In ARMS</span>{% elif plan.grade_number %}<span class="pill good">Will be created</span>{% endif %}</div>
+            <div><small>Section</small><b>{{ plan.section_name|default:"Not stated" }}</b>
+                {% if plan.section %}<span class="pill info">Existing section</span>{% elif plan.section_name %}<span class="pill good">Will be created</span>{% endif %}</div>
+            {% if plan.kind == 'SHS' %}
+            <div><small>Track and strand</small><b>{{ plan.meta.track_strand|default:"Not stated" }}</b>
+                {% if plan.strand %}<span class="pill info">{{ plan.strand.strand_code }} in ARMS</span>{% elif plan.strand_new %}<span class="pill good">{{ plan.strand_new.1 }} will be added</span>{% endif %}</div>
+            <div><small>Semester</small><b>{{ plan.meta.semester|default:"Not stated" }}</b>{% if plan.meta.course %}<span>Course: {{ plan.meta.course }}</span>{% endif %}</div>
+            {% endif %}
+            <div><small>School year in the file</small><b>{{ plan.meta.school_year|default:"Not stated" }}</b><span>Enrolling into SY {{ current_sy.year_label }}</span></div>
+            <div><small>School in the file</small><b>{{ plan.meta.school_name|default:"Not stated" }}</b><span>School ID {{ plan.meta.school_id|default:"—" }}</span></div>
+        </div>
+    </section>
+
+    <section class="card rv-sec" aria-labelledby="optTitle">
+        <div class="panel-head"><h3 id="optTitle"><i class="fi fi-rr-settings-sliders" style="color:#123499;"></i> Before importing</h3></div>
+        <div class="opts">
+            <label class="field"><span>Class adviser</span>
+                <select name="adviser">
+                    <option value="">{% if current_adviser_id %}Keep the current adviser{% else %}No adviser for now{% endif %}</option>
+                    {% for t in adviser_options %}
+                    <option value="{{ t.user_id }}" {% if t.user_id == current_adviser_id %}selected{% endif %}>{{ t.name }}{% if t.advises %} · advises {{ t.advises }}{% endif %}</option>
+                    {% endfor %}
+                </select>
+                <small>The adviser prepares the section's school forms. You can change it later on the section page.</small>
+            </label>
+            {% if plan.counts.elsewhere %}
+            <label class="check" style="align-self:center;"><input type="checkbox" name="move_elsewhere" value="1">
+                <span><b>Move the {{ plan.counts.elsewhere }} learner{{ plan.counts.elsewhere|pluralize }} enrolled in another section</b><br>
+                <small class="muted">Leave this off to keep them where they are; the SF1 rows are then skipped.</small></span></label>
+            {% endif %}
+        </div>
+    </section>
+
+    <div class="tiles" style="--tiles:5">
+        <div class="card tile good"><span class="tile-ico"><i class="fi fi-rr-user-add"></i></span>
+            <div><span>New learners</span><b>{{ plan.counts.new }}</b><small>added to ARMS and enrolled</small></div></div>
+        <div class="card tile"><span class="tile-ico"><i class="fi fi-rr-id-card-clip-alt"></i></span>
+            <div><span>Known learners</span><b>{{ plan.counts.enroll }}</b><small>already in ARMS, enrolled here</small></div></div>
+        <div class="card tile"><span class="tile-ico"><i class="fi fi-rr-users-alt"></i></span>
+            <div><span>Already here</span><b>{{ plan.counts.existing }}</b><small>details updated</small></div></div>
+        <div class="card tile {% if plan.counts.elsewhere %}warn{% endif %}"><span class="tile-ico"><i class="fi fi-rr-exchange"></i></span>
+            <div><span>In another section</span><b>{{ plan.counts.elsewhere }}</b><small>stay unless moved</small></div></div>
+        <div class="card tile {% if problems %}risk{% endif %}"><span class="tile-ico"><i class="fi fi-rr-triangle-warning"></i></span>
+            <div><span>Rows to fix</span><b>{{ problems }}</b><small>skipped</small></div></div>
+    </div>
+
+    <section class="card rv-sec" aria-labelledby="rowsTitle">
+        <div class="panel-head">
+            <h3 id="rowsTitle"><i class="fi fi-rr-graduation-cap" style="color:#123499;"></i> Learners in the SF1 ({{ plan.rows|length }}: {{ plan.males }} male, {{ plan.females }} female)</h3>
+            <div class="toolbar">
+                <label class="search" style="max-width:240px;"><i class="fi fi-rr-search"></i><input type="search" id="rowSearch" placeholder="Find a learner or LRN" aria-label="Find a learner or LRN"></label>
+                <div class="chips" role="group" aria-label="Show">
+                    <button type="button" data-show="" aria-pressed="true">All</button>
+                    <button type="button" data-show="new" aria-pressed="false">New</button>
+                    <button type="button" data-show="issues" aria-pressed="false">To look at</button>
+                </div>
+            </div>
+        </div>
+        <div class="roster" id="roster">
+            <table class="table">
+                <thead><tr><th style="width:2.6rem;">#</th><th>LRN</th><th>Learner</th><th>Birth date</th><th>Address</th><th>Parent or guardian</th><th>Remarks</th><th>What will happen</th></tr></thead>
+                <tbody>
+                    {% for r in plan.rows %}
+                    <tr data-state="{{ r.state }}" data-issue="{% if r.state == 'invalid' or r.state == 'duplicate' or r.state == 'elsewhere' or r.warnings %}1{% endif %}"
+                        data-text="{{ r.last|lower }} {{ r.first|lower }} {{ r.lrn }}" class="{% if r.state == 'invalid' or r.state == 'duplicate' %}badrow{% elif r.state == 'elsewhere' or r.warnings %}warnrow{% endif %}">
+                        <td class="muted">{{ forloop.counter }}</td>
+                        <td class="mono">{{ r.lrn|default:"—" }}</td>
+                        <td><b>{{ r.last|default:r.name }}</b>{% if r.first %}, {{ r.first }}{% endif %}{% if r.ext %} {{ r.ext }}{% endif %}{% if r.middle %} {{ r.middle }}{% endif %}
+                            <small>{% if r.sex == 'M' %}Male{% elif r.sex == 'F' %}Female{% else %}Sex not given{% endif %}{% if r.religion %} · {{ r.religion }}{% endif %}</small></td>
+                        <td>{% if r.birth_date %}{{ r.birth_date|date:"m/d/Y" }}{% else %}<span class="muted">{{ r.birth_date_text|default:"—" }}</span>{% endif %}{% if r.age %}<small>{{ r.age }} years old</small>{% endif %}</td>
+                        <td>{{ r.barangay|default:"—" }}<small>{{ r.city }}{% if r.city and r.province %}, {% endif %}{{ r.province }}</small></td>
+                        <td>{% if r.guardian %}{{ r.guardian }}<small>{{ r.relationship|default:"Guardian" }}</small>{% elif r.mother %}{{ r.mother }}<small>Mother{% if r.contact %} · {{ r.contact }}{% endif %}</small>{% elif r.father %}{{ r.father }}<small>Father</small>{% else %}<span class="muted">—</span>{% endif %}</td>
+                        <td>{% if r.codes %}<div class="codes">{% for c in r.codes %}<span class="pill info" title="{{ r.remarks }}">{{ c }}</span>{% endfor %}</div>{% elif r.remarks %}<small>{{ r.remarks|truncatechars:40 }}</small>{% else %}<span class="muted">—</span>{% endif %}</td>
+                        <td><span class="pill {% if r.state == 'new' %}good{% elif r.state == 'existing' or r.state == 'enroll' %}info{% elif r.state == 'invalid' or r.state == 'duplicate' %}risk{% else %}warn{% endif %}">{% if r.state == 'new' %}New learner{% elif r.state == 'enroll' %}Enrolled here{% elif r.state == 'existing' %}Already here{% elif r.state == 'elsewhere' %}In {{ r.current_section }}{% elif r.state == 'duplicate' %}Listed twice{% else %}Cannot import{% endif %}</span>
+                            {% if r.status != 'Enrolled' %}<small>Status: {{ r.status|cut:"_" }}</small>{% endif %}
+                            {% if r.state == 'invalid' or r.warnings %}<ul class="why">{% if r.state == 'invalid' %}<li>{{ r.note }}</li>{% endif %}{% for w in r.warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="empty" id="noRows" hidden><i class="fi fi-rr-search"></i>No learner matches.</p>
+    </section>
+
+    {% if plan.not_in_file %}
+    <section class="card rv-sec">
+        <div class="note info" style="margin:0;"><i class="fi fi-rr-info"></i><span><b>{{ plan.not_in_file|length }} learner{{ plan.not_in_file|length|pluralize }} of {{ plan.section_name }} in ARMS {{ plan.not_in_file|length|pluralize:"is,are" }} not in this SF1.</b> Nothing changes for them; mark them transferred or dropped on the section page if they left.</span></div>
+        <ul class="left-out">{% for name in plan.not_in_file %}<li>{{ name }}</li>{% endfor %}</ul>
+    </section>
+    {% endif %}
+
+    <section class="card sticky-bar">
+        {% if plan.can_import %}
+        <span class="hint" style="margin:0;">{{ plan.counts.new|add:plan.counts.enroll }} learner{{ plan.counts.new|add:plan.counts.enroll|pluralize }} will be enrolled in {{ plan.grade_level.grade_name|default:plan.meta.grade_level }} {{ plan.section_name }}{% if plan.counts.existing %}, {{ plan.counts.existing }} updated{% endif %}.</span>
+        {% else %}
+        <span class="hint" style="margin:0;color:#b42318;">Fix the problem shown at the top in the SF1, then upload it again.</span>
+        {% endif %}
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <a class="btn btn-line" href="{% url 'registrars:upload_class_list' %}">Cancel</a>
+            <button type="submit" class="btn btn-main" id="confirmBtn" {% if not plan.can_import %}disabled{% endif %}><i class="fi fi-rr-check"></i> Confirm and enroll</button>
+        </div>
+    </section>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var roster = document.getElementById('roster'), rows = Array.prototype.slice.call(roster.querySelectorAll('tbody tr'));
+    var search = document.getElementById('rowSearch'), show = '', chips = Array.prototype.slice.call(document.querySelectorAll('.chips button'));
+    function apply() {
+        var q = search.value.trim().toLowerCase(), shown = 0;
+        rows.forEach(function (tr) {
+            var ok = (!q || tr.dataset.text.indexOf(q) > -1) && (!show || (show === 'issues' ? tr.dataset.issue === '1' : tr.dataset.state === show));
+            tr.hidden = !ok;
+            if (ok) shown++;
+        });
+        chips.forEach(function (c) { c.setAttribute('aria-pressed', c.dataset.show === show ? 'true' : 'false'); });
+        document.getElementById('noRows').hidden = shown > 0;
+    }
+    search.addEventListener('input', apply);
+    chips.forEach(function (c) { c.addEventListener('click', function () { show = c.dataset.show; apply(); }); });
+    document.getElementById('confirmForm').addEventListener('submit', function () {
+        var b = document.getElementById('confirmBtn'); b.disabled = true; b.innerHTML = '<i class="fi fi-rr-spinner"></i> Enrolling…';
+    });
+})();
+</script>
+{% endblock %}

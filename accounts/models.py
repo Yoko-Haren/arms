@@ -1,5 +1,5 @@
 """
-Phase 0, 2 & 13: Foundation, User Profile, and Audit Support models for Formify LIS.
+Phase 0, 2 & 13: Foundation, User Profile, and Audit Support models for ARMS.
 Zero-dependency reference tables, system configuration, permissions,
 DepEd compliance data, user profiles, and audit support (login attempts,
 session logs, password resets).

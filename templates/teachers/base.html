@@ -1,15 +1,29 @@
 {% extends 'shared/portal_base.html' %}
+{% load static %}
 
 {% block title %}ARMS - Teacher Portal{% endblock %}
 {% block home_url %}{% url 'teachers:dashboard' %}{% endblock %}
-{% block brand_icon %}fi-rr-chalkboard-user{% endblock %}
 {% block portal_label %}Teacher Portal{% endblock %}
 {% block role_label %}Teacher{% endblock %}
 {% block subtitle %}Teacher Portal — {{ request.user.profile.school_name }}{% endblock %}
 
+{% block portal_css %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap">
+    <link rel="stylesheet" href="{% static 'heads/css/head-live.css' %}">
+    <link rel="stylesheet" href="{% static 'shared/css/portal-live.css' %}">
+    <link rel="stylesheet" href="{% static 'shared/css/portal-pages.css' %}">
+{% endblock %}
+
 {% block sidebar_nav %}
 <li class="nav-item"><a href="{% url 'teachers:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><i class="fi fi-rr-dashboard"></i><span>Dashboard</span></a></li>
-<li class="nav-item"><a href="{% url 'teachers:class_record_list' %}" class="nav-link {% if 'class-records' in request.path %}active{% endif %}"><i class="fi fi-rr-folder"></i><span>Class Records</span></a></li>
-<li class="nav-item"><a href="{% url 'teachers:upload_class_record' %}" class="nav-link {% if request.resolver_match.url_name == 'upload_class_record' %}active{% endif %}"><i class="fi fi-rr-chart-histogram"></i><span>Upload Grades</span></a></li>
+<li class="nav-item"><a href="{% url 'teachers:class_record_list' %}" class="nav-link {% if request.resolver_match.url_name == 'class_record_list' %}active{% endif %}"><i class="fi fi-rr-folder"></i><span>Class Records</span></a></li>
+<li class="nav-item"><a href="{% url 'teachers:upload_class_record' %}" class="nav-link {% if request.resolver_match.url_name == 'upload_class_record' or request.resolver_match.url_name == 'upload_review' %}active{% endif %}"><i class="fi fi-rr-upload"></i><span>Upload Grades</span></a></li>
 <li class="nav-item"><a href="{% url 'assessments:list' %}" class="nav-link {% if 'assessments' in request.path %}active{% endif %}"><i class="fi fi-rr-list-check"></i><span>Assessments</span></a></li>
+{% endblock %}
+
+{% block top_bar_actions %}
+{% url 'teachers:updates' as updates_url %}{% url 'teachers:read_all' as read_url %}{% url 'teachers:class_record_list' as records_url %}
+{% include 'shared/_bell.html' with updates_url=updates_url read_url=read_url foot_url=records_url foot_label='Open class records' empty='You are all caught up. Every class has its grades in.' %}
 {% endblock %}

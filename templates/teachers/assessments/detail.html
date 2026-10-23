@@ -1,0 +1,355 @@
+{% extends 'teachers/base.html' %}
+{% load static %}
+
+{% block title %}{{ a.title }}{% endblock %}
+{% block subtitle %}Assessments &bull; {{ a.subject.subject_code }} &bull; {{ section }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ad-meta { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; margin-top: 0.4rem; font-size: 0.8rem; color: var(--muted); }
+    .ad-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1rem; }
+    @media (max-width: 1100px) { .ad-grid { grid-template-columns: 1fr; } }
+    .share { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .share input { flex: 1 1 260px; font-family: Consolas, 'Courier New', monospace; font-size: 0.82rem; }
+    .code { display: inline-flex; gap: 0.4rem; align-items: baseline; font-size: 0.8rem; color: var(--muted); margin-top: 0.6rem; }
+    .code b { font-family: Consolas, 'Courier New', monospace; font-size: 1rem; color: var(--ink); letter-spacing: 0.12em; }
+    .when { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.84rem; }
+    .when b { font-size: 0.95rem; }
+    .when small { color: var(--muted); }
+    .inline-form { display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap; margin-top: 0.75rem; }
+    .inline-form .field { flex: 1 1 200px; }
+    .danger-zone { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.9rem;
+                   padding-top: 0.8rem; border-top: 1px solid var(--line); font-size: 0.8rem; color: var(--muted); }
+    .btn-danger { background: #fff; color: #C62828; border-color: #f3c4c4; }
+    .btn-danger:hover { border-color: #C62828; background: #fff5f5; }
+    .lt { container-type: inline-size; }
+    .lt .table td { white-space: nowrap; }
+    .lt .table td.name { white-space: normal; min-width: 180px; }
+    .lt .lrn { font-family: Consolas, 'Courier New', monospace; font-size: 0.75rem; color: var(--muted); }
+    .lt tr.grp td { background: #fafbfd; font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; padding-top: 0.45rem; padding-bottom: 0.45rem; }
+    .lt .pct { display: inline-flex; align-items: center; gap: 0.5rem; }
+    .lt .pct .bar { width: 70px; }
+    .lt .wrap { overflow-x: auto; margin-top: 0.8rem; }
+    .lt .none { display: none; }
+    .items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+    .item { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr) 7.5rem; gap: 0.75rem; align-items: start; padding: 0.7rem 0; border-top: 1px solid #f0f3f7; }
+    .item:first-child { border-top: 0; }
+    .item .no { font-weight: 700; color: var(--muted); font-size: 0.84rem; }
+    .item .text { font-size: 0.86rem; line-height: 1.45; }
+    .item .key { font-size: 0.76rem; color: var(--muted); margin-top: 0.25rem; }
+    .item .key b { color: var(--good); font-weight: 650; }
+    .item .key .wrong { color: var(--risk); }
+    .item .rate { text-align: right; font-size: 0.8rem; }
+    .item .rate b { display: block; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+    .item .rate .bar { margin-top: 0.3rem; }
+    .qr { display: flex; justify-content: center; padding: 0.6rem 0 0.2rem; }
+    .qr svg { width: min(300px, 70vw); height: auto; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tp">
+    <section class="card tp-head">
+        <div style="min-width:0;">
+            <h2><i class="fi fi-rr-list-check" style="color:#123499;"></i> {{ a.title }}</h2>
+            <div class="ad-meta">
+                <span class="pill {{ state_tone }}">{{ state_label }}</span>
+                <span>{{ type }}</span><span aria-hidden="true">·</span><span>{{ a.subject.subject_code }} {{ a.subject.subject_name }}</span><span aria-hidden="true">·</span>
+                <span>{{ section }}</span><span aria-hidden="true">·</span><span>{{ res.questions|length }} question{{ res.questions|length|pluralize }}, {{ res.points|floatformat:"-2" }} point{{ res.points|pluralize }}</span>
+                {% if component %}<span aria-hidden="true">·</span><span>Goes to: {{ component }}</span>{% endif %}
+            </div>
+        </div>
+        <div class="actions">
+            <a class="btn btn-line" href="{% url 'assessments:list' %}"><i class="fi fi-rr-arrow-left"></i> All assessments</a>
+            {% if editable %}<a class="btn btn-line" href="{% url 'assessments:edit' a.id %}"><i class="fi fi-rr-edit"></i> Edit questions</a>{% endif %}
+            <a class="btn btn-line" href="{% url 'take_quiz' a.access_code %}?preview=1" target="_blank" rel="noopener"><i class="fi fi-rr-eye"></i> Preview</a>
+            {% if state != 'draft' %}<a class="btn btn-main" href="{% url 'assessments:export' a.id %}"><i class="fi fi-rr-file-excel"></i> Download results</a>{% endif %}
+        </div>
+    </section>
+
+    <div class="ad-grid">
+        <section class="card panel" aria-labelledby="shareTitle">
+            <div class="panel-head"><h3 id="shareTitle"><i class="fi fi-rr-link-alt" style="color:#123499;"></i> Link for learners</h3></div>
+            {% if state == 'draft' %}
+            <p class="hint" style="margin:0;">Publish the assessment to get its link. Learners will open it and sign in with their LRN.</p>
+            {% else %}
+            <div class="share">
+                <input type="text" id="shareUrl" value="{{ share_url }}" readonly aria-label="Link for learners">
+                <button type="button" class="btn btn-line" id="copyLink"><i class="fi fi-rr-copy"></i> Copy</button>
+                <button type="button" class="btn btn-line" id="showQr"><i class="fi fi-rr-qrcode"></i> QR code</button>
+            </div>
+            <div class="code">Code <b>{{ a.access_code }}</b></div>
+            <p class="hint">Learners sign in with their LRN from the {{ section }} class list and can answer once.{% if a.time_limit_minutes %} Each has {{ a.time_limit_minutes }} minute{{ a.time_limit_minutes|pluralize }} from when they start.{% endif %}
+                {% if a.show_score %}They see their score after submitting, never the answers.{% else %}They do not see their score or the answers after submitting.{% endif %}</p>
+            {% endif %}
+        </section>
+
+        <section class="card panel" aria-labelledby="whenTitle">
+            <div class="panel-head"><h3 id="whenTitle"><i class="fi fi-rr-calendar-clock" style="color:#123499;"></i> Deadline</h3></div>
+            <div class="when">
+                {% if state == 'draft' %}<b>Not published</b><small>{% if a.closes_at %}The deadline is set for {{ a.closes_at|date:"M j, Y g:i A" }}.{% else %}Set a deadline when you publish.{% endif %}</small>
+                {% elif state == 'scheduled' %}<b>Opens {{ a.opens_at|date:"M j, Y g:i A" }}</b><small>Closes {{ a.closes_at|date:"M j, Y g:i A" }}</small>
+                {% elif state == 'open' %}{% if a.closes_at %}<b>Closes {{ a.closes_at|date:"M j, Y g:i A" }}</b><small>in {{ a.closes_at|timeuntil }}</small>{% else %}<b>Open</b><small>No deadline was set.</small>{% endif %}
+                {% else %}<b>Closed</b><small>{% if a.status == 'closed' %}You closed it.{% elif a.closes_at %}The deadline was {{ a.closes_at|date:"M j, Y g:i A" }}.{% endif %}</small>{% endif %}
+            </div>
+            <form method="POST" action="{% url 'assessments:action' a.id %}" class="inline-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="{% if state == 'draft' %}publish{% elif state == 'closed' %}reopen{% else %}deadline{% endif %}">
+                <label class="field"><span>{% if state == 'draft' %}Publish with the deadline{% elif state == 'closed' %}Reopen until{% else %}Change the deadline{% endif %}</span>
+                    <input type="datetime-local" name="closes_at" value="{{ deadline_input }}" min="{{ now_input }}" required></label>
+                <button type="submit" class="btn {% if state == 'draft' %}btn-main{% else %}btn-line{% endif %}">
+                    <i class="fi {% if state == 'draft' %}fi-rr-paper-plane{% elif state == 'closed' %}fi-rr-door-open{% else %}fi-rr-disk{% endif %}"></i>
+                    {% if state == 'draft' %}Publish{% elif state == 'closed' %}Reopen{% else %}Save{% endif %}</button>
+            </form>
+            <div class="danger-zone">
+                {% if state == 'open' or state == 'scheduled' %}
+                <form method="POST" action="{% url 'assessments:action' a.id %}" data-confirm="Close &quot;{{ a.title }}&quot; now? Learners who have not submitted can no longer answer." data-confirm-title="Close assessment" data-confirm-ok="Close now">
+                    {% csrf_token %}<input type="hidden" name="action" value="close">
+                    <button type="submit" class="btn btn-line btn-sm"><i class="fi fi-rr-lock"></i> Close now</button>
+                </form>
+                {% else %}<span></span>{% endif %}
+                <form method="POST" action="{% url 'assessments:action' a.id %}" data-confirm="Delete &quot;{{ a.title }}&quot;{% if res.submitted %} and the {{ res.submitted }} answer{{ res.submitted|pluralize }} learners submitted{% endif %}? This cannot be undone." data-confirm-title="Delete assessment" data-confirm-ok="Delete" data-confirm-danger>
+                    {% csrf_token %}<input type="hidden" name="action" value="delete">
+                    <button type="submit" class="btn btn-danger btn-sm"><i class="fi fi-rr-trash"></i> Delete</button>
+                </form>
+            </div>
+        </section>
+    </div>
+
+    <div class="tiles" style="--tiles:4">
+        <div class="card tile {% if res.enrolled and res.submitted == res.enrolled %}good{% endif %}"><span class="tile-ico"><i class="fi fi-rr-inbox-in"></i></span>
+            <div><span>Answered</span><b>{{ res.submitted }} <small style="display:inline;font-size:0.8rem;">of {{ res.enrolled }}</small></b>
+                <small>{% if res.missing %}{{ res.missing }} not yet answered{% elif res.enrolled %}the whole class answered{% else %}no learners enrolled{% endif %}</small></div></div>
+        <div class="card tile"><span class="tile-ico"><i class="fi fi-rr-chart-histogram"></i></span>
+            <div><span>Class average</span><b>{% if res.average is not None %}{{ res.average }}%{% else %}—{% endif %}</b><small>of {{ res.points|floatformat:"-2" }} point{{ res.points|pluralize }}</small></div></div>
+        <div class="card tile good"><span class="tile-ico"><i class="fi fi-rr-arrow-trend-up"></i></span>
+            <div><span>Highest</span><b>{% if res.highest is not None %}{{ res.highest }}%{% else %}—{% endif %}</b><small>best score</small></div></div>
+        <div class="card tile {% if res.lowest is not None and res.lowest < 75 %}warn{% endif %}"><span class="tile-ico"><i class="fi fi-rr-arrow-trend-down"></i></span>
+            <div><span>Lowest</span><b>{% if res.lowest is not None %}{{ res.lowest }}%{% else %}—{% endif %}</b><small>lowest score</small></div></div>
+    </div>
+
+    <section class="card panel lt" aria-labelledby="ltTitle">
+        <div class="panel-head">
+            <h3 id="ltTitle"><i class="fi fi-rr-users-alt" style="color:#123499;"></i> Learners</h3>
+            <span class="muted" style="font-size:0.8rem;">{{ res.males }} male{{ res.males|pluralize }}, {{ res.females }} female{{ res.females|pluralize }}</span>
+        </div>
+        <div class="toolbar">
+            <label class="search"><i class="fi fi-rr-search"></i><input type="search" id="ltSearch" placeholder="Find a learner or LRN" aria-label="Find a learner or LRN"></label>
+            <label class="sort">Sort by
+                <select id="ltSort">
+                    <option value="class">Class list (males, then females)</option>
+                    <option value="high">Score, highest first</option>
+                    <option value="low">Score, lowest first</option>
+                    <option value="name">Surname A to Z</option>
+                    <option value="time">Submitted, earliest first</option>
+                </select>
+            </label>
+            <div class="chips" role="group" aria-label="Show">
+                <button type="button" data-show="" aria-pressed="true">All</button>
+                <button type="button" data-show="submitted" aria-pressed="false">Answered<em>{{ res.submitted }}</em></button>
+                <button type="button" data-show="waiting" aria-pressed="false">Not yet<em>{{ res.missing|add:res.started }}</em></button>
+            </div>
+        </div>
+        <div class="wrap">
+            <table class="table" id="ltTable">
+                <thead><tr><th style="width:2.5rem;">#</th><th>Learner</th><th>Status</th><th class="num">Score</th><th>Percent</th><th>Submitted</th><th class="num">Time</th></tr></thead>
+                <tbody>
+                    {% for r in res.rows %}
+                    {% ifchanged r.sex %}<tr class="grp" data-grp="1"><td colspan="7">{% if r.sex == 'M' %}Male ({{ res.males }}){% elif r.sex == 'F' %}Female ({{ res.females }}){% else %}Other{% endif %}</td></tr>{% endifchanged %}
+                    <tr data-order="{{ forloop.counter0 }}" data-name="{{ r.name|lower }}" data-text="{{ r.name|lower }} {{ r.lrn }}" data-percent="{{ r.percent|default_if_none:'' }}"
+                        data-status="{{ r.status }}" data-time="{% if r.submitted_at %}{{ r.submitted_at|date:'U' }}{% endif %}">
+                        <td class="muted">{{ forloop.counter }}</td>
+                        <td class="name"><b>{{ r.name }}</b>{% if r.left %} <span class="pill">left the class</span>{% endif %}<div class="lrn">{{ r.lrn|default:"No LRN" }}</div></td>
+                        <td>{% if r.status == 'submitted' %}<span class="pill good">Answered</span>{% elif r.status == 'started' %}<span class="pill warn">Started, not submitted</span>{% else %}<span class="pill">Not yet</span>{% endif %}</td>
+                        <td class="num">{% if r.score is not None %}{{ r.score|floatformat:"-2" }} / {{ r.total|floatformat:"-2" }}{% else %}<span class="muted">—</span>{% endif %}</td>
+                        <td>{% if r.percent is not None %}<span class="pct"><span class="grade {% if r.percent >= 75 %}pass{% else %}fail{% endif %}">{{ r.percent }}%</span><span class="bar {% if r.percent >= 75 %}good{% else %}warn{% endif %}" aria-hidden="true"><i style="width:{{ r.percent }}%"></i></span></span>{% else %}<span class="muted">—</span>{% endif %}</td>
+                        <td>{% if r.submitted_at %}{{ r.submitted_at|date:"M j, g:i A" }}{% else %}<span class="muted">—</span>{% endif %}</td>
+                        <td class="num">{% if r.minutes %}{{ r.minutes }} min{% else %}<span class="muted">—</span>{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                    {% if res.others %}
+                    <tr class="grp" data-grp="1"><td colspan="7">Not on the class list ({{ res.others|length }})</td></tr>
+                    {% for r in res.others %}
+                    <tr data-order="{{ res.rows|length|add:forloop.counter0 }}" data-name="{{ r.name|lower }}" data-text="{{ r.name|lower }}" data-percent="{{ r.percent|default_if_none:'' }}"
+                        data-status="{{ r.status }}" data-time="{% if r.submitted_at %}{{ r.submitted_at|date:'U' }}{% endif %}">
+                        <td class="muted">—</td>
+                        <td class="name"><b>{{ r.name }}</b><div class="lrn">Answered before LRN sign-in</div></td>
+                        <td>{% if r.status == 'submitted' %}<span class="pill good">Answered</span>{% else %}<span class="pill warn">Started, not submitted</span>{% endif %}</td>
+                        <td class="num">{% if r.score is not None %}{{ r.score|floatformat:"-2" }} / {{ r.total|floatformat:"-2" }}{% else %}<span class="muted">—</span>{% endif %}</td>
+                        <td>{% if r.percent is not None %}<span class="grade {% if r.percent >= 75 %}pass{% else %}fail{% endif %}">{{ r.percent }}%</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+                        <td>{% if r.submitted_at %}{{ r.submitted_at|date:"M j, g:i A" }}{% else %}<span class="muted">—</span>{% endif %}</td>
+                        <td class="num">{% if r.minutes %}{{ r.minutes }} min{% else %}<span class="muted">—</span>{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+            <p class="empty none" id="ltNone"><i class="fi fi-rr-search"></i>No learner matches.</p>
+        </div>
+    </section>
+
+    <section class="card panel" aria-labelledby="iaTitle">
+        <div class="panel-head">
+            <h3 id="iaTitle"><i class="fi fi-rr-chart-simple" style="color:#123499;"></i> Questions learners missed most</h3>
+            {% if items %}<button type="button" class="btn btn-line btn-sm" id="allItems"><i class="fi fi-rr-list"></i> Show all {{ items|length }} question{{ items|length|pluralize }}</button>{% endif %}
+        </div>
+        {% if res.items.responses %}
+        <ol class="items">
+            {% for i in hardest %}
+            <li class="item">
+                <span class="no">{{ i.number }}.</span>
+                <div><div class="text">{{ i.text|truncatechars:220 }}</div>
+                    <div class="key">Answer: <b>{{ i.answer }}</b>{% if i.common_wrong %} · Most chosen wrong answer: <span class="wrong">{{ i.common_wrong.text }}</span> ({{ i.common_wrong.count }}){% endif %}</div></div>
+                <div class="rate"><b>{{ i.percent }}%</b><span class="muted">got it right</span>
+                    <div class="bar {% if i.percent >= 75 %}good{% else %}warn{% endif %}" aria-hidden="true"><i style="width:{{ i.percent }}%"></i></div></div>
+            </li>
+            {% endfor %}
+        </ol>
+        <p class="hint">Based on {{ res.items.responses }} learner{{ res.items.responses|pluralize }} who answered. A question most learners missed may need reteaching, or its wording may be unclear.</p>
+        {% elif res.submitted %}
+        <p class="empty"><i class="fi fi-rr-info"></i>These answers were recorded before ARMS kept each learner's choices, so there is no question breakdown.</p>
+        {% else %}
+        <p class="empty"><i class="fi fi-rr-hourglass-end"></i>The breakdown appears once learners submit their answers.</p>
+        {% endif %}
+    </section>
+
+    <div class="tp-modal" id="itemsModal" role="dialog" aria-modal="true" aria-labelledby="itemsTitle" hidden>
+        <div class="tp-modal-card" tabindex="-1">
+            <div class="tp-modal-head">
+                <div><h3 id="itemsTitle">All questions</h3><p class="hint">Answer key and how many learners got each question right.</p></div>
+                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
+            </div>
+            <div class="tp-modal-tools">
+                <label class="search" style="max-width:none;flex:1 1 220px;"><i class="fi fi-rr-search"></i><input type="search" id="itemsSearch" placeholder="Find a question or answer" aria-label="Find a question or answer"></label>
+                <label class="sort">Sort by
+                    <select id="itemsSort">
+                        <option value="number">Question number</option>
+                        <option value="missed">Most missed first</option>
+                        <option value="right">Most right first</option>
+                    </select>
+                </label>
+            </div>
+            <div class="tp-modal-body"><ol class="items" id="itemsList"></ol></div>
+        </div>
+    </div>
+
+    <div class="tp-modal" id="qrModal" role="dialog" aria-modal="true" aria-labelledby="qrTitle" hidden>
+        <div class="tp-modal-card" tabindex="-1" style="width:min(420px, 100%);">
+            <div class="tp-modal-head">
+                <div><h3 id="qrTitle">Scan to answer</h3><p class="hint">{{ a.title }} · {{ section }}</p></div>
+                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
+            </div>
+            <div class="tp-modal-body"><div class="qr" id="qrBox"></div><p class="hint" style="text-align:center;">Or open {{ share_url }}</p></div>
+        </div>
+    </div>
+</div>
+{{ items|json_script:"itemsData" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script>
+(function () {
+    'use strict';
+    var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+
+    // ---------- dialogs ----------
+    var lastFocus = null;
+    function openModal(modal) { lastFocus = document.activeElement; modal.hidden = false; (modal.querySelector('input') || modal.querySelector('.tp-modal-card')).focus(); }
+    function closeModal(modal) { modal.hidden = true; if (lastFocus) lastFocus.focus(); }
+    document.querySelectorAll('.tp-modal').forEach(function (modal) {
+        modal.addEventListener('click', function (e) { if (e.target === modal || e.target.closest('[data-close]')) closeModal(modal); });
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        document.querySelectorAll('.tp-modal:not([hidden])').forEach(closeModal);
+    });
+
+    // ---------- link ----------
+    var copy = document.getElementById('copyLink');
+    if (copy) copy.addEventListener('click', function () {
+        var url = document.getElementById('shareUrl').value;
+        var done = function () { copy.innerHTML = '<i class="fi fi-rr-check"></i> Copied'; setTimeout(function () { copy.innerHTML = '<i class="fi fi-rr-copy"></i> Copy'; }, 1600); };
+        if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, function () { document.getElementById('shareUrl').select(); });
+        else { document.getElementById('shareUrl').select(); }
+    });
+    var qrBtn = document.getElementById('showQr');
+    if (qrBtn) qrBtn.addEventListener('click', function () {
+        var box = document.getElementById('qrBox');
+        if (!box.innerHTML && window.qrcode) {
+            var qr = window.qrcode(0, 'M');
+            qr.addData(document.getElementById('shareUrl').value);
+            qr.make();
+            box.innerHTML = qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
+        }
+        if (!box.innerHTML) box.textContent = 'The QR code could not be drawn. Share the link instead.';
+        openModal(document.getElementById('qrModal'));
+    });
+
+    // ---------- learners ----------
+    var table = document.getElementById('ltTable');
+    if (table) {
+        var body = table.tBodies[0];
+        var rows = Array.prototype.slice.call(body.querySelectorAll('tr:not(.grp)'));
+        var groups = Array.prototype.slice.call(body.querySelectorAll('tr.grp'));
+        var original = Array.prototype.slice.call(body.children);
+        var sort = document.getElementById('ltSort'), search = document.getElementById('ltSearch'), show = '';
+        var num = function (el, key) { var v = el.dataset[key]; return v === '' || v == null ? null : +v; };
+        var nullsLast = function (a, b, dir) { if (a === null && b === null) return 0; if (a === null) return 1; if (b === null) return -1; return dir * (a - b); };
+        var SORTS = {
+            high: function (a, b) { return nullsLast(num(a, 'percent'), num(b, 'percent'), -1) || (num(a, 'order') - num(b, 'order')); },
+            low: function (a, b) { return nullsLast(num(a, 'percent'), num(b, 'percent'), 1) || (num(a, 'order') - num(b, 'order')); },
+            name: function (a, b) { return a.dataset.name.localeCompare(b.dataset.name); },
+            time: function (a, b) { return nullsLast(num(a, 'time'), num(b, 'time'), 1) || (num(a, 'order') - num(b, 'order')); }
+        };
+        var apply = function () {
+            var q = search.value.trim().toLowerCase(), shown = 0;
+            if (sort.value === 'class') original.forEach(function (tr) { body.appendChild(tr); });
+            else rows.slice().sort(SORTS[sort.value]).forEach(function (tr) { body.appendChild(tr); });
+            rows.forEach(function (tr) {
+                var st = tr.dataset.status;
+                var ok = (!q || tr.dataset.text.indexOf(q) > -1) && (!show || (show === 'submitted' ? st === 'submitted' : st !== 'submitted'));
+                tr.hidden = !ok;
+                if (ok) shown++;
+            });
+            groups.forEach(function (g) { g.hidden = sort.value !== 'class' || !!q || !!show; });
+            document.getElementById('ltNone').style.display = shown ? 'none' : 'block';
+        };
+        sort.addEventListener('change', apply);
+        search.addEventListener('input', apply);
+        document.querySelectorAll('.lt .chips button').forEach(function (b) {
+            b.addEventListener('click', function () {
+                show = b.dataset.show;
+                document.querySelectorAll('.lt .chips button').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+                apply();
+            });
+        });
+    }
+
+    // ---------- all questions ----------
+    var items = JSON.parse(document.getElementById('itemsData').textContent);
+    var allBtn = document.getElementById('allItems');
+    if (allBtn) {
+        var list = document.getElementById('itemsList'), itemsSearch = document.getElementById('itemsSearch'), itemsSort = document.getElementById('itemsSort');
+        var drawItems = function () {
+            var q = itemsSearch.value.trim().toLowerCase();
+            var pct = function (i) { return i.percent == null ? -1 : i.percent; };
+            var shown = items.filter(function (i) { return !q || (i.text + ' ' + i.answer).toLowerCase().indexOf(q) > -1; }).slice();
+            if (itemsSort.value === 'missed') shown.sort(function (a, b) { return (pct(a) - pct(b)) || (a.number - b.number); });
+            else if (itemsSort.value === 'right') shown.sort(function (a, b) { return (pct(b) - pct(a)) || (a.number - b.number); });
+            list.innerHTML = shown.map(function (i) {
+                return '<li class="item"><span class="no">' + i.number + '.</span><div><div class="text">' + esc(i.text) + '</div>' +
+                    '<div class="key">' + esc(i.type) + ' · Answer: <b>' + esc(i.answer) + '</b>' +
+                    (i.common_wrong ? ' · Most chosen wrong answer: <span class="wrong">' + esc(i.common_wrong.text) + '</span> (' + i.common_wrong.count + ')' : '') + '</div></div>' +
+                    '<div class="rate">' + (i.percent == null ? '<span class="muted">No answers yet</span>' :
+                        '<b>' + i.percent + '%</b><span class="muted">got it right</span><div class="bar ' + (i.percent >= 75 ? 'good' : 'warn') + '"><i style="width:' + i.percent + '%"></i></div>') +
+                    '</div></li>';
+            }).join('') || '<li class="empty">No question matches.</li>';
+        };
+        itemsSearch.addEventListener('input', drawItems);
+        itemsSort.addEventListener('change', drawItems);
+        allBtn.addEventListener('click', function () { itemsSearch.value = ''; drawItems(); openModal(document.getElementById('itemsModal')); });
+    }
+})();
+</script>
+{% endblock %}

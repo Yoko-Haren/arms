@@ -1,0 +1,20 @@
+/*
+ * Teacher and registrar portals: what the notification bell adds to heads/css/head-live.css
+ * (group headings, urgent items, loading rows) and the loading skeletons both portals use.
+ */
+/* ---------- notification bell ---------- */
+.live-group { padding: 0.55rem 1rem 0.3rem; font-size: 0.68rem; font-weight: 700; color: #718096; text-transform: uppercase; letter-spacing: 0.06em;
+              background: #fafbfd; border-top: 1px solid #f0f3f7; }
+.live-group:first-child { border-top: 0; }
+.live-item.urgent .live-ico { background: #ffebee; color: #C62828; }
+
+/* ---------- skeletons ---------- */
+.skel { display: block; border-radius: 8px; background: linear-gradient(90deg, #eceff4 25%, #f6f7fa 37%, #eceff4 63%);
+        background-size: 400% 100%; animation: arms-skel 1.3s ease-in-out infinite; }
+@keyframes arms-skel { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+@media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
+.skel-line { height: 0.72rem; width: 90%; }
+.skel-line.sm { height: 0.6rem; width: 70%; }
+.skel-circle { width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0; }
+.live-skel { display: flex; gap: 0.65rem; align-items: center; padding: 0.7rem 0.95rem; }
+.live-skel-text { flex: 1; display: flex; flex-direction: column; gap: 0.4rem; }

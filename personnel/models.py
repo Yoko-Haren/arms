@@ -1,6 +1,6 @@
 # personnel/models.py
 """
-Phase 2: Teacher personnel models for Formify LIS.
+Phase 2: Teacher personnel models for ARMS.
 Licenses, education, training, service records, and advisory history.
 """
 

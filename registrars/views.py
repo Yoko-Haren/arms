@@ -5,10 +5,10 @@ from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.http import urlencode
+from django.utils.http import url_has_allowed_host_and_scheme, urlencode
+from django.views.decorators.http import require_POST
 from django.db import transaction
 from django.db.models import Max, Count
-from datetime import date
 from functools import wraps
 import csv
 import io
@@ -21,11 +21,16 @@ from scheduling.models import ClassAssignment, ClassSchedule
 from enrollment.models import Enrollment
 from students.models import Student
 from grades.models import GradeComponent
+from grades.review import review_classes
+from communication.models import Notification
+from communication.notify import notify, sent_recently
+from core import periods as P
 
 from core.caching import cache_page_for_user, remember_filters
 from heads.notify import notify_school_heads
-from heads.views_academic import period_name
 
+from . import dashboard as registrar_dashboard
+from . import views_enrollment
 from .forms import TeacherAccountForm, school_email_domain, suggest_teacher_email
 
 ACTIVE_ENROLLMENT = ['Enrolled', 'Transferred_In']
@@ -162,46 +167,42 @@ def _assign_class(section, subject, teacher, current_sy, created_by=None):
 @registrar_required
 @cache_page_for_user()
 def dashboard(request):
-    """Registrar Dashboard."""
+    """What needs the registrar now, where the grading period stands, and the school's numbers."""
     school = request.user.profile.school
     current_sy = _current_school_year(school)
 
-    total_students = Enrollment.objects.filter(
-        school_year=current_sy, status__in=ACTIVE_ENROLLMENT, section__school=school
-    ).count() if current_sy else 0
-    total_sections = Section.objects.filter(
-        school=school, school_year=current_sy, is_active=True
-    ).count() if current_sy else 0
-    total_teachers = UserProfile.objects.filter(role='teacher', school=school, is_active=True).count()
-    total_subjects = Subject.objects.filter(school=school, is_active=True).count()
+    sections = Section.objects.filter(school=school, school_year=current_sy, is_active=True) if current_sy else Section.objects.none()
+    active = Enrollment.objects.filter(school_year=current_sy, status__in=ACTIVE_ENROLLMENT, section__school=school) if current_sy else Enrollment.objects.none()
+    assigned = ClassAssignment.objects.filter(school_year=current_sy, section__school=school, is_active=True) if current_sy else ClassAssignment.objects.none()
+    teachers = UserProfile.objects.filter(role='teacher', school=school, is_active=True, user__is_active=True)
+    numbers = {
+        'students': active.count(),
+        'sections': sections.count(),
+        'teachers': teachers.count(),
+        'subjects': Subject.objects.filter(school=school, is_active=True).count(),
+        'classes': assigned.count(),
+        'sections_without_teacher': sections.exclude(id__in=assigned.values('section_id')).count(),
+        'empty_sections': sections.exclude(id__in=active.values('section_id')).count(),
+        'teachers_without_classes': teachers.exclude(user_id__in=assigned.values('teacher_id')).count(),
+        'pending_password': teachers.filter(must_change_password=True).count(),
+    }
 
-    # Teachers who cannot see any class yet (no active assignment this school year)
-    assigned_teacher_ids = ClassAssignment.objects.filter(
-        school_year=current_sy, section__school=school, is_active=True
-    ).values_list('teacher_id', flat=True) if current_sy else []
-    teachers_without_classes = UserProfile.objects.filter(
-        role='teacher', school=school, is_active=True
-    ).exclude(user_id__in=assigned_teacher_ids).count()
+    periods = list(Quarter.objects.filter(school_year=current_sy).order_by('quarter_number')) if current_sy else []
+    current_period = P.current(periods)
+    rows = _grade_overview(school, current_sy, current_period, periods) if current_period else []
+    recent = Enrollment.objects.filter(section__school=school, school_year=current_sy)         .select_related('student', 'section', 'section__grade_level').order_by('-created_at')[:8] if current_sy else []
 
-    recent_enrollments = Enrollment.objects.filter(
-        section__school=school, school_year=current_sy
-    ).select_related('student', 'section').order_by('-created_at')[:10] if current_sy else []
-
-    current_period = Quarter.objects.filter(school_year=current_sy, is_current_quarter=True).first() if current_sy else None
-
-    context = {
+    return render(request, 'registrars/dashboard.html', {
         'school': school,
         'current_sy': current_sy,
         'current_period': current_period,
-        'total_students': total_students,
-        'total_sections': total_sections,
-        'total_teachers': total_teachers,
-        'total_subjects': total_subjects,
-        'teachers_without_classes': teachers_without_classes,
-        'recent_enrollments': recent_enrollments,
-        'today': date.today(),
-    }
-    return render(request, 'registrars/dashboard.html', context)
+        'current_period_name': P.name(current_period),
+        'numbers': numbers,
+        'period': registrar_dashboard.period_summary(current_period, rows),
+        'ready_to_validate': sum(1 for r in rows if r['state'] == 'submitted') if current_period and not current_period.is_grades_locked else 0,
+        'todo': registrar_dashboard.todo(current_period, rows, numbers),
+        'recent_enrollments': recent,
+    })
 
 
 # =============================================================================
@@ -431,13 +432,17 @@ def _import_class_list(request, school, current_sy, parsed, teacher_user):
 
 @registrar_required
 def upload_class_list(request):
-    """Upload a class list CSV, review what it will do, then confirm the import."""
+    """Enrollment: a section's SF1 from LIS (or a subject class list CSV), reviewed, then confirmed."""
     school = request.user.profile.school
     current_sy = _current_school_year(school)
 
     if not current_sy:
         messages.error(request, 'No active school year.')
         return redirect('registrars:dashboard')
+
+    if request.method == 'POST' and (request.FILES.get('sf1_file') or request.POST.get('action') == 'confirm_sf1'):
+        return views_enrollment.sf1_post(request, school, current_sy, teacher_options=_teacher_options(school, current_sy),
+                                         teacher_user=_school_teacher_user)
 
     if request.method == 'POST':
         confirming = request.POST.get('action') == 'confirm'
@@ -526,7 +531,7 @@ def section_list(request):
 
     sections = Section.objects.filter(
         school=school, school_year=current_sy,
-    ).select_related('grade_level').order_by('grade_level__sort_order', 'section_name')
+    ).select_related('grade_level', 'adviser').order_by('grade_level__sort_order', 'section_name')
 
     enrolled = dict(
         Enrollment.objects.filter(section__in=sections, school_year=current_sy, status__in=ACTIVE_ENROLLMENT)
@@ -548,14 +553,18 @@ def section_list(request):
                 seen_teachers.add(a.teacher_id)
             subjects_list.append({'code': a.subject.subject_code, 'name': a.subject.subject_name})
 
+        is_full = enrolled_count >= s.max_capacity if s.max_capacity > 0 else False
         section_data.append({
             'section': s,
             'enrolled_count': enrolled_count,
             'max_capacity': s.max_capacity,
+            'fill': min(100, round(enrolled_count * 100 / s.max_capacity)) if s.max_capacity else 0,
             'teachers': teachers_list,
-            'subjects': subjects_list,
-            'is_full': enrolled_count >= s.max_capacity if s.max_capacity > 0 else False,
+            'subjects': sorted(subjects_list, key=lambda x: x['code']),
+            'adviser': (s.adviser.get_full_name() or s.adviser.username) if s.adviser_id else '',
+            'is_full': is_full,
             'is_empty': enrolled_count == 0,
+            'status': 'empty' if enrolled_count == 0 else ('full' if is_full else 'active'),
         })
 
     total_sections = len(section_data)
@@ -568,6 +577,9 @@ def section_list(request):
         'sections_empty': total_sections - sections_with_students,
         'total_enrolled': sum(s['enrolled_count'] for s in section_data),
         'sections_without_teacher': sum(1 for s in section_data if not s['teachers']),
+        'sections_full': sum(1 for s in section_data if s['is_full']),
+        'grade_levels': sorted({(s['section'].grade_level.sort_order if s['section'].grade_level_id else 999,
+                                 s['section'].grade_level.grade_name if s['section'].grade_level_id else 'No grade level') for s in section_data}),
     }
     return render(request, 'registrars/sections/list.html', context)
 
@@ -671,18 +683,24 @@ def section_detail(request, section_id):
         a.teacher_load = load.get(a.teacher_id)
 
     assigned_subject_ids = {a.subject_id for a in assignments}
-    active_count = sum(1 for e in enrollments if e.status in ACTIVE_ENROLLMENT)
+    active = [e for e in enrollments if e.status in ACTIVE_ENROLLMENT]
+    # DepEd class list order: males, then females, each by surname
+    enrollments.sort(key=lambda e: (0 if (e.student.sex or '').upper().startswith('M') else 1,
+                                    e.student.last_name.casefold(), e.student.first_name.casefold()))
     return render(request, 'registrars/sections/detail.html', {
         'section': section,
         'current_sy': sy,
         'enrollments': enrollments,
-        'active_count': active_count,
-        'inactive_count': len(enrollments) - active_count,
+        'active_count': len(active),
+        'inactive_count': len(enrollments) - len(active),
+        'males': sum(1 for e in active if (e.student.sex or '').upper().startswith('M')),
+        'females': sum(1 for e in active if (e.student.sex or '').upper().startswith('F')),
+        'teacher_count': len({a.teacher_id for a in assignments}),
         'assignments': assignments,
         'teacher_options': teacher_options,
         'available_subjects': Subject.objects.filter(school=school, is_active=True)
             .exclude(id__in=assigned_subject_ids).order_by('subject_code'),
-        'other_sections': Section.objects.filter(school=school, school_year=sy, is_active=True)
+        'other_sections': Section.objects.filter(school=school, school_year=sy, is_active=True).select_related('grade_level')
             .exclude(id=section.id).order_by('grade_level__sort_order', 'section_name'),
     })
 
@@ -767,9 +785,11 @@ def teacher_list(request):
             classes.setdefault(a.teacher_id, []).append(f'{a.subject.subject_code} — {a.section.section_name}')
     load = {o['user_id']: o for o in _teacher_options(school, current_sy)}
     for t in teachers:
-        t.classes = classes.get(t.user_id, [])
+        t.classes = sorted(classes.get(t.user_id, []))
         t.account_active = t.is_active and t.user.is_active
         t.load = load.get(t.user_id)
+        # share of a full DepEd teaching load (6 hours a day, 30 a week)
+        t.load_percent = min(100, round(t.load['minutes'] * 100 / (30 * 60))) if t.load else 0
 
     active = [t for t in teachers if t.account_active]
     return render(request, 'registrars/teachers/list.html', {
@@ -979,81 +999,124 @@ def teacher_email_preview(request):
 # =============================================================================
 # GRADE VALIDATION & PERIOD LOCK
 # =============================================================================
+# A class reaches the registrar when its teacher submits it with every learner graded. The registrar
+# validates it once the automatic checks (grades.review) pass, or returns it with a note; the teacher
+# and the School Head are told either way. Locking a period makes its validated grades final.
 
-def _class_grades(section, subject, period):
-    return GradeComponent.objects.filter(quarter=period, subject=subject, enrollment__section=section)
+GRADE_STATES = {          # label, pill tone, what it means
+    'not_started': ('Not started', 'muted', 'No grades yet.'),
+    'encoding': ('Teacher encoding', 'warn', 'Some learners still have no grade.'),
+    'ready': ('Not submitted', 'warn', 'Every learner has a grade, but the teacher has not submitted them yet.'),
+    'submitted': ('Ready to validate', 'info', 'The teacher submitted every grade.'),
+    'returned': ('Returned', 'risk', 'Sent back to the teacher for correction.'),
+    'validated': ('Validated', 'good', 'Validated. The teacher can no longer change these grades.'),
+    'locked': ('Finalized', 'good', 'The period is locked, so these grades are final.'),
+}
+STATE_FILTERS = (('submitted', 'Ready to validate'), ('ready', 'Not submitted'), ('encoding', 'Teacher encoding'),
+                 ('returned', 'Returned'), ('not_started', 'Not started'), ('validated', 'Validated'), ('locked', 'Finalized'))
+WAITING_ON_TEACHER = ('not_started', 'encoding', 'ready')
 
 
-def _class_grade_state(enrolled, statuses):
-    """One status word for a class in a period, from its students' grade rows."""
-    encoded = sum(statuses.values())
-    if not encoded:
-        return 'not_started'
-    if statuses.get('Returned'):
-        return 'returned'
-    if encoded < enrolled:
-        return 'incomplete'
-    if statuses.get('Draft') or statuses.get('Submitted'):
-        return 'ready'
-    return 'validated'
+def _class_name(a):
+    return f'{a.section.grade_level.grade_name} {a.section.section_name} · {a.subject.subject_code}'
+
+
+def _class_grades(assignment, period):
+    """The class's grades in a period, for its enrolled learners (grades of learners who left are not acted on)."""
+    return GradeComponent.objects.filter(quarter=period, subject=assignment.subject, enrollment__section=assignment.section,
+                                         enrollment__status__in=ACTIVE_ENROLLMENT)
+
+
+def _teacher_class_url(assignment):
+    return f"{reverse('teachers:class_record_list')}#class-{assignment.id}"
 
 
 def _selected_period(request, current_sy):
     periods = list(Quarter.objects.filter(school_year=current_sy).order_by('quarter_number')) if current_sy else []
     chosen = request.GET.get('period') or request.POST.get('period')
-    period = next((p for p in periods if str(p.id) == str(chosen)), None)
-    if not period:
-        period = next((p for p in periods if p.is_current_quarter), periods[0] if periods else None)
+    period = next((p for p in periods if str(p.id) == str(chosen)), None) or P.current(periods)
     return periods, period
 
 
-def _grade_overview(school, current_sy, period):
-    """Every active class of the school year with its grade progress in one period."""
-    assignments = list(
-        ClassAssignment.objects.filter(school_year=current_sy, section__school=school, is_active=True)
-        .select_related('section', 'section__grade_level', 'subject', 'teacher')
-        .order_by('section__grade_level__sort_order', 'section__section_name', 'subject__subject_code')
-    )
-    enrolled = dict(
-        Enrollment.objects.filter(section__school=school, school_year=current_sy, status__in=ACTIVE_ENROLLMENT)
-        .values_list('section_id').annotate(total=Count('id'))
-    )
-    status_counts = {}
-    for section_id, subject_id, status, total in GradeComponent.objects.filter(
-        quarter=period, enrollment__section__school=school, enrollment__status__in=ACTIVE_ENROLLMENT
-    ).values_list('enrollment__section_id', 'subject_id', 'validation_status').annotate(total=Count('id')):
-        status_counts.setdefault((section_id, subject_id), {})[status] = total
-
+def _grade_overview(school, current_sy, period, periods):
+    """Every active class graded in the period (a Senior High class only in its semester), with its state and checks."""
+    assignments = [a for a in ClassAssignment.objects.filter(school_year=current_sy, section__school=school, is_active=True)
+                   .select_related('section', 'section__grade_level', 'subject', 'subject__subject_family', 'teacher', 'semester')
+                   .order_by('section__grade_level__sort_order', 'section__section_name', 'subject__subject_code')
+                   if period in P.for_class(a, periods)]
+    reviews = review_classes(assignments, period, school.passing_grade)
     rows = []
     for a in assignments:
-        statuses = status_counts.get((a.section_id, a.subject_id), {})
-        total = enrolled.get(a.section_id, 0)
-        encoded = sum(statuses.values())
+        review = reviews[a.id]
+        label, tone, hint = GRADE_STATES[review['state']]
         rows.append({
-            'assignment': a,
-            'enrolled': total,
-            'encoded': encoded,
-            'percent': min(round(encoded * 100 / total), 100) if total else 0,
-            'state': _class_grade_state(total, statuses),
+            'assignment': a, 'review': review, 'state': review['state'], 'label': label, 'tone': tone, 'hint': hint,
+            'enrolled': review['enrolled'], 'encoded': review['graded'],
+            'percent': min(round(review['graded'] * 100 / review['enrolled']), 100) if review['enrolled'] else 0,
+            'clean': review['can_validate'] and not review['warnings'],
         })
     return rows
-
 
 
 def _who(request):
     return request.user.get_full_name() or request.user.username
 
+
+def _plural(n, many='es', one=''):
+    return one if n == 1 else many
+
+
+def _validate(request, assignment, period, tell_heads=True):
+    """Validate the class's submitted grades; tell the teacher (and the School Head)."""
+    count = _class_grades(assignment, period).filter(validation_status='Submitted').update(
+        validation_status='Validated', validated_by=request.user, validation_date=timezone.now(), validation_notes='')
+    where = _class_name(assignment)
+    _log(request, 'VALIDATE_GRADES', assignment.id, f'Validated {where} ({P.name(period)}), {count} grades', 'ClassAssignment')
+    notify([assignment.teacher], 'GRADE_VALIDATED', f'Validated: {where}',
+           f'{_who(request)} validated your {P.name(period)} grades for {count} learner{_plural(count, "s")}.',
+           _teacher_class_url(assignment), priority='Low', assignment_id=assignment.id)
+    if tell_heads:
+        notify_school_heads(assignment.section.school, 'GRADE_VALIDATED', f'Grades validated: {where}',
+                            f'{_who(request)} validated {P.name(period)} grades for {count} learners.',
+                            reverse('heads-ai-section-detail', args=[assignment.section_id, assignment.subject_id, period.id]),
+                            priority='Low')
+    return count
+
+
+def _reminder_text(review, period):
+    due = P.due_text(period)
+    word = P.name(period)
+    return {
+        'not_started': f'No {word} grades yet for this class.{due}',
+        'encoding': f'{review["missing"]} of {review["enrolled"]} learners still have no {word} grade.{due}',
+        'ready': f'Every learner has a {word} grade. Please submit them for validation.{due}',
+    }.get(review['state'])
+
+
+def _why_not(review):
+    if review['state'] == 'submitted':
+        return 'These grades did not pass every check. Return them to the teacher with a note on what to correct.'
+    return {
+        'ready': 'The teacher has not submitted these grades yet. You can send a reminder.',
+        'encoding': 'Not every learner has a grade yet.',
+        'not_started': 'There are no grades to validate yet.',
+        'returned': 'These grades are back with the teacher for correction.',
+        'validated': 'These grades are already validated.',
+    }.get(review['state'], 'These grades cannot be validated now.')
+
+
 @registrar_required
 @remember_filters('registrar-grades', ['period'])
 @cache_page_for_user()
 def grade_validation(request):
-    """Per grading period: which classes have grades in, validate them, lock the period."""
+    """Per grading period: where every class stands, validate the submitted ones, remind teachers, lock the period."""
     school = request.user.profile.school
     current_sy = _current_school_year(school)
     periods, period = _selected_period(request, current_sy)
 
     if request.method == 'POST' and period:
         action = request.POST.get('action')
+        word = P.name(period)
         period_grades = GradeComponent.objects.filter(quarter=period, enrollment__section__school=school)
         now = timezone.now()
         if action == 'lock':
@@ -1061,127 +1124,232 @@ def grade_validation(request):
             period.save()
             period_grades.filter(validation_status='Validated').update(validation_status='Finalized')
             period_grades.update(is_locked=True, locked_by=request.user, locked_at=now)
-            _log(request, 'LOCK_GRADES', period.id, f'Locked grades for {period.quarter_label} {current_sy.year_label}', 'Quarter')
-            notify_school_heads(school, 'GRADE_VALIDATED', f'{period_name(period)} grades are locked',
-                                f'{_who(request)} locked {period_name(period)}, SY {current_sy.year_label}. The grades are final.',
+            _log(request, 'LOCK_GRADES', period.id, f'Locked grades for {word} {current_sy.year_label}', 'Quarter')
+            notify_school_heads(school, 'GRADE_VALIDATED', f'{word} grades are locked',
+                                f'{_who(request)} locked {word}, SY {current_sy.year_label}. The grades are final.',
                                 reverse('heads-ai-dashboard'))
-            messages.success(request, f'{period.quarter_label} is locked. Teachers can no longer change its grades.')
+            messages.success(request, f'{word} is locked. Teachers can no longer change its grades.')
         elif action == 'unlock':
             period.is_grades_locked, period.locked_by, period.locked_at = False, None, None
             period.save()
             period_grades.update(is_locked=False, locked_by=None, locked_at=None)
             period_grades.filter(validation_status='Finalized').update(validation_status='Validated')
-            _log(request, 'UNLOCK_GRADES', period.id, f'Unlocked grades for {period.quarter_label} {current_sy.year_label}', 'Quarter')
-            notify_school_heads(school, 'GRADE_RETURNED', f'{period_name(period)} grades were unlocked',
-                                f'{_who(request)} unlocked {period_name(period)} so grades can be corrected.',
+            _log(request, 'UNLOCK_GRADES', period.id, f'Unlocked grades for {word} {current_sy.year_label}', 'Quarter')
+            notify_school_heads(school, 'GRADE_RETURNED', f'{word} grades were unlocked',
+                                f'{_who(request)} unlocked {word} so grades can be corrected.',
                                 reverse('heads-ai-dashboard'))
-            messages.success(request, f'{period.quarter_label} is unlocked.')
+            messages.success(request, f'{word} is unlocked.')
+        elif period.is_grades_locked:
+            messages.error(request, f'{word} is locked. Unlock it to change validation.')
         elif action == 'validate_all':
-            if period.is_grades_locked:
-                messages.error(request, f'{period.quarter_label} is locked. Unlock it to change validation.')
+            rows = _grade_overview(school, current_sy, period, periods)
+            done = [r['assignment'] for r in rows if r['state'] == 'submitted' and r['clean']]
+            held = sum(1 for r in rows if r['state'] == 'submitted' and not r['clean'])
+            for a in done:
+                _validate(request, a, period, tell_heads=False)
+            if done:
+                notify_school_heads(school, 'GRADE_VALIDATED', f'{word}: {len(done)} class{_plural(len(done))} validated',
+                                    f'{_who(request)} validated {len(done)} submitted class{_plural(len(done))} '
+                                    f'that passed every check for {word}.', reverse('heads-ai-dashboard'), priority='Low')
+                messages.success(request, f'{len(done)} class{_plural(len(done))} validated for {word}.' +
+                                 (f' {held} submitted class{_plural(held)} need{_plural(held, "", "s")} a closer look first.' if held else ''))
+            elif held:
+                messages.info(request, f'Nothing was validated: the {held} submitted class{_plural(held)} '
+                                       f'{_plural(held, "have", "has")} checks to look at. Open each one to review it.')
             else:
-                # only classes whose every enrolled student has a grade
-                validated = 0
-                for row in _grade_overview(school, current_sy, period):
-                    if row['state'] == 'ready':
-                        _class_grades(row['assignment'].section, row['assignment'].subject, period).update(
-                            validation_status='Validated', validated_by=request.user, validation_date=now)
-                        validated += 1
-                if validated:
-                    notify_school_heads(school, 'GRADE_VALIDATED', f'{period_name(period)}: {validated} class{"es" if validated != 1 else ""} validated',
-                                        f'{_who(request)} validated every complete class for {period_name(period)}.',
-                                        reverse('heads-ai-dashboard'))
-                    messages.success(request, f'{validated} complete class(es) validated for {period.quarter_label}.')
-                else:
-                    messages.info(request, 'No complete classes are waiting for validation.')
+                messages.info(request, 'No class is waiting for validation. Classes appear here once their teachers submit them.')
+        elif action == 'remind_all':
+            by_teacher = {}
+            for r in _grade_overview(school, current_sy, period, periods):
+                if r['state'] in WAITING_ON_TEACHER and r['assignment'].teacher_id:
+                    by_teacher.setdefault(r['assignment'].teacher, []).append(r)
+            sent = 0
+            for teacher, rows in by_teacher.items():
+                if sent_recently(teacher, 'GRADE_DEADLINE_REMINDER', None, 'Reminder:'):
+                    continue
+                names = ', '.join(_class_name(r['assignment']) for r in rows[:4]) + (f' and {len(rows) - 4} more' if len(rows) > 4 else '')
+                notify([teacher], 'GRADE_DEADLINE_REMINDER',
+                       f'Reminder: {len(rows)} class{_plural(len(rows))} to submit for {word}',
+                       f'Please complete and submit the {word} grades of {names}.{P.due_text(period)}',
+                       reverse('teachers:class_record_list'), priority='High' if P.deadline_info(period)[1] else 'Normal')
+                sent += 1
+            skipped = len(by_teacher) - sent
+            if sent:
+                _log(request, 'REMIND_TEACHERS', period.id, f'Reminded {sent} teacher(s) about {word} grades', 'Quarter')
+                messages.success(request, f'Reminder sent to {sent} teacher{_plural(sent, "s")}.' +
+                                 (f' {skipped} already got one in the last 12 hours.' if skipped else ''))
+            elif skipped:
+                messages.info(request, 'Every teacher with classes to submit already got a reminder in the last 12 hours.')
+            else:
+                messages.info(request, 'No teacher has classes waiting to be submitted.')
         return redirect(f"{reverse('registrars:grade_validation')}?period={period.id}")
 
-    rows = _grade_overview(school, current_sy, period) if period else []
+    rows = _grade_overview(school, current_sy, period, periods) if period else []
     counts = {}
     for row in rows:
         counts[row['state']] = counts.get(row['state'], 0) + 1
+    filters = [{'key': key, 'label': label, 'count': counts.get(key, 0)} for key, label in STATE_FILTERS if counts.get(key)]
+    encode_days, encode_overdue = P.deadline_info(period) if period else (None, False)
+    validate_days, validate_overdue = P.deadline_info(period, field='grade_validation_deadline') if period else (None, False)
     return render(request, 'registrars/grades/validation.html', {
         'current_sy': current_sy,
-        'periods': periods,
+        'periods': [{'period': p, 'name': P.name(p)} for p in periods],
         'period': period,
+        'period_name': P.name(period),
         'rows': rows,
         'counts': counts,
-        'pending_count': len(rows) - counts.get('validated', 0),
+        'filters': filters,
+        'clean_count': sum(1 for r in rows if r['state'] == 'submitted' and r['clean']),
+        'held_count': sum(1 for r in rows if r['state'] == 'submitted' and not r['clean']),
+        'waiting_count': sum(1 for r in rows if r['state'] in WAITING_ON_TEACHER),
+        'waiting_teachers': len({r['assignment'].teacher_id for r in rows if r['state'] in WAITING_ON_TEACHER and r['assignment'].teacher_id}),
+        'pending_count': len(rows) - counts.get('validated', 0) - counts.get('locked', 0),
+        'done_count': counts.get('validated', 0) + counts.get('locked', 0),
+        'encode_days': encode_days, 'encode_overdue': encode_overdue,
+        'validate_days': validate_days, 'validate_overdue': validate_overdue,
     })
 
 
 @registrar_required
 def grade_class_detail(request, assignment_id, period_id):
-    """Review one class's grades for a period, then validate or return them."""
+    """One class's grades for a period with the automatic checks; validate, return or remind."""
     school = request.user.profile.school
     assignment = get_object_or_404(
-        ClassAssignment.objects.select_related('section', 'section__grade_level', 'subject', 'teacher', 'school_year'),
+        ClassAssignment.objects.select_related('section', 'section__grade_level', 'section__school', 'subject',
+                                               'subject__subject_family', 'teacher', 'school_year', 'semester'),
         id=assignment_id, section__school=school,
     )
     period = get_object_or_404(Quarter, id=period_id, school_year=assignment.school_year)
-    grades = _class_grades(assignment.section, assignment.subject, period)
+    review = review_classes([assignment], period, school.passing_grade)[assignment.id]
+    where, word = _class_name(assignment), P.name(period)
 
     if request.method == 'POST':
         action = request.POST.get('action')
         if period.is_grades_locked:
-            messages.error(request, f'{period.quarter_label} is locked. Unlock it to change validation.')
-        elif not grades.exists():
-            messages.error(request, 'There are no grades to act on yet.')
+            messages.error(request, f'{word} is locked. Unlock it to change validation.')
         elif action == 'validate':
-            grades.update(validation_status='Validated', validated_by=request.user,
-                          validation_date=timezone.now(), validation_notes='')
-            _log(request, 'VALIDATE_GRADES', assignment.id,
-                 f'Validated {assignment.subject.subject_code} — {assignment.section.section_name} ({period.quarter_label})', 'ClassAssignment')
-            notify_school_heads(school, 'GRADE_VALIDATED',
-                                f'Grades validated: {assignment.subject.subject_code} · {assignment.section.section_name}',
-                                f'{_who(request)} validated {period_name(period)} grades for {grades.count()} learners.',
-                                reverse('heads-ai-section-detail', args=[assignment.section_id, assignment.subject_id, period.id]),
-                                priority='Low')
-            messages.success(request, f'{assignment.subject.subject_code} — {assignment.section.section_name} validated for {period.quarter_label}.')
+            if not review['can_validate']:
+                messages.error(request, _why_not(review))
+            elif review['warnings'] and request.POST.get('reviewed') != '1':
+                messages.error(request, 'Confirm that you have looked at the warnings before validating.')
+            else:
+                count = _validate(request, assignment, period)
+                messages.success(request, f'{where}: {count} {word} grade{_plural(count, "s")} validated.')
         elif action == 'return':
-            note = request.POST.get('note', '').strip()
+            note = request.POST.get('note', '').strip()[:1000]
             if not note:
                 messages.error(request, 'Tell the teacher what needs correcting before returning the grades.')
+            elif not review['graded']:
+                messages.error(request, 'There are no grades to return yet.')
             else:
-                grades.update(validation_status='Returned', validated_by=request.user,
-                              validation_date=timezone.now(), validation_notes=note)
-                _log(request, 'RETURN_GRADES', assignment.id,
-                     f'Returned {assignment.subject.subject_code} — {assignment.section.section_name} ({period.quarter_label}): {note}', 'ClassAssignment')
-                notify_school_heads(school, 'GRADE_RETURNED',
-                                    f'Grades returned: {assignment.subject.subject_code} · {assignment.section.section_name}',
-                                    f'{_who(request)} returned {period_name(period)} grades to '
-                                    f'{assignment.teacher.get_full_name() if assignment.teacher else "the teacher"} for correction: {note}',
+                count = _class_grades(assignment, period).exclude(validation_status='Finalized').update(
+                    validation_status='Returned', validated_by=request.user, validation_date=timezone.now(), validation_notes=note)
+                _log(request, 'RETURN_GRADES', assignment.id, f'Returned {where} ({word}): {note}', 'ClassAssignment')
+                notify([assignment.teacher], 'GRADE_RETURNED', f'Returned: {where}',
+                       f'{_who(request)} returned your {word} grades for correction: {note}',
+                       _teacher_class_url(assignment), priority='High', assignment_id=assignment.id)
+                notify_school_heads(school, 'GRADE_RETURNED', f'Grades returned: {where}',
+                                    f'{_who(request)} returned {word} grades to '
+                                    f'{review["teacher"] or "the teacher"} for correction: {note}',
                                     reverse('heads-ai-section-detail', args=[assignment.section_id, assignment.subject_id, period.id]))
-                messages.success(request, 'Grades returned to the teacher for correction.')
+                messages.success(request, f'{count} grade{_plural(count, "s")} returned to {review["teacher"] or "the teacher"} with your note.')
+        elif action == 'remind':
+            text = _reminder_text(review, period)
+            if not assignment.teacher_id:
+                messages.error(request, 'This class has no teacher to remind.')
+            elif not text:
+                messages.info(request, 'There is nothing to remind the teacher about.')
+            elif sent_recently(assignment.teacher, 'GRADE_DEADLINE_REMINDER', assignment.id, 'Reminder:'):
+                messages.info(request, 'A reminder about this class already went out in the last 12 hours.')
+            else:
+                notify([assignment.teacher], 'GRADE_DEADLINE_REMINDER', f'Reminder: {where}', text,
+                       _teacher_class_url(assignment), priority='High' if P.deadline_info(period)[1] else 'Normal',
+                       assignment_id=assignment.id)
+                _log(request, 'REMIND_TEACHER', assignment.id, f'Reminded the teacher of {where} ({word})', 'ClassAssignment')
+                messages.success(request, f'Reminder sent to {review["teacher"]}.')
         return redirect('registrars:grade_class_detail', assignment_id=assignment.id, period_id=period.id)
 
-    by_enrollment = {g.enrollment_id: g for g in grades}
-    students = []
-    for e in Enrollment.objects.filter(
-        section=assignment.section, school_year=assignment.school_year, status__in=ACTIVE_ENROLLMENT
-    ).select_related('student').order_by('student__last_name', 'student__first_name'):
-        g = by_enrollment.get(e.id)
-        value = None
-        if g:
-            value = g.transmuted_grade if g.transmuted_grade is not None else g.initial_grade
-        students.append({'enrollment': e, 'grade': g, 'value': value})
-
-    values = [float(s['value']) for s in students if s['value'] is not None]
-    passing = school.passing_grade
-    statuses = {}
-    for s in students:
-        if s['grade']:
-            statuses[s['grade'].validation_status] = statuses.get(s['grade'].validation_status, 0) + 1
+    label, tone, hint = GRADE_STATES[review['state']]
+    order = {'error': 0, 'warn': 1, 'info': 2, 'ok': 3}
+    validate_days, validate_overdue = P.deadline_info(period, field='grade_validation_deadline')
     return render(request, 'registrars/grades/class_detail.html', {
         'assignment': assignment,
         'period': period,
-        'students': students,
-        'encoded': sum(statuses.values()),
-        'missing': len(students) - sum(statuses.values()),
-        'average': round(sum(values) / len(values), 2) if values else None,
-        'passed': sum(1 for v in values if v >= passing),
-        'failed': sum(1 for v in values if v < passing),
-        'passing': passing,
-        'state': _class_grade_state(len(students), statuses),
-        'note': next((g.validation_notes for g in by_enrollment.values() if g.validation_notes), ''),
+        'period_name': word,
+        'review': review,
+        'checks': sorted(review['checks'], key=lambda c: order[c['level']]),
+        'state_label': label, 'state_tone': tone, 'state_hint': hint,
+        'passing': school.passing_grade,
+        'prev_label': P.short(review['previous_period']),
+        'has_components': any(l['qa'] is not None for l in review['learners']),
+        'can_remind': review['state'] in WAITING_ON_TEACHER and bool(assignment.teacher_id),
+        'reminder_text': _reminder_text(review, period),
+        'why_not': '' if review['can_validate'] else _why_not(review),
+        'mixed_status': len(review['statuses']) > 1,
+        'validate_days': validate_days, 'validate_overdue': validate_overdue,
     })
+
+
+# =============================================================================
+# NOTIFICATION BELL
+# =============================================================================
+
+NOTE_ICONS = {'GRADE_SUBMITTED': 'fi-rr-paper-plane', 'GRADE_VALIDATED': 'fi-rr-badge-check', 'GRADE_RETURNED': 'fi-rr-undo'}
+
+
+@registrar_required
+def grade_updates(request):
+    """What needs the registrar in the current period, plus their notifications (the bell)."""
+    school = request.user.profile.school
+    current_sy = _current_school_year(school)
+    periods = list(Quarter.objects.filter(school_year=current_sy).order_by('quarter_number')) if current_sy else []
+    current = P.current(periods)
+    reminders = []
+    if current and not current.is_grades_locked:
+        word = P.name(current)
+        rows = _grade_overview(school, current_sy, current, periods)
+        url = f"{reverse('registrars:grade_validation')}?period={current.id}"
+        submitted = [r for r in rows if r['state'] == 'submitted']
+        if submitted:
+            clean = sum(1 for r in submitted if r['clean'])
+            days, overdue = P.deadline_info(current, field='grade_validation_deadline')
+            detail = f'{clean} passed every check' + (f', {len(submitted) - clean} need a closer look' if clean < len(submitted) else '')
+            reminders.append({'icon': 'fi-rr-shield-check', 'url': f'{url}&show=submitted',
+                              'title': f'{len(submitted)} class{_plural(len(submitted))} ready to validate',
+                              'message': f'{detail}.{P.due_text(current, field="grade_validation_deadline")}',
+                              'urgent': overdue or (days is not None and days <= 3)})
+        waiting = [r for r in rows if r['state'] in WAITING_ON_TEACHER]
+        if waiting and P.deadline_info(current)[1]:
+            reminders.append({'icon': 'fi-rr-time-quarter-past', 'url': url,
+                              'title': f'{len(waiting)} class{_plural(len(waiting))} not submitted',
+                              'message': f'The {word} encoding deadline has passed. You can remind their teachers from Grade Validation.'})
+        if rows and all(r['state'] == 'validated' for r in rows):
+            reminders.append({'icon': 'fi-rr-lock', 'url': url, 'title': 'Every class is validated',
+                              'message': f'Lock {word} to make its grades final.'})
+    notes = []
+    for n in Notification.objects.filter(recipient=request.user, is_dismissed=False).order_by('-created_at')[:8]:
+        notes.append({'id': n.id, 'title': n.title, 'message': n.message, 'unread': not n.is_read,
+                      'url': reverse('registrars:open_notification', args=[n.id]) if n.action_url else '',
+                      'when': timezone.localtime(n.created_at).strftime('%b %d, %I:%M %p'),
+                      'icon': NOTE_ICONS.get(n.notification_type, 'fi-rr-bell')})
+    unread = Notification.objects.filter(recipient=request.user, is_read=False, is_dismissed=False).count()
+    return JsonResponse({'period': P.name(current), 'reminders': reminders, 'notifications': notes,
+                         'count': len(reminders) + unread})
+
+
+@registrar_required
+def open_notification(request, notification_id):
+    n = get_object_or_404(Notification, id=notification_id, recipient=request.user)
+    if not n.is_read:
+        n.is_read, n.read_at = True, timezone.now()
+        n.save(update_fields=['is_read', 'read_at'])
+    if n.action_url and url_has_allowed_host_and_scheme(n.action_url, {request.get_host()}):
+        return redirect(n.action_url)
+    return redirect('registrars:grade_validation')
+
+
+@registrar_required
+@require_POST
+def read_all_notifications(request):
+    Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True, read_at=timezone.now())
+    return JsonResponse({'ok': True})

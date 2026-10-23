@@ -1,0 +1,167 @@
+{% extends 'registrars/base.html' %}
+{% load static %}
+
+{% block title %}School Forms - ARMS{% endblock %}
+{% block subtitle %}School Forms{% if current_sy %} &bull; SY {{ current_sy.year_label }}{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .sf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 0.9rem; }
+    .sf { padding: 1rem 1.1rem 1.05rem; display: flex; flex-direction: column; gap: 0.7rem; }
+    .sf-head { display: flex; gap: 0.6rem; align-items: center; }
+    .sf-code { flex-shrink: 0; min-width: 3.1rem; padding: 0.28rem 0.5rem; border-radius: 9px; background: var(--brand-soft); color: var(--brand);
+               font-weight: 750; font-size: 0.78rem; text-align: center; letter-spacing: 0.02em; }
+    .sf h3 { margin: 0; font-size: 0.95rem; line-height: 1.3; }
+    .sf .hint { margin: 0; }
+    .sf-fields { display: grid; gap: 0.6rem; }
+    .sf-fields .field select { width: 100%; }
+    .sf-fields .field[hidden] { display: none; }        /* .field is display:flex, which would beat [hidden] */
+    .sf-actions { margin-top: auto; display: flex; justify-content: flex-end; }
+    .sf-head-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; }
+    .sy-pick { min-width: 190px; }
+    .hdr { padding: 1rem 1.15rem 1.1rem; }
+    .hdr-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; align-items: end; }
+    .hdr-grid .head-name { padding: 0.55rem 0.7rem; border-radius: 10px; background: var(--soft); font-weight: 650; font-size: 0.86rem; min-height: 2.35rem; }
+    .hdr-actions { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap; margin-top: 0.8rem; }
+    @media (max-width: 900px) { .hdr-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 560px) { .hdr-grid { grid-template-columns: minmax(0, 1fr); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tp">
+    <section class="card tp-head">
+        <div>
+            <h2><i class="fi fi-rr-document" style="color:#123499;"></i> School forms</h2>
+            <p class="hint">DepEd's own templates, filled from what ARMS already has: the register, attendance, grades and personnel. Each form downloads as an Excel file to check, sign and print.</p>
+        </div>
+        {% if years %}
+        <form method="get" class="sy-pick">
+            {% if picked %}<input type="hidden" name="section" value="{{ picked }}">{% endif %}
+            <label class="field"><span>School year</span>
+                <select name="sy" onchange="this.form.submit()" aria-label="School year">
+                    {% for y in years %}<option value="{{ y.id }}" {% if y.id == current_sy.id %}selected{% endif %}>SY {{ y.year_label }}{% if y.is_current %} (current){% endif %}</option>{% endfor %}
+                </select>
+            </label>
+            <noscript><button class="btn btn-line btn-sm" type="submit">Show</button></noscript>
+        </form>
+        {% endif %}
+    </section>
+
+    {% if no_year %}
+    <section class="card"><p class="empty"><i class="fi fi-rr-calendar"></i>There is no school year yet. School forms can be made once your system administrator sets one.</p></section>
+    {% else %}
+
+    {% if unvalidated %}
+    <div class="note warn"><i class="fi fi-rr-triangle-warning"></i><span><b>{{ unvalidated }} grade{{ unvalidated|pluralize }} of SY {{ current_sy.year_label }} {{ unvalidated|pluralize:"is,are" }} not validated yet.</b> SF5, SF6 and the summaries use the grades as recorded; validate them on Grade Validation before you submit these forms.</span></div>
+    {% endif %}
+
+    <section class="card hdr" aria-labelledby="hdrTitle">
+        <div class="panel-head" style="margin-bottom:0.6rem;">
+            <h3 id="hdrTitle"><i class="fi fi-rr-id-card-clip-alt" style="color:#123499;"></i> Printed on every form</h3>
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="header">
+            <input type="hidden" name="sy" value="{{ current_sy.id }}">
+            <div class="hdr-grid">
+                <label class="field"><span>Region</span><input type="text" name="region" value="{{ region_label }}" placeholder="Region XI" maxlength="40"></label>
+                <label class="field"><span>Division</span><input type="text" name="division" value="{{ header.division }}" placeholder="Panabo City" maxlength="100"></label>
+                <label class="field"><span>District</span><input type="text" name="district" value="{{ header.district }}" placeholder="Panabo City District I" maxlength="100"></label>
+                <div class="field"><span>School head (signs the forms)</span><div class="head-name">{{ info.head|default:"No school head account" }}</div></div>
+            </div>
+            <div class="hdr-actions">
+                <span class="hint" style="margin:0;">School {{ school.school_name }} &middot; ID {{ school.school_id }}. ARMS fills the region, division and district from the SF1 you import.</span>
+                <button type="submit" class="btn btn-line btn-sm"><i class="fi fi-rr-disk"></i> Save header</button>
+            </div>
+        </form>
+    </section>
+
+    <div class="sf-grid">
+        {% for c in cards %}
+        <form class="card sf" method="get" action="{% url 'registrars:school_form_download' %}" data-card="{{ c.code }}">
+            <input type="hidden" name="code" value="{{ c.code }}">
+            <input type="hidden" name="sy" value="{{ current_sy.id }}">
+            <div class="sf-head"><span class="sf-code">{{ c.badge }}</span><h3>{{ c.title }}</h3></div>
+            <p class="hint">{{ c.about }}</p>
+            <div class="sf-fields">
+                {% if c.scope == 'section' %}
+                <label class="field"><span>Section</span>
+                    <select name="section" required data-section>
+                        <option value="">Choose a section</option>
+                        {% if jhs %}<optgroup label="Junior High">{% for s in jhs %}<option value="{{ s.id }}" {% if picked == s.id|stringformat:"s" %}selected{% endif %}>{{ s.grade_level.grade_name }} {{ s.section_name }}</option>{% endfor %}</optgroup>{% endif %}
+                        {% if shs %}<optgroup label="Senior High">{% for s in shs %}<option value="{{ s.id }}" data-shs="1" {% if picked == s.id|stringformat:"s" %}selected{% endif %}>{{ s.grade_level.grade_name }} {{ s.section_name }}</option>{% endfor %}</optgroup>{% endif %}
+                    </select>
+                </label>
+                {% elif c.scope == 'section12' %}
+                <label class="field"><span>Grade 12 section</span>
+                    <select name="section" required data-section>
+                        {% for s in grade12 %}<option value="{{ s.id }}" data-shs="1" {% if picked == s.id|stringformat:"s" %}selected{% endif %}>{{ s.grade_level.grade_name }} {{ s.section_name }}</option>{% endfor %}
+                    </select>
+                </label>
+                {% elif c.scope == 'section_jhs' %}
+                <label class="field"><span>Section</span>
+                    <select name="section" required data-section>
+                        <option value="">Choose a section</option>
+                        {% for s in jhs %}<option value="{{ s.id }}" {% if picked == s.id|stringformat:"s" %}selected{% endif %}>{{ s.grade_level.grade_name }} {{ s.section_name }}</option>{% endfor %}
+                    </select>
+                </label>
+                {% elif c.scope == 'school' %}
+                {% if has_jhs and has_shs %}
+                <label class="field"><span>Level</span>
+                    <select name="level" data-level>
+                        <option value="jhs" {% if level == 'jhs' %}selected{% endif %}>Junior High (Grades 7 to 10)</option>
+                        <option value="shs" {% if level == 'shs' %}selected{% endif %}>Senior High (Grades 11 and 12)</option>
+                    </select>
+                </label>
+                {% else %}
+                <input type="hidden" name="level" value="{% if has_shs %}shs{% else %}jhs{% endif %}" data-level>
+                {% endif %}
+                {% endif %}
+                {% if 'month' in c.needs %}
+                <label class="field"><span>Month</span>
+                    <select name="month">
+                        {% for number, label in months %}<option value="{{ number }}" {% if number == month %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                    </select>
+                </label>
+                {% endif %}
+                {% if 'semester' in c.needs and semesters %}
+                <label class="field" data-semester><span>Semester (Senior High)</span>
+                    <select name="semester">
+                        {% for s in semesters %}<option value="{{ s.semester_number }}" {% if s.semester_number == semester %}selected{% endif %}>{{ s.semester_label }} Semester</option>{% endfor %}
+                    </select>
+                </label>
+                {% endif %}
+            </div>
+            <div class="sf-actions">
+                <button type="submit" class="btn btn-main btn-sm"><i class="fi fi-rr-download"></i> Download</button>
+            </div>
+        </form>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    // the semester only matters for Senior High: show it when a Senior High section or level is chosen
+    document.querySelectorAll('form.sf').forEach(function (form) {
+        var sem = form.querySelector('[data-semester]');
+        if (!sem) return;
+        var section = form.querySelector('[data-section]'), level = form.querySelector('[data-level]');
+        function update() {
+            var shs = false;
+            if (section) { var o = section.options[section.selectedIndex]; shs = !!(o && o.dataset.shs); }
+            else if (level) { shs = level.value === 'shs'; }
+            sem.hidden = !shs;
+            sem.querySelector('select').disabled = !shs;
+        }
+        if (section) section.addEventListener('change', update);
+        if (level && level.tagName === 'SELECT') level.addEventListener('change', update);
+        update();
+    });
+})();
+</script>
+{% endblock %}

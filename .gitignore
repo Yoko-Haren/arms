@@ -17,8 +17,12 @@ media/
 staticfiles/
 *.log
 
-# Generated machine-learning artifacts
+# Generated machine-learning artifacts (rebuild with `python manage.py train_ml_models`)
 ml_engine/saved_models/*.pkl
+ml_engine/saved_models/*.json
+
+# Capstone paperwork (progress reports, seminar outputs): it names the team and adviser and is not part of the app
+/reports/
 
 # Editor and operating-system files
 .vscode/

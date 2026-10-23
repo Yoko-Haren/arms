@@ -1,6 +1,6 @@
 # students/models.py
 """
-Phase 3: Core Student Master Data for Formify LIS.
+Phase 3: Core Student Master Data for ARMS.
 Permanent student records, addresses, contacts, guardians,
 medical info, documents, and sibling tracking.
 """

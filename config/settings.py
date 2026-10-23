@@ -105,6 +105,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'accounts.context_processors.auth_options',
+                'communication.context_processors.contact',
             ],
         },
     },
@@ -233,6 +234,8 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', '').strip() or (
     f'ARMS <{EMAIL_HOST_USER}>' if EMAIL_HOST_USER else 'ARMS <no-reply@arms.local>'
 )
 EMAIL_CODE_MINUTES = 15
+# Where "Contact us" requests from schools and sign-in help messages are sent.
+ARMS_CONTACT_EMAIL = os.environ.get('ARMS_CONTACT_EMAIL', 'trinity.org.ph@gmail.com').strip()
 
 
 # =============================================================================
@@ -295,6 +298,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 SESSION_COOKIE_HTTPONLY = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE = 28800  # 8 hours
+# "Remember me" on the sign-in page keeps the user signed in on that device for this long.
+REMEMBER_ME_DAYS = int(os.environ.get('REMEMBER_ME_DAYS', '30'))
 
 # CSRF — set HTTPONLY False so JS (AJAX forms) can read the token from the cookie
 CSRF_COOKIE_HTTPONLY = False

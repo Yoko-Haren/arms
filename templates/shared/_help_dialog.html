@@ -1,0 +1,65 @@
+{# "Need help?" on the sign-in and account pages: quick answers, and a message to the ARMS administrator. #}
+<dialog class="help-dialog" id="helpDialog" aria-labelledby="helpTitle" data-mailto="{{ contact_links.help_mailto }}">
+    <div class="help-head">
+        <span class="help-ico" aria-hidden="true"><i class="fi fi-rr-headset"></i></span>
+        <div>
+            <h2 id="helpTitle">Need help signing in?</h2>
+            <p>Most sign-in problems are solved in a minute.</p>
+        </div>
+        <button class="help-close" type="button" data-close-help aria-label="Close"><i class="fi fi-rr-cross" aria-hidden="true"></i></button>
+    </div>
+    <div class="help-content">
+        <ul class="help-faq">
+            <li><i class="fi fi-rr-key" aria-hidden="true"></i><div><b>Forgot your password?</b><span>We email a 6-digit code to the address on your account. <a href="{% url 'password_reset' %}">Reset your password</a></span></div></li>
+            <li><i class="fi fi-rr-user" aria-hidden="true"></i><div><b>No account yet?</b><span>Your school's registrar or administrator creates ARMS accounts. Ask them for your username and temporary password.</span></div></li>
+            <li><i class="fi fi-rr-graduation-cap" aria-hidden="true"></i><div><b>Taking a quiz?</b><span>Learners do not need an account. Open the quiz link your teacher shared.</span></div></li>
+        </ul>
+
+        <form class="help-form" method="post" action="{% url 'contact_submit' %}" data-contact-form novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="topic" value="support">
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <div data-contact-fields>
+                <h3>Message the ARMS administrator</h3>
+                <p class="help-sub">Still stuck? Tell us what happened and we will reply by email.</p>
+                <div class="help-grid">
+                    <div>
+                        <label for="helpName">Your name</label>
+                        <input id="helpName" name="name" type="text" autocomplete="name" maxlength="120" required data-required="Enter your name.">
+                        <p class="field-error" data-error-for="name" hidden></p>
+                    </div>
+                    <div>
+                        <label for="helpEmail">Email address</label>
+                        <input id="helpEmail" name="email" type="email" autocomplete="email" maxlength="254" required data-required="Enter your email address so we can reply.">
+                        <p class="field-error" data-error-for="email" hidden></p>
+                    </div>
+                </div>
+                <label for="helpSchool">School <span class="optional">(optional)</span></label>
+                <input id="helpSchool" name="school_name" type="text" autocomplete="organization" maxlength="200">
+                <label for="helpMessage">What went wrong?</label>
+                <textarea id="helpMessage" name="message" rows="4" maxlength="3000" required data-required="Tell us what went wrong so we can help."
+                          placeholder="For example: my account is locked, or the reset code did not arrive."></textarea>
+                <p class="field-error" data-error-for="message" hidden></p>
+                <div class="trap" aria-hidden="true"><label for="helpWebsite">Leave this empty</label><input id="helpWebsite" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+                <p class="field-error" data-error-for="__all__" hidden></p>
+                <button class="btn" type="submit"><i class="fi fi-rr-paper-plane" aria-hidden="true"></i>Send message</button>
+            </div>
+            <div class="contact-sent" data-contact-sent tabindex="-1" hidden>
+                <span class="sent-ico" aria-hidden="true"><i class="fi fi-rr-check"></i></span>
+                <b>Message sent</b>
+                <p>Thank you<span data-sent-name></span>. The ARMS administrator will reply to <strong data-sent-email></strong>.</p>
+            </div>
+        </form>
+
+        <div class="help-email">
+            <div>
+                <b>Prefer email?</b>
+                <span>Open a ready-made message with the subject and the details we need already filled in.</span>
+            </div>
+            <div class="help-email-actions">
+                <a class="btn outline" href="{{ contact_links.help_gmail }}" target="_blank" rel="noopener noreferrer">Open in Gmail<i class="fi fi-rr-arrow-up-right" aria-hidden="true"></i></a>
+                <a class="help-other" href="{{ contact_links.help_mailto }}">Other email app</a>
+            </div>
+        </div>
+    </div>
+</dialog>

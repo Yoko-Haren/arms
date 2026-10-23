@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Teacher Evaluation - Formify School Head Portal</title>
+    <title>Teacher Evaluation - ARMS School Head Portal</title>
     
     <!-- Flaticon UIcons -->
     <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
@@ -701,7 +701,7 @@
             <div class="sidebar-header">
                 <div class="logo-area">
                     <i class="fi fi-rr-graduation-cap"></i>
-                    <h2>Formify <span>School Head Portal</span></h2>
+                    <h2>ARMS <span>School Head Portal</span></h2>
                 </div>
                 <button class="fold-btn" id="foldBtn" title="Toggle sidebar">
                     <i class="fi fi-rr-angle-left"></i>
@@ -1037,7 +1037,7 @@
 
             window.generateReport = function() {
                 if (!selectedTeacher) return;
-                const content = `<div style="font-family: Arial; padding: 2rem;"><h2 style="color: #5EA173;">Teacher Performance Evaluation Report</h2><p><strong>Teacher:</strong> ${selectedTeacher.name}</p><p><strong>Department:</strong> ${selectedTeacher.dept}</p><p><strong>Career Stage:</strong> ${selectedTeacher.career}</p><p><strong>IPCRF:</strong> ${selectedTeacher.ipcrf.toFixed(1)}/5.0 | <strong>COT:</strong> ${selectedTeacher.cot.toFixed(1)}/5.0 | <strong>Overall:</strong> ${selectedTeacher.overall.toFixed(1)}/5.0</p><hr><p><em>Generated from Formify LIS - School Head Portal</em></p></div>`;
+                const content = `<div style="font-family: Arial; padding: 2rem;"><h2 style="color: #5EA173;">Teacher Performance Evaluation Report</h2><p><strong>Teacher:</strong> ${selectedTeacher.name}</p><p><strong>Department:</strong> ${selectedTeacher.dept}</p><p><strong>Career Stage:</strong> ${selectedTeacher.career}</p><p><strong>IPCRF:</strong> ${selectedTeacher.ipcrf.toFixed(1)}/5.0 | <strong>COT:</strong> ${selectedTeacher.cot.toFixed(1)}/5.0 | <strong>Overall:</strong> ${selectedTeacher.overall.toFixed(1)}/5.0</p><hr><p><em>Generated from ARMS - School Head Portal</em></p></div>`;
                 html2pdf().set({ margin: [0.5,0.5,0.5,0.5], filename: `Teacher_Evaluation_${selectedTeacher.name.replace(/ /g, '_')}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } }).from(content).save();
                 showToast('Report Generated', `PDF report for ${selectedTeacher.name} downloaded.`);
             };

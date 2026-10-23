@@ -1,6 +1,15 @@
 {% extends 'accounts/auth_base.html' %}
 {% block title %}Link your Google account - ARMS{% endblock %}
 {% block icon %}fi-rr-link-alt{% endblock %}
+{% block aside_title %}Faster sign-in with Google.{% endblock %}
+{% block aside_text %}Link your school Google account once. After that, one click signs you in, with no password to type.{% endblock %}
+{% block aside_points %}
+<ul class="auth-points">
+    <li><i class="fi fi-rr-link-alt" aria-hidden="true"></i>Link your Google account once</li>
+    <li><i class="fi fi-rr-envelope" aria-hidden="true"></i>A code confirms the address is yours</li>
+    <li><i class="fi fi-rr-sign-in-alt" aria-hidden="true"></i>Then sign in with one click</li>
+</ul>
+{% endblock %}
 {% block content %}
 <h1>{% if changing %}Change your Google account{% else %}Link your Google account{% endif %}</h1>
 <p class="lead">
@@ -26,7 +35,7 @@
 </a>
 
 <div class="link-row">
-    {% if required %}<span></span>{% else %}<a href="{{ dashboard_url }}"><i class="fi fi-rr-arrow-left"></i> Not now</a>{% endif %}
+    {% if required %}<span></span>{% else %}<a href="{{ dashboard_url }}"><i class="fi fi-rr-arrow-small-left" aria-hidden="true"></i>Not now</a>{% endif %}
     <a href="{% url 'signout' %}">Sign out</a>
 </div>
 {% endblock %}

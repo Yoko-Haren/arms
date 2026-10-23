@@ -2,172 +2,374 @@
 {% load static %}
 
 {% block title %}Class Records{% endblock %}
-{% block subtitle %}My Class Records — {{ current_sy.year_label|default:"Current SY" }}{% endblock %}
+{% block subtitle %}Class Records{% if sy %} &bull; SY {{ sy.year_label }}{% endif %}{% if current_name %} &bull; {{ current_name }}{% endif %}{% endblock %}
 
 {% block extra_css %}
 <style>
-    .expand-icon { transition: transform 0.2s; cursor: pointer; }
-    .expand-icon.open { transform: rotate(90deg); }
-    .student-row { display: none; background: #fafbfc; }
-    .student-row.open { display: table-row; }
-    .student-name-cell { padding-left: 2rem !important; }
-    .grade-badge { display: inline-block; width: 38px; text-align: center; padding: 2px 0; border-radius: 6px; font-weight: 700; font-size: 0.75rem; }
-    .grade-badge.pass { background: #d4edda; color: #155724; }
-    .grade-badge.fail { background: #f8d7da; color: #721c24; }
-    .grade-badge.pending { background: #e9ecef; color: #4a5568; }
-    .clickable-row { cursor: pointer; transition: background 0.15s; }
-    .clickable-row:hover { background: #f0f4ff; }
-    .summary-strip { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
-    .summary-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #4a5568; }
-    .summary-item .dot { width: 8px; height: 8px; border-radius: 50%; }
-    .summary-item .dot.green { background: #123499; }
-    .summary-item .dot.orange { background: #f39c12; }
-    .summary-item .dot.red { background: #dc3545; }
-    .summary-item strong { color: #1a1a2e; }
+    /* Shared portal look is in static/shared/css/portal-pages.css. */
+    .cr-list { padding: 1rem 1.15rem 1.1rem; container-type: inline-size; }
+    .cr-toolbar { display: flex; gap: 0.6rem 0.8rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.9rem; }
+    .cr-toolbar .search { position: relative; flex: 1 1 240px; max-width: 340px; }
+    .cr-toolbar .search i { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 0.8rem; }
+    .cr-toolbar .search input { padding-left: 2.1rem; border-radius: 20px; }
+    .cr-toolbar .sort { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.8rem; font-weight: 650; color: var(--muted); white-space: nowrap; }
+    .cr-toolbar .sort select { width: auto; border-radius: 20px; }
+    .chips { display: inline-flex; gap: 0.35rem; flex-wrap: wrap; }
+    .chips button { border: 1.5px solid #dfe4ec; background: #fff; border-radius: 20px; padding: 0.35rem 0.75rem; font: inherit; font-size: 0.78rem;
+                    font-weight: 600; color: var(--muted); cursor: pointer; }
+    .chips button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .chips button em { font-style: normal; opacity: 0.75; margin-left: 0.25rem; }
+    .cr-count { margin-left: auto; font-size: 0.8rem; color: var(--muted); }
+
+    .cr-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
+    .cr-row { display: grid; grid-template-columns: minmax(190px, 1.2fr) max-content 7rem 8.5rem minmax(max-content, 1fr); gap: 0.6rem 1.1rem;
+              grid-template-areas: "who periods now state actions"; align-items: center; padding: 0.8rem 0.95rem; border: 1px solid var(--line); border-radius: 14px; background: #fff;
+              transition: border-color 0.15s, box-shadow 0.15s; scroll-margin-top: 1rem; }
+    .cr-row:hover { border-color: #cfd8ea; }
+    .cr-row.flash { box-shadow: 0 0 0 3px rgba(18, 52, 153, 0.25); }
+    .cr-row.tone-risk { border-left: 4px solid var(--risk); }
+    .cr-who b { display: block; font-size: 0.92rem; font-weight: 650; }
+    .cr-who small { display: block; font-size: 0.78rem; color: var(--muted); margin-top: 0.1rem; }
+    .cr-who .pill { margin-left: 0.35rem; vertical-align: 1px; padding: 0.08rem 0.5rem; font-size: 0.68rem; }
+    .cr-who { grid-area: who; min-width: 0; }
+    .cr-periods { grid-area: periods; display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .cr-now { grid-area: now; }
+    .cr-state { grid-area: state; }
+    .cr-chip { display: grid; grid-template-columns: auto 1fr; gap: 0.1rem 0.4rem; align-items: center; min-width: 4.6rem; padding: 0.3rem 0.5rem;
+               border: 1.5px solid var(--line); border-radius: 10px; background: #fff; }
+    .cr-chip em { font-style: normal; font-size: 0.72rem; font-weight: 700; color: var(--muted); }
+    .cr-chip small { grid-column: 2; justify-self: end; font-size: 0.72rem; font-weight: 650; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .cr-chip .bar { grid-column: 1 / -1; height: 4px; border-radius: 4px; background: #edf1f7; overflow: hidden; }
+    .cr-chip .bar i { display: block; height: 100%; background: #a0aec0; border-radius: 4px; }
+    .cr-chip.is-current { border-color: var(--brand); box-shadow: 0 0 0 2px rgba(18, 52, 153, 0.12); }
+    .cr-chip.is-current em { color: var(--brand); }
+    .cr-chip.st-validated .bar i, .cr-chip.st-locked .bar i { background: var(--good); }
+    .cr-chip.st-submitted .bar i, .cr-chip.st-ready .bar i { background: var(--brand); }
+    .cr-chip.st-encoding .bar i { background: #D97706; }
+    .cr-chip.st-returned .bar i { background: var(--risk); }
+    .cr-chip.st-not_started small { color: #a0aec0; }
+    .cr-now b { display: block; font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .cr-now small { display: block; font-size: 0.74rem; color: var(--muted); }
+    .cr-now small.risk { color: var(--risk); font-weight: 600; }
+    .cr-actions { grid-area: actions; display: flex; gap: 0.4rem; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+    .cr-actions form { margin: 0; }
+    .cr-more { position: relative; }
+    .cr-more summary { list-style: none; cursor: pointer; }
+    .cr-more summary::-webkit-details-marker { display: none; }
+    .cr-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 240px; background: #fff; border: 1px solid var(--line);
+               border-radius: 12px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12); padding: 0.35rem; }
+    .cr-menu a { display: flex; gap: 0.55rem; align-items: center; padding: 0.55rem 0.7rem; border-radius: 8px; color: var(--ink); text-decoration: none; font-size: 0.82rem; }
+    .cr-menu a:hover { background: var(--soft); }
+    .cr-menu a small { display: block; color: var(--muted); font-size: 0.72rem; }
+    .adv { padding: 1rem 1.15rem 1.1rem; }
+    .adv-forms { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 0.6rem; }
+    .adv-form { display: flex; flex-wrap: wrap; gap: 0.45rem 0.6rem; align-items: center; border: 1px solid var(--line); border-radius: 12px; padding: 0.65rem 0.75rem; }
+    .adv-code { min-width: 3rem; padding: 0.22rem 0.45rem; border-radius: 8px; background: var(--brand-soft); color: var(--brand); font-weight: 750;
+                font-size: 0.74rem; text-align: center; }
+    .adv-title { flex: 1 1 120px; font-weight: 650; font-size: 0.84rem; }
+    .adv-form select { flex: 1 1 140px; }
+    .adv-form .btn { margin-left: auto; }
+    .cr-note { grid-column: 1 / -1; margin: 0; padding: 0.55rem 0.75rem; border-radius: 10px; background: var(--risk-bg); color: #7a1c1c; font-size: 0.8rem; }
+    .cr-note b { font-weight: 650; }
+    .cr-empty { padding: 2.5rem 1rem; text-align: center; color: var(--muted); }
+    .cr-empty i { font-size: 2rem; color: #a0aec0; display: block; margin-bottom: 0.5rem; }
+    /* not enough room for one line: status and buttons move under the class */
+    @container (max-width: 1180px) {
+        .cr-row { grid-template-columns: minmax(0, 1fr) max-content 6.5rem; grid-template-areas: "who periods now" "state actions actions"; }
+    }
+    @container (max-width: 760px) {
+        .cr-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "who now" "periods periods" "state actions"; }
+        .cr-now { text-align: right; }
+    }
+    @container (max-width: 520px) {
+        .cr-row { grid-template-columns: minmax(0, 1fr); grid-template-areas: "who" "now" "periods" "state" "actions"; }
+        .cr-now { text-align: left; }
+        .cr-actions { justify-content: flex-start; }
+    }
+
+    /* learners dialog */
+    .ld-table td.cur, .ld-table th.cur { background: #f3f6ff; }
+    .ld-table .lrn { font-family: Consolas, 'Courier New', monospace; font-size: 0.76rem; color: var(--muted); }
+    .ld-table tbody tr:hover td { background: #fafbff; }
+    .ld-none { padding: 1.5rem; text-align: center; color: var(--muted); font-size: 0.86rem; }
 </style>
 {% endblock %}
 
 {% block content %}
-
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h3 style="margin:0;"><i class="fi fi-rr-folder"></i> My Class Records</h3>
-    </div>
-    <div style="display:flex;gap:0.5rem;">
-        <a href="{% url 'teachers:upload_class_record' %}?download_template=1" class="btn-outline btn-sm">
-            <i class="fi fi-rr-download"></i> Template
-        </a>
-        <a href="{% url 'teachers:upload_class_record' %}" class="btn-primary">
-            <i class="fi fi-rr-upload"></i> Upload Grades
-        </a>
-    </div>
-</div>
-
-{% if assignments %}
-<!-- Summary Strip -->
-<div class="summary-strip">
-    <div class="summary-item"><span class="dot green"></span> <strong>{{ assignments|length }}</strong> Classes</div>
-    <div class="summary-item"><span class="dot orange"></span> <strong>{{ total_students|default:0 }}</strong> Total Students</div>
-</div>
-
-{% for item in assignments %}
-<!-- Class Card -->
-<div class="card" style="margin-bottom:1.5rem;">
-    <!-- Class Header -->
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.8rem;">
+<div class="tp">
+    <section class="card tp-head">
         <div>
-            <div style="font-size:0.95rem;font-weight:700;color:#1a1a2e;">
-                {{ item.section.section_name }}
-                <span style="font-size:0.7rem;color:#4a5568;font-weight:400;margin-left:0.5rem;">
-                    {{ item.section.grade_level.grade_name }}
-                </span>
-            </div>
-            <div style="font-size:0.78rem;color:#4a5568;">
-                {{ item.subject.subject_name }} ({{ item.subject.subject_code }})
-            </div>
+            <h2><i class="fi fi-rr-folder-open" style="color:#123499;"></i> Class records</h2>
+            <p class="hint">
+                {% if current %}{{ current_name }} is the current {{ period_word|lower }}{% if deadline %}; grades are due {{ deadline|date:"M j, g:i A" }}{% endif %}.{% else %}No grading period is open.{% endif %}
+                Grades you upload stay drafts until you submit them to the registrar.
+            </p>
         </div>
-        <div style="display:flex;gap:0.8rem;align-items:center;">
-            <!-- Quarter Stats -->
-            {% for qs in item.quarter_stats %}
-            <div style="text-align:center;padding:0.3rem 0.6rem;border-radius:8px;background:{% if qs.complete %}#d4edda{% elif qs.done > 0 %}#fff3cd{% else %}#f8f9fa{% endif %};">
-                <div style="font-size:0.6rem;font-weight:600;color:#4a5568;">{{ qs.quarter }}</div>
-                <div style="font-size:0.85rem;font-weight:700;color:{% if qs.complete %}#155724{% elif qs.done > 0 %}#856404{% else %}#4a5568{% endif %};">
-                    {{ qs.done }}/{{ qs.total }}
-                </div>
+        <div class="actions">
+            <a class="btn btn-main" href="{% url 'teachers:upload_class_record' %}"><i class="fi fi-rr-upload"></i> Upload grades</a>
+        </div>
+    </section>
+
+    {% if current and days_left is not None and to_grade %}
+    <div class="note {% if overdue %}risk{% elif days_left <= 7 %}warn{% endif %}">
+        <i class="fi fi-rr-alarm-clock"></i>
+        <span>{% if overdue %}The {{ current_name }} deadline has passed and <b>{{ to_grade }} learner{{ to_grade|pluralize }}</b> still {{ to_grade|pluralize:"has,have" }} no grade.
+              {% elif days_left == 0 %}{{ current_name }} grades are due <b>today</b>; <b>{{ to_grade }} learner{{ to_grade|pluralize }}</b> still {{ to_grade|pluralize:"has,have" }} no grade.
+              {% else %}{{ current_name }} grades are due in <b>{{ days_left }} day{{ days_left|pluralize }}</b>; <b>{{ to_grade }} learner{{ to_grade|pluralize }}</b> still {{ to_grade|pluralize:"has,have" }} no grade.{% endif %}</span>
+    </div>
+    {% endif %}
+
+    {% if classes %}
+    <div class="tiles" style="--tiles:4">
+        <div class="card tile"><span class="tile-ico"><i class="fi fi-rr-users-alt"></i></span>
+            <div><span>Classes</span><b>{{ classes|length }}</b><small>{{ learners }} learner{{ learners|pluralize }}</small></div></div>
+        <div class="card tile {% if graded == learners and learners %}good{% endif %}"><span class="tile-ico"><i class="fi fi-rr-chart-pie-alt"></i></span>
+            <div><span>Graded in {{ current_name|default:"this period" }}</span><b>{{ graded }} <small style="display:inline;font-size:0.8rem;">of {{ learners }}</small></b>
+                <small>{% widthratio graded learners 100 %}% of your learners</small></div></div>
+        <div class="card tile {% if to_grade %}warn{% else %}good{% endif %}"><span class="tile-ico"><i class="fi fi-rr-time-quarter-past"></i></span>
+            <div><span>Still to grade</span><b>{{ to_grade }}</b><small>{% if to_grade %}learner{{ to_grade|pluralize }} without a {{ period_word|lower }} grade{% else %}every learner has a grade{% endif %}</small></div></div>
+        <div class="card tile {% if returned %}risk{% elif ready %}{% else %}good{% endif %}"><span class="tile-ico"><i class="fi {% if returned %}fi-rr-undo{% else %}fi-rr-paper-plane{% endif %}"></i></span>
+            <div>{% if returned %}<span>Returned</span><b>{{ returned }}</b><small>class{{ returned|pluralize:"es" }} to correct</small>
+                 {% else %}<span>Ready to submit</span><b>{{ ready }}</b><small>class{{ ready|pluralize:"es" }} waiting for you</small>{% endif %}</div></div>
+    </div>
+
+    <section class="card cr-list" aria-labelledby="crTitle">
+        <h3 id="crTitle" class="sr-only">Your classes</h3>
+        <div class="cr-toolbar">
+            <label class="search"><i class="fi fi-rr-search"></i><input type="search" id="crSearch" placeholder="Find a section or subject" aria-label="Find a section or subject"></label>
+            <label class="sort">Sort by
+                <select id="crSort">
+                    <option value="attention">Needs attention first</option>
+                    <option value="avg_high">Class average: highest first</option>
+                    <option value="avg_low">Class average: lowest first</option>
+                    <option value="missing">Most learners without a grade</option>
+                    <option value="progress">Least complete first</option>
+                    <option value="section">Grade level and section</option>
+                    <option value="subject">Subject</option>
+                    <option value="learners">Most learners</option>
+                </select>
+            </label>
+            <div class="chips" role="group" aria-label="Show">
+                <button type="button" data-filter="" aria-pressed="true">All</button>
+                <button type="button" data-filter="grade" aria-pressed="false">To grade<em>{{ chip_grade }}</em></button>
+                <button type="button" data-filter="ready" aria-pressed="false">Ready to submit<em>{{ ready }}</em></button>
+                <button type="button" data-filter="returned" aria-pressed="false">Returned<em>{{ returned }}</em></button>
+                <button type="button" data-filter="done" aria-pressed="false">Submitted or validated<em>{{ chip_done }}</em></button>
             </div>
+            <span class="cr-count" id="crCount" aria-live="polite"></span>
+        </div>
+
+        <ol class="cr-rows" id="crRows">
+            {% for c in classes %}
+            <li>
+                <article class="cr-row tone-{{ c.tone }}" id="class-{{ c.id }}" data-id="{{ c.id }}" data-state="{{ c.state }}" data-average="{{ c.average|default_if_none:'' }}"
+                         data-missing="{{ c.missing }}" data-percent="{{ c.percent }}" data-learners="{{ c.learners }}" data-order="{{ forloop.counter0 }}"
+                         data-text="{{ c.grade|lower }} {{ c.section|lower }} {{ c.subject|lower }} {{ c.code|lower }}" data-subject="{{ c.subject|lower }}">
+                    <div class="cr-who">
+                        <b>{{ c.grade }} {{ c.section }}{% if c.advisory %}<span class="pill info">Adviser</span>{% endif %}</b>
+                        <small>{{ c.subject }} &middot; {{ c.code }} &middot; {{ c.learners }} learner{{ c.learners|pluralize }}</small>
+                    </div>
+                    <div class="cr-periods" aria-label="Grades per {{ period_word|lower }}">
+                        {% for p in c.cells %}
+                        <span class="cr-chip st-{{ p.state }}{% if p.current %} is-current{% endif %}" title="{{ p.name }}: {{ p.graded }} of {{ p.total }} graded{% if p.average is not None %}, average {{ p.average }}{% endif %}">
+                            <em>{{ p.label }}</em><small>{{ p.graded }}/{{ p.total }}</small><span class="bar"><i style="width:{{ p.percent }}%"></i></span>
+                        </span>
+                        {% endfor %}
+                    </div>
+                    <div class="cr-now">
+                        {% if c.average is not None %}<b>{{ c.average }}%</b><small{% if c.below %} class="risk"{% endif %}>{% if c.below %}{{ c.below }} below 75{% else %}class average{% endif %}</small>
+                        {% else %}<b style="color:#a0aec0;">&mdash;</b><small>no grades yet</small>{% endif %}
+                    </div>
+                    <div class="cr-state"><span class="pill {{ c.tone }}" title="{{ c.hint }}">{{ c.state_label }}</span></div>
+                    <div class="cr-actions">
+                        {% if c.state == 'ready' and c.submit_url %}
+                        <form method="post" action="{{ c.submit_url }}">{% csrf_token %}
+                            <button type="submit" class="btn btn-main btn-sm"><i class="fi fi-rr-paper-plane"></i> Submit</button></form>
+                        {% endif %}
+                        <a class="btn btn-line btn-sm" href="{{ c.upload_url }}"><i class="fi fi-rr-upload"></i> Upload</a>
+                        <button type="button" class="btn btn-line btn-sm" data-learners="{{ c.id }}" aria-haspopup="dialog" aria-controls="learnersModal"><i class="fi fi-rr-list"></i> Learners</button>
+                        <details class="cr-more">
+                            <summary class="icon-btn" aria-label="More for {{ c.section }}"><i class="fi fi-rr-menu-dots"></i></summary>
+                            <div class="cr-menu">
+                                <a href="{{ c.ecr_url }}"><i class="fi fi-rr-file-excel"></i><span>E-class record for this class<small>DepEd template with names and LRNs filled in</small></span></a>
+                                <a href="{{ c.csv_url }}"><i class="fi fi-rr-file-csv"></i><span>Class list (CSV)<small>LRN, learner and a grade column</small></span></a>
+                                {% if c.mapeh_url %}<a href="{{ c.mapeh_url }}"><i class="fi fi-rr-table-list"></i><span>MAPEH final grades<small>The quarterly MAPEH grades; the sheet averages them</small></span></a>{% endif %}
+                            </div>
+                        </details>
+                    </div>
+                    {% if c.state == 'returned' and c.note %}<p class="cr-note"><b>Registrar:</b> {{ c.note }}</p>{% endif %}
+                </article>
+            </li>
             {% endfor %}
-            
-            <!-- Expand Button -->
-            <button class="btn-outline btn-sm expand-btn" onclick="toggleStudents(this, 'students-{{ forloop.counter }}')">
-                <i class="fi fi-rr-angle-down expand-icon"></i> Students
-            </button>
-            
-            <a href="{% url 'teachers:upload_class_record' %}" class="btn-outline btn-sm">
-                <i class="fi fi-rr-upload"></i>
-            </a>
+        </ol>
+        <p class="cr-empty" id="crNone" hidden><i class="fi fi-rr-search"></i>No class matches.</p>
+    </section>
+
+    {% for adv in advisory %}
+    <section class="card adv" aria-labelledby="adv{{ adv.section.id }}">
+        <div class="panel-head">
+            <h3 id="adv{{ adv.section.id }}"><i class="fi fi-rr-document" style="color:#123499;"></i> School forms of your advisory class: {{ adv.section.grade_level.grade_name }} {{ adv.section.section_name }}</h3>
+        </div>
+        <p class="hint" style="margin:-0.35rem 0 0.8rem;">DepEd's templates filled from ARMS: the register, attendance and grades of your learners. Check them, sign and submit.</p>
+        <div class="adv-forms">
+            {% for code, title in adv.forms %}
+            <form method="get" action="{{ adv.url }}" class="adv-form">
+                <input type="hidden" name="code" value="{{ code }}">
+                <span class="adv-code">{% if code == 'SUMMARY' %}Grades{% elif code == 'SF5' and adv.senior %}SF5A{% else %}{{ code }}{% endif %}</span>
+                <span class="adv-title">{{ title }}</span>
+                {% if code == 'SF2' %}
+                <select name="month" aria-label="Month of the SF2">
+                    {% for number, label in adv.months %}<option value="{{ number }}" {% if number == adv.month %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+                {% endif %}
+                <button type="submit" class="btn btn-line btn-sm"><i class="fi fi-rr-download"></i> Download</button>
+            </form>
+            {% endfor %}
+        </div>
+    </section>
+    {% endfor %}
+
+    <div class="tp-modal" id="learnersModal" role="dialog" aria-modal="true" aria-labelledby="ldTitle" hidden>
+        <div class="tp-modal-card" tabindex="-1">
+            <div class="tp-modal-head">
+                <div><h3 id="ldTitle">Learners</h3><p class="hint" id="ldHint"></p></div>
+                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
+            </div>
+            <div class="tp-modal-tools">
+                <label class="search" style="position:relative;flex:1 1 220px;max-width:320px;"><i class="fi fi-rr-search" style="position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:0.8rem;"></i>
+                    <input type="search" id="ldSearch" placeholder="Find a learner or LRN" aria-label="Find a learner or LRN" style="padding-left:2.1rem;border-radius:20px;"></label>
+                <label class="sort" style="display:inline-flex;align-items:center;gap:0.45rem;font-size:0.8rem;font-weight:650;color:var(--muted);">Sort by
+                    <select id="ldSort" style="width:auto;border-radius:20px;">
+                        <option value="name">Name (A to Z)</option>
+                        <option value="high">{{ current_name|default:"Current" }} grade: highest first</option>
+                        <option value="low">{{ current_name|default:"Current" }} grade: lowest first</option>
+                        <option value="missing">Without a grade first</option>
+                    </select>
+                </label>
+                <span class="cr-count" id="ldCount" aria-live="polite"></span>
+            </div>
+            <div class="tp-modal-body"><div id="ldTable"></div></div>
         </div>
     </div>
-    
-    <!-- Student List (hidden by default) -->
-    <div id="students-{{ forloop.counter }}" class="student-list" style="display:none;margin-top:1rem;border-top:1px solid #e8ecf1;padding-top:0.8rem;">
-        {% if item.students %}
-        <div class="table-responsive">
-            <table style="font-size:0.78rem;width:100%;">
-                <thead>
-                    <tr>
-                        <th style="width:40px;">#</th>
-                        <th>Student Name</th>
-                        {% for q in quarters %}
-                        <th style="width:70px;text-align:center;">{{ q.quarter_label }}</th>
-                        {% endfor %}
-                        <th style="width:80px;text-align:center;">Final</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for student in item.students %}
-                    <tr>
-                        <td style="color:#718096;">{{ forloop.counter }}</td>
-                        <td>
-                            <strong>{{ student.last_name }}</strong>, {{ student.first_name }}
-                            <span style="font-size:0.65rem;color:#718096;margin-left:0.3rem;">{{ student.lrn }}</span>
-                        </td>
-                        {% for grade in student.quarter_grades %}
-                        <td style="text-align:center;">
-                            {% if grade is not None %}
-                            <span class="grade-badge {% if grade >= 75 %}pass{% else %}fail{% endif %}">
-                                {{ grade }}
-                            </span>
-                            {% else %}
-                            <span class="grade-badge pending">—</span>
-                            {% endif %}
-                        </td>
-                        {% endfor %}
-                        <td style="text-align:center;">
-                            {% if student.final_grade %}
-                            <span class="grade-badge {% if student.final_grade >= 75 %}pass{% else %}fail{% endif %}">
-                                {{ student.final_grade }}
-                            </span>
-                            {% else %}
-                            <span class="grade-badge pending">—</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <p style="text-align:center;color:#718096;padding:1rem;">No students enrolled in this section.</p>
-        {% endif %}
-    </div>
+    {% else %}
+    <section class="card cr-empty">
+        <i class="fi fi-rr-folder-open"></i>
+        <h3 style="justify-content:center;">No classes yet</h3>
+        <p class="hint">Ask your registrar to assign your classes for SY {{ sy.year_label|default:"this school year" }}.</p>
+    </section>
+    {% endif %}
+    {{ classes_json|json_script:"crData" }}
 </div>
-{% endfor %}
-
-{% else %}
-<div class="card" style="text-align:center;padding:3rem;">
-    <i class="fi fi-rr-folder-open" style="font-size:3rem;color:#718096;opacity:0.4;"></i>
-    <h5 style="color:#4a5568;margin-top:1rem;">No Class Assignments Yet</h5>
-    <p style="color:#718096;">Contact your registrar to be assigned to sections.</p>
-</div>
-{% endif %}
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function toggleStudents(btn, containerId) {
-    var container = document.getElementById(containerId);
-    var icon = btn.querySelector('.expand-icon');
-    
-    if (container.style.display === 'none') {
-        container.style.display = 'block';
-        icon.classList.add('open');
-        btn.innerHTML = '<i class="fi fi-rr-angle-up expand-icon open"></i> Hide';
-    } else {
-        container.style.display = 'none';
-        icon.classList.remove('open');
-        btn.innerHTML = '<i class="fi fi-rr-angle-down expand-icon"></i> Students';
+(function () {
+    var data = JSON.parse(document.getElementById('crData').textContent || '[]');
+    var currentLabel = '{{ current.quarter_label|default:""|escapejs }}', periodWord = '{{ period_word|lower|escapejs }}';
+    var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+    var list = document.getElementById('crRows');
+    if (!list) return;
+    var items = Array.prototype.slice.call(list.children);
+    var search = document.getElementById('crSearch'), sort = document.getElementById('crSort'), filter = '';
+    var RANK = { returned: 0, encoding: 1, not_started: 2, ready: 3, submitted: 4, validated: 5, locked: 6 };
+    var GROUP = { grade: ['not_started', 'encoding'], ready: ['ready'], returned: ['returned'], done: ['submitted', 'validated', 'locked'] };
+    var num = function (el, key) { var v = el.dataset[key]; return v === '' || v == null ? null : +v; };
+    var nullsLast = function (a, b, dir) { if (a === null && b === null) return 0; if (a === null) return 1; if (b === null) return -1; return dir * (a - b); };
+    var SORTS = {
+        attention: function (a, b) { return (RANK[a.dataset.state] - RANK[b.dataset.state]) || (num(b, 'missing') - num(a, 'missing')) || (num(a, 'order') - num(b, 'order')); },
+        avg_high: function (a, b) { return nullsLast(num(a, 'average'), num(b, 'average'), -1) || (num(a, 'order') - num(b, 'order')); },
+        avg_low: function (a, b) { return nullsLast(num(a, 'average'), num(b, 'average'), 1) || (num(a, 'order') - num(b, 'order')); },
+        missing: function (a, b) { return (num(b, 'missing') - num(a, 'missing')) || (num(a, 'order') - num(b, 'order')); },
+        progress: function (a, b) { return (num(a, 'percent') - num(b, 'percent')) || (num(a, 'order') - num(b, 'order')); },
+        section: function (a, b) { return num(a, 'order') - num(b, 'order'); },
+        subject: function (a, b) { return a.dataset.subject.localeCompare(b.dataset.subject) || (num(a, 'order') - num(b, 'order')); },
+        learners: function (a, b) { return (num(b, 'learners') - num(a, 'learners')) || (num(a, 'order') - num(b, 'order')); }
+    };
+    try { var saved = localStorage.getItem('arms-records-sort'); if (saved && SORTS[saved]) sort.value = saved; } catch (e) {}
+    function show() {
+        var q = search.value.trim().toLowerCase(), shown = 0;
+        var rows = items.map(function (li) { return li.firstElementChild; }).sort(SORTS[sort.value] || SORTS.attention);
+        rows.forEach(function (row) {
+            var li = row.parentElement;
+            var ok = (!q || row.dataset.text.indexOf(q) > -1) && (!filter || GROUP[filter].indexOf(row.dataset.state) > -1);
+            li.hidden = !ok;
+            if (ok) shown++;
+            list.appendChild(li);
+        });
+        document.getElementById('crNone').hidden = shown > 0;
+        document.getElementById('crCount').textContent = 'Showing ' + shown + ' of ' + items.length + ' class' + (items.length === 1 ? '' : 'es');
+        try { localStorage.setItem('arms-records-sort', sort.value); } catch (e) {}
     }
-}
+    search.addEventListener('input', show);
+    sort.addEventListener('change', show);
+    document.querySelectorAll('.chips button').forEach(function (b) {
+        b.addEventListener('click', function () {
+            filter = b.dataset.filter;
+            document.querySelectorAll('.chips button').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+            show();
+        });
+    });
+    document.addEventListener('click', function (e) {     // one open menu at a time
+        document.querySelectorAll('.cr-more[open]').forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute('open'); });
+    });
+    show();
+    if (location.hash) {                                     // back from an upload or a submission
+        var target = document.querySelector(location.hash);
+        if (target && target.classList.contains('cr-row')) {
+            target.scrollIntoView({ block: 'center' });
+            target.classList.add('flash'); setTimeout(function () { target.classList.remove('flash'); }, 2200);
+        }
+    }
+
+    // ---------- learners of one class ----------
+    var modal = document.getElementById('learnersModal'), opener = null, active = null;
+    var ldSearch = document.getElementById('ldSearch'), ldSort = document.getElementById('ldSort');
+    function gradeCell(v, cur) {
+        var cls = v === null ? 'none' : (v >= 75 ? 'pass' : 'fail');
+        return '<td class="center' + (cur ? ' cur' : '') + '"><span class="grade ' + cls + '">' + (v === null ? '&mdash;' : esc(v)) + '</span></td>';
+    }
+    function drawLearners() {
+        var c = active, q = ldSearch.value.trim().toLowerCase();
+        var ci = c.periods.indexOf(currentLabel);
+        var key = function (r) { return ci > -1 ? r.grades[ci] : null; };
+        var rows = c.rows.filter(function (r) { return !q || r.name.toLowerCase().indexOf(q) > -1 || String(r.lrn || '').indexOf(q) > -1; });
+        var by = ldSort.value;
+        rows.sort(function (a, b) {
+            if (by === 'high') return nullsLast(key(a), key(b), -1) || a.name.localeCompare(b.name);
+            if (by === 'low') return nullsLast(key(a), key(b), 1) || a.name.localeCompare(b.name);
+            if (by === 'missing') return ((key(a) === null ? 0 : 1) - (key(b) === null ? 0 : 1)) || a.name.localeCompare(b.name);
+            return a.name.localeCompare(b.name);
+        });
+        var head = '<tr><th>#</th><th>LRN</th><th>Learner</th><th class="center">Sex</th>' +
+            c.periods.map(function (p, i) { return '<th class="center' + (i === ci ? ' cur' : '') + '">' + esc(p) + '</th>'; }).join('') +
+            '<th class="center">Final</th></tr>';
+        var body = rows.map(function (r, i) {
+            return '<tr><td class="muted">' + (i + 1) + '</td><td class="lrn">' + esc(r.lrn || '') + '</td><td><b style="font-weight:600;">' + esc(r.name) + '</b></td>' +
+                '<td class="center muted">' + esc(r.sex || '') + '</td>' + r.grades.map(function (g, gi) { return gradeCell(g, gi === ci); }).join('') +
+                gradeCell(r.final, false) + '</tr>';
+        }).join('');
+        document.getElementById('ldTable').innerHTML = rows.length ? '<table class="table ld-table"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>'
+                                                                    : '<p class="ld-none">No learner matches.</p>';
+        document.getElementById('ldCount').textContent = 'Showing ' + rows.length + ' of ' + c.rows.length;
+    }
+    function openLearners(id, from) {
+        active = data.find(function (c) { return String(c.id) === String(id); });
+        if (!active) return;
+        document.getElementById('ldTitle').textContent = active.grade + ' ' + active.section + ' · ' + active.subject;
+        document.getElementById('ldHint').textContent = active.rows.length + ' learners. The final grade appears once every ' + periodWord + ' has a grade.';
+        ldSearch.value = '';
+        drawLearners();
+        opener = from; modal.hidden = false; document.body.style.overflow = 'hidden';
+        modal.querySelector('.tp-modal-card').focus();
+    }
+    function closeLearners() { modal.hidden = true; document.body.style.overflow = ''; if (opener) opener.focus(); }
+    document.querySelectorAll('[data-learners]').forEach(function (b) { b.addEventListener('click', function () { openLearners(b.dataset.learners, b); }); });
+    modal.addEventListener('click', function (e) { if (e.target === modal || e.target.closest('[data-close]')) closeLearners(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !modal.hidden) closeLearners(); });
+    document.addEventListener('focusin', function (e) { if (!modal.hidden && !modal.contains(e.target)) modal.querySelector('.tp-modal-card').focus(); });
+    ldSearch.addEventListener('input', drawLearners);
+    ldSort.addEventListener('change', drawLearners);
+})();
 </script>
 {% endblock %}

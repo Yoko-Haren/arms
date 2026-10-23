@@ -7,23 +7,8 @@ import re
 
 # ===== USE REAL MODELS =====
 from academics.models import School, GradeLevel, SchoolYear, Quarter, GradingSchema
+from academics.school_years import PERIOD_CONFIG, period_config  # noqa: F401 (grading periods follow School.period_type)
 from accounts.models import UserProfile
-
-
-# =============================================================================
-# GRADING PERIODS — driven by School.period_type
-# =============================================================================
-
-PERIOD_CONFIG = {
-    'QUARTERLY': {'count': 4, 'prefix': 'Q', 'noun': 'Quarter', 'plural': 'Quarters'},
-    'TRIMESTRAL': {'count': 3, 'prefix': 'T', 'noun': 'Trimester', 'plural': 'Trimesters'},
-    'SEMESTRAL': {'count': 2, 'prefix': 'S', 'noun': 'Semester', 'plural': 'Semesters'},
-}
-
-
-def period_config(school):
-    """Grading-period settings (count, label prefix, wording) for a school."""
-    return PERIOD_CONFIG.get(school.period_type, PERIOD_CONFIG['QUARTERLY'])
 
 
 def default_registrar_account(school):

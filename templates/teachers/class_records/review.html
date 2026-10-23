@@ -1,0 +1,216 @@
+{% extends 'teachers/base.html' %}
+{% load static %}
+
+{% block title %}Check the Upload{% endblock %}
+{% block subtitle %}Upload Grades &bull; {{ assignment.section.section_name }} &bull; {{ period_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .rv-sec { padding: 1rem 1.15rem 1.05rem; }
+    .rv-sec .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
+    .rv-table { overflow-x: auto; }
+    .rv-table .table td { vertical-align: top; }
+    .rv-table .who b { font-weight: 600; display: block; }
+    .rv-table .who small { color: var(--muted); font-size: 0.74rem; }
+    .rv-table .lrn { font-family: Consolas, 'Courier New', monospace; font-size: 0.74rem; color: var(--muted); }
+    .rv-table .arrow { color: #a0aec0; margin: 0 0.2rem; }
+    .comps { display: flex; gap: 0.35rem; flex-wrap: wrap; font-size: 0.72rem; color: var(--muted); }
+    .comps span { background: var(--soft); border-radius: 6px; padding: 0.1rem 0.4rem; font-variant-numeric: tabular-nums; }
+    .reasons { margin: 0.25rem 0 0; padding: 0; list-style: none; font-size: 0.76rem; color: var(--warn); }
+    .reasons.risk { color: var(--risk); }
+    .reasons li::before { content: '\2022'; margin-right: 0.35rem; }
+    .settle select { min-width: 240px; }
+    .settle select.dupe { border-color: var(--risk); background: var(--risk-bg); }
+    .skip { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: var(--muted); cursor: pointer; white-space: nowrap; }
+    .was { font-size: 0.74rem; color: var(--muted); display: block; }
+    .was .up { color: var(--good); } .was .down { color: var(--risk); }
+    .bar { position: sticky; bottom: 0; z-index: 10; padding: 0.85rem 1.15rem; display: flex; gap: 0.8rem; align-items: center; justify-content: space-between; flex-wrap: wrap;
+           box-shadow: 0 -6px 20px rgba(16, 24, 40, 0.06) !important; }
+    .bar label.ack { display: inline-flex; gap: 0.5rem; align-items: flex-start; font-size: 0.82rem; max-width: 560px; }
+    .bar label.ack input { margin-top: 0.2rem; }
+    .missing { columns: 3 220px; margin: 0; padding-left: 1.1rem; font-size: 0.82rem; line-height: 1.7; }
+    details.more summary { cursor: pointer; font-weight: 600; color: var(--brand); font-size: 0.84rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<form class="tp" method="post" id="rvForm">
+    {% csrf_token %}
+    <input type="hidden" name="token" value="{{ token }}">
+
+    <section class="card tp-head">
+        <div>
+            <h2><i class="fi fi-rr-list-check" style="color:#123499;"></i> Check before saving</h2>
+            <p class="hint">{{ assignment.section.grade_level.grade_name }} {{ assignment.section.section_name }} &middot; {{ assignment.subject.subject_name }}
+                &middot; {{ period_name }} &middot; <span title="{{ file }}">{{ file|truncatechars:48 }}</span>{% if result.sheets %} &middot; sheet {{ result.sheets|join:", " }}{% endif %}</p>
+        </div>
+        <a class="btn btn-line btn-sm" href="{% url 'teachers:upload_class_record' %}?class={{ assignment.id }}&period={{ period.id }}"><i class="fi fi-rr-arrow-small-left"></i> Choose another file</a>
+    </section>
+
+    {% if errors %}
+    <div class="note risk" role="alert"><i class="fi fi-rr-exclamation"></i>
+        <div><b>This file cannot be imported for this class.</b><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div></div>
+    {% endif %}
+    {% if problems %}
+    <div class="note risk" role="alert"><i class="fi fi-rr-exclamation"></i>
+        <div><b>Not saved yet.</b><ul>{% for p in problems %}<li>{{ p }}</li>{% endfor %}</ul></div></div>
+    {% endif %}
+    {% if warns %}
+    <div class="note warn"><i class="fi fi-rr-triangle-warning"></i>
+        <div><b>Check these first.</b><ul>{% for w in warns %}<li>{{ w }}</li>{% endfor %}</ul></div></div>
+    {% endif %}
+    {% if other_periods %}
+    <div class="note"><i class="fi fi-rr-info"></i><span>The file also has scores for {{ other_periods|join:", " }}. Only {{ period_name }} is imported now.</span></div>
+    {% endif %}
+
+    <div class="tiles" style="--tiles:4">
+        <div class="card tile good"><span class="tile-ico"><i class="fi fi-rr-check-circle"></i></span>
+            <div><span>Ready to save</span><b>{{ groups.ready|length }}</b><small>matched to one learner</small></div></div>
+        <div class="card tile {% if groups.settle %}warn{% endif %}"><span class="tile-ico"><i class="fi fi-rr-user-pen"></i></span>
+            <div><span>To settle</span><b>{{ groups.settle|length }}</b><small>need you to choose</small></div></div>
+        <div class="card tile {% if groups.skipped %}risk{% endif %}"><span class="tile-ico"><i class="fi fi-rr-ban"></i></span>
+            <div><span>Not imported</span><b>{{ groups.skipped|length }}</b><small>problems or validated</small></div></div>
+        <div class="card tile {% if result.missing %}warn{% endif %}"><span class="tile-ico"><i class="fi fi-rr-user-time"></i></span>
+            <div><span>Not in the file</span><b>{{ result.missing|length }}</b><small>learner{{ result.missing|length|pluralize }} of the class</small></div></div>
+    </div>
+
+    {% if groups.settle %}
+    <section class="card rv-sec settle" aria-labelledby="settleTitle">
+        <div class="head"><div><h3 id="settleTitle"><i class="fi fi-rr-user-pen" style="color:#B45309;"></i> Settle these rows</h3>
+            <p class="hint">ARMS could not be certain who these rows belong to. Choose the learner, or skip the row. Suggestions come first.</p></div></div>
+        <div class="rv-table">
+            <table class="table">
+                <thead><tr><th>Row</th><th>In the file</th><th>Why</th><th class="center">Grade</th><th>Learner</th></tr></thead>
+                <tbody>
+                    {% for r in groups.settle %}
+                    <tr>
+                        <td class="muted">{{ r.row }}</td>
+                        <td class="who"><b>{{ r.name }}</b><small>{% if r.sex == 'M' %}Male list{% elif r.sex == 'F' %}Female list{% endif %}{% if r.lrn %} &middot; LRN {{ r.lrn }}{% endif %}</small></td>
+                        <td><ul class="reasons">{% for x in r.reasons %}<li>{{ x }}</li>{% endfor %}{% for x in r.warnings %}<li>{{ x }}</li>{% endfor %}</ul></td>
+                        <td class="center"><span class="grade {% if r.quarterly >= 75 %}pass{% else %}fail{% endif %}">{{ r.grade_text }}</span>{% if r.initial_text %}<span class="was">initial {{ r.initial_text }}</span>{% endif %}</td>
+                        <td>
+                            <select name="row-{{ r.row }}" class="choice" data-row="{{ r.row }}" aria-label="Learner for row {{ r.row }}">
+                                <option value="">Choose&hellip;</option>
+                                {% for c in r.candidates %}<option value="{{ c.id }}">{{ c.name }}{% if c.lrn %} · {{ c.lrn }}{% endif %} (suggested)</option>{% endfor %}
+                                <optgroup label="Everyone in the class">
+                                    {% for p in roster %}<option value="{{ p.id }}">{{ p.name }}{% if p.lrn %} · {{ p.lrn }}{% endif %}</option>{% endfor %}
+                                </optgroup>
+                                <option value="skip">Skip this row</option>
+                            </select>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="card rv-sec" aria-labelledby="readyTitle">
+        <div class="head"><div><h3 id="readyTitle"><i class="fi fi-rr-check-circle" style="color:#2E7D32;"></i> Ready to save &middot; {{ groups.ready|length }}</h3>
+            <p class="hint">Each grade is recomputed from the scores (written work, performance tasks, quarterly assessment) with the DepEd weights and transmutation table.</p></div></div>
+        {% if groups.ready %}
+        <div class="rv-table">
+            <table class="table">
+                <thead><tr><th>Row</th><th>In the file</th><th>Learner</th><th>Scores (percent)</th><th class="center">Grade</th><th class="center">Skip</th></tr></thead>
+                <tbody>
+                    {% for r in groups.ready %}
+                    <tr>
+                        <td class="muted">{{ r.row }}</td>
+                        <td class="who"><b>{{ r.name }}</b>{% if r.warnings %}<ul class="reasons">{% for x in r.warnings %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}</td>
+                        <td class="who"><b>{{ r.learner.name }}</b><small class="lrn">{{ r.learner.lrn|default:"no LRN" }}</small></td>
+                        <td><div class="comps">{% for label, ps in r.components %}{% if ps is not None %}<span>{{ label }} {{ ps }}</span>{% endif %}{% endfor %}
+                            {% for p in r.parts_text %}<span>{{ p.name }} {{ p.grade|default:"—" }}</span>{% endfor %}</div></td>
+                        <td class="center"><span class="grade {% if r.quarterly >= 75 %}pass{% else %}fail{% endif %}">{{ r.grade_text }}</span>
+                            {% if r.current is not None %}<span class="was">now {{ r.current|floatformat:0 }}{% if r.current_status %} ({{ r.current_status|lower }}){% endif %}</span>{% elif r.initial_text %}<span class="was">initial {{ r.initial_text }}</span>{% endif %}</td>
+                        <td class="center"><label class="skip"><input type="checkbox" name="row-{{ r.row }}" value="skip"> skip</label></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}<p class="hint">No row could be matched with certainty.</p>{% endif %}
+    </section>
+
+    {% if groups.skipped %}
+    <section class="card rv-sec" aria-labelledby="skippedTitle">
+        <div class="head"><div><h3 id="skippedTitle"><i class="fi fi-rr-ban" style="color:#C62828;"></i> Not imported &middot; {{ groups.skipped|length }}</h3>
+            <p class="hint">Fix these in the e-class record and upload it again.</p></div></div>
+        <div class="rv-table">
+            <table class="table">
+                <thead><tr><th>Row</th><th>In the file</th><th>Reason</th></tr></thead>
+                <tbody>
+                    {% for r in groups.skipped %}
+                    <tr><td class="muted">{{ r.row }}</td><td class="who"><b>{{ r.name|default:"(no name)" }}</b></td>
+                        <td><ul class="reasons risk">{% for x in r.errors %}<li>{{ x }}</li>{% endfor %}
+                            {% if r.frozen %}<li>The registrar already validated this learner's {{ period_name }} grade ({{ r.current|floatformat:0 }}). Ask the registrar to return it to change it.</li>{% endif %}</ul></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if groups.empty or result.missing %}
+    <section class="card rv-sec">
+        {% if result.missing %}
+        <h3><i class="fi fi-rr-user-time" style="color:#B45309;"></i> Learners of the class who are not in this file &middot; {{ result.missing|length }}</h3>
+        <p class="hint">They will still need a {{ period_name }} grade before you can submit the class.</p>
+        <ol class="missing">{% for n in result.missing %}<li>{{ n }}</li>{% endfor %}</ol>
+        {% endif %}
+        {% if groups.empty %}
+        <details class="more" style="margin-top:0.8rem;"><summary>{{ groups.empty|length }} row{{ groups.empty|length|pluralize }} in the file without a grade yet</summary>
+            <ul class="hint" style="margin-top:0.4rem;">{% for r in groups.empty %}<li>Row {{ r.row }}: {{ r.name }}{% for x in r.notes %} &middot; {{ x }}{% endfor %}</li>{% endfor %}</ul></details>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="card bar">
+        <div>
+            {% if acknowledge %}
+            <label class="ack"><input type="checkbox" name="acknowledge" value="yes" id="ack"> <span>I checked the notes above. Save the grades as ARMS computed them from the scores.</span></label>
+            {% elif resubmit %}<span class="hint">Some of these grades were already submitted. Saving makes them drafts again; submit the class once more.</span>
+            {% else %}<span class="hint" id="rvSummary"></span>{% endif %}
+        </div>
+        <div style="display:flex;gap:0.5rem;">
+            <a class="btn btn-line" href="{% url 'teachers:class_record_list' %}">Cancel</a>
+            <button type="submit" class="btn btn-main" id="rvSave" {% if errors or not importable %}disabled{% endif %}><i class="fi fi-rr-disk"></i> <span>Save <span id="rvN">{{ groups.ready|length }}</span> grade<span id="rvS">{{ groups.ready|length|pluralize }}</span> as drafts</span></button>
+        </div>
+    </section>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var form = document.getElementById('rvForm'), save = document.getElementById('rvSave'), ack = document.getElementById('ack');
+    if (!save || save.hasAttribute('data-blocked')) return;
+    var blocked = {{ errors|yesno:"true,false" }};
+    var choices = Array.prototype.slice.call(document.querySelectorAll('select.choice'));
+    var skips = Array.prototype.slice.call(document.querySelectorAll('input[type=checkbox][value=skip]'));
+    var matched = {{ groups.ready|length }};
+    function update() {
+        var picked = {}, open = 0, chosen = 0, dupes = false;
+        choices.forEach(function (s) {
+            s.classList.remove('dupe');
+            if (!s.value) { open++; return; }
+            if (s.value === 'skip') return;
+            chosen++;
+            (picked[s.value] = picked[s.value] || []).push(s);
+        });
+        Object.keys(picked).forEach(function (k) { if (picked[k].length > 1) { dupes = true; picked[k].forEach(function (s) { s.classList.add('dupe'); }); } });
+        var n = matched - skips.filter(function (c) { return c.checked; }).length + chosen;
+        document.getElementById('rvN').textContent = n;
+        document.getElementById('rvS').textContent = n === 1 ? '' : 's';
+        var summary = document.getElementById('rvSummary');
+        if (summary) summary.textContent = open ? open + ' row' + (open === 1 ? '' : 's') + ' still to settle.' : (dupes ? 'Two rows point to the same learner.' : 'Ready.');
+        save.disabled = blocked || open > 0 || dupes || n === 0 || (ack && !ack.checked);
+    }
+    choices.forEach(function (s) { s.addEventListener('change', update); });
+    skips.forEach(function (c) { c.addEventListener('change', update); });
+    if (ack) ack.addEventListener('change', update);
+    form.addEventListener('submit', function () { save.disabled = true; save.innerHTML = '<i class="fi fi-rr-refresh"></i> Saving&hellip;'; });
+    update();
+})();
+</script>
+{% endblock %}

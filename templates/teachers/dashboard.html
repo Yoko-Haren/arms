@@ -2,847 +2,252 @@
 {% load static %}
 
 {% block title %}Teacher Dashboard{% endblock %}
-{% block subtitle %}Teacher Portal — {{ school.school_name }}{% endblock %}
+{% block subtitle %}Dashboard{% if sy %} &bull; SY {{ sy.year_label }}{% endif %}{% if current_name %} &bull; {{ current_name }}{% endif %}{% endblock %}
 
 {% block extra_css %}
 <style>
-    :root {
-        --primary: #123499;
-        --primary-light: #e8eeff;
-        --success: #2E7D32;
-        --success-light: #e8f5e9;
-        --info: #1565C0;
-        --info-light: #e3f2fd;
-        --warning: #E65100;
-        --warning-light: #fff3e0;
-        --danger: #C62828;
-        --danger-light: #ffebee;
-        --purple: #6A1B9A;
-        --purple-light: #f3e5f5;
-        --orange: #f39c12;
-        --orange-light: #fff8e1;
-        --gray-50: #f8f9fa;
-        --gray-100: #f0f4f8;
-        --gray-200: #e8ecf1;
-        --gray-300: #e0e5ea;
-        --gray-400: #718096;
-        --gray-500: #4a5568;
-        --gray-700: #1a1a2e;
-        --radius-sm: 10px;
-        --radius-md: 16px;
-        --radius-lg: 20px;
-        --shadow-sm: 0 2px 10px rgba(0,0,0,0.04);
-        --shadow-md: 0 2px 12px rgba(0,0,0,0.06);
-        --shadow-lg: 0 6px 20px rgba(0,0,0,0.1);
-        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    /* ========== DASHBOARD LAYOUT ========== */
-    .dashboard-layout {
-        display: grid;
-        grid-template-columns: 300px 1fr;
-        gap: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-    @media (max-width: 1024px) { .dashboard-layout { grid-template-columns: 1fr; } }
-    @media (min-width: 1025px) { .dashboard-layout { align-items: flex-start; } }
-
-    /* ========== STAT CARDS (TOP ROW) ========== */
-    .stat-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 1.25rem;
-        margin-bottom: 1.5rem;
-    }
-    @media (max-width: 1024px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 480px) { .stat-grid { grid-template-columns: 1fr; } }
-
-    .stat-card {
-        border-radius: var(--radius-md);
-        padding: 1.5rem 1.25rem;
-        color: white;
-        text-align: center;
-        position: relative;
-        overflow: hidden;
-        transition: var(--transition);
-        cursor: pointer;
-        box-shadow: var(--shadow-md);
-    }
-    .stat-card:hover {
-        transform: translateY(-4px);
-        box-shadow: var(--shadow-lg);
-    }
-    .stat-card::after {
-        content: '';
-        position: absolute;
-        top: -30px;
-        right: -30px;
-        width: 100px;
-        height: 100px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.1);
-        transition: var(--transition);
-    }
-    .stat-card:hover::after {
-        width: 130px;
-        height: 130px;
-        top: -40px;
-        right: -40px;
-    }
-    .stat-card.blue { background: linear-gradient(135deg, #123499, #667eea); }
-    .stat-card.green { background: linear-gradient(135deg, #2E7D32, #43a047); }
-    .stat-card.purple { background: linear-gradient(135deg, #667eea, #764ba2); }
-    .stat-card.orange { background: linear-gradient(135deg, #E65100, #f57c00); }
-
-    .stat-card .stat-icon {
-        font-size: 1.8rem;
-        margin-bottom: 0.4rem;
-        opacity: 0.85;
-        position: relative;
-        z-index: 1;
-    }
-    .stat-card .stat-value {
-        font-size: 2.2rem;
-        font-weight: 800;
-        line-height: 1.2;
-        margin-bottom: 0.15rem;
-        position: relative;
-        z-index: 1;
-    }
-    .stat-card .stat-label {
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.6px;
-        font-weight: 600;
-        opacity: 0.9;
-        position: relative;
-        z-index: 1;
-    }
-    .stat-card .stat-sub {
-        font-size: 0.65rem;
-        opacity: 0.75;
-        margin-top: 0.3rem;
-        position: relative;
-        z-index: 1;
-    }
-
-    /* ========== INSIGHT CARD ========== */
-    .insight-card {
-        background: linear-gradient(135deg, #f0f4ff, #e8eeff);
-        border-radius: var(--radius-md);
-        padding: 1.2rem 1.5rem;
-        border: 1px solid rgba(18,52,153,0.15);
-        display: flex;
-        align-items: flex-start;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-        transition: var(--transition);
-    }
-    .insight-card:hover {
-        box-shadow: var(--shadow-md);
-    }
-    .insight-icon-wrap {
-        width: 48px;
-        height: 48px;
-        border-radius: 14px;
-        background: linear-gradient(135deg, #2E7D32, #43a047);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 1.2rem;
-        flex-shrink: 0;
-        box-shadow: 0 4px 15px rgba(46,125,50,0.3);
-        animation: insightPulse 2.5s ease-in-out infinite;
-    }
-    @keyframes insightPulse {
-        0%, 100% { box-shadow: 0 4px 15px rgba(46,125,50,0.3); }
-        50% { box-shadow: 0 8px 25px rgba(46,125,50,0.5); }
-    }
-    .insight-content {
-        flex: 1;
-        min-width: 0;
-    }
-    .insight-title {
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: var(--primary);
-        text-transform: uppercase;
-        letter-spacing: 0.8px;
-        margin-bottom: 0.35rem;
-    }
-    .insight-text {
-        font-size: 0.82rem;
-        color: var(--gray-700);
-        line-height: 1.65;
-        margin: 0;
-    }
-
-    /* ========== SIDEBAR CARDS ========== */
-    .sidebar-card {
-        background: white;
-        border-radius: var(--radius-lg);
-        padding: 1.4rem;
-        box-shadow: var(--shadow-md);
-        border: 1px solid var(--gray-200);
-        height: fit-content;
-    }
-    .sidebar-card-header {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        margin-bottom: 1.2rem;
-        padding-bottom: 0.9rem;
-        border-bottom: 2px solid var(--gray-100);
-    }
-    .sidebar-card-icon {
-        width: 38px;
-        height: 38px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 1rem;
-        flex-shrink: 0;
-    }
-    .sidebar-card-icon.green { background: linear-gradient(135deg, #2E7D32, #43a047); }
-    .sidebar-card-icon.blue { background: linear-gradient(135deg, #123499, #1a4dcc); }
-    .sidebar-card-icon.purple { background: linear-gradient(135deg, #667eea, #764ba2); }
-
-    .sidebar-card-title {
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: var(--gray-700);
-    }
-
-    /* Profile Avatar */
-    .profile-avatar {
-        width: 72px;
-        height: 72px;
-        border-radius: 20px;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 1.6rem;
-        font-weight: 700;
-        box-shadow: 0 4px 15px rgba(118,75,162,0.3);
-        margin-bottom: 0.6rem;
-    }
-    .profile-name {
-        font-size: 0.9rem;
-        font-weight: 700;
-        color: var(--gray-700);
-    }
-    .profile-role {
-        font-size: 0.7rem;
-        color: var(--gray-500);
-        margin-bottom: 1rem;
-    }
-
-    /* Info List Items */
-    .info-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    .info-item {
-        display: flex;
-        align-items: center;
-        gap: 0.65rem;
-        padding: 0.5rem 0.6rem;
-        background: var(--gray-50);
-        border-radius: var(--radius-sm);
-        font-size: 0.73rem;
-        transition: var(--transition);
-    }
-    .info-item:hover {
-        background: var(--primary-light);
-    }
-    .info-dot {
-        width: 9px;
-        height: 9px;
-        border-radius: 50%;
-        flex-shrink: 0;
-    }
-    .info-dot.active { background: var(--success); box-shadow: 0 0 8px rgba(46,125,50,0.3); }
-    .info-dot.warning { background: var(--orange); box-shadow: 0 0 8px rgba(243,156,18,0.3); }
-    .info-dot.neutral { background: var(--gray-400); }
-    .info-label {
-        font-weight: 600;
-        color: var(--gray-700);
-        white-space: nowrap;
-    }
-    .info-value {
-        color: var(--gray-500);
-        margin-left: auto;
-        text-align: right;
-    }
-
-    /* Subject Breakdown */
-    .subject-item {
-        padding: 0.7rem 0.6rem;
-        border-radius: var(--radius-sm);
-        margin-bottom: 0.5rem;
-        transition: var(--transition);
-        cursor: pointer;
-    }
-    .subject-item:hover {
-        background: var(--gray-50);
-    }
-    .subject-item:last-child { margin-bottom: 0; }
-    .subject-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.3rem;
-    }
-    .subject-code {
-        font-size: 0.73rem;
-        font-weight: 700;
-        color: var(--gray-700);
-    }
-    .subject-sections {
-        font-size: 0.65rem;
-        color: var(--gray-500);
-        background: var(--gray-100);
-        padding: 0.15rem 0.5rem;
-        border-radius: 12px;
-    }
-    .subject-students {
-        font-size: 0.62rem;
-        color: var(--gray-400);
-        margin-top: 0.2rem;
-    }
-
-    .progress-bar-wrap {
-        background: var(--gray-200);
-        border-radius: 10px;
-        height: 7px;
-        overflow: hidden;
-        margin-top: 0.4rem;
-    }
-    .progress-bar-fill {
-        height: 100%;
-        border-radius: 10px;
-        transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .progress-bar-fill.high { background: linear-gradient(90deg, #2E7D32, #43a047); }
-    .progress-bar-fill.medium { background: linear-gradient(90deg, #f39c12, #f57c00); }
-    .progress-bar-fill.low { background: linear-gradient(90deg, #C62828, #e53935); }
-
-    /* ========== CHART CARDS ========== */
-    .charts-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-    @media (max-width: 1024px) { .charts-row { grid-template-columns: 1fr; } }
-
-    .chart-card {
-        background: white;
-        border-radius: var(--radius-lg);
-        padding: 1.5rem;
-        box-shadow: var(--shadow-md);
-        border: 1px solid var(--gray-200);
-        transition: var(--transition);
-    }
-    .chart-card:hover {
-        box-shadow: var(--shadow-lg);
-    }
-    .chart-title {
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: var(--gray-700);
-        margin-bottom: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    .chart-title i { color: var(--primary); font-size: 0.95rem; }
-    .chart-container {
-        position: relative;
-        width: 100%;
-    }
-    .chart-container canvas {
-        max-height: 280px;
-        width: 100% !important;
-    }
-
-    /* ========== CLASS ASSIGNMENT CARDS ========== */
-    .class-cards-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.9rem;
-    }
-    @media (max-width: 768px) { .class-cards-grid { grid-template-columns: 1fr; } }
-
-    .class-card {
-        background: white;
-        border-radius: var(--radius-md);
-        padding: 1.2rem;
-        border: 2px solid var(--gray-200);
-        transition: var(--transition);
-        cursor: pointer;
-        position: relative;
-        overflow: hidden;
-    }
-    .class-card:hover {
-        border-color: var(--primary);
-        box-shadow: 0 6px 25px rgba(18,52,153,0.1);
-        transform: translateY(-3px);
-    }
-    .class-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 4px;
-        height: 100%;
-        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-        background: var(--gray-300);
-        transition: var(--transition);
-    }
-    .class-card:hover::before {
-        background: var(--primary);
-        width: 5px;
-    }
-    .class-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 0.5rem;
-    }
-    .class-card-name {
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: var(--gray-700);
-    }
-    .class-card-subject {
-        font-size: 0.7rem;
-        color: var(--gray-500);
-        margin-top: 0.15rem;
-    }
-    .class-card-stats {
-        display: flex;
-        gap: 1rem;
-        font-size: 0.68rem;
-        color: var(--gray-500);
-        margin-bottom: 0.5rem;
-    }
-    .class-card-stats span {
-        display: flex;
-        align-items: center;
-        gap: 0.35rem;
-    }
-    .class-card-stats i {
-        color: var(--primary);
-        font-size: 0.7rem;
-    }
-
-    /* ========== BADGES ========== */
-    .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.3rem;
-        padding: 0.3rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.65rem;
-        font-weight: 600;
-        white-space: nowrap;
-    }
-    .badge-success {
-        background: var(--success-light);
-        color: var(--success);
-    }
-    .badge-warning {
-        background: var(--warning-light);
-        color: var(--warning);
-    }
-    .badge-info {
-        background: var(--info-light);
-        color: var(--info);
-    }
-    .badge-danger {
-        background: var(--danger-light);
-        color: var(--danger);
-    }
-
-    /* ========== BUTTONS ========== */
-    .btn-outline {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.6rem 1.2rem;
-        border: 2px solid var(--gray-300);
-        border-radius: 25px;
-        background: white;
-        color: var(--gray-700);
-        font-size: 0.75rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: var(--transition);
-        font-family: inherit;
-        text-decoration: none;
-    }
-    .btn-outline:hover {
-        border-color: var(--primary);
-        background: var(--primary-light);
-        color: var(--primary);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(18,52,153,0.1);
-    }
-    .btn-outline i { font-size: 0.85rem; }
-    .btn-sm { padding: 0.45rem 0.9rem; font-size: 0.7rem; }
-
-    /* ========== EMPTY STATE ========== */
-    .empty-state {
-        text-align: center;
-        padding: 3rem 1.5rem;
-        color: var(--gray-500);
-    }
-    .empty-state i {
-        font-size: 3rem;
-        display: block;
-        margin-bottom: 1rem;
-        opacity: 0.3;
-    }
-    .empty-state h5 {
-        font-size: 0.9rem;
-        font-weight: 700;
-        margin-bottom: 0.3rem;
-    }
-    .empty-state p {
-        font-size: 0.78rem;
-        margin: 0;
-    }
-
-    /* ========== SUBTLE PULSE ========== */
-    @keyframes cardPulse {
-        0%, 100% { box-shadow: var(--shadow-md); }
-        50% { box-shadow: 0 4px 20px rgba(18,52,153,0.1); }
-    }
-    .stat-card { animation: cardPulse 3s ease-in-out infinite; }
-    .stat-card:nth-child(1) { animation-delay: 0s; }
-    .stat-card:nth-child(2) { animation-delay: 0.4s; }
-    .stat-card:nth-child(3) { animation-delay: 0.8s; }
-    .stat-card:nth-child(4) { animation-delay: 1.2s; }
+    .db-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+    @media (max-width: 1100px) { .db-grid { grid-template-columns: 1fr; } }
+    .todo { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+    .todo li { display: flex; gap: 0.7rem; align-items: flex-start; padding: 0.65rem 0; border-top: 1px solid #f0f3f7; }
+    .todo li:first-child { border-top: 0; padding-top: 0.1rem; }
+    .todo .ico { width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+                 background: var(--info-bg); color: var(--info); font-size: 0.9rem; }
+    .todo .risk .ico, .todo li.risk .ico { background: var(--risk-bg); color: var(--risk); }
+    .todo li.warn .ico { background: var(--warn-bg); color: var(--warn); }
+    .todo li.muted .ico { background: var(--soft); color: var(--muted); }
+    .todo a { font-weight: 650; font-size: 0.88rem; color: var(--ink); text-decoration: none; }
+    .todo a:hover { color: var(--brand); text-decoration: underline; }
+    .todo small { display: block; font-size: 0.78rem; color: var(--muted); margin-top: 0.1rem; }
+    .alist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
+    .alist li { padding: 0.6rem 0.75rem; border: 1px solid var(--line); border-radius: 12px; }
+    .alist a { font-weight: 650; font-size: 0.86rem; color: var(--ink); text-decoration: none; }
+    .alist a:hover { color: var(--brand); text-decoration: underline; }
+    .alist .meta { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.76rem; color: var(--muted); margin-top: 0.2rem; }
+    .alist .meta .soon { color: var(--warn); font-weight: 650; }
+    .alist .bar { margin-top: 0.4rem; }
+    .sub-h { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin: 0.9rem 0 0.5rem; }
+    .legend { display: flex; gap: 0.4rem 1rem; flex-wrap: wrap; font-size: 0.76rem; color: var(--muted); }
+    .legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+    .legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .cls { list-style: none; margin: 0.8rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; container-type: inline-size; }
+    .cl { display: grid; grid-template-columns: minmax(170px, 1.1fr) 7rem minmax(180px, 2fr) 6.5rem 8.5rem auto; gap: 0.5rem 1rem; align-items: center;
+          grid-template-areas: "who avg dist below state go"; padding: 0.75rem 0.9rem; border: 1px solid var(--line); border-radius: 14px; }
+    .cl .who { grid-area: who; min-width: 0; } .cl .avg { grid-area: avg; } .cl .dist { grid-area: dist; } .cl .below { grid-area: below; }
+    .cl .state { grid-area: state; } .cl .go { grid-area: go; justify-self: end; }
+    .cl .who b { display: block; font-size: 0.9rem; } .cl .who small { font-size: 0.76rem; color: var(--muted); }
+    .cl .avg b { display: block; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+    .cl .avg small, .cl .below small, .cl .dist small { font-size: 0.72rem; color: var(--muted); }
+    .cl .up { color: var(--good); font-weight: 650; } .cl .down { color: var(--risk); font-weight: 650; }
+    .stack { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: #edf1f7; }
+    .stack i { display: block; height: 100%; }
+    .cl .below b { display: block; font-size: 0.95rem; }
+    @container (max-width: 900px) {
+        .cl { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "who avg go" "dist dist dist" "below state state"; }
+        .cl .state { justify-self: end; }
+    }
+    @container (max-width: 520px) {
+        .cl { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "who avg" "dist dist" "below state" "go go"; }
+        .cl .go { justify-self: start; }
+    }
+    .sp .table td { white-space: nowrap; }
+    .sp .table td.name { white-space: normal; min-width: 160px; }
+    .chg-down { color: var(--risk); font-weight: 650; } .chg-up { color: var(--good); font-weight: 650; }
+    .why { font-size: 0.78rem; color: var(--muted); }
 </style>
 {% endblock %}
 
 {% block content %}
-
-<!-- ========== STATS ROW ========== -->
-<div class="stat-grid">
-    <div class="stat-card blue">
-        <div class="stat-icon"><i class="fi fi-rr-chalkboard-user"></i></div>
-        <div class="stat-value">{{ total_assignments }}</div>
-        <div class="stat-label">Class Assignments</div>
-    </div>
-    <div class="stat-card green">
-        <div class="stat-icon"><i class="fi fi-rr-users"></i></div>
-        <div class="stat-value">{{ total_students }}</div>
-        <div class="stat-label">Total Students</div>
-    </div>
-    <div class="stat-card purple">
-        <div class="stat-icon"><i class="fi fi-rr-apps"></i></div>
-        <div class="stat-value">{{ total_sections }}</div>
-        <div class="stat-label">Sections Handled</div>
-    </div>
-    <div class="stat-card orange">
-        <div class="stat-icon"><i class="fi fi-rr-calendar"></i></div>
-        <div class="stat-value">{{ current_quarter.quarter_label|default:"N/A" }}</div>
-        <div class="stat-label">Current Quarter</div>
-        {% if current_quarter.date_start and current_quarter.date_end %}
-        <div class="stat-sub">{{ current_quarter.date_start|date:"M d" }} - {{ current_quarter.date_end|date:"M d" }}</div>
-        {% endif %}
-    </div>
-</div>
-
-<!-- ========== INSIGHT CARD ========== -->
-<div class="insight-card">
-    <div class="insight-icon-wrap">
-        <i class="fi fi-rr-bulb"></i>
-    </div>
-    <div class="insight-content">
-        <div class="insight-title">Quick Overview</div>
-        <p class="insight-text">
-            You are handling <strong>{{ total_assignments }} class(es)</strong> across <strong>{{ total_sections }} section(s)</strong> 
-            with <strong>{{ total_students }} students</strong> for {{ current_sy.year_label|default:"this school year" }}. 
-            {% if grade_completion > 0 %}Grade completion is at <strong>{{ grade_completion }}%</strong>.{% endif %}
-            {% if pending_grades > 0 %}<strong>{{ pending_grades }} grades</strong> are pending submission.{% endif %}
-        </p>
-    </div>
-</div>
-
-<!-- ========== DASHBOARD LAYOUT ========== -->
-<div class="dashboard-layout">
-
-    <!-- ===== LEFT SIDEBAR ===== -->
-    <div style="display:flex;flex-direction:column;gap:1.5rem;position:sticky;top:1rem;">
-
-        <!-- Profile Card -->
-        <div class="sidebar-card">
-            <div class="sidebar-card-header">
-                <div class="sidebar-card-icon purple">
-                    <i class="fi fi-rr-user"></i>
-                </div>
-                <div class="sidebar-card-title">My Profile</div>
-            </div>
-            <div style="text-align:center;margin-bottom:1.2rem;">
-                <div class="profile-avatar">
-                    {{ teacher.user.first_name|first|upper }}{{ teacher.user.last_name|first|upper }}
-                </div>
-                <div class="profile-name">{{ teacher.full_name }}</div>
-                <div class="profile-role">{{ teacher.get_role_display }}</div>
-            </div>
-            <div class="info-list">
-                <div class="info-item">
-                    <span class="info-dot active"></span>
-                    <span class="info-label">School</span>
-                    <span class="info-value">{{ school.school_name|truncatechars:18 }}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-dot active"></span>
-                    <span class="info-label">Teaching Area</span>
-                    <span class="info-value">{{ teacher.teaching_area|default:"General" }}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-dot neutral"></span>
-                    <span class="info-label">Designation</span>
-                    <span class="info-value">{{ teacher.designation|default:"Teacher" }}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-dot {% if teacher.employment_status == 'Regular_Permanent' %}active{% else %}warning{% endif %}"></span>
-                    <span class="info-label">Status</span>
-                    <span class="info-value">{{ teacher.get_employment_status_display|default:"Active" }}</span>
-                </div>
-            </div>
+<div class="tp">
+    <section class="card tp-head">
+        <div>
+            <h2><i class="fi fi-rr-dashboard" style="color:#123499;"></i> {% if current_name %}{{ current_name }} at a glance{% else %}Dashboard{% endif %}</h2>
+            <p class="hint">
+                {% if deadline %}{% if overdue %}The {{ current_name }} grade deadline passed on {{ deadline|date:"M j" }}.{% elif days_left == 0 %}{{ current_name }} grades are due today.{% else %}{{ current_name }} grades are due {{ deadline|date:"M j" }}, in {{ days_left }} day{{ days_left|pluralize }}.{% endif %}
+                {% elif current_name %}{{ current_name }} is the current grading period.{% else %}No grading period is open yet.{% endif %}
+                {% if class_count %}You teach {{ class_count }} class{{ class_count|pluralize:"es" }}.{% endif %}
+            </p>
         </div>
-
-        <!-- Subjects Breakdown Card -->
-        <div class="sidebar-card">
-            <div class="sidebar-card-header">
-                <div class="sidebar-card-icon blue">
-                    <i class="fi fi-rr-book"></i>
-                </div>
-                <div class="sidebar-card-title">Subjects Taught</div>
-            </div>
-            {% for subj in subject_breakdown %}
-            <div class="subject-item">
-                <div class="subject-header">
-                    <span class="subject-code">{{ subj.subject_code }}</span>
-                    <span class="subject-sections">{{ subj.section_count }} section{{ subj.section_count|pluralize }}</span>
-                </div>
-                <div class="subject-students">{{ subj.students }} student{{ subj.students|pluralize }}</div>
-                <div class="progress-bar-wrap">
-                    <div class="progress-bar-fill {% if subj.completion >= 80 %}high{% elif subj.completion >= 50 %}medium{% else %}low{% endif %}" 
-                         style="width:{{ subj.completion }}%;"></div>
-                </div>
-            </div>
-            {% empty %}
-            <div class="empty-state" style="padding:1.5rem 0.5rem;">
-                <i class="fi fi-rr-book" style="font-size:2rem;"></i>
-                <p style="font-size:0.73rem;">No subjects assigned yet.</p>
-            </div>
-            {% endfor %}
+        <div class="actions">
+            <a class="btn btn-line" href="{% url 'teachers:upload_class_record' %}"><i class="fi fi-rr-upload"></i> Upload grades</a>
+            <a class="btn btn-main" href="{% url 'assessments:create_page' %}"><i class="fi fi-rr-plus"></i> New assessment</a>
         </div>
+    </section>
+
+    <div class="tiles" style="--tiles:4">
+        <div class="card tile"><span class="tile-ico"><i class="fi fi-rr-users-alt"></i></span>
+            <div><span>Learners</span><b>{{ learners }}</b><small>in {{ class_count }} class{{ class_count|pluralize:"es" }}</small></div></div>
+        <div class="card tile {% if expected and graded == expected %}good{% elif overdue %}risk{% elif days_left is not None and days_left <= 7 and graded < expected %}warn{% endif %}"><span class="tile-ico"><i class="fi fi-rr-chart-pie-alt"></i></span>
+            <div><span>Graded in {{ current_name|default:"this period" }}</span><b>{{ graded }} <small style="display:inline;font-size:0.8rem;">of {{ expected }}</small></b><small>{{ graded_percent }}% of your learners</small></div></div>
+        <div class="card tile {% if class_count and submitted_classes == class_count %}good{% endif %}"><span class="tile-ico"><i class="fi fi-rr-paper-plane"></i></span>
+            <div><span>Submitted classes</span><b>{{ submitted_classes }} <small style="display:inline;font-size:0.8rem;">of {{ class_count }}</small></b><small>sent to the registrar</small></div></div>
+        <div class="card tile {% if closing_soon %}warn{% endif %}"><span class="tile-ico"><i class="fi fi-rr-list-check"></i></span>
+            <div><span>Open assessments</span><b>{{ open_count }}</b><small>{% if closing_soon %}{{ closing_soon }} closing within 48 hours{% elif draft_count %}{{ draft_count }} draft{{ draft_count|pluralize }} not published{% else %}none closing soon{% endif %}</small></div></div>
     </div>
 
-    <!-- ===== RIGHT CONTENT ===== -->
-    <div style="display:flex;flex-direction:column;gap:1.5rem;">
-
-        <!-- Charts Row -->
-        <div class="charts-row">
-            <div class="chart-card">
-                <div class="chart-title">
-                    <i class="fi fi-rr-chart-pie-alt"></i> Student Distribution by Section
-                </div>
-                <div class="chart-container">
-                    <canvas id="sectionDistChart"></canvas>
-                </div>
-            </div>
-            <div class="chart-card">
-                <div class="chart-title">
-                    <i class="fi fi-rr-chart-bar"></i> Grade Completion Progress
-                </div>
-                <div class="chart-container">
-                    <canvas id="completionChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Class Assignments Card -->
-        <div class="chart-card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.5rem;">
-                <div class="chart-title" style="margin-bottom:0;">
-                    <i class="fi fi-rr-chalkboard"></i> My Class Assignments
-                </div>
-                <span class="badge badge-info">SY {{ current_sy.year_label|default:"N/A" }}</span>
-            </div>
-
-            {% if assignments %}
-            <div class="class-cards-grid">
-                {% for item in assignments %}
-                <div class="class-card" onclick="location.href='#'" title="Click to view section details">
-                    <div class="class-card-header">
-                        <div>
-                            <div class="class-card-name">{{ item.section.section_name }}</div>
-                            <div class="class-card-subject">{{ item.subject.subject_name }} ({{ item.subject.subject_code }})</div>
-                        </div>
-                        <span class="badge {% if item.completion_pct >= 80 %}badge-success{% elif item.completion_pct >= 50 %}badge-warning{% else %}badge-danger{% endif %}">
-                            <i class="fi fi-rr-check-circle"></i> {{ item.completion_pct }}%
-                        </span>
-                    </div>
-                    <div class="class-card-stats">
-                        <span><i class="fi fi-rr-users"></i> {{ item.student_count }} students</span>
-                        <span><i class="fi fi-rr-graduation-cap"></i> {{ item.section.grade_level.grade_name }}</span>
-                    </div>
-                    <div class="progress-bar-wrap">
-                        <div class="progress-bar-fill {% if item.completion_pct >= 80 %}high{% elif item.completion_pct >= 50 %}medium{% else %}low{% endif %}" 
-                             style="width:{{ item.completion_pct }}%;"></div>
-                    </div>
-                </div>
+    <div class="db-grid">
+        <section class="card panel" aria-labelledby="todoTitle">
+            <div class="panel-head"><h3 id="todoTitle"><i class="fi fi-rr-checkbox" style="color:#123499;"></i> To do</h3>
+                <a class="btn btn-ghost btn-sm" href="{% url 'teachers:class_record_list' %}">Class records <i class="fi fi-rr-angle-small-right"></i></a></div>
+            {% if todo %}
+            <ul class="todo">
+                {% for t in todo %}
+                <li class="{{ t.tone }}"><span class="ico"><i class="fi {{ t.icon }}"></i></span>
+                    <div><a href="{{ t.url }}">{{ t.title }}</a><small>{{ t.detail }}</small></div></li>
                 {% endfor %}
-            </div>
+            </ul>
+            {% if todo_more %}<p class="hint">And {{ todo_more }} more. Open Class Records or Assessments to see everything.</p>{% endif %}
             {% else %}
-            <div class="empty-state">
-                <i class="fi fi-rr-chalkboard"></i>
-                <h5>No Class Assignments</h5>
-                <p>Contact your registrar to be assigned to sections.</p>
-            </div>
+            <p class="empty"><i class="fi fi-rr-badge-check"></i>You are all caught up. Every class has its grades in and nothing is waiting for you.</p>
             {% endif %}
-        </div>
+        </section>
 
-        <!-- Quick Actions Card -->
-        <div class="chart-card">
-            <div class="chart-title">
-                <i class="fi fi-rr-bolt"></i> Quick Actions
+        <section class="card panel" aria-labelledby="asTitle">
+            <div class="panel-head"><h3 id="asTitle"><i class="fi fi-rr-list-check" style="color:#123499;"></i> Assessments</h3>
+                <a class="btn btn-ghost btn-sm" href="{% url 'assessments:list' %}">All <i class="fi fi-rr-angle-small-right"></i></a></div>
+            {% if open_assessments %}
+            <ul class="alist">
+                {% for r in open_assessments %}{% with a=r.assessment %}
+                <li><a href="{% url 'assessments:detail' a.id %}">{{ a.title }}</a>
+                    <div class="meta"><span>{{ r.section }} · {{ a.subject.subject_code }}</span>
+                        <span class="{% if r.closing_soon %}soon{% endif %}">{% if a.closes_at %}closes in {{ a.closes_at|timeuntil }}{% else %}no deadline{% endif %}</span></div>
+                    <div class="meta"><span>{{ r.submitted }} of {{ r.enrolled }} answered</span>{% if r.average is not None %}<span>average {{ r.average }}%</span>{% endif %}</div>
+                    <div class="bar {% if r.progress == 100 %}good{% endif %}" aria-hidden="true"><i style="width:{{ r.progress }}%"></i></div></li>
+                {% endwith %}{% endfor %}
+            </ul>
+            {% else %}
+            <p class="empty" style="padding:1rem;"><i class="fi fi-rr-list-check"></i>No assessment is open right now.</p>
+            {% endif %}
+            {% if recent_assessments %}
+            <p class="sub-h">Recently closed</p>
+            <ul class="alist">
+                {% for r in recent_assessments %}{% with a=r.assessment %}
+                <li><a href="{% url 'assessments:detail' a.id %}">{{ a.title }}</a>
+                    <div class="meta"><span>{{ r.section }} · {{ r.submitted }} of {{ r.enrolled }} answered</span><span>{% if r.average is not None %}average <b>{{ r.average }}%</b>{% else %}no answers{% endif %}</span></div></li>
+                {% endwith %}{% endfor %}
+            </ul>
+            {% endif %}
+        </section>
+    </div>
+
+    <section class="card panel" aria-labelledby="clsTitle">
+        <div class="panel-head">
+            <div><h3 id="clsTitle"><i class="fi fi-rr-chalkboard-user" style="color:#123499;"></i> My classes</h3>
+                <p class="hint">How learners are spread across the DepEd descriptors in each class's latest graded period.</p></div>
+            <div class="legend" aria-label="Descriptors">
+                {% for d in descriptors %}<span><i style="background:{{ d.color }}"></i>{{ d.label }} ({{ d.range }})</span>{% endfor %}
             </div>
-            <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
-                {% for item in assignments|slice:":4" %}
-                <button class="btn-outline btn-sm" onclick="location.href='#'">
-                    <i class="fi fi-rr-edit"></i> Grade {{ item.section.section_name }}
-                </button>
-                {% endfor %}
-                <button class="btn-outline btn-sm">
-                    <i class="fi fi-rr-calendar-check"></i> Take Attendance
-                </button>
-                <button class="btn-outline btn-sm">
-                    <i class="fi fi-rr-file-export"></i> Export Grades
-                </button>
+        </div>
+        {% if classes %}
+        <ul class="cls">
+            {% for c in classes %}
+            <li class="cl">
+                <div class="who"><b>{{ c.name }}</b><small>{{ c.subject }} · {{ c.code }} · {{ c.learners }} learner{{ c.learners|pluralize }}</small></div>
+                <div class="avg">{% if c.average is not None %}<b>{{ c.average }}</b><small>{% if c.change is not None %}<span class="{% if c.change > 0 %}up{% elif c.change < 0 %}down{% endif %}">{% if c.change > 0 %}+{% endif %}{{ c.change }}</span> vs {{ c.before }}{% else %}{{ c.focus }} average{% endif %}</small>{% else %}<b class="muted">—</b><small>no grades yet</small>{% endif %}</div>
+                <div class="dist">
+                    {% if c.average is not None %}
+                    <div class="stack" role="img" aria-label="{% for l in c.levels %}{{ l.label }}: {{ l.count }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                        {% for l in c.levels %}{% if l.count %}<i style="width:{{ l.percent }}%;background:{{ l.color }}" title="{{ l.label }}: {{ l.count }} learner{{ l.count|pluralize }}"></i>{% endif %}{% endfor %}
+                    </div>
+                    <small>{{ c.focus }}{% if not c.focus_is_current %} (latest with grades){% endif %}</small>
+                    {% else %}<small>Grades appear here once you upload them.</small>{% endif %}
+                </div>
+                <div class="below">{% if c.average is not None %}<b class="{% if c.below %}down{% endif %}">{{ c.below }}</b><small>below {{ passing|floatformat:"-2" }}</small>{% endif %}</div>
+                <div class="state"><span class="pill {{ c.state_tone }}" title="{{ c.state_hint }}">{{ c.state_label }}</span></div>
+                <div class="go"><a class="btn btn-line btn-sm" href="{{ c.url }}">Open <i class="fi fi-rr-angle-small-right"></i></a></div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty"><i class="fi fi-rr-chalkboard-user"></i>You have no classes this school year yet. The registrar assigns them.</p>
+        {% endif %}
+    </section>
+
+    <section class="card panel sp" aria-labelledby="spTitle">
+        <div class="panel-head">
+            <div><h3 id="spTitle"><i class="fi fi-rr-hand-holding-heart" style="color:#123499;"></i> Learners who may need help</h3>
+                <p class="hint">Below {{ passing|floatformat:"-2" }}, or down 5 points or more since the period before, in each class's latest graded period.</p></div>
+            {% if support|length > 8 %}<button type="button" class="btn btn-line btn-sm" id="allSupport"><i class="fi fi-rr-list"></i> Show all {{ support|length }}</button>{% endif %}
+        </div>
+        {% if support %}
+        <div style="overflow-x:auto;">
+            <table class="table">
+                <thead><tr><th>Learner</th><th>Class</th><th class="num">Grade</th><th class="num">Change</th><th>Why</th></tr></thead>
+                <tbody>
+                    {% for s in support|slice:":8" %}
+                    <tr><td class="name"><a href="{{ s.url }}" style="color:var(--ink);font-weight:600;text-decoration:none;">{{ s.name }}</a></td>
+                        <td>{{ s.class }}</td>
+                        <td class="num"><span class="grade {% if s.grade >= passing %}pass{% else %}fail{% endif %}">{{ s.grade|floatformat:"-1" }}</span></td>
+                        <td class="num">{% if s.change is not None %}<span class="{% if s.change < 0 %}chg-down{% elif s.change > 0 %}chg-up{% endif %}">{% if s.change > 0 %}+{% endif %}{{ s.change|floatformat:"-1" }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+                        <td class="why">{{ s.reason }} ({{ s.period }})</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty"><i class="fi fi-rr-badge-check"></i>No learner is below {{ passing|floatformat:"-2" }} or dropping in your classes right now.</p>
+        {% endif %}
+    </section>
+
+    <div class="tp-modal" id="supportModal" role="dialog" aria-modal="true" aria-labelledby="supportTitle" hidden>
+        <div class="tp-modal-card" tabindex="-1">
+            <div class="tp-modal-head">
+                <div><h3 id="supportTitle">Learners who may need help</h3><p class="hint">{{ support|length }} learner{{ support|length|pluralize }} across your classes.</p></div>
+                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
             </div>
+            <div class="tp-modal-tools">
+                <label class="search" style="max-width:none;flex:1 1 220px;"><i class="fi fi-rr-search"></i><input type="search" id="spSearch" placeholder="Find a learner or class" aria-label="Find a learner or class"></label>
+                <label class="sort">Sort by
+                    <select id="spSort">
+                        <option value="grade">Lowest grade first</option>
+                        <option value="drop">Biggest drop first</option>
+                        <option value="name">Surname A to Z</option>
+                        <option value="class">Class</option>
+                    </select>
+                </label>
+            </div>
+            <div class="tp-modal-body"><table class="table"><thead><tr><th>Learner</th><th>Class</th><th class="num">Grade</th><th class="num">Change</th><th>Why</th></tr></thead><tbody id="spBody"></tbody></table></div>
         </div>
     </div>
 </div>
-
+{{ support|json_script:"supportData" }}
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Student Distribution Doughnut Chart
-    var sdc = document.getElementById('sectionDistChart');
-    if (sdc) {
-        new Chart(sdc.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: [{% for item in assignments %}'{{ item.section.section_name|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
-                datasets: [{
-                    data: [{% for item in assignments %}{{ item.student_count }}{% if not forloop.last %},{% endif %}{% endfor %}],
-                    backgroundColor: [
-                        '#123499', '#2E7D32', '#f39c12', '#667eea',
-                        '#E65100', '#764ba2', '#17a2b8', '#C62828'
-                    ],
-                    borderColor: '#fff',
-                    borderWidth: 3,
-                    hoverBorderWidth: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '58%',
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 15,
-                            usePointStyle: true,
-                            boxWidth: 8,
-                            boxHeight: 8,
-                            font: { size: 10 },
-                            generateLabels: function(chart) {
-                                var data = chart.data;
-                                return data.labels.map(function(label, i) {
-                                    return {
-                                        text: label + ' (' + data.datasets[0].data[i] + ')',
-                                        fillStyle: data.datasets[0].backgroundColor[i],
-                                        strokeStyle: data.datasets[0].backgroundColor[i],
-                                        pointStyle: 'circle',
-                                        index: i
-                                    };
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-        });
+(function () {
+    'use strict';
+    var btn = document.getElementById('allSupport');
+    if (!btn) return;
+    var data = JSON.parse(document.getElementById('supportData').textContent);
+    var PASSING = {{ passing }};
+    var modal = document.getElementById('supportModal'), body = document.getElementById('spBody');
+    var search = document.getElementById('spSearch'), sort = document.getElementById('spSort');
+    var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+    var fmt = function (n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); };
+    var SORTS = {
+        grade: function (a, b) { return a.grade - b.grade || a.name.localeCompare(b.name); },
+        drop: function (a, b) { return (a.change == null ? 0 : a.change) - (b.change == null ? 0 : b.change) || a.grade - b.grade; },
+        name: function (a, b) { return a.name.localeCompare(b.name); },
+        class: function (a, b) { return a.class.localeCompare(b.class) || a.name.localeCompare(b.name); }
+    };
+    function draw() {
+        var q = search.value.trim().toLowerCase();
+        var rows = data.filter(function (s) { return !q || (s.name + ' ' + s.class).toLowerCase().indexOf(q) > -1; }).slice().sort(SORTS[sort.value]);
+        body.innerHTML = rows.map(function (s) {
+            var ch = s.change == null ? '<span class="muted">—</span>' : '<span class="' + (s.change < 0 ? 'chg-down' : s.change > 0 ? 'chg-up' : '') + '">' + (s.change > 0 ? '+' : '') + fmt(s.change) + '</span>';
+            return '<tr><td class="name"><a href="' + esc(s.url) + '" style="color:var(--ink);font-weight:600;text-decoration:none;">' + esc(s.name) + '</a></td><td>' + esc(s.class) + '</td>' +
+                '<td class="num"><span class="grade ' + (s.grade >= PASSING ? 'pass' : 'fail') + '">' + fmt(s.grade) + '</span></td><td class="num">' + ch + '</td>' +
+                '<td class="why">' + esc(s.reason) + ' (' + esc(s.period) + ')</td></tr>';
+        }).join('') || '<tr><td colspan="5" class="empty">No learner matches.</td></tr>';
     }
-
-    // Grade Completion Bar Chart
-    var cc = document.getElementById('completionChart');
-    if (cc) {
-        new Chart(cc.getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: [{% for item in assignments %}'{{ item.section.section_name|escapejs|truncatechars:12 }}'{% if not forloop.last %},{% endif %}{% endfor %}],
-                datasets: [{
-                    label: 'Grade Completion %',
-                    data: [{% for item in assignments %}{{ item.completion_pct }}{% if not forloop.last %},{% endif %}{% endfor %}],
-                    backgroundColor: [{% for item in assignments %}{% if item.completion_pct >= 80 %}'rgba(46,125,50,0.75)'{% elif item.completion_pct >= 50 %}'rgba(243,156,18,0.75)'{% else %}'rgba(198,40,40,0.75)'{% endif %}{% if not forloop.last %},{% endif %}{% endfor %}],
-                    borderColor: [{% for item in assignments %}{% if item.completion_pct >= 80 %}'#2E7D32'{% elif item.completion_pct >= 50 %}'#f39c12'{% else %}'#C62828'{% endif %}{% if not forloop.last %},{% endif %}{% endfor %}],
-                    borderWidth: 2,
-                    borderRadius: 6,
-                    borderSkipped: false
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        ticks: {
-                            callback: function(v) { return v + '%'; },
-                            font: { size: 10 }
-                        },
-                        grid: { color: 'rgba(0,0,0,0.05)' }
-                    },
-                    x: {
-                        ticks: { font: { size: 9 } },
-                        grid: { display: false }
-                    }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(ctx) {
-                                return 'Completion: ' + ctx.raw + '%';
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-});
+    var last = null;
+    function close() { modal.hidden = true; if (last) last.focus(); }
+    btn.addEventListener('click', function () { last = document.activeElement; search.value = ''; draw(); modal.hidden = false; search.focus(); });
+    search.addEventListener('input', draw);
+    sort.addEventListener('change', draw);
+    modal.addEventListener('click', function (e) { if (e.target === modal || e.target.closest('[data-close]')) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !modal.hidden) close(); });
+})();
 </script>
 {% endblock %}

@@ -1,6 +1,6 @@
 # communication/models.py
 """
-Phase 11: Communication models for Formify LIS.
+Phase 11: Communication models for ARMS.
 Announcements with targeted delivery and view tracking, threaded
 messaging, and system-wide notifications with 19 notification types.
 """
@@ -55,6 +55,7 @@ NOTIFICATION_PRIORITY_CHOICES = [
 NOTIFICATION_TYPE_CHOICES = [
     ('GRADE_RETURNED', 'Registrar returned grades for correction'),
     ('GRADE_VALIDATED', 'Registrar validated submitted grades'),
+    ('GRADE_SUBMITTED', 'Teacher submitted grades for validation'),
     ('GRADE_DEADLINE_REMINDER', 'Approaching grade encoding deadline'),
     ('FORM_SUBMISSION_DEADLINE', 'SF1/SF2/SF9 submission due soon'),
     ('FORM_RETURNED', 'Submitted form returned for revision'),
@@ -373,3 +374,55 @@ class Notification(models.Model):
     def __str__(self):
         status = 'Read' if self.is_read else 'Unread'
         return f"Notif: {self.title} — To: {self.recipient.get_full_name()} ({status})"
+
+
+# =============================================================================
+# 11.7 — ContactRequest (public "Contact us" and sign-in help messages)
+# =============================================================================
+class ContactRequest(models.Model):
+    """A message sent from the public pages: a school asking for ARMS, or someone who cannot sign in.
+
+    Every request is saved here and also emailed to settings.ARMS_CONTACT_EMAIL, so nothing is lost
+    when email is not configured. Administrators work through them on the admin portal's Requests page.
+    """
+    TOPIC_SCHOOL = 'school'
+    TOPIC_SUPPORT = 'support'
+    TOPIC_CHOICES = [
+        (TOPIC_SCHOOL, 'School request'),
+        (TOPIC_SUPPORT, 'Sign-in help'),
+    ]
+    STATUS_NEW = 'new'
+    STATUS_CHOICES = [
+        (STATUS_NEW, 'New'),
+        ('contacted', 'Contacted'),
+        ('done', 'Done'),
+    ]
+
+    topic = models.CharField(max_length=10, choices=TOPIC_CHOICES, default=TOPIC_SCHOOL, db_index=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_NEW, db_index=True)
+    name = models.CharField(max_length=120)
+    email = models.EmailField()
+    phone = models.CharField(max_length=40, blank=True)
+    school_name = models.CharField(max_length=200, blank=True)
+    position = models.CharField(max_length=80, blank=True)
+    message = models.TextField(blank=True)
+    email_sent = models.BooleanField(default=False, help_text='Whether the notification email was accepted by the mail server.')
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=255, blank=True)
+    handled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='handled_contact_requests',
+    )
+    handled_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Contact request'
+        verbose_name_plural = 'Contact requests'
+
+    def __str__(self):
+        about = self.school_name or self.get_topic_display()
+        return f"{about} — {self.name} <{self.email}> ({self.get_status_display()})"
