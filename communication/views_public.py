@@ -2,6 +2,8 @@
 
 Each request is saved (administrators see it on the admin portal's Requests page) and emailed to
 settings.ARMS_CONTACT_EMAIL with Reply-To set to the sender, so a reply goes straight to them.
+Sign-in help from someone with a school account also reaches that school's School Head and the staff
+they trusted with the accounts, so the System Administrator is not the only one who can help.
 """
 import logging
 
@@ -78,6 +80,35 @@ def _notify(contact, request):
         return False
 
 
+def _tell_school(contact):
+    """Bell notification for the School Head and the account helpers of the school the person belongs to."""
+    if contact.topic != ContactRequest.TOPIC_SUPPORT:
+        return 0
+    try:
+        from django.contrib.auth.models import User
+        from django.db.models import Q
+
+        from accounts.models import UserProfile
+        from .notify import notify
+
+        address = contact.email.strip()
+        person = UserProfile.objects.filter(
+            Q(user__email__iexact=address) | Q(user__username__iexact=address) | Q(google_email__iexact=address),
+            school__isnull=False).select_related('user').first()
+        if person is None:
+            return 0
+        helpers = User.objects.filter(
+            Q(profile__role='schoolhead') | Q(profile__can_manage_accounts=True, profile__role__in=['registrar', 'teacher']),
+            profile__school_id=person.school_id, is_active=True, profile__is_active=True).exclude(pk=person.user_id)
+        said = f': "{contact.message.strip()[:180]}"' if contact.message.strip() else '.'
+        return notify(helpers, 'MESSAGE_RECEIVED', f'Sign-in help: {contact.name}'[:255],
+                      f'{contact.name} ({address}) asked for help signing in{said} Check that it is really them, then reset '
+                      'their password on User Management (Accounts).', action_url=reverse('heads-user-management'))
+    except Exception:
+        logger.exception('Could not tell the school about contact request %s', contact.pk)
+        return 0
+
+
 @require_POST
 def contact_submit(request):
     # The hidden "website" field is invisible to people; bots fill it in. Pretend it worked.
@@ -103,4 +134,5 @@ def contact_submit(request):
 
     contact.email_sent = _notify(contact, request)
     contact.save(update_fields=['email_sent'])
+    _tell_school(contact)
     return _reply(request, True, name=contact.name, email=contact.email)

@@ -24,7 +24,7 @@ ZEBRA = 'F5F7FB'
 SOFT = 'EEF2FF'
 FONT = 'Calibri'
 
-# fill and text color for each proficiency level (DepEd Order No. 31, s. 2012)
+# fill and text color for each level slot (named by the school's DepEd order, core/grading_policy.py)
 LEVEL_COLORS = {
     'beginning': ('FDECEC', 'C62828'),
     'developing': ('FFF3E0', 'B45309'),

@@ -150,6 +150,12 @@ class UserProfile(models.Model):
         default=False,
         help_text='Set when an administrator issues a temporary password; cleared once the user sets their own.',
     )
+    # ===== Delegated account management =====
+    can_manage_accounts = models.BooleanField(
+        default=False,
+        help_text="Granted by the School Head: may create, edit, deactivate and reset the passwords of the school's staff "
+                  "accounts (never the School Head's own) when the School Head is busy.",
+    )
     is_active = models.BooleanField(default=True, db_index=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -202,7 +208,7 @@ class UserProfile(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        school_info = f" @ {self.school.name}" if self.school else ""
+        school_info = f" @ {self.school.school_name}" if self.school else ""
         return f"{self.user.get_full_name()} — {self.get_role_display()}{school_info}"
 
 

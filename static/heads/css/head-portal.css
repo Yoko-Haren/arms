@@ -35,7 +35,7 @@ body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; 
 .hp .btn-primary, .hp .btn-outline { font-weight: 600; }
 .tnum, .hp .fact b, .hp .tile b, .hp .lvl, .hp .sec-table td, .hp .kp-val, .hp .kp-ticks { font-variant-numeric: tabular-nums; }
 
-/* level colors (DepEd Order No. 31, s. 2012) */
+/* level colors: one per level slot, lowest to highest, whatever the school's DepEd order names them */
 .level-advanced { --lv: var(--lv-advanced, #2E7D32); --lv-bg: var(--lv-advanced-bg, #e8f5e9); }
 .level-proficient { --lv: var(--lv-proficient, #123499); --lv-bg: var(--lv-proficient-bg, #e3f2fd); }
 .level-approaching { --lv: var(--lv-approaching, #1565C0); --lv-bg: var(--lv-approaching-bg, #e8eaf6); }
@@ -50,20 +50,31 @@ body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; 
 .link-btn:hover { text-decoration: underline; }
 .empty-good { margin-top: 0.8rem; font-size: 0.84rem; color: #2E7D32; display: flex; gap: 0.5rem; align-items: center; }
 
-/* ---------- guided filters: what to review, then the period ---------- */
-.guide { padding: 0.95rem 1.2rem 0.85rem; }
-.guide-row { display: flex; flex-wrap: wrap; gap: 0.85rem 1.1rem; align-items: flex-end; }
-.step { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
-.step.grow { flex: 1 1 240px; }
-.step-label { font-size: 0.74rem; font-weight: 650; color: var(--muted); display: flex; align-items: center; gap: 0.45rem; }
+/* ---------- guided filters: what to review, then the period ----------
+   One row whenever it fits, so opening the sidebar never pushes the last filter onto a line of its own. Each filter
+   takes an equal share of the row up to a cap (never the whole card); the period, two choices, takes a larger
+   share and never narrows below "Quarter 2 (current)". Only a narrow card (below 880px) lets the filters wrap. */
+.guide { padding: 0.95rem 1.2rem 0.85rem; container-type: inline-size; }
+.guide-row { display: flex; flex-wrap: nowrap; gap: 0.85rem 1.1rem; align-items: flex-end; }
+.step { display: flex; flex-direction: column; gap: 0.35rem; flex: 1 1 0; max-width: 17rem; }
+.step:has(> .seg) { flex: 0 0 auto; max-width: none; }
+.step:has(> .pair) { flex-grow: 1.6; max-width: 30rem; }
+.step-label { font-size: 0.74rem; font-weight: 650; color: var(--muted); display: flex; align-items: center; gap: 0.45rem; white-space: nowrap; }
 .step-no { width: 19px; height: 19px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 0.66rem; font-weight: 700;
            display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.guide select { width: 100%; min-width: 150px; padding: 0.55rem 2rem 0.55rem 0.8rem; border: 1.5px solid #dfe4ec; border-radius: 10px;
+/* the browser draws the arrow inside the box, so a small right padding is enough */
+.guide select { width: 100%; min-width: 8rem; text-overflow: ellipsis; padding: 0.55rem 0.6rem 0.55rem 0.8rem; border: 1.5px solid #dfe4ec; border-radius: 10px;
                 font-size: 0.86rem; font-family: inherit; color: var(--ink); background-color: var(--soft); cursor: pointer; }
 .guide select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(18,52,153,0.12); background-color: #fff; }
-.pair { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-.pair select { width: auto; min-width: 165px; }
-.pair select:first-child { min-width: 205px; }
+.pair { display: flex; gap: 0.5rem; }
+/* the period list's longest choice ("All periods (school year so far)") must not set the period's width */
+.pair select { flex: 1 1 0; width: 0; min-width: 10.5rem; }
+.pair select + select { flex: 0 0 auto; width: auto; min-width: 0; }      /* the school year keeps its width */
+@container (max-width: 880px) {
+    .guide-row { flex-wrap: wrap; }
+    .step, .step:has(> .pair) { flex: 1 1 13rem; max-width: none; }
+    .step:has(> .seg) { flex: 0 0 auto; }
+}
 .seg { display: inline-flex; border: 1.5px solid #dfe4ec; border-radius: 10px; overflow: hidden; background: var(--soft); }
 .seg button { border: 0; background: transparent; padding: 0.55rem 0.95rem; font: inherit; font-size: 0.84rem; font-weight: 600;
               color: var(--muted); cursor: pointer; white-space: nowrap; }
@@ -82,7 +93,7 @@ body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; 
 .status { padding: 1.15rem 1.3rem; }
 .status .eyebrow { font-size: 0.7rem; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 .status-main { display: flex; gap: 0.95rem; align-items: center; margin: 0.75rem 0 0.95rem; }
-.status-badge { width: 60px; height: 60px; border-radius: 16px; background: var(--lv-bg); color: var(--lv); font-size: 1.3rem;
+.status-badge { min-width: 60px; height: 60px; padding: 0 0.55rem; border-radius: 16px; background: var(--lv-bg); color: var(--lv); font-size: 1.3rem;
                 font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 2px solid var(--lv); }
 .status-level { font-size: 1.45rem; font-weight: 700; color: var(--lv); line-height: 1.15; letter-spacing: -0.01em; }
 .status-meaning { font-size: 0.84rem; color: var(--muted); margin-top: 0.25rem; line-height: 1.5; max-width: 70ch; }
@@ -233,7 +244,7 @@ a.kp-link:hover, a.kp-link:focus-visible { background: #f3f6ff; outline: none; b
 .skel-title { height: 1rem; width: 38%; }
 .skel-big { height: 1.6rem; width: 55%; }
 .skel-input { height: 2.3rem; border-radius: 10px; flex: 0 0 170px; }
-.skel-input.grow { flex: 1 1 240px; }
+.skel-input.grow { flex: 0 0 200px; }
 .skel-pill { height: 1.5rem; width: 6.5rem; border-radius: 20px; }
 .skel-badge { width: 60px; height: 60px; border-radius: 16px; flex-shrink: 0; }
 .skel-circle { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; }
@@ -292,7 +303,7 @@ html[data-explain="off"] .hp .explain { display: none !important; }
 @media (max-width: 760px) { .ladder-cols { grid-template-columns: 1fr; } }
 .ladder-col { background: var(--soft); border-radius: 12px; padding: 0.55rem 0.55rem 0.6rem; display: flex; flex-direction: column; min-width: 0; }
 .ladder-top { display: flex; align-items: center; gap: 0.4rem; }
-.ladder-top b { width: 26px; height: 26px; border-radius: 8px; background: var(--lv-bg); color: var(--lv); border: 1.5px solid var(--lv);
+.ladder-top b { min-width: 26px; height: 26px; padding: 0 0.3rem; border-radius: 8px; background: var(--lv-bg); color: var(--lv); border: 1.5px solid var(--lv);
                 font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .ladder-top span { font-size: 0.76rem; font-weight: 650; color: var(--ink); line-height: 1.2; min-width: 0; }
 .ladder-top small { display: block; font-size: 0.68rem; font-weight: 500; color: var(--muted); }

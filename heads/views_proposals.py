@@ -2,14 +2,17 @@
 
 Nothing here changes data. Each card says what a page would answer, what it would show, how much of
 its data ARMS already keeps (counted from this school's records, so the readiness shown is real),
-its DepEd basis, a rough size of the work, and the questions to settle before building it. School
-Overview and Forms Compliance are left out: the Dean already turned them down.
+its DepEd basis (the school's own grading rules), a rough size of the work, and the questions to settle
+before building it. Proposals that have been built stay at the end with a link and what was settled.
+School Overview and Forms Compliance are left out: the Dean already turned them down.
 """
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.shortcuts import render
+from django.urls import reverse
 
 from attendance.models import AttendanceSummary
+from core import grading_policy as policy
 from enrollment.models import Enrollment
 from grades.models import GradeComponent
 from ml_engine import forecast as ml
@@ -31,6 +34,8 @@ def proposals(request):
     months = attendance.values('school_year_id', 'month').distinct().count()
     classes = ClassAssignment.objects.filter(section__school=school, is_active=True).values('teacher_id').annotate(n=Count('id')).count()
     _, meta = ml.load()
+    rules = policy.current()
+    parts = [name.lower() for _, name, _ in policy.components()]
     model_line = (f'Ready: the grade model learned from {meta["samples"]:,} records and was off by '
                   f'{meta["evaluation"][-1]["model"]["mae"]:.1f} points on the latest unseen quarter.') if meta else \
         'Partly ready: train the grade model first (python manage.py train_ml_models).'
@@ -42,7 +47,7 @@ def proposals(request):
                    'Attendance month by month', 'The grade model\'s forecast and the chance of falling below 75',
                    'Support given so far (from the level-up plans)'],
          'data': f'Ready: {learners:,} learners and {grades:,} grade records across {years} school year{"" if years == 1 else "s"}.',
-         'basis': 'DepEd Order No. 8, s. 2015 (the report card grades); DepEd Order No. 31, s. 2012 (levels).',
+         'basis': f'{rules["name"]} (the report card grades and their descriptors).',
          'decide': ['Should advisers see it for their own section?', 'Is a printable one-page summary needed for parent conferences?']},
         {'key': 'tracker', 'icon': 'fi-rr-list-check', 'name': 'Intervention Tracker', 'size': 'Large', 'ready': 'partial',
          'question': 'Did remediation work for the learners below 75?',
@@ -50,7 +55,7 @@ def proposals(request):
                    'Weekly check-ins recorded by the teacher', 'The outcome: the next quarter\'s grade against the target',
                    'Which strategies lift learners most, by grade component'],
          'data': 'Partly ready: learners and grades are in ARMS; the plans and check-ins would be new records kept by teachers.',
-         'basis': 'DepEd Order No. 8, s. 2015 requires remediation for grades below 75.',
+         'basis': f'{rules["name"]} requires remediation for grades below 75.',
          'decide': ['Do teachers or advisers record the check-ins?', 'Should the School Head approve plans, or only read them?']},
         {'key': 'attendance', 'icon': 'fi-rr-calendar-check', 'name': 'Attendance Watch', 'size': 'Small', 'ready': 'ready' if months else 'partial',
          'question': 'Who misses class often, and does it show in their grades?',
@@ -60,25 +65,10 @@ def proposals(request):
                   else 'Partly ready: no monthly attendance has been recorded yet.'),
          'basis': 'School Form 2 (Daily Attendance Report of Learners).',
          'decide': ['Which absence level should alert the School Head?', 'Should advisers get the same alerts?']},
-        {'key': 'honors', 'icon': 'fi-rr-trophy', 'name': 'Honors Outlook', 'size': 'Small', 'ready': 'ready',
-         'question': 'Who is on track for honors this year, and who is close?',
-         'shows': ['Learners on track for With Honors, With High Honors and With Highest Honors',
-                   'Learners within 2 points of a cut-off, and the subjects holding them back',
-                   'The forecast for the rest of the year'],
-         'data': 'Ready: quarterly grades and the grade model\'s forecasts.',
-         'basis': 'DepEd Order No. 36, s. 2016 (awards and recognition).',
-         'decide': ['Should near-honors learners be listed for advisers?', 'Is a list for the awards committee needed?']},
-        {'key': 'accuracy', 'icon': 'fi-rr-chart-line-up', 'name': 'Forecast Accuracy', 'size': 'Small', 'ready': 'ready' if meta else 'partial',
-         'question': 'How far can we trust the forecasts?',
-         'shows': ['Forecast against actual grades for every past quarter', 'How far off the model was, by learner and by class',
-                   'What the forecasts lean on most', 'When the model was last trained, and a button to retrain'],
-         'data': model_line,
-         'basis': 'Transparency for decisions made with AI support.',
-         'decide': ['Who may retrain the model?', 'Should the accuracy appear on every forecast chart?']},
         {'key': 'coaching', 'icon': 'fi-rr-chalkboard-user', 'name': 'Class Coaching', 'size': 'Medium', 'ready': 'ready' if classes else 'partial',
          'question': 'Which classes would gain most from coaching, and on which grade component?',
          'shows': ['Each teacher\'s classes with averages, trend and learners per level',
-                   'The weakest component (written work, performance tasks or quarterly assessment) per class',
+                   f'The weakest component ({", ".join(parts[:-1])} or {parts[-1]}) per class',
                    'Notes from classroom observations'],
          'data': f'Ready: class assignments for {classes} teacher{"" if classes == 1 else "s"} and every grade component score.',
          'basis': 'Classroom observation and coaching in the RPMS cycle (DepEd Order No. 2, s. 2015).',
@@ -98,5 +88,23 @@ def proposals(request):
                  if years < 3 else f'Ready: {years} school years of enrollment.',
          'basis': 'School Forms 1 and 4 (School Register; Monthly Learner\'s Movement).',
          'decide': ['Should it plan sections and teachers too?', 'Who updates the expected new enrollees?']},
+        {'key': 'accuracy', 'icon': 'fi-rr-chart-line-up', 'name': 'Forecast Accuracy', 'size': 'Small', 'ready': 'ready' if meta else 'partial',
+         'question': 'How far can we trust the forecasts?',
+         'shows': ['How far off the forecasts were for this school, tested on quarters the model never saw',
+                   'The same by grade level', 'What the forecasts lean on most'],
+         'data': model_line,
+         'basis': 'Transparency for decisions made with AI support.',
+         'decide': ['Does the School Head need it, or is the administrator\'s Grade Forecaster page enough?',
+                    'Should the accuracy appear on every forecast chart?']},
+        # built: kept at the end with what was settled
+        {'key': 'honors', 'icon': 'fi-rr-trophy', 'name': 'Honors Outlook', 'size': 'Small', 'ready': 'built',
+         'url': reverse('heads-honors'),
+         'question': 'Who is on track for an academic award this year, and who is close?',
+         'shows': [f'Learners on track for {rules["awards"]["label"].lower()} under {rules["short"]}, now and with the forecasts',
+                   'Learners within 2 points of a cut-off, and those held back by one final grade', 'Every list as an Excel file'],
+         'data': 'Built: quarterly grades and the grade model\'s forecasts.',
+         'basis': f'{rules["awards"]["order"]} (awards and recognition).',
+         'settled': ['Each school picks its DepEd rules on the School Year page: the honors of DepEd Order No. 36, s. 2016, '
+                     'or the single Academic Excellence Award of DepEd Order No. 015, s. 2026.']},
     ]
     return render(request, 'heads/proposals/index.html', {'cards': cards, 'school': school})

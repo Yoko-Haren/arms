@@ -13,6 +13,8 @@ class Command(BaseCommand):
             default='forecast',
             help='Which model to train (forecast = the grade forecaster; both = grade + risk; all = every model)'
         )
+        parser.add_argument('--record', action='store_true',
+                            help='Record how the forecaster run ended in the status the Admin Portal shows (ml_engine/training.py)')
 
     def handle(self, *args, **options):
         model_type = options['model']
@@ -32,9 +34,16 @@ class Command(BaseCommand):
                 latest = meta['evaluation'][-1]
                 results['forecast'] = {'success': True, 'model_version': meta['version'], 'samples': meta['samples'],
                                        'mae': latest['model']['mae'], 'split': latest['split']}
+                if options['record']:
+                    from ml_engine import training
+                    training.finish(True, f'Version {meta["version"]}: {meta["samples"]:,} records, off by '
+                                          f'{latest["model"]["mae"]:.1f} points on average for {latest["split"]}.')
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f'  Forecaster training failed: {e}'))
                 results['forecast'] = {'success': False, 'error': str(e)}
+                if options['record']:
+                    from ml_engine import training
+                    training.finish(False, str(e)[:300])
 
         # Grade Predictor (XGBoost)
         if model_type in ['grade', 'both', 'all']:

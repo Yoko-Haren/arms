@@ -54,6 +54,30 @@
     .field .err { color: #C62828; font-weight: 500; }
     .dialog-foot { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 0.9rem 1.25rem 1.1rem; border-top: 1px solid var(--line); }
     .empty-years { padding: 2rem 1.25rem; text-align: center; color: var(--muted); }
+
+    /* the DepEd order the school follows for levels and awards (folded; the summary names the one in use) */
+    .policy-card { padding: 0; }
+    .policy-card > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; padding: 1rem 1.25rem; }
+    .policy-card > summary::-webkit-details-marker { display: none; }
+    .policy-card > summary:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; border-radius: inherit; }
+    .policy-title { font-size: 1rem; font-weight: 700; color: var(--ink); display: flex; gap: 0.5rem; align-items: center; }
+    .policy-title i { color: var(--brand); }
+    .policy-now { margin-left: auto; font-size: 0.78rem; font-weight: 600; color: var(--brand); background: var(--info-bg); border-radius: 20px; padding: 0.2rem 0.7rem; }
+    .policy-chev { color: var(--muted); transition: transform 0.2s; }
+    .policy-card[open] .policy-chev { transform: rotate(180deg); }
+    .policy-body { padding: 1rem 1.25rem 1.1rem; border-top: 1px solid var(--line); }
+    .policy-foot { display: flex; justify-content: flex-end; margin-top: 0.85rem; }
+    .policy-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; margin-top: 0.85rem; }
+    @media (max-width: 760px) { .policy-options { grid-template-columns: 1fr; } }
+    .policy-option { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.4rem 0.6rem; padding: 0.8rem 0.9rem;
+                     border: 1.5px solid #dfe4ec; border-radius: 14px; cursor: pointer; background: #fff; }
+    .policy-option.is-on { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(18,52,153,0.08); }
+    .policy-option input { margin-top: 0.2rem; accent-color: var(--brand); }
+    .policy-name { font-weight: 700; font-size: 0.9rem; color: var(--ink); display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap; }
+    .policy-levels, .policy-award { grid-column: 2; }
+    .policy-levels { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+    .policy-levels .lvl { font-size: 0.7rem; }
+    .policy-award { font-size: 0.78rem; color: var(--muted); line-height: 1.45; }
 </style>
 {% endblock %}
 
@@ -66,6 +90,30 @@
         </div>
         <button type="button" class="btn-primary" id="newYearBtn" aria-haspopup="dialog" aria-controls="newYearModal"><i class="fi fi-rr-add"></i> Start a new school year</button>
     </section>
+
+    <!-- the DepEd order the school follows: folded, since it is set once and rarely changed -->
+    <details class="card policy-card">
+        <summary>
+            <span class="policy-title" id="policyTitle"><i class="fi fi-rr-scale"></i> DepEd grading rules</span>
+            <span class="policy-now">{% for p in policies %}{% if p.key == policy_key %}{{ p.name }}{% endif %}{% endfor %}</span>
+            <i class="fi fi-rr-angle-small-down policy-chev" aria-hidden="true"></i>
+        </summary>
+        <form method="post" action="{% url 'heads-grading-policy' %}" class="policy-body">
+            {% csrf_token %}
+            <p class="hint">How ARMS names the five levels and decides academic awards for {{ school.school_name }}. DepEd Order No. 015, s. 2026 replaced DepEd Order No. 8, s. 2015 in public schools from SY 2026-2027; private schools may adopt it or keep the earlier rules.</p>
+            <div class="policy-options" role="radiogroup" aria-labelledby="policyTitle">
+                {% for p in policies %}
+                <label class="policy-option{% if p.key == policy_key %} is-on{% endif %}">
+                    <input type="radio" name="grading_policy" value="{{ p.key }}" {% if p.key == policy_key %}checked{% endif %}>
+                    <span class="policy-name">{{ p.name }}{% if p.key == policy_key %} <span class="pill current">In use</span>{% endif %}</span>
+                    <span class="policy-levels">{% for lv in p.levels %}<span class="lvl level-{{ lv.key }}">{{ lv.name }} {{ lv.range }}</span>{% endfor %}</span>
+                    <span class="policy-award">{{ p.awards.rule }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <div class="policy-foot"><button type="submit" class="btn-primary btn-sm"><i class="fi fi-rr-disk"></i> Save</button></div>
+        </form>
+    </details>
 
     <div class="sy-list">
         {% for y in years %}
@@ -176,6 +224,13 @@
     modal.addEventListener('click', function (e) { if (e.target === modal || e.target.closest('[data-close]')) closeModalDialog(); });
     document.addEventListener('keydown', function (e) { if (!modal.hidden && e.key === 'Escape') closeModalDialog(); });
     if (!modal.hidden) { document.body.style.overflow = 'hidden'; }
+
+    // ---------- the chosen DepEd order is highlighted until it is saved ----------
+    document.querySelectorAll('.policy-option input').forEach(function (input) {
+        input.addEventListener('change', function () {
+            document.querySelectorAll('.policy-option').forEach(function (o) { o.classList.toggle('is-on', o.contains(input)); });
+        });
+    });
 
     // ---------- a period's edit form opens under its row ----------
     document.querySelectorAll('.btn-edit').forEach(function (btn) {

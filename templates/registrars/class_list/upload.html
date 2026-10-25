@@ -6,17 +6,9 @@
 
 {% block extra_css %}
 <style>
-    .up { max-width: 980px; width: 100%; margin: 0 auto; }
+    .up { max-width: 920px; width: 100%; margin: 0 auto; }
     .up-form { padding: 1.15rem 1.25rem 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
     .up-actions { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
-    .how { padding: 1.05rem 1.25rem; }
-    .how ol { margin: 0.6rem 0 0; padding-left: 1.2rem; font-size: 0.84rem; line-height: 1.65; color: #2d3748; }
-    .how li b { font-weight: 650; }
-    .reads { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; margin-top: 0.7rem; }
-    .reads div { border: 1px solid var(--line); border-radius: 12px; padding: 0.8rem 0.9rem; background: #fbfcfe; }
-    .reads b { display: block; font-size: 0.84rem; margin-bottom: 0.25rem; }
-    .reads p { margin: 0; font-size: 0.8rem; color: var(--muted); line-height: 1.55; }
-    .blank { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; }
     details.csv { padding: 0; }
     details.csv > summary { list-style: none; cursor: pointer; padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; }
     details.csv > summary::-webkit-details-marker { display: none; }
@@ -27,7 +19,6 @@
     .csv-body { padding: 0 1.25rem 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
     .fmt td:first-child { width: 90px; color: var(--muted); font-weight: 650; white-space: nowrap; }
     .fmt code { background: var(--soft); padding: 0.12rem 0.45rem; border-radius: 6px; font-family: Consolas, 'Courier New', monospace; font-size: 0.78rem; word-break: break-all; }
-    @media (max-width: 640px) { .reads { grid-template-columns: minmax(0, 1fr); } }
 </style>
 {% endblock %}
 
@@ -56,20 +47,22 @@
         </div>
     </form>
 
-    <section class="card how">
-        <h3><i class="fi fi-rr-list-check" style="color:#123499;"></i> What ARMS reads from the SF1</h3>
-        <div class="reads">
-            <div><b>The section</b><p>School ID and name, school year, grade level and section. Senior High also gives the semester, the track and strand, and the course.</p></div>
-            <div><b>Each learner</b><p>LRN, name (last, first, extension, middle), sex, birth date, birth place, mother tongue, IP group and religion.</p></div>
-            <div><b>Family</b><p>Current address, father, mother, the guardian when the learner does not live with a parent, and their contact number.</p></div>
-            <div><b>REMARKS codes</b><p>T/I transferred in, T/O transferred out, DRP dropped, B/A Balik-Aral, LE late enrollment, CCT, LWD or LWE, ACL.</p></div>
-        </div>
-        <ol>
+    <section class="card file-guide" aria-labelledby="guideTitle">
+        <h3 id="guideTitle"><i class="fi fi-rr-picture" style="color:#123499;"></i> Which file to upload</h3>
+        <p class="hint">The section's SF1 exactly as LIS exports it. ARMS finds the columns by their headings, so nothing needs to be moved or deleted.</p>
+        <button type="button" class="guide-shot" style="--crop: 190px;" data-guide-open="guideSf1" aria-label="Enlarge the SF1 picture">
+            <img src="{% static 'shared/guides/sf1-guide.png' %}" width="1583" height="838" loading="lazy"
+                 alt="An SF1: School ID (1), school name (2), school year (3), grade level and section (4), LRN (5), name (6), and sex and birth date (7) are marked.">
+            <span><i class="fi fi-rr-expand"></i> Enlarge</span>
+        </button>
+        {% include 'registrars/class_list/_sf1_keys.html' %}
+        <p class="guide-note"><i class="fi fi-rr-info"></i><span>Each learner's row also gives the birth place, mother tongue, IP group, religion, address, parents or guardian with their contact number, and the REMARKS codes (T/I, T/O, DRP, B/A, LE, CCT, LWD, LWE, ACL).</span></p>
+        <ul class="guide-steps">
             <li><b>You see the section first:</b> whether it is new, its strand, and who will advise it.</li>
             <li><b>Every learner is checked:</b> a wrong LRN, a missing name or sex, the same LRN twice, or a learner already in another section.</li>
             <li><b>Details only get better:</b> an empty cell in the SF1 never erases what ARMS already has.</li>
-        </ol>
-        <div class="blank">
+        </ul>
+        <div class="guide-files">
             <a class="btn btn-line btn-sm" href="{% static 'forms/schoolforms/Junior High School Forms.xls' %}" download><i class="fi fi-rr-download"></i> Blank JHS forms (SF1 to SF7)</a>
             <a class="btn btn-line btn-sm" href="{% static 'forms/schoolforms/Senior High School Forms.xlsx' %}" download><i class="fi fi-rr-download"></i> Blank SHS forms (SF1 to SF7)</a>
         </div>
@@ -113,10 +106,25 @@
             </div>
         </div>
     </details>
+
+    <div class="tp-modal" id="guideSf1" role="dialog" aria-modal="true" aria-labelledby="guideSf1Title" hidden>
+        <div class="tp-modal-card guide-modal" tabindex="-1">
+            <div class="tp-modal-head">
+                <div><h3 id="guideSf1Title">School Form 1: what ARMS reads</h3><p class="hint">The top of the form and the first learner rows. The numbers match the list below the picture.</p></div>
+                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
+            </div>
+            <div class="tp-modal-body">
+                <div class="guide-big"><img src="{% static 'shared/guides/sf1-guide.png' %}" width="1583" height="838" loading="lazy"
+                     alt="An SF1: School ID (1), school name (2), school year (3), grade level and section (4), LRN (5), name (6), and sex and birth date (7) are marked."></div>
+                {% include 'registrars/class_list/_sf1_keys.html' %}
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'shared/js/file-guide.js' %}"></script>
 <script>
 (function () {
     function wire(dropId, inputId, pickedId, goId, formId) {

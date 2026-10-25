@@ -1,0 +1,7 @@
+<ol class="guide-keys">
+    <li><span><b>Employee No.</b> Kept with the account. It must not repeat.</span></li>
+    <li><span><b>Name.</b> Written LAST NAME, FIRST NAME as in the form; ARMS splits it into first and last name.</span></li>
+    <li><span><b>Position/Designation.</b> Teacher, Master Teacher and Head Teacher positions get accounts.</span></li>
+    <li><span><b>Major/Specialization.</b> Becomes the teacher's teaching area.</span></li>
+</ol>
+<p class="guide-note"><i class="fi fi-rr-info"></i><span>SF7 has no email column, so {% if email_domain %}each teacher signs in with <b>firstname.lastname@{{ email_domain }}</b>{% else %}its teachers need the school's email domain, which is not set yet. Until it is, use the template with an email for each teacher{% endif %}.</span></p>

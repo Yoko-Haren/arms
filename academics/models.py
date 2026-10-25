@@ -16,6 +16,8 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils import timezone
 
+from core.grading_policy import CHOICES as GRADING_POLICY_CHOICES, DEFAULT as GRADING_POLICY_DEFAULT
+
 
 # =============================================================================
 # 1.0 — School (Multi-tenant support)
@@ -49,7 +51,12 @@ class School(models.Model):
     passing_grade = models.FloatField(default=75.0, help_text="Minimum passing grade")
     period_type = models.CharField(max_length=20, choices=PERIOD_TYPE_CHOICES, default='QUARTERLY')
     quarters_count = models.IntegerField(default=4, help_text="4 for quarterly, 3 for trimestral, 2 for semestral")
-    
+    # DepEd rules for grade descriptors and academic awards (core/grading_policy.py)
+    grading_policy = models.CharField(
+        max_length=12, choices=GRADING_POLICY_CHOICES, default=GRADING_POLICY_DEFAULT,
+        help_text='DepEd Order No. 8, s. 2015 (with the honors of DO 36, s. 2016) or DepEd Order No. 015, s. 2026.',
+    )
+
     # School preferences
     logo = models.ImageField(upload_to='school_logos/', null=True, blank=True)
     theme_color = models.CharField(max_length=7, default='#2c3e50', help_text="Primary theme color (hex)")
@@ -1197,103 +1204,6 @@ class GradePrediction(models.Model):
     def __str__(self):
         return f"Prediction for {self.enrollment.student} - {self.subject}: {self.predicted_grade}"
 
-# academics/models.py - ADD THESE MODELS
-
-class AssessmentItem(models.Model):
-    """Individual quiz/test question mapped to KPUP level"""
-    COGNITIVE_LEVELS = [
-        ('REMEMBERING', 'Remembering (Knowledge)'),
-        ('UNDERSTANDING', 'Understanding (Knowledge)'),
-        ('APPLYING', 'Applying (Process)'),
-        ('ANALYZING', 'Analyzing (Process)'),
-        ('EVALUATING', 'Evaluating (Understanding)'),
-        ('CREATING', 'Creating (Product)'),
-    ]
-    
-    subject = models.ForeignKey('academics.Subject', on_delete=models.CASCADE)
-    question_text = models.TextField()
-    cognitive_level = models.CharField(max_length=20, choices=COGNITIVE_LEVELS)
-    max_score = models.DecimalField(max_digits=5, decimal_places=2, default=1.0)
-    topic = models.CharField(max_length=100, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        db_table = 'academics_assessment_item'
-
-
-class StudentAssessmentResult(models.Model):
-    """Individual student's score on an assessment item"""
-    student = models.ForeignKey('students.Student', on_delete=models.CASCADE)
-    assessment_item = models.ForeignKey(AssessmentItem, on_delete=models.CASCADE)
-    score = models.DecimalField(max_digits=5, decimal_places=2)
-    quarter = models.ForeignKey('academics.Quarter', on_delete=models.CASCADE)
-    school_year = models.ForeignKey('academics.SchoolYear', on_delete=models.CASCADE)
-    answered_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        db_table = 'academics_student_assessment_result'
-
-
-class KPUPMastery(models.Model):
-    """Aggregated KPUP mastery per student per subject per quarter"""
-    MASTERY_LEVELS = [
-        ('ADVANCED', 'Advanced (96-100%)'),
-        ('PROFICIENT', 'Proficient (86-95%)'),
-        ('DEVELOPING', 'Developing (66-85%)'),
-        ('BEGINNING', 'Beginning (0-65%)'),
-    ]
-    
-    student = models.ForeignKey('students.Student', on_delete=models.CASCADE)
-    subject = models.ForeignKey('academics.Subject', on_delete=models.CASCADE)
-    quarter = models.ForeignKey('academics.Quarter', on_delete=models.CASCADE)
-    school_year = models.ForeignKey('academics.SchoolYear', on_delete=models.CASCADE)
-    
-    # KPUP Scores (0-100)
-    knowledge_score = models.FloatField(default=0)  # K - 15% weight
-    process_score = models.FloatField(default=0)    # P - 25% weight
-    understanding_score = models.FloatField(default=0)  # U - 30% weight
-    product_score = models.FloatField(default=0)    # P - 30% weight
-    
-    # Mastery levels for each dimension
-    knowledge_mastery = models.CharField(max_length=20, choices=MASTERY_LEVELS, blank=True)
-    process_mastery = models.CharField(max_length=20, choices=MASTERY_LEVELS, blank=True)
-    understanding_mastery = models.CharField(max_length=20, choices=MASTERY_LEVELS, blank=True)
-    product_mastery = models.CharField(max_length=20, choices=MASTERY_LEVELS, blank=True)
-    
-    # Overall subject grade (computed from KPUP)
-    overall_grade = models.FloatField(default=0)
-    overall_mastery = models.CharField(max_length=20, choices=MASTERY_LEVELS, blank=True)
-    
-    computed_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        db_table = 'academics_kpup_mastery'
-        unique_together = ['student', 'subject', 'quarter', 'school_year']
-
-
-class SubjectKPUPSummary(models.Model):
-    """Subject-level KPUP summary for principal dashboard"""
-    subject = models.ForeignKey('academics.Subject', on_delete=models.CASCADE)
-    quarter = models.ForeignKey('academics.Quarter', on_delete=models.CASCADE)
-    school_year = models.ForeignKey('academics.SchoolYear', on_delete=models.CASCADE)
-    
-    # Average scores across all students
-    avg_knowledge = models.FloatField(default=0)
-    avg_process = models.FloatField(default=0)
-    avg_understanding = models.FloatField(default=0)
-    avg_product = models.FloatField(default=0)
-    
-    # Distribution counts
-    advanced_count = models.IntegerField(default=0)
-    proficient_count = models.IntegerField(default=0)
-    developing_count = models.IntegerField(default=0)
-    beginning_count = models.IntegerField(default=0)
-    
-    total_students = models.IntegerField(default=0)
-    computed_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        db_table = 'academics_subject_kpup_summary'
 
 
 

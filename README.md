@@ -2,7 +2,7 @@
 
 **AI-Enabled Academic Records Management System with Predictive Analytics and School Performance Prediction for Private Secondary Schools**
 
-ARMS is a web system for the academic records of a private secondary school: Junior High (Grades 7 to 10) and Senior High (Grades 11 and 12). It follows the Department of Education (DepEd) rules for grading, proficiency levels and school forms. It forecasts grades and school performance so the school can act before a quarter ends.
+ARMS is a web system for the academic records of a private secondary school: Junior High (Grades 7 to 10) and Senior High (Grades 11 and 12). It follows the Department of Education (DepEd) rules for grading, grade descriptors, academic awards and school forms; each school chooses DepEd Order No. 8, s. 2015 or DepEd Order No. 015, s. 2026. It forecasts grades and school performance so the school can act before a quarter ends.
 
 Each signed-in role has its own portal: System Administrator, School Head, Registrar and Teacher. The partner school is Northern Paramedical & Technological College of Panabo, Inc. (NPTCI). ARMS is a capstone project of the Institute of Computing, Davao del Norte State College (DNSC).
 
@@ -13,23 +13,28 @@ Each signed-in role has its own portal: System Administrator, School Head, Regis
 - Sets up schools, school years, grading periods and grade levels.
 - Creates the School Head (principal) and registrar accounts of each school.
 - Tracks the contact requests sent from the public page (New, Contacted, Done).
+- **Grade Forecaster.** Shows when the grade model was trained, how it did on grading periods it never saw, and what it leans on, with a button to retrain it in the background.
 
 ### School Head (`/heads/`)
 
-- **Academic Dashboard.** It shows one overall status for the selection, from Beginning to Advanced. The selection can be:
+- **Academic Dashboard.** It shows one overall status for the selection, on the five grade descriptors of the school's DepEd order (Did Not Meet Expectations to Outstanding, or Emerging to Advancing). The selection can be:
   - one discipline, every discipline, or one subject;
   - one grade level, all of Junior High, all of Senior High, or every grade level;
   - one grading period, or the whole school year so far.
 
-  The page also shows where each discipline stands on the five levels, a sections table with each section's KPUP breakdown (Knowledge, Process, Understanding, Product), the learners below 75, and a forecast chart.
-- **Section briefs.** Each class has a summary, what stands out, and what to do next. A level-up plan takes every group of learners one level higher, from Beginning to Advanced.
+  The page also shows where each discipline stands on the five levels, a sections table with each section's Written Work, Performance Tasks and Quarterly Assessment averages (the first rows, then all of them in a dialog with search and sorting), the learners below 75, and a forecast chart.
+- **Section briefs.** Each class has a summary, what stands out, and what to do next. A level-up plan takes every group of learners one level higher, aimed at the grade component that holds the group back. Poro AI rewords the brief (see below).
+- **Honors Outlook.** Who is on track for an academic award this school year, now and with the forecasts; who is within 2 points of a cut-off; who is held back by one final grade. Every list downloads as Excel.
 - **School Performance.** It covers the promotion outlook, learning areas, grade levels, enrollment over the years and a comparison with last year.
-- **School Year.** The School Head can start a school year with its grading periods, make it current and adjust period dates, without waiting for the administrator.
-- **User Management, Excel reports, and Page Proposals** (candidate pages to discuss next).
+- **School Year.** The School Head can start a school year with its grading periods, make it current and adjust period dates, without waiting for the administrator. Here the school also chooses its DepEd grading rules.
+- **User Management.** When the School Head is busy, a registrar or a teacher (an ICT coordinator, say) can be allowed to manage the school's accounts from their own portal: edit details, reset passwords, activate and deactivate. They never touch a School Head's account, cannot add registrars and cannot pass the permission on. Sign-in help requests from the school's staff reach the School Head and these delegates, so the System Administrator is not the only way back in.
+- **Excel reports, and Page Proposals** (candidate pages to discuss next).
 
 ### Registrar (`/registrars/`)
 
 - Enrolls learners from DepEd's SF1, and manages sections and teacher accounts.
+- Creates many teacher accounts at once from the school's SF7 (School Personnel Assignment List and Basic Profile), the ARMS teacher template (Excel) or a CSV. SF7 has no email column, so each teacher's sign-in is made from their name and the school's email domain (firstname.lastname@domain).
+- Every upload page shows a picture of the expected file with the parts ARMS reads numbered: SF1 for enrollment, SF7 and the template for teachers, and the e-class record for teachers' grades.
 - Validates, returns and locks grades that teachers submit.
 - Generates the DepEd School Forms SF1 to SF7 on DepEd's own templates.
 
@@ -51,20 +56,26 @@ Each signed-in role has its own portal: System Administrator, School Head, Regis
 ## Forecasts and Poro AI
 
 - **Grade forecaster** (`ml_engine/forecast.py`). An XGBoost model trained on every learner, subject and grading period in the database. It forecasts the next grading periods with a 90% likely range.
-  - Its forecasts appear on the dashboard, the section briefs and School Performance.
-  - Each chart has Line, Bar and Table views. Each also shows what the model forecast one period earlier, so its accuracy stays visible.
+  - Its forecasts appear on the dashboard, the section briefs, Honors Outlook and School Performance.
+  - Each chart has Line, Bar and Table views. The administrator's Grade Forecaster page reports how the model did on grading periods it never saw.
   - On the demo data, for quarters it had not seen, it missed by about 2 points on average. A simple trend rule missed by about 3.
-  - Train it with `python manage.py train_ml_models`. The trained files are not in git, so a fresh copy uses the trend rule until the model is trained once.
-- **Poro AI.** Every figure in a summary is computed in code by rules a person can check (`heads/insights.py`). Poro AI uses a local Qwen model through [Ollama](https://ollama.com), and only rewords the summary. Its wording is shown only when every figure, name and level survives unchanged. Without Ollama, the computed wording is shown.
+  - Train it with `python manage.py train_ml_models`. It also retrains itself in the background when the registrar locks a grading period, and the administrator can retrain it from the Grade Forecaster page. The trained files are not in git, so a fresh copy uses the trend rule until the model is trained once.
+- **Poro AI** (`heads/poro.py`). Every figure in a brief is computed in code by rules a person can check (`heads/insights.py`). Poro AI runs a local model through [Ollama](https://ollama.com): `poro` is Qwen 2.5 (3B) with Poro's persona (`ml_engine/poro/Modelfile`). In the background it rewords each sentence of a class brief, told what that sentence must keep.
+  - A reworded sentence is shown only when it keeps every number in the same order, says "higher", "below" and the like the same way, keeps every name, period, level, grade component and DepEd order, and brings in no new subject, advice or cause. A second reading by the model must then find the same meaning.
+  - The other sentences keep the computed wording, and the School Head can switch between Poro's wording and the computed one.
+  - On a laptop without a graphics card, a brief takes about 4 to 6 minutes, and about a third to a half of its sentences pass every check. Each brief is kept until its grades change. Without Ollama, the computed wording is shown.
 
 ## DepEd basis
 
 | Rule | Source |
 |---|---|
-| Grade components, transmutation, passing grade of 75, remediation below 75 | DepEd Order No. 8, s. 2015 |
-| Proficiency levels: Beginning, Developing, Approaching Proficiency, Proficient, Advanced | DepEd Order No. 31, s. 2012 |
-| Academic honors | DepEd Order No. 36, s. 2016 |
+| Grade components (Written Work, Performance Tasks, Quarterly Assessment), transmutation, passing grade of 75, remediation below 75 | DepEd Order No. 8, s. 2015 |
+| Grade descriptors: Outstanding, Very Satisfactory, Satisfactory, Fairly Satisfactory, Did Not Meet Expectations | DepEd Order No. 8, s. 2015 |
+| Academic honors: With Honors, With High Honors, With Highest Honors | DepEd Order No. 36, s. 2016 |
+| Descriptors Advancing, Benchmarking, Connecting, Developing, Emerging, and the Academic Excellence Award | DepEd Order No. 015, s. 2026, for schools that choose it on the School Year page (`core/grading_policy.py`) |
 | School Forms SF1 to SF7 and e-class records | DepEd's official templates (`documentation/sf_templates/`, `grades/ecr_templates/`) |
+
+KPUP (Knowledge, Process or Skills, Understanding, Products or Performances) and the levels Beginning to Advanced came from DepEd Order No. 73, s. 2012, which DepEd Order No. 8, s. 2015 replaced. ARMS no longer uses them. The e-class records follow DepEd Order No. 8, s. 2015 (four quarters); the three-term records of DepEd Order No. 015, s. 2026 are not in ARMS yet.
 
 DepEd's Excel templates are filled by editing their cells in place (`core/xlsx_patch.py`), so their dropdowns, formulas and print setup stay as DepEd made them.
 
@@ -125,10 +136,14 @@ DepEd's Excel templates are filled by editing their cells in place (`core/xlsx_p
    python manage.py runserver
    ```
 
-8. **Optional: Poro AI.** Install [Ollama](https://ollama.com) and pull the model:
+8. **Optional: Poro AI.** Install [Ollama](https://ollama.com), pull the base model (about 1.9 GB), then build `poro` from it:
 
    ```bash
-   ollama pull qwen2.5:1.5b
+   ollama pull qwen2.5:3b
+   ```
+
+   ```bash
+   python manage.py setup_poro
    ```
 
 ## Configuration
@@ -146,7 +161,7 @@ All settings come from `.env`. The full list with examples is in `.env.example`.
 | `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USE_TLS`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` | The mail account for verification and password-reset codes. For Gmail, use an App Password. |
 | `ARMS_CONTACT_EMAIL` | Where contact-form messages go. |
 | `DEMO_PASSWORD` | The password of the demo accounts. It is generated on the first `seed_demo` run if empty. |
-| `PORO_AI_ENABLED`, `OLLAMA_URL`, `PORO_AI_MODEL`, `PORO_AI_TIMEOUT` | Poro AI and its local model. |
+| `PORO_AI_ENABLED`, `OLLAMA_URL`, `PORO_AI_MODEL`, `PORO_AI_BASE_MODEL`, `PORO_AI_TIMEOUT`, `PORO_AI_WRITE_TIMEOUT`, `PORO_AI_STYLE` | Poro AI, its local model, and how it writes (`faithful` rewords each computed sentence; `free` writes from the facts, for a larger model). |
 | `PAGE_CACHE` | `False` turns the per-user page cache off while troubleshooting. |
 | `REMEMBER_ME_DAYS` | How long Remember me keeps a user signed in. The default is 30. |
 | `REDIS_URL` | Optional shared cache when the app runs on several servers. |
@@ -159,14 +174,14 @@ All settings come from `.env`. The full list with examples is in `.env.example`.
 | `config/` | Settings and the main URLs |
 | `accounts/` | Sign-in, Google sign-in, password reset, account settings, the `seed_demo` command |
 | `admin_panel/` | The System Administrator portal |
-| `heads/` | The School Head portal: dashboard, section briefs and Poro AI (`insights.py`), forecast charts (`forecasts.py`), School Performance, School Year |
-| `registrars/` | The Registrar portal: enrollment, sections, teachers, grade validation, School Forms |
+| `heads/` | The School Head portal: dashboard, section briefs (`insights.py`) and Poro AI (`poro.py`), forecast charts (`forecasts.py`), Honors Outlook, School Performance, School Year, User Management |
+| `registrars/` | The Registrar portal: enrollment, sections, teachers and the teacher file reader (`teacher_import.py`), grade validation, School Forms |
 | `teachers/` | The Teacher portal: class records, e-class record uploads, adviser forms |
 | `assessments/` | Online quizzes |
 | `grades/`, `enrollment/`, `documentation/` | The e-class record reader, the SF1 reader and the DepEd school forms |
 | `academics/`, `students/`, `attendance/`, `scheduling/`, `promotion/`, … | School structure, learners, attendance, class assignments and promotion records |
-| `ml_engine/` | The grade forecaster and the `train_ml_models` command |
+| `ml_engine/` | The grade forecaster, the `train_ml_models` command, background retraining (`training.py`), and Poro's Modelfile with the `setup_poro` command |
 | `communication/` | Notifications and contact requests |
 | `audit/` | Activity logs and anomaly detection (`python manage.py detect_anomalies`) |
-| `core/` | Shared helpers: page caching, Excel template patching, the school form header |
-| `templates/`, `static/` | Pages, styles, scripts, the ARMS logo and DepEd form templates for download |
+| `core/` | Shared helpers: the DepEd grading rules each school follows (`grading_policy.py`), page caching, Excel template patching, the school form header |
+| `templates/`, `static/` | Pages, styles, scripts, the ARMS logo, the upload guide pictures (`static/shared/guides/`) and DepEd form templates for download |

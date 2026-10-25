@@ -250,7 +250,7 @@ window.ARMS_FLOWS = [
   dash --> mode{"View mode"}
   mode -->|"All subjects"| subject["Pick subject, year, quarter, level"]
   mode -->|"By discipline"| family["Pick a discipline"]
-  subject --> results["Proficiency, KPUP profile, at-risk students"]
+  subject --> results["Level, WW/PT/QA scores, learners below 75"]
   family --> results
   results --> row["Click a section row"]
   row --> analysis["Section analysis and recommendation"]

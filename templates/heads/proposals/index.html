@@ -22,6 +22,8 @@
     .pp-name small { display: block; font-size: 0.74rem; color: var(--muted); font-weight: 500; margin-top: 0.1rem; }
     .ready { font-size: 0.72rem; font-weight: 650; padding: 0.18rem 0.6rem; border-radius: 20px; white-space: nowrap; }
     .ready.ready-ready { background: #e8eeff; color: #123499; } .ready.ready-partial { background: #fff3e0; color: #B45309; }
+    .ready.ready-built { background: #123499; color: #fff; text-decoration: none; display: inline-flex; gap: 0.3rem; align-items: center; }
+    a.ready.ready-built:hover { background: #0e2a7d; }
     .pp-q { font-size: 0.9rem; font-weight: 650; color: var(--ink); line-height: 1.45; margin: 0; }
     .pp-body { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 0.9rem; align-items: start; }
     @media (max-width: 520px) { .pp-body { grid-template-columns: 1fr; } }
@@ -57,6 +59,7 @@
         <div class="pp-key">
             <span><span class="ready ready-ready">Data ready</span> ARMS already keeps what the page needs</span>
             <span><span class="ready ready-partial">Partly ready</span> some records would be new</span>
+            <span><span class="ready ready-built">Built</span> already in the portal</span>
             <span><b>Size:</b> Small (days), Medium (1 to 2 weeks), Large (more)</span>
         </div>
     </section>
@@ -69,7 +72,8 @@
                     <span class="pp-ico"><i class="fi {{ c.icon }}"></i></span>
                     <div><h3 id="pp-{{ c.key }}">{{ c.name }}</h3><small>Size: {{ c.size }}</small></div>
                 </div>
-                <span class="ready ready-{{ c.ready }}">{% if c.ready == 'ready' %}Data ready{% else %}Partly ready{% endif %}</span>
+                {% if c.ready == 'built' %}<a class="ready ready-built" href="{{ c.url }}">Built: open <i class="fi fi-rr-arrow-small-right"></i></a>
+                {% else %}<span class="ready ready-{{ c.ready }}">{% if c.ready == 'ready' %}Data ready{% else %}Partly ready{% endif %}</span>{% endif %}
             </div>
             <p class="pp-q">{{ c.question }}</p>
             <div class="pp-body">
@@ -107,7 +111,8 @@
                 <span><b>Data in ARMS.</b> {{ c.data }}</span>
                 <span><b>DepEd basis.</b> {{ c.basis }}</span>
             </div>
-            <div class="pp-decide"><b>To decide</b><ul>{% for d in c.decide %}<li>{{ d }}</li>{% endfor %}</ul></div>
+            {% if c.settled %}<div class="pp-decide"><b>Settled</b><ul>{% for d in c.settled %}<li>{{ d }}</li>{% endfor %}</ul></div>
+            {% else %}<div class="pp-decide"><b>To decide</b><ul>{% for d in c.decide %}<li>{{ d }}</li>{% endfor %}</ul></div>{% endif %}
         </section>
         {% endfor %}
     </div>

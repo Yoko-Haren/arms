@@ -27,9 +27,9 @@
 
     /* ---------- sections table ---------- */
     .classes { padding: 1.1rem 1.25rem 0.95rem; container-type: inline-size; }
-    .kpup-key { font-size: 0.76rem; color: var(--muted); }
-    .kpup-key b { color: var(--ink); }
-    .sec-table col.c-section { width: 24%; } .sec-table col.c-learners { width: 11%; } .sec-table col.c-k { width: 8%; }
+    .comp-key { font-size: 0.76rem; color: var(--muted); }
+    .comp-key b { color: var(--ink); }
+    .sec-table col.c-section { width: 26%; } .sec-table col.c-learners { width: 11%; } .sec-table col.c-k { width: 9%; }
     .sec-table col.c-avg { width: 13%; } .sec-table col.c-level { width: 16%; } .sec-table col.c-go { width: 4%; }
     .sec-row { cursor: pointer; transition: background 0.15s; }
     .sec-row:hover, .sec-row:focus-visible { background: #eef2ff; outline: none; box-shadow: inset 3px 0 0 var(--brand); }
@@ -68,8 +68,11 @@
     .subj-list .av { font-weight: 700; font-variant-numeric: tabular-nums; }
     .subj-list .lvl { justify-self: end; }
 
-    /* ---------- KPUP colors ---------- */
-    .k-color { background: #2E7D32; } .p-color { background: #123499; } .u-color { background: #E65100; } .pd-color { background: #6A1B9A; }
+    /* ---------- a long sections list: the lowest averages in the card, every row in the dialog ---------- */
+    .classes-foot { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap;
+                    margin-top: 0.7rem; font-size: 0.8rem; color: var(--muted); }
+    .sec-scroll { container-type: inline-size; }
+    .sec-scroll .sec-row[hidden] { display: none; }
 
     /* ---------- every learner below 75 (dialog list) ---------- */
     .watch-all { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
@@ -183,7 +186,7 @@
             <div class="ladder" aria-labelledby="ladderTitle">
                 <div class="ladder-head">
                     <h4 id="ladderTitle">Where each {{ ladder_word }} stands</h4>
-                    <span class="explain">Placed by average on the DepEd Order No. 31, s. 2012 levels{% if ladder_word != 'section' %}; open one to review it{% endif %}.</span>
+                    <span class="explain">Placed by average on the levels of {{ grading.levels_order }}{% if ladder_word != 'section' %}; open one to review it{% endif %}.</span>
                 </div>
                 <div class="ladder-cols">
                     {% for step in ladder %}
@@ -215,7 +218,7 @@
         <aside class="card watch" id="watchCard" aria-labelledby="watchTitle">
             <h3 id="watchTitle"><i class="fi fi-rr-user-time" style="color:#C62828;"></i> Learners below 75 {% if at_risk %}<span class="count">{{ at_risk|length }}</span>{% endif %}</h3>
             {% if at_risk %}
-            <p class="hint explain">Remediation is required (DepEd Order No. 8, s. 2015). Open a name to see the class.</p>
+            <p class="hint explain">{{ grading.remediation }} Open a name to see the class.</p>
             <ul>
                 {% for f in at_risk %}{% if forloop.counter <= 6 %}
                 <li>
@@ -239,7 +242,7 @@
             <div class="ad-modal-head">
                 <div>
                     <h3 id="watchModalTitle"><i class="fi fi-rr-user-time" style="color:#C62828;"></i> Learners below 75 <span class="count">{{ at_risk|length }}</span></h3>
-                    <p class="hint">{{ scope_name }}{% if scope_detail %} &middot; {{ scope_detail }}{% endif %} &middot; {{ period_name }}. Remediation is required (DepEd Order No. 8, s. 2015). Open a name to see the class.</p>
+                    <p class="hint">{{ scope_name }}{% if scope_detail %} &middot; {{ scope_detail }}{% endif %} &middot; {{ period_name }}. {{ grading.remediation }} Open a name to see the class.</p>
                 </div>
                 <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
             </div>
@@ -275,7 +278,7 @@
     {% endif %}
     {% endif %}
 
-    <!-- 3. Sections: open a row to see its analysis -->
+    <!-- 3. Sections: open a row to see its analysis; a long list shows its lowest averages here and every row in a dialog -->
     <section class="card classes" id="classes" aria-labelledby="classesTitle">
         <div class="card-head">
             <div>
@@ -283,52 +286,53 @@
                 <p class="hint explain">{% if sections_view %}Each row is one section across every discipline; open it to see its subjects and their Poro AI briefs.{% else %}Open a row to see the section's Poro AI brief, trend and learners.{% endif %} Rows marked red average below 75.</p>
             </div>
             <div class="head-actions">
-                <span class="kpup-key"><b>K</b> Knowledge &middot; <b>Pr</b> Process &middot; <b>U</b> Understanding &middot; <b>Pd</b> Product</span>
+                <span class="comp-key">{% for key, name, abbr in grading.components %}<b>{{ abbr }}</b> {{ name }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}</span>
                 {% if table %}<a class="btn-outline btn-sm" href="{{ export_url }}"><i class="fi fi-rr-download"></i> Download report</a>{% endif %}
             </div>
         </div>
-        <table class="sec-table" id="secTable">
-            <colgroup><col class="c-section"><col class="c-learners"><col class="c-k"><col class="c-k"><col class="c-k"><col class="c-k"><col class="c-avg"><col class="c-level"><col class="c-go"></colgroup>
-            <thead>
-                <tr>
-                    <th scope="col"><button type="button" data-sort="section">Section <i class="fi fi-rr-sort-alt"></i></button></th>
-                    <th scope="col" class="num"><button type="button" data-sort="learners">Learners <i class="fi fi-rr-sort-alt"></i></button></th>
-                    <th scope="col" class="num" title="Knowledge">K</th>
-                    <th scope="col" class="num" title="Process">Pr</th>
-                    <th scope="col" class="num" title="Understanding">U</th>
-                    <th scope="col" class="num" title="Product">Pd</th>
-                    <th scope="col" class="num"><button type="button" data-sort="overall">Average <i class="fi fi-rr-sort-alt"></i></button></th>
-                    <th scope="col"><button type="button" data-sort="level">Level <i class="fi fi-rr-sort-alt"></i></button></th>
-                    <th scope="col"><span class="sr-only">Open</span></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for r in table %}
-                <tr class="sec-row level-{{ r.level.key }}{% if r.overall < 75 %} row-low{% endif %}" tabindex="0" data-href="{{ r.url }}"
-                    data-section="{{ forloop.counter0 }}" data-learners="{{ r.learners }}" data-overall="{{ r.overall }}">
-                    <td class="cell-section" data-label="Section">
-                        <a class="sec-name" href="{{ r.url }}" tabindex="-1">{{ r.section_name }}</a>
-                        <span class="sub">{{ r.grade_level }}{% if view_mode == 'family' %} &middot; {{ r.subject_name }}{% endif %}</span>
-                    </td>
-                    <td class="num cell-learners" data-label="Learners">{{ r.learners }}{% if r.below %}<span class="sub danger">{{ r.below }} below 75</span>{% endif %}</td>
-                    <td class="num cell-k" data-label="K">{{ r.k }}</td>
-                    <td class="num cell-k" data-label="Pr">{{ r.p }}</td>
-                    <td class="num cell-k" data-label="U">{{ r.u }}</td>
-                    <td class="num cell-k" data-label="Pd">{{ r.pd }}</td>
-                    <td class="num cell-avg" data-label="Average">
-                        <strong>{{ r.overall }}%</strong>
-                        {% if r.delta %}<span class="delta {% if r.delta > 0 %}up{% else %}down{% endif %}" title="Change vs {{ prev_period_name }}"><i class="fi {% if r.delta > 0 %}fi-rr-caret-up{% else %}fi-rr-caret-down{% endif %}"></i>{{ r.delta_abs }}</span>{% endif %}
-                    </td>
-                    <td class="cell-level" data-label="Level"><span class="lvl">{{ r.level.short }} ({{ r.level.letter }})</span></td>
-                    <td class="go"><i class="fi fi-rr-angle-small-right"></i></td>
-                </tr>
-                {% empty %}
-                <tr class="empty-row"><td colspan="9"><i class="fi fi-rr-chart-line-up" style="font-size:1.6rem;display:block;margin-bottom:0.4rem;"></i>No grades for this selection yet.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% if table %}<p class="footnote explain">K, Pr, U and Pd are estimated from each {% if sections_view %}section{% else %}class{% endif %} average with the DepEd Order No. 73, s. 2012 weights. The average and level come from the actual grades.</p>{% endif %}
+        {% if table_preview|length < table|length %}
+        {% include 'heads/ai_dashboard/_sections_table.html' with rows=table_preview table_id='secTable' sortable=False %}
+        <div class="classes-foot">
+            <span>{{ table_preview|length }} of {{ table|length }} {% if sections_view %}sections{% else %}classes{% endif %}: the lowest averages first</span>
+            <button type="button" class="btn-outline btn-sm" id="secMore" aria-haspopup="dialog" aria-controls="secModal"><i class="fi fi-rr-expand"></i> Show all {{ table|length }}</button>
+        </div>
+        {% else %}
+        {% include 'heads/ai_dashboard/_sections_table.html' with rows=table table_id='secTable' sortable=True %}
+        {% endif %}
+        {% if table %}<p class="footnote explain">{% for key, name, abbr in grading.components %}{{ abbr }} is the average {{ name|lower }} score{% if not forloop.last %}, {% endif %}{% endfor %} (in percent), from the uploaded class records. The average and level come from the grades ({{ grading.levels_order }}).</p>{% endif %}
     </section>
+
+    {% if table_preview|length < table|length %}
+    <div class="ad-modal" id="secModal" role="dialog" aria-modal="true" aria-labelledby="secModalTitle" hidden>
+        <div class="ad-modal-card wide" tabindex="-1">
+            <div class="ad-modal-head">
+                <div>
+                    <h3 id="secModalTitle"><i class="fi fi-rr-users-alt" style="color:#123499;"></i> {% if sections_view %}Every section{% else %}Every class{% endif %} <span class="count">{{ table|length }}</span></h3>
+                    <p class="hint">{{ scope_name }}{% if scope_detail %} &middot; {{ scope_detail }}{% endif %} &middot; {{ period_name }}. Open a row to see {% if sections_view %}that section's subjects{% else %}that class's Poro AI brief{% endif %}.</p>
+                </div>
+                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
+            </div>
+            <div class="ad-modal-tools">
+                <label class="ad-search"><i class="fi fi-rr-search"></i><input type="search" id="secSearch" placeholder="Find a section, grade or subject" aria-label="Find a section, grade or subject"></label>
+                <label class="ad-sortby">Sort by
+                    <select id="secSort">
+                        <option value="low">Lowest average first</option>
+                        <option value="high">Highest average first</option>
+                        <option value="below">Most learners below 75</option>
+                        {% if prev_period_name %}<option value="drop">Biggest drop since {{ prev_period_name }}</option>{% endif %}
+                        <option value="grade">Grade level</option>
+                        <option value="name">Section name (A to Z)</option>
+                    </select>
+                </label>
+                <span class="tools-count" id="secCount" aria-live="polite"></span>
+            </div>
+            <div class="ad-modal-body sec-scroll">
+                {% include 'heads/ai_dashboard/_sections_table.html' with rows=table table_id='secAll' sortable=False %}
+                <p class="ad-none" id="secNone" hidden>No section matches.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     {% if sections_view and table %}
     <div class="ad-modal" id="sectionModal" role="dialog" aria-modal="true" aria-labelledby="sectionModalTitle" hidden>
@@ -360,62 +364,6 @@
     {{ forecast|json_script:"dashForecast" }}
     {% endif %}
 
-    {% if table %}
-    <!-- 5. KPUP by section: one row per class on a shared scale; the lowest six here, every class in the dialog -->
-    <section class="card chart-card" aria-labelledby="chartTitle">
-        <div class="card-head">
-            <div>
-                <h3 id="chartTitle"><i class="fi fi-rr-chart-scatter" style="color:#123499;"></i> KPUP by section</h3>
-                <p class="hint explain">One row per {% if sections_view %}section{% else %}class{% endif %}, all on the same scale. Lowest averages first{% if table|length > 6 %}, 6 of {{ table|length }} shown{% endif %}. Point at a dot for its score.</p>
-            </div>
-            {% if table|length > 6 %}<button type="button" class="btn-outline btn-sm" id="openChart" aria-haspopup="dialog" aria-controls="kpModal"><i class="fi fi-rr-expand"></i> View all {{ table|length }} sections</button>{% endif %}
-        </div>
-        <div class="kp-legend" aria-hidden="true">
-            <span><i class="kp-key k-color"></i>Knowledge (K)</span><span><i class="kp-key p-color"></i>Process (Pr)</span>
-            <span><i class="kp-key u-color"></i>Understanding (U)</span><span><i class="kp-key pd-color"></i>Product (Pd)</span>
-            <span><i class="kp-key avg"></i>Class average</span><span><i class="kp-key pass"></i>Passing (75)</span>
-        </div>
-        <div class="kp" id="kpInline" data-prev="{{ prev_period_name }}"></div>
-        <p class="kp-note explain">K, Pr, U and Pd are estimated from each average, so the dots keep the same spacing in every row. Compare where the rows sit.</p>
-    </section>
-
-    {% if table|length > 6 %}
-    <div class="ad-modal" id="kpModal" role="dialog" aria-modal="true" aria-labelledby="kpModalTitle" hidden>
-        <div class="ad-modal-card wide" tabindex="-1">
-            <div class="ad-modal-head">
-                <div>
-                    <h3 id="kpModalTitle"><i class="fi fi-rr-chart-scatter" style="color:#123499;"></i> KPUP by section &middot; all {{ table|length }}</h3>
-                    <p class="hint">{{ scope_name }}{% if scope_detail %} &middot; {{ scope_detail }}{% endif %} &middot; {{ period_name }}. Open a row to see {% if sections_view %}that section's subjects{% else %}that class's Poro AI brief{% endif %}.</p>
-                </div>
-                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
-            </div>
-            <div class="ad-modal-tools">
-                <label class="ad-search"><i class="fi fi-rr-search"></i><input type="search" id="kpSearch" placeholder="Find a section or subject" aria-label="Find a section or subject"></label>
-                <label class="ad-sortby">Sort by
-                    <select id="kpSort">
-                        <option value="low">Lowest average first</option>
-                        <option value="high">Highest average first</option>
-                        <option value="below">Most learners below 75</option>
-                        {% if prev_period_name %}<option value="drop">Biggest drop since {{ prev_period_name }}</option>{% endif %}
-                        <option value="grade">Grade level</option>
-                        <option value="name">Section name (A to Z)</option>
-                    </select>
-                </label>
-                <span class="tools-count" id="kpCount" aria-live="polite"></span>
-            </div>
-            <div class="ad-modal-body kp-body">
-                <div class="kp-legend" aria-hidden="true">
-                    <span><i class="kp-key k-color"></i>Knowledge (K)</span><span><i class="kp-key p-color"></i>Process (Pr)</span>
-                    <span><i class="kp-key u-color"></i>Understanding (U)</span><span><i class="kp-key pd-color"></i>Product (Pd)</span>
-                    <span><i class="kp-key avg"></i>Class average</span><span><i class="kp-key pass"></i>Passing (75)</span>
-                </div>
-                <div class="kp" id="kpAll"></div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    {{ chart|json_script:"kpupData" }}
-    {% endif %}
 </div>
 {% endblock %}
 
@@ -456,23 +404,28 @@
         });
     });
 
-    // ---------- Poro AI: the computed wording shows at once; the local model's wording replaces it when every check passes ----------
+    // ---------- Poro AI: the computed wording shows at once; Poro's wording replaces it when every check passes ----------
     var poro = document.getElementById('poroDash'), poroSrc = document.getElementById('poroDashSrc');
     if (poro && poro.dataset.token) {
+        var poroUrl = '{% url "heads-poro-narrative" "TOKEN" %}'.replace('TOKEN', poro.dataset.token), poroTries = 0;
         poroSrc.textContent = 'Poro AI is wording the summary…';
-        fetch('{% url "heads-poro-narrative" "TOKEN" %}'.replace('TOKEN', poro.dataset.token), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(function (r) { return r.ok ? r.json() : null; })
-            .then(function (d) {
-                if (d && d.source === 'ai' && d.text) {
-                    poro.parentNode.classList.add('fading');
-                    setTimeout(function () { poro.textContent = d.text; poro.parentNode.classList.remove('fading'); }, 250);
-                    poroSrc.className = 'poro-src ai';
-                    poroSrc.textContent = 'Worded by Poro AI (' + d.model + '); every figure, name and level checked against the grades';
-                } else {
-                    poroSrc.textContent = d && d.unavailable ? 'Computed from the grades (Poro AI is not running)' : 'Computed from the grades';
-                }
-            })
-            .catch(function () { poroSrc.textContent = 'Computed from the grades'; });
+        var poroPoll = function () {
+            fetch(poroUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (d) {
+                    if (d && d.state === 'writing' && ++poroTries <= 60) { setTimeout(poroPoll, 4000); return; }
+                    if (d && d.source === 'ai' && d.text) {
+                        poro.parentNode.classList.add('fading');
+                        setTimeout(function () { poro.textContent = d.text; poro.parentNode.classList.remove('fading'); }, 250);
+                        poroSrc.className = 'poro-src ai';
+                        poroSrc.textContent = 'Worded by Poro AI (' + d.model + '); every figure, name and level checked against the grades';
+                    } else {
+                        poroSrc.textContent = d && d.unavailable ? 'Computed from the grades (Poro AI is not running)' : 'Computed from the grades';
+                    }
+                })
+                .catch(function () { poroSrc.textContent = 'Computed from the grades'; });
+        };
+        poroPoll();
     }
 
     // ---------- dialogs: Esc or the backdrop closes them, focus stays inside and returns to the button ----------
@@ -503,6 +456,8 @@
     function openSection(href, from) {
         var id = href.replace('#section-', ''), s = sections[id];
         if (!s || !sectionModal) return false;
+        var shown = document.querySelector('.ad-modal:not([hidden])');          // one dialog at a time
+        if (shown) { shown.hidden = true; document.body.style.overflow = ''; }
         document.getElementById('sectionModalName').textContent = s.name;
         document.getElementById('sectionModalSummary').textContent = s.overall.toFixed(1) + '% across ' + s.subjects.length + ' subjects, ' + s.level + '.';
         var list = document.getElementById('sectionModalList');
@@ -525,7 +480,7 @@
         if (href) open(href);
     }
 
-    // Rows open the section brief, or the section's subjects (mouse, Enter or Space)
+    // Rows open the section brief, or the section's subjects (mouse, Enter or Space), in the card and in the dialog
     document.querySelectorAll('.sec-row').forEach(function (row) {
         row.addEventListener('click', function (e) { var a = e.target.closest('a'); if (a) { e.preventDefault(); } follow(row.dataset.href, row); });
         row.addEventListener('keydown', function (e) {
@@ -533,18 +488,17 @@
         });
     });
 
-    // Sorting the sections table
-    var tbody = document.querySelector('#secTable tbody');
+    // Sorting the sections table (when the card shows every row)
     var levelRank = { beginning: 1, developing: 2, approaching: 3, proficient: 4, advanced: 5 };
     document.querySelectorAll('#secTable th button[data-sort]').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            var th = btn.closest('th'), key = btn.dataset.sort;
+            var th = btn.closest('th'), key = btn.dataset.sort, tbody = btn.closest('table').querySelector('tbody');
             var dir = th.getAttribute('aria-sort') === 'ascending' ? 'descending' : 'ascending';
-            document.querySelectorAll('#secTable th').forEach(function (t) { t.removeAttribute('aria-sort'); });
+            btn.closest('thead').querySelectorAll('th').forEach(function (t) { t.removeAttribute('aria-sort'); });
             th.setAttribute('aria-sort', dir);
             var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr.sec-row'));
             var val = function (r) {
-                if (key === 'section') return +r.dataset.section;
+                if (key === 'section') return +r.dataset.order;
                 if (key === 'learners') return +r.dataset.learners;
                 if (key === 'level') { var m = r.className.match(/level-(\w+)/); return levelRank[m ? m[1] : ''] || 0; }
                 return +r.dataset.overall;
@@ -553,6 +507,36 @@
             rows.forEach(function (r) { tbody.appendChild(r); });
         });
     });
+
+    // ---------- every section: search and sort in the dialog ----------
+    var secModal = document.getElementById('secModal');
+    if (secModal) {
+        var secBody = document.querySelector('#secAll tbody'), secRows = Array.prototype.slice.call(secBody.querySelectorAll('tr.sec-row'));
+        var sSearch = document.getElementById('secSearch'), sSort = document.getElementById('secSort');
+        var num = function (r, k) { return r.dataset[k] === '' ? null : +r.dataset[k]; };
+        var SORTS = {
+            low: function (a, b) { return num(a, 'overall') - num(b, 'overall') || num(a, 'order') - num(b, 'order'); },
+            high: function (a, b) { return num(b, 'overall') - num(a, 'overall') || num(a, 'order') - num(b, 'order'); },
+            below: function (a, b) { return num(b, 'below') - num(a, 'below') || num(a, 'overall') - num(b, 'overall'); },
+            drop: function (a, b) { return (num(a, 'delta') === null) - (num(b, 'delta') === null) || (num(a, 'delta') || 0) - (num(b, 'delta') || 0); },
+            grade: function (a, b) { return num(a, 'order') - num(b, 'order'); },
+            name: function (a, b) { return a.dataset.name.localeCompare(b.dataset.name) || num(a, 'order') - num(b, 'order'); }
+        };
+        var showSections = function () {
+            var q = sSearch.value.trim().toLowerCase(), shown = 0;
+            secRows.sort(SORTS[sSort.value] || SORTS.low);
+            secRows.forEach(function (r) {
+                r.hidden = q && r.dataset.text.indexOf(q) === -1;
+                if (!r.hidden) shown++;
+                secBody.appendChild(r);
+            });
+            document.getElementById('secNone').hidden = shown > 0;
+            document.getElementById('secCount').textContent = 'Showing ' + shown + ' of ' + secRows.length;
+        };
+        sSearch.addEventListener('input', showSections);
+        sSort.addEventListener('change', showSections);
+        document.getElementById('secMore').addEventListener('click', function (e) { showSections(); openDialog(secModal, e.currentTarget); });
+    }
 
     // ---------- every learner below 75 ----------
     var watchModal = document.getElementById('watchModal');
@@ -579,83 +563,6 @@
         document.getElementById('watchMore').addEventListener('click', function (e) { showWatch(); openDialog(watchModal, e.currentTarget); });
     }
 
-    // ---------- KPUP by section: a dot plot, one row per class, all on one scale ----------
-    var dataEl = document.getElementById('kpupData');
-    if (!dataEl) return;
-    var rows = JSON.parse(dataEl.textContent);
-    var DIMS = [['k', 'Knowledge', 'K'], ['p', 'Process', 'Pr'], ['u', 'Understanding', 'U'], ['pd', 'Product', 'Pd']];
-    var mixed = rows.some(function (r) { return r.subject !== rows[0].subject; });
-    var prev = document.getElementById('kpInline').dataset.prev;
-    var values = [75];
-    rows.forEach(function (r) { DIMS.forEach(function (d) { values.push(r[d[0]]); }); values.push(r.overall); });
-    // The scale starts just below the lowest score (in steps of 5) so the dots use the width; labels and grid lines every 10.
-    var lo = Math.max(0, Math.floor((Math.min.apply(null, values) - 2) / 5) * 5), hi = 100;
-    var at = function (v) { return ((v - lo) / (hi - lo) * 100).toFixed(2) + '%'; };
-    var ticks = '', grid = '';
-    for (var v = Math.ceil(lo / 10) * 10; v <= hi; v += 10) {
-        ticks += '<span style="left:' + at(v) + '">' + v + '</span>';
-        if (v > lo && v < hi) grid += '<span class="kp-grid" style="left:' + at(v) + '"></span>';
-    }
-
-    function rowHtml(r) {
-        var dims = DIMS.map(function (d) { return r[d[0]]; }), low = Math.min.apply(null, dims), high = Math.max.apply(null, dims);
-        var said = r.section + ', ' + r.subject + ': average ' + r.overall.toFixed(1) +
-            (r.below ? ', ' + r.below + ' below 75' : '') +
-            (r.delta ? ', ' + (r.delta > 0 ? 'up ' : 'down ') + Math.abs(r.delta).toFixed(1) + ' since ' + prev : '') + ', ' +
-            DIMS.map(function (d) { return d[1] + ' ' + r[d[0]].toFixed(1); }).join(', ');
-        var change = r.delta ? '<span class="kp-delta ' + (r.delta > 0 ? 'up' : 'down') + '" title="Change since ' + esc(prev) + '">' +
-            '<i class="fi fi-rr-caret-' + (r.delta > 0 ? 'up' : 'down') + '"></i>' + Math.abs(r.delta).toFixed(1) + '</span>' : '';
-        return '<li class="kp-row level-' + esc(r.level) + '"><a class="kp-link" href="' + esc(r.url) + '" aria-label="' + esc(said) + '">' +
-            '<span class="kp-name"><b>' + esc(r.section) + (r.below ? '<em class="kp-flag">' + r.below + ' below 75</em>' : '') + '</b>' +
-            '<small>' + esc(mixed ? r.grade + ' · ' + r.subject : r.level_name) + '</small></span>' +
-            '<span class="kp-track" aria-hidden="true">' + grid +
-                '<span class="kp-pass" style="left:' + at(75) + '"></span>' +
-                '<span class="kp-range" style="left:' + at(low) + ';width:calc(' + at(high) + ' - ' + at(low) + ')"></span>' +
-                '<span class="kp-avg" style="left:' + at(r.overall) + '" data-tip="Class average ' + r.overall.toFixed(1) + '%"></span>' +
-                DIMS.map(function (d) {
-                    return '<span class="kp-dot ' + d[0] + '-color" style="left:' + at(r[d[0]]) + '" data-tip="' + d[1] + ' (' + d[2] + ') ' + r[d[0]].toFixed(1) + '%"></span>';
-                }).join('') +
-            '</span>' +
-            '<span class="kp-val"><span class="lvl">' + r.overall.toFixed(1) + '%</span>' + change + '</span></a></li>';
-    }
-    function draw(box, list) {
-        box.innerHTML = '<div class="kp-axis" aria-hidden="true"><span class="kp-spacer">Section</span><span class="kp-ticks">' + ticks + '</span><span class="kp-head-val">Average</span></div>' +
-            (list.length ? '<ol class="kp-rows">' + list.map(rowHtml).join('') + '</ol>' : '<p class="kp-empty">No class matches.</p>');
-    }
-    // in the every-discipline view a row opens the section's subjects instead of a brief
-    document.addEventListener('click', function (e) {
-        var a = e.target.closest('a.kp-link');
-        if (a && a.getAttribute('href').indexOf('#section-') === 0) {
-            e.preventDefault();
-            var shown = document.querySelector('.ad-modal:not([hidden])');
-            if (shown) { shown.hidden = true; document.body.style.overflow = ''; }
-            openSection(a.getAttribute('href'), a);
-        }
-    });
-    var byLowest = function (a, b) { return a.overall - b.overall || a.order - b.order; };
-    draw(document.getElementById('kpInline'), rows.slice().sort(byLowest).slice(0, 6));
-
-    var kpModal = document.getElementById('kpModal');
-    if (!kpModal) return;
-    var kSearch = document.getElementById('kpSearch'), kSort = document.getElementById('kpSort');
-    var SORTS = {
-        low: byLowest,
-        high: function (a, b) { return b.overall - a.overall || a.order - b.order; },
-        below: function (a, b) { return b.below - a.below || a.overall - b.overall || a.order - b.order; },
-        drop: function (a, b) { return (a.delta == null) - (b.delta == null) || (a.delta || 0) - (b.delta || 0) || a.order - b.order; },
-        grade: function (a, b) { return a.order - b.order; },
-        name: function (a, b) { return a.section.localeCompare(b.section) || a.order - b.order; }
-    };
-    function showAll() {
-        var q = kSearch.value.trim().toLowerCase();
-        var list = rows.filter(function (r) { return !q || (r.section + ' ' + r.subject + ' ' + r.code + ' ' + r.grade).toLowerCase().indexOf(q) > -1; })
-                       .sort(SORTS[kSort.value] || byLowest);
-        draw(document.getElementById('kpAll'), list);
-        document.getElementById('kpCount').textContent = 'Showing ' + list.length + ' of ' + rows.length + ' sections';
-    }
-    kSearch.addEventListener('input', showAll);
-    kSort.addEventListener('change', showAll);
-    document.getElementById('openChart').addEventListener('click', function (e) { showAll(); openDialog(kpModal, e.currentTarget); });
 })();
 </script>
 {% endblock %}

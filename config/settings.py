@@ -106,6 +106,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'accounts.context_processors.auth_options',
                 'communication.context_processors.contact',
+                'core.grading_policy.context',
             ],
         },
     },
@@ -188,14 +189,20 @@ AUTHENTICATION_BACKENDS = ['accounts.backends.ProfileBackend']
 # =============================================================================
 # PORO AI (local language model through Ollama)
 # =============================================================================
-# Poro's reports are computed from the grades (heads/insights.py). The language model only rewords
-# the summary, and its text is shown only when every figure survives unchanged. If Ollama is not
-# running, the computed wording is shown instead.
+# Poro's facts are computed from the grades (heads/insights.py). The local model rewords the sentences of a
+# brief in the background (heads/poro.py), and each one is shown only when its numbers, names and levels check
+# out against the original and a second reading finds the same meaning; otherwise the computed wording stays.
+# 'poro' is qwen2.5 with Poro's persona (ml_engine/poro/Modelfile, built by `python manage.py setup_poro`);
+# without it, BASE_MODEL is used.
 PORO_AI = {
     'ENABLED': os.environ.get('PORO_AI_ENABLED', 'True').lower() in ('1', 'true', 'yes'),
     'OLLAMA_URL': os.environ.get('OLLAMA_URL', 'http://127.0.0.1:11434').strip(),
-    'MODEL': os.environ.get('PORO_AI_MODEL', 'qwen2.5:1.5b').strip(),
+    'MODEL': os.environ.get('PORO_AI_MODEL', 'poro').strip(),
+    'BASE_MODEL': os.environ.get('PORO_AI_BASE_MODEL', 'qwen2.5:3b').strip(),
     'TIMEOUT': int(os.environ.get('PORO_AI_TIMEOUT', '45')),
+    'WRITE_TIMEOUT': int(os.environ.get('PORO_AI_WRITE_TIMEOUT', '600')),    # each request of the background writer
+    # 'faithful': Poro rewords each computed sentence with its facts locked in; 'free': writes from the facts alone
+    'STYLE': os.environ.get('PORO_AI_STYLE', 'faithful').strip().lower(),
 }
 
 

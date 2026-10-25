@@ -35,6 +35,15 @@
     .headline { font-size: 1.02rem; font-weight: 650; color: var(--ink); line-height: 1.45; margin: 0.85rem 0 0.35rem; letter-spacing: -0.005em; }
     .summary { font-size: 0.88rem; color: #2d3748; line-height: 1.6; margin: 0; transition: opacity 0.3s; max-width: 95ch; }
     .summary.fading { opacity: 0.35; }
+    /* a part Poro wrote fades in, so the change is visible but calm */
+    .by-poro { animation: poro-in 0.6s ease; }
+    @keyframes poro-in { from { opacity: 0.25; } to { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .by-poro { animation: none; } }
+    .brief-tools { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .wording { border: 1.5px solid #dfe4ec; background: #fff; border-radius: 20px; padding: 0.25rem 0.7rem; font: inherit; font-size: 0.74rem;
+               font-weight: 650; color: var(--brand); cursor: pointer; display: inline-flex; gap: 0.35rem; align-items: center; }
+    .wording:hover { border-color: var(--brand); }
+    .wording[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
     .figs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.55rem; margin: 0.9rem 0 1rem; }
     @media (max-width: 760px) { .figs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     .fig { background: var(--soft); border-radius: 12px; padding: 0.6rem 0.8rem; }
@@ -49,7 +58,7 @@
     .plan-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.2rem; }
     .plan-head .hint { margin: 0; }
     .plan details.fold > summary { gap: 0.6rem; flex-wrap: wrap; }
-    .step-badge { width: 28px; height: 28px; border-radius: 8px; background: var(--lv-bg); color: var(--lv); border: 1.5px solid var(--lv); font-size: 0.72rem;
+    .step-badge { min-width: 28px; height: 28px; padding: 0 0.3rem; border-radius: 8px; background: var(--lv-bg); color: var(--lv); border: 1.5px solid var(--lv); font-size: 0.72rem;
                   font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .step-title { color: var(--ink); }
     .step-title .arrow { color: var(--muted); font-weight: 500; margin: 0 0.2rem; }
@@ -178,10 +187,14 @@
                     <div class="src" id="poroSource"><i class="fi fi-rr-chart-line-up"></i> Computed from {{ brief.graded }} grades in {{ period_name }}</div>
                 </div>
             </div>
-            <span class="chip {{ brief.confidence.tone }}" title="{{ brief.confidence.reason }}"><i class="fi fi-rr-shield-check"></i> {{ brief.confidence.level }} confidence</span>
+            <div class="brief-tools">
+                <button type="button" class="wording" id="poroWording" aria-pressed="false" hidden
+                        title="Switch between Poro's sentences and the wording computed from the grades, to check one against the other"><i class="fi fi-rr-exchange"></i> <span>Show the computed wording</span></button>
+                <span class="chip {{ brief.confidence.tone }}" title="{{ brief.confidence.reason }}"><i class="fi fi-rr-shield-check"></i> {{ brief.confidence.level }} confidence</span>
+            </div>
         </div>
-        <p class="headline">{{ brief.headline }}</p>
-        <p class="summary" id="poroSummary" data-token="{{ poro_token }}">{{ brief.summary }}</p>
+        <p class="headline" data-poro="headline">{{ brief.headline }}</p>
+        <p class="summary" id="poroSummary" data-token="{{ poro_token }}" data-poro="summary">{{ brief.summary }}</p>
 
         <div class="figs">
             <div class="fig"><b>{{ brief.average }}%</b><span>Average grade</span>{% if brief.delta is not None %}<small class="{% if brief.delta >= 0 %}pos{% else %}neg{% endif %}">{% if brief.delta > 0 %}+{% endif %}{{ brief.delta }} vs {{ prev_period_name }}</small>{% endif %}</div>
@@ -194,7 +207,7 @@
         <div class="plan" aria-labelledby="planTitle">
             <div class="plan-head">
                 <h4 id="planTitle"><i class="fi fi-rr-stairs"></i> Level-up plan</h4>
-                <p class="hint explain">One step up for every level in this class, from Beginning to Advanced. Open a step for what to do, who does it and the learners in it.</p>
+                <p class="hint explain">One step up for every level in this class, from {{ levels.4.name }} to {{ levels.0.name }}. Open a step for what to do, who does it and the learners in it.</p>
             </div>
             {% for step in brief.plan %}
             <details class="fold level-{{ step.level.key }}">
@@ -208,7 +221,7 @@
                         {% if step.likely_up %}<span class="step-note good"><i class="fi fi-rr-arrow-trend-up"></i> {{ step.likely_up }} forecast to reach {{ step.target.name }} in {{ next_period_name }}</span>{% endif %}
                         {% if step.may_slip %}<span class="step-note warn"><i class="fi fi-rr-triangle-warning"></i> {{ step.may_slip }} could fall below 75 (1 in 2 chance or more)</span>{% endif %}
                     </div>{% endif %}
-                    <p>{{ step.how }}</p>
+                    <p data-poro="level-{{ step.level.key }}">{{ step.how }}</p>
                     {% if step.weak %}<p class="explain">Their {{ step.weak.label }} averages {{ step.weak.average }}%, against {{ step.weak.class }}% for the class.</p>{% endif %}
                     <dl><div><dt>Who</dt><dd>{{ step.who }}</dd></div><div><dt>When</dt><dd>{{ step.when }}</dd></div><div><dt>Success</dt><dd>{{ step.measure }}</dd></div></dl>
                     <div class="people">
@@ -226,8 +239,8 @@
                 <h4><i class="fi fi-rr-search"></i> What stands out</h4>
                 {% for f in brief.findings %}
                 <details class="fold tone-{{ f.tone }}">
-                    <summary><span class="dot" aria-hidden="true"></span>{{ f.title }}</summary>
-                    <p class="fold-body">{{ f.detail }}</p>
+                    <summary><span class="dot" aria-hidden="true"></span><span data-poro="finding-{{ forloop.counter0 }}-title">{{ f.title }}</span></summary>
+                    <p class="fold-body" data-poro="finding-{{ forloop.counter0 }}-detail">{{ f.detail }}</p>
                 </details>
                 {% endfor %}
             </div>
@@ -235,8 +248,8 @@
                 <h4><i class="fi fi-rr-list-check"></i> What to do next</h4>
                 {% for a in brief.actions %}
                 <details class="fold">
-                    <summary><span class="n">{{ forloop.counter }}</span>{{ a.title }}</summary>
-                    <div class="fold-body">{{ a.why }}<dl><div><dt>Who</dt><dd>{{ a.who }}</dd></div><div><dt>When</dt><dd>{{ a.when }}</dd></div><div><dt>Success</dt><dd>{{ a.measure }}</dd></div></dl></div>
+                    <summary><span class="n">{{ forloop.counter }}</span><span data-poro="action-{{ forloop.counter0 }}-title">{{ a.title }}</span></summary>
+                    <div class="fold-body"><span data-poro="action-{{ forloop.counter0 }}-why">{{ a.why }}</span><dl><div><dt>Who</dt><dd>{{ a.who }}</dd></div><div><dt>When</dt><dd>{{ a.when }}</dd></div><div><dt>Success</dt><dd>{{ a.measure }}</dd></div></dl></div>
                 </details>
                 {% empty %}
                 <p class="hint">No action needed beyond regular monitoring.</p>
@@ -260,7 +273,7 @@
         <div class="card tile {% if improvement > 0 %}tone-good{% elif improvement < 0 %}tone-risk{% else %}tone-muted{% endif %}"><span class="tile-ico"><i class="fi {% if improvement > 0 %}fi-rr-arrow-trend-up{% elif improvement < 0 %}fi-rr-arrow-trend-down{% else %}fi-rr-minus{% endif %}"></i></span>
             <span class="tile-text"><span>Change</span><b class="{% if improvement > 0 %}pos{% elif improvement < 0 %}neg{% endif %}">{% if improvement is None %}&mdash;{% else %}{% if improvement > 0 %}+{% endif %}{{ improvement }}{% endif %}</b><small>{% if improvement is None %}no earlier period{% else %}points vs {{ prev_period_name }}{% endif %}</small></span></div>
         <div class="card tile tone-good"><span class="tile-ico"><i class="fi fi-rr-star"></i></span>
-            <span class="tile-text"><span>Advanced (90+)</span><b>{{ brief.advanced }}</b><small>of {{ brief.graded }} learners</small></span></div>
+            <span class="tile-text"><span>{{ levels.0.name }} (90+)</span><b>{{ brief.advanced }}</b><small>of {{ brief.graded }} learners</small></span></div>
         <div class="card tile {% if brief.validated == brief.graded %}tone-good{% else %}tone-warn{% endif %}"><span class="tile-ico"><i class="fi fi-rr-badge-check"></i></span>
             <span class="tile-text"><span>Validated</span><b>{{ brief.validated }} of {{ brief.graded }}</b><small>{% if brief.validated == brief.graded %}checked by the registrar{% else %}waiting for the registrar{% endif %}</small></span></div>
     </div>
@@ -292,7 +305,7 @@
             <summary id="histTitle"><i class="fi fi-rr-time-forward" style="color:#123499;"></i> Performance by grading period <span class="sum-note">average, passing rate, Advanced rate and change</span></summary>
             <div class="wrap-x">
                 <table class="simple-table">
-                    <thead><tr><th>Period</th><th>Average</th><th>Passing rate</th><th>Advanced rate</th><th>Below 75</th><th>Change</th></tr></thead>
+                    <thead><tr><th>Period</th><th>Average</th><th>Passing rate</th><th>{{ levels.0.name }} rate</th><th>Below 75</th><th>Change</th></tr></thead>
                     <tbody>
                         {% for h in history_rows %}
                         {% if h.projected %}
@@ -315,9 +328,9 @@
     </section>
     {% endif %}
 
-    <!-- Learners: proficiency reference first, then the table (10 rows, all on request) -->
+    <!-- Learners: the levels of the school's DepEd order first, then the table (10 rows, all on request) -->
     <section class="card learners" id="learners" aria-labelledby="learnersTitle">
-        <div class="reference-title explain"><i class="fi fi-rr-bookmark"></i> Proficiency levels, DepEd Order No. 31, s. 2012</div>
+        <div class="reference-title explain"><i class="fi fi-rr-bookmark"></i> Levels, {{ grading.levels_order }}</div>
         <div class="reference explain">
             {% for lv in levels reversed %}
             <div class="ref level-{{ lv.key }}" title="{{ lv.meaning }}"><b>{{ lv.letter }}</b><span>{{ lv.name }}</span><small>{{ lv.range }}</small></div>
@@ -382,24 +395,65 @@
 (function () {
     var PAGE = 10;
 
-    // ---------- Poro AI wording (the computed summary is already shown) ----------
+    // ---------- Poro AI writes the brief in the background; the computed brief shows until its parts are ready ----------
     var summary = document.getElementById('poroSummary'), source = document.getElementById('poroSource');
     if (summary && summary.dataset.token) {
-        var computed = source.innerHTML;
-        source.innerHTML = '<i class="fi fi-rr-refresh"></i> Poro AI is wording the summary&hellip;';
-        fetch('{% url "heads-poro-narrative" "TOKEN" %}'.replace('TOKEN', summary.dataset.token), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(function (r) { return r.ok ? r.json() : null; })
-            .then(function (d) {
-                if (d && d.source === 'ai' && d.text) {
-                    summary.classList.add('fading');
-                    setTimeout(function () { summary.textContent = d.text; summary.classList.remove('fading'); }, 250);
-                    source.className = 'src ai';
-                    source.innerHTML = '<i class="fi fi-rr-shield-check"></i> Worded by Poro AI (' + d.model + '); every figure, name and level checked against the grades';
-                } else {
-                    source.innerHTML = computed + (d && d.unavailable ? ' (Poro AI is not running)' : '');
-                }
-            })
-            .catch(function () { source.innerHTML = computed; });
+        var computed = source.innerHTML, tries = 0;
+        var url = '{% url "heads-poro-brief" "TOKEN" %}'.replace('TOKEN', summary.dataset.token);
+        var say = function (icon, text, ai) {
+            source.className = ai ? 'src ai' : 'src';
+            source.textContent = '';
+            var i = document.createElement('i'); i.className = 'fi ' + icon; source.appendChild(i);
+            source.appendChild(document.createTextNode(' ' + text));
+        };
+        // Poro's wording replaces the computed one in place; the button switches between the two so the head can check them
+        var wording = document.getElementById('poroWording'), computedShown = false;
+        var put = function (key, text) {
+            var el = document.querySelector('[data-poro="' + key + '"]');
+            if (!el || !text) return;
+            if (el.dataset.computed === undefined) el.dataset.computed = el.textContent;
+            el.dataset.ai = text;
+            wording.hidden = false;
+            if (computedShown || el.textContent === text) return;
+            el.textContent = text; el.classList.remove('by-poro'); void el.offsetWidth; el.classList.add('by-poro');
+        };
+        wording.addEventListener('click', function () {
+            computedShown = !computedShown;
+            wording.setAttribute('aria-pressed', computedShown ? 'true' : 'false');
+            wording.querySelector('span').textContent = computedShown ? 'Show Poro\'s wording' : 'Show the computed wording';
+            document.querySelectorAll('[data-poro]').forEach(function (el) {
+                if (el.dataset.ai !== undefined) el.textContent = computedShown ? el.dataset.computed : el.dataset.ai;
+            });
+        });
+        var apply = function (fields) { Object.keys(fields).forEach(function (key) { put(key, fields[key]); }); };
+        var poll = function () {
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (d) {
+                    if (!d) { source.innerHTML = computed; return; }
+                    if (d.state === 'writing') {
+                        if (d.fields) {             // sentences Poro has already reworded and checked show at once
+                            apply(d.fields);
+                            say('fi-rr-refresh', 'Poro AI is rewording this brief: ' + d.done + ' of ' + d.total + ' sentences read, ' +
+                                d.written + ' reworded so far. The rest show the computed wording until then.');
+                        }
+                        if (++tries <= 180) { setTimeout(poll, 5000); return; }
+                        say('fi-rr-time-past', 'Computed from the grades. Poro AI is still writing; open this page again in a few minutes.');
+                        return;
+                    }
+                    if (d.source === 'ai' && d.fields) {
+                        apply(d.fields);
+                        say('fi-rr-shield-check', 'Poro AI (' + d.model + ') reworded ' + d.written + ' of ' + d.total + ' ' + (d.unit || 'parts') +
+                            ' from this class\'s grades, each checked for every number, name and level' + (d.unit === 'sentences' ? ' and read again for meaning' : '') +
+                            (d.written < d.total ? '. The rest keep the computed wording.' : '.'), true);
+                    } else {
+                        source.innerHTML = computed + (d.unavailable ? ' (Poro AI is not running)' : '');
+                    }
+                })
+                .catch(function () { source.innerHTML = computed; });
+        };
+        say('fi-rr-refresh', 'Poro AI is writing this brief from the class\'s grades. The computed brief shows until it is done.');
+        poll();
     }
 
     // ---------- learners table: 10 rows, search, level filter, sorting, show all ----------

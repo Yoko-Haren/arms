@@ -883,3 +883,39 @@ def request_update(request, request_id):
         back = reverse('admin_panel:request_list')
     return redirect(back)
 
+
+
+# =============================================================================
+# GRADE FORECASTER: the model behind every School Head forecast
+# =============================================================================
+# Retraining is the System Administrator's: the model learns from every school's records at once. It also
+# retrains by itself whenever a registrar locks a grading period (ml_engine/training.py).
+
+@login_required
+@user_passes_test(is_admin, login_url='admin_panel:login')
+def forecaster(request):
+    from ml_engine import report, training
+    return render(request, 'admin/forecaster.html', {
+        'model': report.summary(), 'run': report.run_status(), 'log': training.log_tail(),
+    })
+
+
+@login_required
+@user_passes_test(is_admin, login_url='admin_panel:login')
+@require_POST
+def forecaster_retrain(request):
+    from ml_engine import training
+    if training.start('Started by the System Administrator', by=request.user.get_full_name() or request.user.username):
+        messages.success(request, 'Retraining started. It takes about a minute, and this page updates when it ends.')
+        _log_admin_action(request, 'RETRAIN_MODEL', 'Started retraining the grade forecaster')
+    else:
+        messages.info(request, 'A retraining run is already going.')
+    return redirect('admin_panel:forecaster')
+
+
+@login_required
+@user_passes_test(is_admin, login_url='admin_panel:login')
+def forecaster_status(request):
+    from ml_engine import training
+    run = training.status()
+    return JsonResponse({'state': run.get('state', 'idle'), 'detail': run.get('detail', '')})

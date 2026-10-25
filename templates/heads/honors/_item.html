@@ -1,0 +1,13 @@
+<li data-text="{{ l.name|lower }} {{ l.section|lower }} {{ l.grade|lower }}">
+    <span class="who">{{ l.name }}<span class="where">{{ l.grade }} {{ l.section }}</span></span>
+    {% if kind == 'track' %}
+    <span class="ho-right"><b>{{ l.ga_exact|floatformat:2 }}</b>{% if awards.kind != 'single' %}<span class="ho-award">{{ l.award_name }}</span>{% endif %}
+        {% if forecasting and l.award_projected_name != l.award_name %}<small class="ho-risk">{% if l.award_projected_name %}{{ l.award_projected_name }} by {{ year_end }}{% else %}Forecast {{ l.ga_projected }} by {{ year_end }}{% endif %}</small>{% endif %}</span>
+    {% elif kind == 'close' %}
+    <span class="ho-right"><b>{{ l.ga_exact|floatformat:2 }}</b><span class="ho-gap">{{ l.gap }} point{{ l.gap|pluralize }} short{% if awards.kind != 'single' %} of {{ l.next }}{% endif %}</span>
+        <small>Lowest: {% for code, g in l.lowest %}{{ code }} {{ g }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}</small></span>
+    {% else %}
+    <span class="ho-right"><b>{{ l.ga_exact|floatformat:2 }}</b>
+        <span class="ho-chips">{% for code, g in l.below_floor %}<span class="ho-chip">{{ code }} {{ g }}</span>{% endfor %}</span></span>
+    {% endif %}
+</li>

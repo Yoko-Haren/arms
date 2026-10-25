@@ -51,6 +51,11 @@ urlpatterns = [
     path('requests/', views.request_list, name='request_list'),
     path('requests/<int:request_id>/status/', views.request_update, name='request_update'),
 
+    # Grade forecaster: status, accuracy and retraining
+    path('forecaster/', views.forecaster, name='forecaster'),
+    path('forecaster/retrain/', views.forecaster_retrain, name='forecaster_retrain'),
+    path('forecaster/status/', views.forecaster_status, name='forecaster_status'),
+
     # AJAX
     path('api/school/<int:school_id>/', views.get_school_details, name='get_school_details'),
     path('api/school/<int:school_id>/grade-levels/', views.get_grade_levels_for_school, name='get_grade_levels'),

@@ -2,6 +2,12 @@
 
 The principal sees and manages only the accounts of their own school, and may
 add registrar accounts. System-wide user administration belongs to the admin panel.
+
+When the School Head is busy, they can let a registrar or a teacher (an ICT coordinator, say) manage the school's
+accounts too: edit details, reset passwords, activate and deactivate. A delegate works in their own portal, never
+touches a School Head's account, cannot add registrars and cannot pass the permission on. Everyone can also reset a
+forgotten password from the sign-in page, and sign-in help requests from the school's staff reach the School Head
+and the delegates (communication/views_public.py), so the System Administrator is not the only way back in.
 """
 import json
 import secrets
@@ -17,15 +23,20 @@ from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from accounts.models import UserProfile
+from communication.notify import notify
 from registrars.forms import TeacherAccountForm, school_email_domain
 
 from .views import _log
 
 # Roles a principal manages inside the school. Administrators are never listed.
 SCHOOL_ROLES = ['schoolhead', 'registrar', 'teacher', 'guidance']
+# Roles the School Head may trust with account management (each has a portal of its own to work in)
+DELEGABLE_ROLES = ['registrar', 'teacher']
+PORTAL_BASE = {'schoolhead': 'heads/base.html', 'registrar': 'registrars/base.html', 'teacher': 'teachers/base.html'}
 
 # Designation choices offered in the Edit User form, by role.
 DESIGNATIONS = {
@@ -40,18 +51,41 @@ DESIGNATIONS = {
 }
 
 
-def school_head_api(view):
-    """JSON endpoints: only a school head with an assigned school."""
-    @login_required
-    @wraps(view)
-    def wrapper(request, *args, **kwargs):
-        profile = getattr(request.user, 'profile', None)
-        if not profile or profile.role != 'schoolhead':
-            return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
-        if not profile.school_id:
-            return JsonResponse({'success': False, 'error': 'You are not assigned to a school.'}, status=403)
-        return view(request, *args, **kwargs)
-    return wrapper
+def account_manager(user):
+    """The user's profile when they may manage their school's accounts: the School Head, or a registrar or teacher the
+    School Head trusted with it. None otherwise."""
+    profile = getattr(user, 'profile', None)
+    if not profile or not profile.school_id or not profile.is_active:
+        return None
+    if profile.role == 'schoolhead' or (profile.can_manage_accounts and profile.role in DELEGABLE_ROLES):
+        return profile
+    return None
+
+
+def _is_head(request):
+    return request.user.profile.role == 'schoolhead'
+
+
+def accounts_api(head_only=False):
+    """JSON endpoints for the School Head, and (unless head_only) the staff they trusted with the school's accounts."""
+    def decorator(view):
+        @login_required
+        @wraps(view)
+        def wrapper(request, *args, **kwargs):
+            profile = account_manager(request.user)
+            if profile is None or (head_only and profile.role != 'schoolhead'):
+                return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+            return view(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def _editable(request, profile):
+    """A delegate never changes a School Head's account; the School Head can change every account of the school."""
+    return _is_head(request) or profile.role != 'schoolhead'
+
+
+NOT_EDITABLE = 'Only the School Head can change a School Head account.'
 
 
 def _school_users(request):
@@ -96,7 +130,17 @@ def _serialize(profile):
         'designation': profile.designation or '',
         'employee_number': profile.employee_number or '',
         'is_self': False,
+        'manages_accounts': bool(profile.can_manage_accounts) and profile.role in DELEGABLE_ROLES,
     }
+
+
+def _row(request, profile):
+    row = _serialize(profile)
+    row['is_self'] = profile.user_id == request.user.id
+    row['editable'] = _editable(request, profile)
+    # the School Head may trust a registrar or teacher with the accounts (never themselves)
+    row['delegable'] = _is_head(request) and profile.role in DELEGABLE_ROLES and not row['is_self'] and _is_active(profile)
+    return row
 
 
 def _body(request):
@@ -117,18 +161,27 @@ def _get(request, user_id):
 
 @login_required
 def user_management(request):
-    profile = getattr(request.user, 'profile', None)
-    if not profile or profile.role != 'schoolhead':
+    profile = account_manager(request.user)
+    if profile is None:
+        own = getattr(request.user, 'profile', None)
+        if own and own.role == 'schoolhead' and not own.school_id:
+            messages.error(request, 'You are not assigned to any school. Contact the administrator.')
+            return redirect('heads-ai-dashboard')
         messages.error(request, 'Access denied.')
         return redirect('signin')
-    if not profile.school_id:
-        messages.error(request, 'You are not assigned to any school. Contact the administrator.')
-        return redirect('heads-ai-dashboard')
 
+    school = profile.school
+    head = UserProfile.objects.filter(school=school, role='schoolhead', is_active=True).select_related('user').first()
+    delegates = UserProfile.objects.filter(school=school, role__in=DELEGABLE_ROLES, can_manage_accounts=True,
+                                           is_active=True, user__is_active=True).select_related('user').order_by('user__last_name')
     return render(request, 'heads/users/user_management.html', {
-        'school': profile.school,
+        'base_template': PORTAL_BASE.get(profile.role, 'heads/base.html'),
+        'is_head': profile.role == 'schoolhead',
+        'head_name': head.user.get_full_name() if head else 'the School Head',
+        'delegates': list(delegates),
+        'school': school,
         'stats': _stats(request),
-        'email_domain': school_email_domain(profile.school),
+        'email_domain': school_email_domain(school),
         'designations': DESIGNATIONS,
     })
 
@@ -137,7 +190,7 @@ def user_management(request):
 # JSON API
 # =============================================================================
 
-@school_head_api
+@accounts_api()
 @require_GET
 def user_list_data(request):
     users = _school_users(request)
@@ -178,9 +231,7 @@ def user_list_data(request):
     page = min(page, total_pages)
     rows = []
     for profile in users[(page - 1) * per_page: page * per_page]:
-        row = _serialize(profile)
-        row['is_self'] = profile.user_id == request.user.id
-        rows.append(row)
+        rows.append(_row(request, profile))
 
     return JsonResponse({
         'success': True, 'users': rows, 'total': total, 'page': page,
@@ -188,19 +239,18 @@ def user_list_data(request):
     })
 
 
-@school_head_api
+@accounts_api()
 @require_GET
 def user_detail_data(request, user_id):
     profile = _get(request, user_id)
     if not profile:
         return JsonResponse({'success': False, 'error': 'User not found'}, status=404)
-    data = _serialize(profile)
-    data['is_self'] = profile.user_id == request.user.id
+    data = _row(request, profile)
     data['designations'] = DESIGNATIONS.get(profile.role, [])
     return JsonResponse({'success': True, 'user': data})
 
 
-@school_head_api
+@accounts_api(head_only=True)
 @require_POST
 def user_create(request):
     """Add a registrar account for the principal's school."""
@@ -247,12 +297,14 @@ def user_create(request):
     })
 
 
-@school_head_api
+@accounts_api()
 @require_POST
 def user_update(request, user_id):
     profile = _get(request, user_id)
     if not profile:
         return JsonResponse({'success': False, 'error': 'User not found'}, status=404)
+    if not _editable(request, profile):
+        return JsonResponse({'success': False, 'error': NOT_EDITABLE}, status=403)
     user = profile.user
     data = _body(request)
 
@@ -287,12 +339,14 @@ def user_update(request, user_id):
     return JsonResponse({'success': True, 'message': f'{user.get_full_name()} updated.'})
 
 
-@school_head_api
+@accounts_api()
 @require_POST
 def user_toggle_status(request, user_id):
     profile = _get(request, user_id)
     if not profile:
         return JsonResponse({'success': False, 'error': 'User not found'}, status=404)
+    if not _editable(request, profile):
+        return JsonResponse({'success': False, 'error': NOT_EDITABLE}, status=403)
     user = profile.user
     if user.id == request.user.id:
         return JsonResponse({'success': False, 'error': 'You cannot deactivate your own account.'}, status=400)
@@ -308,13 +362,15 @@ def user_toggle_status(request, user_id):
     return JsonResponse({'success': True, 'message': f'{user.get_full_name()} {word}.'})
 
 
-@school_head_api
+@accounts_api()
 @require_POST
 def user_reset_password(request, user_id):
-    """Set a new temporary password for any account of the school."""
+    """Set a new temporary password for any account of the school (a delegate: any but a School Head's)."""
     profile = _get(request, user_id)
     if not profile:
         return JsonResponse({'success': False, 'error': 'User not found'}, status=404)
+    if not _editable(request, profile):
+        return JsonResponse({'success': False, 'error': NOT_EDITABLE}, status=403)
     user = profile.user
     password = str(_body(request).get('password', ''))
     try:
@@ -334,10 +390,34 @@ def user_reset_password(request, user_id):
     })
 
 
+@accounts_api(head_only=True)
+@require_POST
+def user_toggle_delegate(request, user_id):
+    """The School Head lets a registrar or teacher manage the school's accounts, or takes that back."""
+    profile = _get(request, user_id)
+    if not profile:
+        return JsonResponse({'success': False, 'error': 'User not found'}, status=404)
+    if profile.role not in DELEGABLE_ROLES or profile.user_id == request.user.id or not _is_active(profile):
+        return JsonResponse({'success': False, 'error': 'Only an active registrar or teacher can manage accounts for you.'}, status=400)
+    grant = not profile.can_manage_accounts
+    UserProfile.objects.filter(pk=profile.pk).update(can_manage_accounts=grant)
+    name, head = profile.user.get_full_name() or profile.user.username, request.user.get_full_name() or request.user.username
+    if grant:
+        notify([profile.user], 'SYSTEM_UPDATE', 'You can now manage school accounts',
+               f'{head} asked you to help manage the accounts of {request.user.profile.school.school_name}: edit details, reset '
+               'passwords, activate and deactivate. Open Accounts in your menu.', action_url=reverse('heads-user-management'))
+    else:
+        notify([profile.user], 'SYSTEM_UPDATE', 'Account management handed back',
+               f'{head} took back the management of the school accounts. Thank you for your help.')
+    _log(request, 'UPDATE_USER', 'UserProfile', profile.id,
+         f'{"Let" if grant else "Stopped letting"} {profile.user.username} manage the school accounts')
+    return JsonResponse({'success': True, 'message': f'{name} {"can now manage" if grant else "no longer manages"} the school accounts.'})
+
+
 @login_required
 def user_export(request):
-    profile = getattr(request.user, 'profile', None)
-    if not profile or profile.role != 'schoolhead' or not profile.school_id:
+    profile = account_manager(request.user)
+    if profile is None:
         messages.error(request, 'Access denied.')
         return redirect('signin')
 

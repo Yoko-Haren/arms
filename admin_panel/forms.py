@@ -45,14 +45,14 @@ class SchoolForm(forms.ModelForm):
         choices=[
             ('', '--- Select Grading System ---'),
             # ===== SEPARATE (Single Level) =====
-            ('DEPED_JHS', 'DepEd JHS Only — DO 31, s. 2020 (Quarterly, Grades 7-10)'),
-            ('DEPED_SHS', 'DepEd SHS Only — DO 31, s. 2020 (Semestral, Grades 11-12)'),
+            ('DEPED_JHS', 'DepEd JHS Only — DO 8, s. 2015 (Quarterly, Grades 7-10)'),
+            ('DEPED_SHS', 'DepEd SHS Only — DO 8, s. 2015 (Semestral, Grades 11-12)'),
             # ===== INTEGRATED (Combined) =====
-            ('DEPED_INTEGRATED', 'DepEd Integrated School — DO 31, s. 2020 (JHS Quarterly + SHS Semestral, Grades 7-12)'),
+            ('DEPED_INTEGRATED', 'DepEd Integrated School — DO 8, s. 2015 (JHS Quarterly + SHS Semestral, Grades 7-12)'),
             # ===== ELEMENTARY =====
-            ('DEPED_ELEMENTARY', 'DepEd Elementary — DO 31, s. 2020 (Quarterly, Grades 1-6)'),
+            ('DEPED_ELEMENTARY', 'DepEd Elementary — DO 8, s. 2015 (Quarterly, Grades 1-6)'),
             # ===== K-12 COMPLETE =====
-            ('DEPED_K12_COMPLETE', 'DepEd K-12 Complete — DO 31, s. 2020 (Quarterly G1-10 + Semestral G11-12)'),
+            ('DEPED_K12_COMPLETE', 'DepEd K-12 Complete — DO 8, s. 2015 (Quarterly G1-10 + Semestral G11-12)'),
             # ===== HIGHER EDUCATION =====
             ('CHED_STANDARD', 'CHED Standard — CMO 14, s. 2019 (Semestral)'),
             ('CHED_TRIMESTER', 'CHED Trimester — CMO 14, s. 2019 (Trimester)'),
@@ -148,13 +148,14 @@ class SchoolForm(forms.ModelForm):
 
         # ===== COMMON GRADE RANGES =====
 
-        # DepEd DO 31, s. 2020 — JHS & Elementary
+        # DepEd descriptors, DO 8, s. 2015 (the School Head can switch the school to DO 015, s. 2026 on the
+        # School Year page; core/grading_policy.py)
         DEPED_RANGES = [
-            (90, 100, 'A', 'Advanced', 4.0, True),
-            (85, 89, 'P', 'Proficient', 3.5, True),
-            (80, 84, 'AP', 'Approaching Proficiency', 3.0, True),
-            (75, 79, 'D', 'Developing', 2.5, True),
-            (0, 74, 'B', 'Beginning', 1.0, False),
+            (90, 100, 'O', 'Outstanding', 4.0, True),
+            (85, 89, 'VS', 'Very Satisfactory', 3.5, True),
+            (80, 84, 'S', 'Satisfactory', 3.0, True),
+            (75, 79, 'FS', 'Fairly Satisfactory', 2.5, True),
+            (0, 74, 'DNME', 'Did Not Meet Expectations', 1.0, False),
         ]
 
         # CHED CMO 14, s. 2019 — College
@@ -189,24 +190,24 @@ class SchoolForm(forms.ModelForm):
         schemas_to_create = []
 
         if schema_type == 'DEPED_JHS':
-            schemas_to_create.append(('DEPED_JHS', 'DepEd JHS — DO 31, s. 2020 (Grades 7-10)', 'QUARTERLY', 'JHS', DEPED_RANGES))
+            schemas_to_create.append(('DEPED_JHS', 'DepEd JHS — DO 8, s. 2015 (Grades 7-10)', 'QUARTERLY', 'JHS', DEPED_RANGES))
 
         elif schema_type == 'DEPED_SHS':
-            schemas_to_create.append(('DEPED_SHS', 'DepEd SHS — DO 31, s. 2020 (Grades 11-12)', 'SEMESTRAL', 'SHS', DEPED_RANGES))
+            schemas_to_create.append(('DEPED_SHS', 'DepEd SHS — DO 8, s. 2015 (Grades 11-12)', 'SEMESTRAL', 'SHS', DEPED_RANGES))
 
         elif schema_type == 'DEPED_INTEGRATED':
             # Creates 2 schemas: JHS (Quarterly) + SHS (Semestral)
-            schemas_to_create.append(('DEPED_INTEGRATED_JHS', 'DepEd JHS — DO 31, s. 2020 (Grades 7-10)', 'QUARTERLY', 'JHS', DEPED_RANGES))
-            schemas_to_create.append(('DEPED_INTEGRATED_SHS', 'DepEd SHS — DO 31, s. 2020 (Grades 11-12)', 'SEMESTRAL', 'SHS', DEPED_RANGES))
+            schemas_to_create.append(('DEPED_INTEGRATED_JHS', 'DepEd JHS — DO 8, s. 2015 (Grades 7-10)', 'QUARTERLY', 'JHS', DEPED_RANGES))
+            schemas_to_create.append(('DEPED_INTEGRATED_SHS', 'DepEd SHS — DO 8, s. 2015 (Grades 11-12)', 'SEMESTRAL', 'SHS', DEPED_RANGES))
 
         elif schema_type == 'DEPED_ELEMENTARY':
-            schemas_to_create.append(('DEPED_ELEMENTARY', 'DepEd Elementary — DO 31, s. 2020 (Grades 1-6)', 'QUARTERLY', 'ELEMENTARY', DEPED_RANGES))
+            schemas_to_create.append(('DEPED_ELEMENTARY', 'DepEd Elementary — DO 8, s. 2015 (Grades 1-6)', 'QUARTERLY', 'ELEMENTARY', DEPED_RANGES))
 
         elif schema_type == 'DEPED_K12_COMPLETE':
             # Creates 3 schemas: Elementary + JHS + SHS
-            schemas_to_create.append(('DEPED_K12_ELEM', 'DepEd Elementary — DO 31, s. 2020 (Grades 1-6)', 'QUARTERLY', 'ELEMENTARY', DEPED_RANGES))
-            schemas_to_create.append(('DEPED_K12_JHS', 'DepEd JHS — DO 31, s. 2020 (Grades 7-10)', 'QUARTERLY', 'JHS', DEPED_RANGES))
-            schemas_to_create.append(('DEPED_K12_SHS', 'DepEd SHS — DO 31, s. 2020 (Grades 11-12)', 'SEMESTRAL', 'SHS', DEPED_RANGES))
+            schemas_to_create.append(('DEPED_K12_ELEM', 'DepEd Elementary — DO 8, s. 2015 (Grades 1-6)', 'QUARTERLY', 'ELEMENTARY', DEPED_RANGES))
+            schemas_to_create.append(('DEPED_K12_JHS', 'DepEd JHS — DO 8, s. 2015 (Grades 7-10)', 'QUARTERLY', 'JHS', DEPED_RANGES))
+            schemas_to_create.append(('DEPED_K12_SHS', 'DepEd SHS — DO 8, s. 2015 (Grades 11-12)', 'SEMESTRAL', 'SHS', DEPED_RANGES))
 
         elif schema_type == 'CHED_STANDARD':
             schemas_to_create.append(('CHED_STANDARD', 'CHED Standard — CMO 14, s. 2019', 'SEMESTRAL', 'COLLEGE', CHED_RANGES))

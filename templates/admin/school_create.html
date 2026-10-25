@@ -146,7 +146,7 @@
                 <label class="form-label required-field">Default Grading System</label>
                 <select name="grading_schema_type" id="gradingSchemaType" class="form-select" required>
                     <option value="">--- Select Grading System ---</option>
-                    <optgroup label="── DepEd K-12 (DO 31, s. 2020) ──">
+                    <optgroup label="── DepEd K-12 (DO 8, s. 2015) ──">
                         <option value="DEPED_ELEMENTARY">DepEd Elementary (Quarterly, Grades 1-6)</option>
                         <option value="DEPED_JHS">DepEd JHS Only (Quarterly, Grades 7-10)</option>
                         <option value="DEPED_SHS">DepEd SHS Only (Semestral, Grades 11-12)</option>
@@ -229,63 +229,63 @@
     // ===== ALL SCHEMA DATA FOR PREVIEW =====
     var schemaData = {
         'DEPED_ELEMENTARY': {
-            name: 'DepEd Elementary — DO 31, s. 2020',
+            name: 'DepEd Elementary — DO 8, s. 2015',
             period: 'Quarterly (Grades 1-6)',
             count: 1,
             ranges: [
-                {letter: 'A', label: 'Advanced', min: 90, max: 100, color: '#28a745'},
-                {letter: 'P', label: 'Proficient', min: 85, max: 89, color: '#17a2b8'},
-                {letter: 'AP', label: 'Approaching', min: 80, max: 84, color: '#6c757d'},
-                {letter: 'D', label: 'Developing', min: 75, max: 79, color: '#ffc107'},
-                {letter: 'B', label: 'Beginning', min: 0, max: 74, color: '#dc3545'},
+                {letter: 'O', label: 'Outstanding', min: 90, max: 100, color: '#28a745'},
+                {letter: 'VS', label: 'Very Satisfactory', min: 85, max: 89, color: '#17a2b8'},
+                {letter: 'S', label: 'Satisfactory', min: 80, max: 84, color: '#6c757d'},
+                {letter: 'FS', label: 'Fairly Satisfactory', min: 75, max: 79, color: '#ffc107'},
+                {letter: 'DNME', label: 'Did Not Meet Expectations', min: 0, max: 74, color: '#dc3545'},
             ]
         },
         'DEPED_JHS': {
-            name: 'DepEd JHS — DO 31, s. 2020',
+            name: 'DepEd JHS — DO 8, s. 2015',
             period: 'Quarterly (Grades 7-10)',
             count: 1,
             ranges: [
-                {letter: 'A', label: 'Advanced', min: 90, max: 100, color: '#28a745'},
-                {letter: 'P', label: 'Proficient', min: 85, max: 89, color: '#17a2b8'},
-                {letter: 'AP', label: 'Approaching', min: 80, max: 84, color: '#6c757d'},
-                {letter: 'D', label: 'Developing', min: 75, max: 79, color: '#ffc107'},
-                {letter: 'B', label: 'Beginning', min: 0, max: 74, color: '#dc3545'},
+                {letter: 'O', label: 'Outstanding', min: 90, max: 100, color: '#28a745'},
+                {letter: 'VS', label: 'Very Satisfactory', min: 85, max: 89, color: '#17a2b8'},
+                {letter: 'S', label: 'Satisfactory', min: 80, max: 84, color: '#6c757d'},
+                {letter: 'FS', label: 'Fairly Satisfactory', min: 75, max: 79, color: '#ffc107'},
+                {letter: 'DNME', label: 'Did Not Meet Expectations', min: 0, max: 74, color: '#dc3545'},
             ]
         },
         'DEPED_SHS': {
-            name: 'DepEd SHS — DO 31, s. 2020',
+            name: 'DepEd SHS — DO 8, s. 2015',
             period: 'Semestral (Grades 11-12)',
             count: 1,
             ranges: [
-                {letter: 'A', label: 'Advanced', min: 90, max: 100, color: '#28a745'},
-                {letter: 'P', label: 'Proficient', min: 85, max: 89, color: '#17a2b8'},
-                {letter: 'AP', label: 'Approaching', min: 80, max: 84, color: '#6c757d'},
-                {letter: 'D', label: 'Developing', min: 75, max: 79, color: '#ffc107'},
-                {letter: 'B', label: 'Beginning', min: 0, max: 74, color: '#dc3545'},
+                {letter: 'O', label: 'Outstanding', min: 90, max: 100, color: '#28a745'},
+                {letter: 'VS', label: 'Very Satisfactory', min: 85, max: 89, color: '#17a2b8'},
+                {letter: 'S', label: 'Satisfactory', min: 80, max: 84, color: '#6c757d'},
+                {letter: 'FS', label: 'Fairly Satisfactory', min: 75, max: 79, color: '#ffc107'},
+                {letter: 'DNME', label: 'Did Not Meet Expectations', min: 0, max: 74, color: '#dc3545'},
             ]
         },
         'DEPED_INTEGRATED': {
-            name: 'DepEd Integrated School — DO 31, s. 2020',
+            name: 'DepEd Integrated School — DO 8, s. 2015',
             period: 'JHS: Quarterly | SHS: Semestral (Grades 7-12)',
             count: 2,
             ranges: [
-                {letter: 'A', label: 'Advanced', min: 90, max: 100, color: '#28a745'},
-                {letter: 'P', label: 'Proficient', min: 85, max: 89, color: '#17a2b8'},
-                {letter: 'AP', label: 'Approaching', min: 80, max: 84, color: '#6c757d'},
-                {letter: 'D', label: 'Developing', min: 75, max: 79, color: '#ffc107'},
-                {letter: 'B', label: 'Beginning', min: 0, max: 74, color: '#dc3545'},
+                {letter: 'O', label: 'Outstanding', min: 90, max: 100, color: '#28a745'},
+                {letter: 'VS', label: 'Very Satisfactory', min: 85, max: 89, color: '#17a2b8'},
+                {letter: 'S', label: 'Satisfactory', min: 80, max: 84, color: '#6c757d'},
+                {letter: 'FS', label: 'Fairly Satisfactory', min: 75, max: 79, color: '#ffc107'},
+                {letter: 'DNME', label: 'Did Not Meet Expectations', min: 0, max: 74, color: '#dc3545'},
             ]
         },
         'DEPED_K12_COMPLETE': {
-            name: 'DepEd K-12 Complete — DO 31, s. 2020',
+            name: 'DepEd K-12 Complete — DO 8, s. 2015',
             period: 'Elem/JHS: Quarterly | SHS: Semestral (Grades 1-12)',
             count: 3,
             ranges: [
-                {letter: 'A', label: 'Advanced', min: 90, max: 100, color: '#28a745'},
-                {letter: 'P', label: 'Proficient', min: 85, max: 89, color: '#17a2b8'},
-                {letter: 'AP', label: 'Approaching', min: 80, max: 84, color: '#6c757d'},
-                {letter: 'D', label: 'Developing', min: 75, max: 79, color: '#ffc107'},
-                {letter: 'B', label: 'Beginning', min: 0, max: 74, color: '#dc3545'},
+                {letter: 'O', label: 'Outstanding', min: 90, max: 100, color: '#28a745'},
+                {letter: 'VS', label: 'Very Satisfactory', min: 85, max: 89, color: '#17a2b8'},
+                {letter: 'S', label: 'Satisfactory', min: 80, max: 84, color: '#6c757d'},
+                {letter: 'FS', label: 'Fairly Satisfactory', min: 75, max: 79, color: '#ffc107'},
+                {letter: 'DNME', label: 'Did Not Meet Expectations', min: 0, max: 74, color: '#dc3545'},
             ]
         },
         'CHED_STANDARD': {

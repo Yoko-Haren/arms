@@ -18,6 +18,7 @@ from django.utils.http import urlencode
 
 from academics.models import GradeLevel, Quarter, SchoolYear, Section, Subject
 from attendance.models import AttendanceSummary
+from core import grading_policy as policy
 from core.caching import cache_page_for_user, remember_filters
 from core.periods import GRADE, HAS_GRADE
 from core.xlsx import Report, safe_filename
@@ -28,8 +29,9 @@ from . import forecasts, insights
 from .insights import PASSING, level_of
 from .views_academic import ACTIVE, _default_period, _denied, _head_school, _person, _r1, period_name, school_fingerprint
 
-# DepEd Order No. 36, s. 2016: the quarterly average (a whole number, DepEd Order No. 8, s. 2015) with every learning area passed
-HONORS = ((98, 'highest', 'With Highest Honors'), (95, 'high', 'With High Honors'), (90, 'honors', 'With Honors'))
+# Honors follow the school's DepEd order (core/grading_policy.py): DepEd Order No. 36, s. 2016 (a quarterly average of 90 or
+# more, a whole number, with every learning area passed) or the Academic Excellence Award of DepEd Order No. 015, s. 2026
+# (90 or more with no grade below 80; counted here as on track, since the award is given at the end of the school year).
 # DepEd Order No. 8, s. 2015: below 75 in one or two learning areas means remedial classes; three or more, retention (Grades 4 to 10).
 # Senior High learners below 75 in a subject take remedial classes or retake it, so they are never counted for retention.
 OUTLOOK = (
@@ -84,7 +86,8 @@ def _learners(rows, senior):
         learner['whole'] = int(learner['average'] + 0.5)          # reported as a whole number, rounded half up
         failing = len(learner['failing'])
         learner['outlook'] = 'on_track' if not failing else ('remedial' if senior.get(learner['grade_level_id']) or failing <= 2 else 'retention')
-        learner['honor'] = None if failing else next((key for cut, key, _ in HONORS if learner['whole'] >= cut), None)
+        award = policy.award_of(learner['whole'], policy.whole(min(learner['grades'])))
+        learner['honor'] = award[0] if award else None
     return by
 
 
@@ -199,7 +202,7 @@ def _performance_data(params, school):
             'delta': _r1(average - prev['average']) if prev else None,
             'passing_all': on_track, 'passing_delta': _r1(on_track - prev['passing_all']) if prev else None,
             'learners': len(learners), 'enrolled': enrolled, 'honors': honors, 'honors_rate': _pct(honors, len(learners)),
-            'honors_by': {key: sum(1 for l in learners.values() if l['honor'] == key) for _, key, _ in HONORS},
+            'honors_by': [(name, sum(1 for l in learners.values() if l['honor'] == key)) for _, key, name in policy.current()['awards']['tiers']],
             'attendance': attendance, 'classes': len({(r[3], r[6]) for r in rows}),
         }
 
@@ -294,7 +297,8 @@ def _performance_data(params, school):
         status['insight'] = insights.performance_insight(
             scope_name='The school' if not grade else grade.grade_name, period_name=period_name(period),
             prev_period_name=period_name(prev_period), average=average, delta=status['delta'], learners=len(learners),
-            areas=areas, remedial=counts['remedial'], retention=counts['retention'], honors=honors)
+            areas=areas, remedial=counts['remedial'], retention=counts['retention'], honors=honors,
+            honors_phrase=policy.current()['awards']['phrase'])
 
     last_year = None
     if last_rows:
@@ -306,7 +310,7 @@ def _performance_data(params, school):
                  'now': status['average'] if status else None},
                 {'name': 'Passing all subjects', 'icon': 'fi-rr-check-circle', 'unit': '%', 'then': last['passing_all'],
                  'now': status['passing_all'] if status else None},
-                {'name': 'With honors', 'icon': 'fi-rr-trophy', 'unit': '%', 'then': last['honors'],
+                {'name': policy.current()['awards']['label'], 'icon': 'fi-rr-trophy', 'unit': '%', 'then': last['honors'],
                  'now': status['honors_rate'] if status else None},
                 {'name': 'Attendance', 'icon': 'fi-rr-calendar-check', 'unit': '%', 'then': last_attendance, 'now': attendance},
                 {'name': 'Learners enrolled', 'icon': 'fi-rr-users-alt', 'unit': '', 'then': per_year.get(last_sy.id), 'now': enrolled},
@@ -343,7 +347,7 @@ def _performance_data(params, school):
         'grade_levels': grade_levels, 'grade': grade, 'grade_id': str(grade.id) if grade else 'all', 'scope_name': scope_name,
         'status': status, 'areas': areas or [], 'subjects': subject_rows or [], 'table': table, 'needs': needs,
         'outlook': [dict(o, count=counts[o['key']], share=_pct(counts[o['key']], len(learners)) or 0) for o in OUTLOOK],
-        'honors_legend': HONORS, 'trend': trend, 'trend_levels': [g.grade_name for g in grade_levels if not grade or g.id == grade.id],
+        'honors_legend': policy.current()['awards']['tiers'], 'awards': policy.current()['awards'], 'trend': trend, 'trend_levels': [g.grade_name for g in grade_levels if not grade or g.id == grade.id],
         'enrolled': enrolled, 'last_year': last_year,
     }
 
@@ -385,7 +389,7 @@ def performance_export(request):
         ('Passing every learning area', fmt(st['passing_all']), None),
         ('Attendance', fmt(st['attendance']), None),
         ('Learners graded', f'{st["learners"]} of {st["enrolled"]}', None),
-        ('With honors', str(st['honors']), 'good' if st['honors'] else None),
+        (policy.current()['awards']['label'], str(st['honors']), 'good' if st['honors'] else None),
         ('Remedial classes', str(d['outlook'][1]['count']), 'warn' if d['outlook'][1]['count'] else 'good'),
         ('At risk of retention', str(d['outlook'][2]['count']), 'risk' if d['outlook'][2]['count'] else 'good'),
     ])
@@ -400,8 +404,8 @@ def performance_export(request):
     unit = 'Section' if d['grade'] else 'Grade level'
     sh2 = report.sheet('Grade levels' if not d['grade'] else 'Sections', [22, 11, 11, 12, 13, 13, 13, 11, 12],
                        subtitle=d['scope_name'], meta=meta, title='Promotion outlook and honors')
-    sh2.paragraph('Promotion outlook if the year ended with these grades (DepEd Order No. 8, s. 2015). Honors: quarterly average of 90 or more '
-                  'with every learning area passed (DepEd Order No. 36, s. 2016).', color='4A5568', size=9)
+    sh2.paragraph('Promotion outlook if the year ended with these grades (DepEd Order No. 8, s. 2015). '
+                  + policy.current()['awards']['period_rule'], color='4A5568', size=9)
     sh2.table([{'title': unit}, {'title': 'Enrolled', 'format': 'int'}, {'title': 'Graded', 'format': 'int'}, {'title': 'Average', 'format': 'grade'},
                {'title': 'On track', 'format': 'int'}, {'title': 'Remedial', 'format': 'int'}, {'title': 'Retention risk', 'format': 'int'},
                {'title': 'Honors', 'format': 'int'}, {'title': 'Attendance', 'format': 'percent'}],

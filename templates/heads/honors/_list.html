@@ -1,0 +1,41 @@
+{% comment %}
+One Honors Outlook list: up to `preview` learners in the card, every one in a dialog with search.
+kind: 'track' (on track for an award), 'close' (within a few points of one) or 'held' (held back by a learning area).
+{% endcomment %}
+<section class="card ho-list" aria-labelledby="{{ list_id }}Title">
+    <div class="card-head">
+        <div>
+            <h3 id="{{ list_id }}Title"><i class="fi {{ icon }}" style="color:#123499;"></i> {{ title }} <span class="count">{{ items|length }}</span></h3>
+            <p class="hint explain">{{ hint }}</p>
+        </div>
+    </div>
+    {% if items %}
+    <ul class="ho-items">
+        {% for l in items %}{% if forloop.counter <= preview %}{% include 'heads/honors/_item.html' %}{% endif %}{% endfor %}
+    </ul>
+    {% if items|length > preview %}<button type="button" class="link-btn" data-open="{{ list_id }}Modal" aria-haspopup="dialog" aria-controls="{{ list_id }}Modal">Show all {{ items|length }}</button>{% endif %}
+    {% else %}
+    <p class="empty-note">{{ empty }}</p>
+    {% endif %}
+</section>
+{% if items|length > preview %}
+<div class="ad-modal" id="{{ list_id }}Modal" role="dialog" aria-modal="true" aria-labelledby="{{ list_id }}ModalTitle" hidden>
+    <div class="ad-modal-card" tabindex="-1">
+        <div class="ad-modal-head">
+            <div>
+                <h3 id="{{ list_id }}ModalTitle"><i class="fi {{ icon }}" style="color:#123499;"></i> {{ title }} <span class="count">{{ items|length }}</span></h3>
+                <p class="hint">{{ grade_label }} &middot; SY {{ sy.year_label }} &middot; grades through {{ graded_through }}.</p>
+            </div>
+            <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
+        </div>
+        <div class="ad-modal-tools">
+            <label class="ad-search"><i class="fi fi-rr-search"></i><input type="search" data-filter placeholder="Find a learner or section" aria-label="Find a learner or section"></label>
+            <span class="tools-count" aria-live="polite"></span>
+        </div>
+        <div class="ad-modal-body">
+            <ul class="ho-items">{% for l in items %}{% include 'heads/honors/_item.html' %}{% endfor %}</ul>
+            <p class="ad-none" hidden>No learner matches.</p>
+        </div>
+    </div>
+</div>
+{% endif %}

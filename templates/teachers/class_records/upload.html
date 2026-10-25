@@ -21,10 +21,6 @@
     .drop small { color: var(--muted); font-size: 0.78rem; }
     .drop .picked { margin-top: 0.6rem; font-weight: 650; color: var(--brand); font-size: 0.86rem; }
     .up-actions { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
-    .how { padding: 1.05rem 1.25rem; }
-    .how ol { margin: 0.6rem 0 0; padding-left: 1.2rem; font-size: 0.84rem; line-height: 1.65; color: #2d3748; }
-    .how li b { font-weight: 650; }
-    .files { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.8rem; }
 </style>
 {% endblock %}
 
@@ -70,20 +66,41 @@
         </div>
     </form>
 
-    <section class="card how">
-        <h3><i class="fi fi-rr-shield-check" style="color:#123499;"></i> How the upload keeps grades accurate</h3>
-        <ol>
+    <section class="card file-guide" aria-labelledby="guideTitle">
+        <h3 id="guideTitle"><i class="fi fi-rr-picture" style="color:#123499;"></i> Which file to upload</h3>
+        <p class="hint">Your class's DepEd e-class record, the whole workbook. ARMS reads the sheet of the {{ period_word|lower }} you choose above; the picture shows a quarter sheet.</p>
+        <button type="button" class="guide-shot" data-guide-open="guideEcr" aria-label="Enlarge the e-class record picture">
+            <img src="{% static 'shared/guides/ecr-quarter.png' %}" width="1954" height="360" loading="lazy"
+                 alt="A quarter sheet of the e-class record: learners' names (1), written works (2), performance tasks (3), quarterly assessment (4) and the grades (5) are marked.">
+            <span><i class="fi fi-rr-expand"></i> Enlarge</span>
+        </button>
+        {% include 'teachers/class_records/_ecr_keys.html' %}
+        <ul class="guide-steps">
             <li><b>Start from your class's own e-class record.</b> Download it from Class records (the menu on each class): the DepEd template with your learners' names and LRNs already in it.</li>
-            <li><b>Every grade is recomputed</b> from the written work, performance task and quarterly assessment scores with the DepEd weights and transmutation table, and compared with what your file shows.</li>
             <li><b>Every row must belong to one learner of the class.</b> Names that are only similar, a learner listed under the wrong sex, or two rows for one learner are shown for you to settle.</li>
             <li><b>Validated and locked grades never change.</b> Uploads are saved as drafts; submit them to the registrar when the class is complete.</li>
-        </ol>
+        </ul>
     </section>
+
+    <div class="tp-modal" id="guideEcr" role="dialog" aria-modal="true" aria-labelledby="guideEcrTitle" hidden>
+        <div class="tp-modal-card guide-modal" tabindex="-1">
+            <div class="tp-modal-head">
+                <div><h3 id="guideEcrTitle">E-class record: what ARMS reads</h3><p class="hint">A quarter sheet from its column headings down. The numbers match the list below the picture. Scroll sideways on a small screen.</p></div>
+                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
+            </div>
+            <div class="tp-modal-body">
+                <div class="guide-big"><img src="{% static 'shared/guides/ecr-quarter.png' %}" width="1954" height="360" loading="lazy" style="min-width:1100px;"
+                     alt="A quarter sheet of the e-class record: learners' names (1), written works (2), performance tasks (3), quarterly assessment (4) and the grades (5) are marked."></div>
+                {% include 'teachers/class_records/_ecr_keys.html' %}
+            </div>
+        </div>
+    </div>
 </div>
 {{ choices|json_script:"upChoices" }}
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'shared/js/file-guide.js' %}"></script>
 <script>
 (function () {
     var choices = JSON.parse(document.getElementById('upChoices').textContent);

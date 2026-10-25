@@ -23,7 +23,7 @@
     <section class="card tp-head">
         <div>
             <h2><i class="fi fi-rr-list-check" style="color:#123499;"></i> Review the teachers</h2>
-            <p class="hint"><span class="mono" title="{{ file_name }}">{{ file_name|truncatechars:56 }}</span> &middot; no account has been made yet.</p>
+            <p class="hint"><span class="mono" title="{{ file_name }}">{{ file_name|truncatechars:56 }}</span> &middot; read as {% if file_kind == 'SF7' %}SF7 (School Personnel Assignment List): teaching staff only{% elif file_kind == 'template' %}the ARMS teacher template{% else %}a CSV teacher list{% endif %} &middot; no account has been made yet.</p>
         </div>
         <a class="btn btn-line btn-sm" href="{% url 'registrars:teacher_import' %}"><i class="fi fi-rr-arrow-small-left"></i> Choose another file</a>
     </section>
@@ -34,6 +34,19 @@
         <div class="card tile {% if error_count %}risk{% endif %}"><span class="tile-ico"><i class="fi fi-rr-ban"></i></span>
             <div><span>Skipped</span><b>{{ error_count }}</b><small>row{{ error_count|pluralize }} with a problem</small></div></div>
     </div>
+
+    {% if skipped %}
+    <section class="card panel" aria-labelledby="skippedTitle">
+        <div class="panel-head"><h3 id="skippedTitle"><i class="fi fi-rr-info" style="color:#123499;"></i> Left out of SF7 ({{ skipped|length }})</h3></div>
+        <p class="hint" style="margin:0 0 0.6rem;">These personnel are not in teaching positions, so no teacher account is made for them. School Head and registrar accounts come from the Admin Portal.</p>
+        <div class="rows" style="max-height:260px;">
+            <table class="table">
+                <thead><tr><th>Name in SF7</th><th>Position</th></tr></thead>
+                <tbody>{% for p in skipped %}<tr><td>{{ p.name }}</td><td>{{ p.position }}</td></tr>{% endfor %}</tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
 
     <section class="card panel" aria-labelledby="rowsTitle">
         <div class="panel-head">

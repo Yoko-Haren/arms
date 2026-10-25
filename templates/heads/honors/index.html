@@ -1,0 +1,176 @@
+{% extends 'heads/base.html' %}
+{% load static %}
+
+{% block title %}Honors Outlook{% endblock %}
+
+{% block subtitle %}Honors Outlook{% if sy %} &bull; SY {{ sy.year_label }}{% endif %} &bull; {{ grade_label }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Shared cards, filters, facts and dialogs are in static/heads/css/head-portal.css. */
+    .ho-status { padding: 1.1rem 1.25rem 1rem; }
+    .ho-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-top: 0.3rem; }
+    .ho-head h2 { font-size: 1.2rem; font-weight: 700; color: var(--ink); margin: 0 0 0.25rem; display: flex; gap: 0.55rem; align-items: center; }
+    .ho-head h2 i { color: var(--brand); }
+    .ho-head .hint { max-width: 62rem; }
+    .ho-status .status-facts { margin-top: 0.9rem; }
+    .ho-tiers { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.8rem; }
+    .ho-tier { display: inline-flex; gap: 0.35rem; align-items: baseline; padding: 0.3rem 0.7rem; border-radius: 20px; background: #e8eeff;
+               color: #123499; font-size: 0.8rem; font-weight: 600; }
+    .ho-tier small { color: #4a5568; font-weight: 500; }
+    .ho-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+    @media (max-width: 1100px) { .ho-grid { grid-template-columns: 1fr; } }
+    .ho-list { padding: 1.05rem 1.15rem 0.95rem; display: flex; flex-direction: column; min-width: 0; }
+    .ho-items { list-style: none; margin: 0.6rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+    .ho-items li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.2rem 0.8rem; align-items: start; padding: 0.5rem 0.7rem;
+                   border: 1px solid var(--line); border-radius: 10px; }
+    .ho-items li[hidden] { display: none; }
+    .ho-items .who { font-size: 0.85rem; font-weight: 650; color: var(--ink); min-width: 0; }
+    .ho-items .where { display: block; font-size: 0.74rem; font-weight: 400; color: var(--muted); margin-top: 0.1rem; }
+    .ho-right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.12rem; text-align: right; }
+    .ho-right b { font-size: 0.9rem; font-variant-numeric: tabular-nums; color: var(--ink); }
+    .ho-right small { font-size: 0.72rem; color: var(--muted); }
+    .ho-award { font-size: 0.72rem; font-weight: 650; color: #123499; background: #e8eeff; border-radius: 12px; padding: 0.08rem 0.5rem; }
+    .ho-gap { font-size: 0.74rem; font-weight: 650; color: #B45309; }
+    .ho-right small.ho-risk { color: #B45309; font-weight: 600; }
+    .ho-status .footnote i { color: var(--brand); margin-right: 0.2rem; }
+    .ho-chips { display: flex; flex-wrap: wrap; gap: 0.25rem; justify-content: flex-end; }
+    .ho-chip { font-size: 0.72rem; font-weight: 650; padding: 0.08rem 0.45rem; border-radius: 12px; background: #fff3e0; color: #B45309; }
+    .empty-note { font-size: 0.84rem; color: var(--muted); margin: 0.7rem 0 0.2rem; }
+    .ho-levels { padding: 1.05rem 1.25rem 1rem; }
+    .ho-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; margin-top: 0.6rem; }
+    .ho-table th { text-align: left; font-size: 0.7rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);
+                   background: var(--soft); padding: 0.5rem 0.6rem; }
+    .ho-table td { padding: 0.55rem 0.6rem; border-bottom: 1px solid #f0f3f7; }
+    .ho-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .ho-table a { color: var(--ink); font-weight: 650; text-decoration: none; }
+    .ho-table a:hover { color: var(--brand); text-decoration: underline; }
+    .ho-empty { padding: 2rem 1.25rem; text-align: center; color: var(--muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hp">
+    <!-- 1. Which year and which grade levels -->
+    <section class="card guide" aria-label="Choose the school year and grade levels" data-skel-keep>
+        <form method="get" id="filterForm" class="guide-row">
+            <label class="step">
+                <span class="step-label"><span class="step-no">1</span> School year</span>
+                <select name="school_year" class="auto-submit">
+                    {% for y in school_years %}<option value="{{ y.id }}" {% if sy and y.id == sy.id %}selected{% endif %}>SY {{ y.year_label }}</option>{% endfor %}
+                </select>
+            </label>
+            <label class="step">
+                <span class="step-label"><span class="step-no">2</span> Grade level</span>
+                <select name="grade_level" class="auto-submit">
+                    <option value="all" {% if grade_id == 'all' %}selected{% endif %}>All grade levels</option>
+                    {% for g in grade_scopes %}<option value="{{ g.value }}" {% if grade_id == g.value %}selected{% endif %}>{{ g.name }}</option>{% endfor %}
+                    <optgroup label="One grade level">
+                        {% for gl in grade_levels %}<option value="{{ gl.id }}" {% if grade_id == gl.id|stringformat:"s" %}selected{% endif %}>{{ gl.grade_name }}</option>{% endfor %}
+                    </optgroup>
+                </select>
+            </label>
+        </form>
+        <div class="guide-summary">
+            <i class="fi fi-rr-eye"></i>
+            <span>Showing <strong>{{ grade_label }}</strong>{% if sy %} &middot; SY {{ sy.year_label }}{% endif %} &middot; grades through {{ graded_through|default:"no grading period yet" }}</span>
+            <a class="reset" href="?reset=1">Start over</a>
+        </div>
+    </section>
+
+    {% if learners %}
+    <!-- 2. The rule, and how many learners stand where -->
+    <section class="card ho-status" aria-labelledby="hoTitle">
+        <div class="ho-head">
+            <div>
+                <h2 id="hoTitle"><i class="fi fi-rr-trophy"></i> {{ on_track|length }} learner{{ on_track|pluralize }} on track for {% if awards.kind == 'single' %}the {{ awards.name }}{% else %}academic honors{% endif %}</h2>
+                <p class="hint">{{ awards.brief }} &middot; {{ awards.order }}</p>
+                <p class="hint explain">{{ awards.rule }}</p>
+            </div>
+            <a class="btn-outline btn-sm" href="{{ export_url }}"><i class="fi fi-rr-download"></i> Download the lists</a>
+        </div>
+        <div class="status-facts">
+            <div class="fact"><b>{{ on_track|length }}</b><span>On track now</span></div>
+            <div class="fact"><b>{% if forecasting %}{{ projected_count }}{% else %}&mdash;{% endif %}</b><span>{% if forecasting %}By {{ year_end }}, forecast{% else %}No forecast<span class="explain">: the year's grades are in, or the grade model is not trained</span>{% endif %}</span></div>
+            <div class="fact"><b>{{ close|length }}</b><span>Within {{ close_points }} points</span></div>
+            <div class="fact {% if held %}alert{% endif %}"><b>{{ held|length }}</b><span>Held back by a grade below {{ awards.floor }}</span></div>
+        </div>
+        {% if tiers|length > 1 %}
+        <div class="ho-tiers" aria-label="On track by award">
+            {% for t in tiers %}<span class="ho-tier"><b>{{ t.now }}</b> {{ t.name }}{% if forecasting %} <small>{{ t.projected }} by {{ year_end }}</small>{% endif %}</span>{% endfor %}
+        </div>
+        {% endif %}
+        {% if awards.kind == 'single' %}<p class="footnote"><i class="fi fi-rr-info"></i> Check each learner's conduct record before the list goes to the awards committee; ARMS keeps no discipline records.</p>{% endif %}
+        <p class="footnote explain">A learning area's final grade is the average of its grading periods so far, and the general average is the average of the final grades, each rounded to a whole number as DepEd reports them.{% if forecasting %} The year-end outlook adds the forecast for {{ to_come|join:" and " }}. {{ method }}{% endif %} Schools that give Senior High awards per semester should read this as the school year so far.</p>
+    </section>
+
+    <!-- 3. Who: on track, close, and held back by one learning area -->
+    <div class="ho-grid">
+        {% include 'heads/honors/_list.html' with list_id='track' kind='track' items=on_track icon='fi-rr-trophy' title='On track' hint=track_hint empty='No learner is on track yet.' %}
+        {% include 'heads/honors/_list.html' with list_id='close' kind='close' items=close icon='fi-rr-arrow-trend-up' title='Close to an award' hint='Nearest first, with their two lowest learning areas.' empty='No learner is within two points of an award.' %}
+        {% include 'heads/honors/_list.html' with list_id='held' kind='held' items=held icon='fi-rr-exclamation' title='Held back' hint='High enough for an award, but one final grade is too low.' empty='No learner is held back by one grade.' %}
+    </div>
+
+    <!-- 4. By grade level -->
+    {% if by_grade|length > 1 %}
+    <section class="card ho-levels" aria-labelledby="hoLevels">
+        <h3 id="hoLevels"><i class="fi fi-rr-layers" style="color:#123499;"></i> By grade level</h3>
+        <table class="ho-table">
+            <thead><tr><th scope="col">Grade level</th><th scope="col" class="num">Learners graded</th><th scope="col" class="num">On track now</th>
+                <th scope="col" class="num">{% if forecasting %}At year end{% else %}Year end{% endif %}</th><th scope="col" class="num">Close</th><th scope="col" class="num">Held back</th></tr></thead>
+            <tbody>
+                {% for g in by_grade %}
+                <tr><td><a href="{{ g.url }}">{{ g.name }}</a></td><td class="num">{{ g.learners }}</td><td class="num">{{ g.now }}</td>
+                    <td class="num">{% if forecasting %}{{ g.projected }}{% else %}&mdash;{% endif %}</td><td class="num">{{ g.close }}</td><td class="num">{{ g.held }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+    {% endif %}
+    {% else %}
+    <section class="card ho-empty">
+        <i class="fi fi-rr-trophy" style="font-size:2rem;color:#123499;"></i>
+        <h3 style="justify-content:center;margin-top:0.6rem;">No grades yet</h3>
+        <p class="hint">Honors Outlook fills in once {% if sy %}SY {{ sy.year_label }}{% else %}the school year{% endif %} has grades for {{ grade_label|lower }}.</p>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var form = document.getElementById('filterForm');
+    var go = function (f) { if (window.ArmsSkeleton) ArmsSkeleton.submit(f); else f.submit(); };
+    document.querySelectorAll('.auto-submit').forEach(function (el) { el.addEventListener('change', function () { go(form); }); });
+
+    // ---------- "Show all" dialogs: search by name or section; Esc or the backdrop closes them ----------
+    var opener = null;
+    function close(dialog) { dialog.hidden = true; document.body.style.overflow = ''; if (opener) opener.focus(); }
+    document.querySelectorAll('[data-open]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var dialog = document.getElementById(btn.dataset.open);
+            opener = btn; dialog.hidden = false; document.body.style.overflow = 'hidden';
+            dialog.querySelector('.ad-modal-card').focus();
+        });
+    });
+    document.querySelectorAll('.ad-modal').forEach(function (dialog) {
+        var items = Array.prototype.slice.call(dialog.querySelectorAll('.ho-items li'));
+        var input = dialog.querySelector('[data-filter]'), count = dialog.querySelector('.tools-count'), none = dialog.querySelector('.ad-none');
+        var show = function () {
+            var q = input.value.trim().toLowerCase(), shown = 0;
+            items.forEach(function (li) { li.hidden = q && li.dataset.text.indexOf(q) === -1; if (!li.hidden) shown++; });
+            none.hidden = shown > 0;
+            count.textContent = 'Showing ' + shown + ' of ' + items.length;
+        };
+        input.addEventListener('input', show);
+        show();
+        dialog.addEventListener('click', function (e) { if (e.target === dialog || e.target.closest('[data-close]')) close(dialog); });
+    });
+    document.addEventListener('keydown', function (e) {
+        var shown = document.querySelector('.ad-modal:not([hidden])');
+        if (shown && e.key === 'Escape') close(shown);
+    });
+})();
+</script>
+{% endblock %}

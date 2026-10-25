@@ -31,6 +31,7 @@ from heads.notify import notify_school_heads
 
 from . import dashboard as registrar_dashboard
 from . import views_enrollment
+from . import teacher_import as teacher_import_file
 from .forms import TeacherAccountForm, school_email_domain, suggest_teacher_email
 
 ACTIVE_ENROLLMENT = ['Enrolled', 'Transferred_In']
@@ -515,7 +516,7 @@ def upload_class_list(request):
             messages.warning(request, f'{subject.subject_code} in {section.section_name} has no teacher yet. Assign one below.')
         return redirect('registrars:section_detail', section_id=section.id)
 
-    return render(request, 'registrars/class_list/upload.html', {'current_sy': current_sy})
+    return render(request, 'registrars/class_list/upload.html', {'current_sy': current_sy, 'school': school})
 
 
 # =============================================================================
@@ -883,16 +884,21 @@ def _teacher_import_rows(school, raw_rows):
 
 @registrar_required
 def teacher_import(request):
-    """Create many teacher accounts from a CSV: upload -> preview -> confirm -> credentials."""
+    """Create many teacher accounts from SF7, the ARMS template or a CSV: upload -> review -> confirm -> credentials."""
     school = request.user.profile.school
 
-    if request.GET.get('template'):
+    if request.GET.get('template') == 'csv':
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="teachers_template.csv"'
         writer = csv.writer(response)
         writer.writerow(TEACHER_IMPORT_COLUMNS)
         writer.writerow(['Maria Clara', 'Dela Cruz', '', 'EMP-0001', 'Teacher II', 'Mathematics'])
         writer.writerow(['Jose', 'Rizal', 'jose.rizal@example.com', '', 'Teacher I', 'Filipino'])
+        return response
+    if request.GET.get('template'):
+        response = HttpResponse(teacher_import_file.template_xlsx(school.school_name, school_email_domain(school)),
+                                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="ARMS teacher template.xlsx"'
         return response
 
     if request.method == 'POST' and request.POST.get('action') == 'confirm':
@@ -919,25 +925,11 @@ def teacher_import(request):
         })
 
     if request.method == 'POST':
-        text, error = _read_upload(request)
-        rows = []
-        if not error:
-            reader = csv.DictReader(io.StringIO(text))
-            headers = [(h or '').strip().lower().replace(' ', '_') for h in (reader.fieldnames or [])]
-            if 'first_name' not in headers or 'last_name' not in headers:
-                error = 'The file needs first_name and last_name columns. Download the template to see the format.'
-            else:
-                reader.fieldnames = headers
-                for row in reader:
-                    clean = {k: (v or '').strip() for k, v in row.items() if k and isinstance(v, str)}
-                    if any(clean.values()):
-                        rows.append(clean)
-                if not rows:
-                    error = 'No teachers were found in the file.'
-                elif len(rows) > 500:
-                    error = 'Please import at most 500 teachers at a time.'
-        if error:
-            messages.error(request, error)
+        upload = request.FILES.get('csv_file')
+        try:
+            rows, skipped, kind = teacher_import_file.read(upload)
+        except teacher_import_file.TeacherFileError as exc:
+            messages.error(request, str(exc))
             return redirect('registrars:teacher_import')
 
         results = _teacher_import_rows(school, rows)
@@ -946,7 +938,7 @@ def teacher_import(request):
             'ready_count': sum(1 for r in results if not r['errors']),
             'error_count': sum(1 for r in results if r['errors']),
             'payload': json.dumps(rows),
-            'file_name': request.FILES['csv_file'].name,
+            'file_name': upload.name, 'file_kind': kind, 'skipped': skipped,
             'school': school,
         })
 
@@ -1128,6 +1120,9 @@ def grade_validation(request):
             notify_school_heads(school, 'GRADE_VALIDATED', f'{word} grades are locked',
                                 f'{_who(request)} locked {word}, SY {current_sy.year_label}. The grades are final.',
                                 reverse('heads-ai-dashboard'))
+            # final grades are what the grade forecaster learns from: retrain it in the background
+            from ml_engine import training
+            training.start(f'{school.short_name or school.school_name}: {word}, SY {current_sy.year_label} locked', by=_who(request))
             messages.success(request, f'{word} is locked. Teachers can no longer change its grades.')
         elif action == 'unlock':
             period.is_grades_locked, period.locked_by, period.locked_at = False, None, None

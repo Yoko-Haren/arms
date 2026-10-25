@@ -5,6 +5,9 @@ without waiting for the admin: starting the next school year with its grading pe
 current year and period, and adjusting period dates. Grade locks stay with the registrar (Grade
 Validation), and a year that already holds sections, enrollments or grades is never deleted. Every
 change is logged, and the registrars are told when a year starts or becomes current.
+
+The School Head also chooses here which DepEd order the school follows for grade descriptors and academic
+awards (core/grading_policy.py): DepEd Order No. 8, s. 2015 with DO 36, s. 2016, or DepEd Order No. 015, s. 2026.
 """
 from datetime import date
 
@@ -20,6 +23,7 @@ from django.views.decorators.http import require_POST
 from academics.models import Quarter, SchoolYear, Section
 from academics.school_years import generate_periods, has_records, period_config
 from communication.notify import notify, school_registrars
+from core import grading_policy
 from enrollment.models import Enrollment
 from grades.models import GradeComponent
 
@@ -27,12 +31,12 @@ from .forms import PeriodDatesForm, SchoolYearStartForm
 from .views_academic import _denied, _head_school, _person, period_name
 
 
-def _log(request, action, sy_id, description):
+def _log(request, action, sy_id, description, resource_type='SchoolYear'):
     try:
         from audit.models import ActivityLog
         ActivityLog.objects.create(
             user=request.user, user_name=_person(request.user), user_role='schoolhead', action_type=action,
-            resource_type='SchoolYear', resource_id=str(sy_id), details_json={'description': description},
+            resource_type=resource_type, resource_id=str(sy_id), details_json={'description': description},
             ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1'), user_agent=request.META.get('HTTP_USER_AGENT', '')[:255],
         )
     except Exception:
@@ -113,7 +117,29 @@ def school_year(request):
     return render(request, 'heads/school_year/index.html', {
         'school': school, 'years': years, 'form': form, 'cfg': cfg, 'open_form': request.method == 'POST',
         'form_errors': _errors(form) if request.method == 'POST' else '',
+        'policies': list(grading_policy.POLICIES.values()), 'policy_key': grading_policy.key_of(school),
     })
+
+
+@login_required
+@require_POST
+def grading_policy_update(request):
+    """The DepEd rules the school follows for grade descriptors and academic awards (core/grading_policy.py)."""
+    school = _head_school(request)
+    if school is None:
+        return _denied(request)
+    chosen = request.POST.get('grading_policy')
+    if chosen not in grading_policy.POLICIES:
+        messages.error(request, 'Choose one of the two DepEd orders.')
+        return redirect('heads-school-year')
+    if chosen != school.grading_policy:
+        school.grading_policy = chosen
+        school.save(update_fields=['grading_policy', 'updated_at'])
+        rules = grading_policy.POLICIES[chosen]
+        messages.success(request, f'{school.school_name} now follows {rules["name"]} for grade descriptors and academic awards. '
+                                  'Every School Head page uses it from now on.')
+        _log(request, 'UPDATE_SCHOOL', school.id, f'Grading rules set to {rules["name"]}', resource_type='School')
+    return redirect('heads-school-year')
 
 
 @login_required

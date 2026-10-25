@@ -201,3 +201,41 @@ body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; 
     .tp .sort select { flex: 1 1 auto; min-width: 0; width: 100%; }
     .tp .table th, .tp .table td { padding-left: 0.45rem; padding-right: 0.45rem; }
 }
+
+/* ---------- "Which file to upload": the same card on every upload page (Enrollment, Import teachers, Upload Grades) ----------
+   One strip of the file's picture with numbered boxes (Enlarge shows the whole picture in a dialog), the same numbers
+   listed below it in columns, then a short "good to know" list. */
+.tp .file-guide { padding: 1.05rem 1.25rem 1.15rem; }
+.tp .file-guide-head { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem 1rem; flex-wrap: wrap; }
+.tp .file-guide .hint { max-width: 85ch; }
+.tp .guide-shot { position: relative; display: block; width: 100%; margin-top: 0.85rem; padding: 0; border: 1px solid var(--line);
+                  border-radius: 12px; background: #fff; overflow: hidden; cursor: zoom-in; }
+.tp .guide-shot img { display: block; width: 100%; height: var(--crop, 150px); object-fit: cover; object-position: left top; }
+.tp .guide-shot span { position: absolute; right: 0.5rem; bottom: 0.5rem; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.65rem;
+                       border-radius: 20px; background: rgba(255, 255, 255, 0.94); border: 1px solid var(--line); font-size: 0.74rem; font-weight: 650;
+                       color: var(--brand); }
+.tp .guide-shot:hover, .tp .guide-shot:focus-visible { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px rgba(18, 52, 153, 0.12); }
+.tp .guide-keys { list-style: none; margin: 0.85rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+                  gap: 0.55rem 1.1rem; counter-reset: guide; }
+.tp .guide-keys li { counter-increment: guide; display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 0.55rem; font-size: 0.8rem;
+                     line-height: 1.5; color: #2d3748; }
+.tp .guide-keys li::before { content: counter(guide); width: 22px; height: 22px; border-radius: 50%; background: var(--brand); color: #fff;
+                             font-size: 0.7rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; margin-top: 0.05rem; }
+.tp .guide-keys b { font-weight: 650; color: var(--ink); }
+.tp .guide-note { margin: 0.85rem 0 0; font-size: 0.78rem; color: var(--muted); line-height: 1.5; display: flex; gap: 0.45rem; align-items: flex-start; }
+.tp .guide-note i { color: var(--brand); margin-top: 0.15rem; }
+.tp .guide-steps { list-style: none; margin: 1rem 0 0; padding: 0.9rem 0 0; border-top: 1px dashed var(--line); display: grid; gap: 0.4rem; }
+.tp .guide-steps li { position: relative; padding-left: 1.2rem; font-size: 0.82rem; line-height: 1.55; color: #2d3748; }
+.tp .guide-steps li::before { content: ''; position: absolute; left: 0.25rem; top: 0.6em; width: 6px; height: 6px; border-radius: 50%; background: var(--brand); }
+.tp .guide-steps b { font-weight: 650; color: var(--ink); }
+.tp .guide-files { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.85rem; }
+/* a choice between two kinds of file, as tabs (Import teachers) */
+.tp .seg button { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.42rem 0.85rem; border: 0; border-radius: 9px; background: transparent;
+                  font: inherit; font-size: 0.82rem; font-weight: 600; color: var(--muted); cursor: pointer; }
+.tp .seg button:hover { color: var(--brand); background: #fff; }
+.tp .seg button[aria-selected="true"] { background: #fff; color: var(--brand); box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12); }
+.tp .seg button:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+/* the dialog: the whole picture, then the same numbered list */
+.tp .guide-modal { width: min(1180px, 100%); }
+.tp .guide-big { flex-shrink: 0; border: 1px solid var(--line); border-radius: 12px; overflow-x: auto; overflow-y: hidden; background: #fff; }
+.tp .guide-big img { display: block; width: 100%; min-width: 640px; height: auto; }

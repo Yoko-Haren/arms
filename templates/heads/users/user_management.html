@@ -1,8 +1,8 @@
-{% extends 'heads/base.html' %}
+{% extends base_template %}
 {% load static %}
 
-{% block title %}User Management - ARMS{% endblock %}
-{% block subtitle %}User Management — accounts of {{ school.school_name }}{% endblock %}
+{% block title %}{% if is_head %}User Management{% else %}Accounts{% endif %} - ARMS{% endblock %}
+{% block subtitle %}{% if is_head %}User Management{% else %}Accounts{% endif %} — accounts of {{ school.school_name }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -133,6 +133,31 @@
     .um-cred { background: var(--gray-bg); border-radius: 12px; padding: 0.9rem 1rem; margin-top: 0.8rem; font-size: 0.84rem; }
     .um-cred div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.2rem 0; }
     .um-cred code { font-family: Consolas, monospace; font-weight: 700; color: var(--rich-black); word-break: break-all; }
+
+    /* when the School Head is busy: delegates, self-service and sign-in help (folded at the bottom of the page) */
+    .um-busy { padding: 0; }
+    .um-busy > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; padding: 1rem 1.25rem; }
+    .um-busy > summary::-webkit-details-marker { display: none; }
+    .um-busy > summary:focus-visible { outline: 2px solid #123499; outline-offset: -2px; border-radius: inherit; }
+    .um-busy-title { font-size: 0.95rem; font-weight: 700; color: var(--rich-black); display: flex; gap: 0.5rem; align-items: center; }
+    .um-busy-title i, .um-busy h3 i { color: #123499; }
+    .um-busy-state { margin-left: auto; font-size: 0.78rem; font-weight: 600; color: #123499; background: #e8eeff; border-radius: 20px; padding: 0.2rem 0.65rem; }
+    .um-chev { color: var(--text-secondary); transition: transform 0.2s; }
+    .um-busy[open] .um-chev { transform: rotate(180deg); }
+    .um-busy-body { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 1.2rem 2rem; padding: 0.2rem 1.25rem 1.25rem;
+                    border-top: 1px solid var(--border-color, #e8ecf1); padding-top: 1rem; }
+    @media (max-width: 1000px) { .um-busy-body { grid-template-columns: 1fr; } }
+    .um-busy h3 { font-size: 0.88rem; font-weight: 700; color: var(--rich-black); display: flex; gap: 0.5rem; align-items: center; margin: 0 0 0.2rem; }
+    .um-busy p { font-size: 0.84rem; color: var(--text-secondary); line-height: 1.55; margin: 0; }
+    .um-delegates { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.8rem; }
+    .um-delegate { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; border-radius: 20px; background: #e8eeff;
+                   color: #123499; font-size: 0.8rem; font-weight: 600; }
+    .um-ways { list-style: none; margin: 0.4rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+    .um-ways li { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr); gap: 0.5rem; font-size: 0.84rem; color: var(--text-primary); line-height: 1.5; }
+    .um-ways i { color: #123499; margin-top: 0.15rem; }
+    .um-banner { background: #e8eeff; color: #123499; border-radius: 14px; padding: 0.9rem 1.1rem; font-size: 0.86rem; line-height: 1.55;
+                 margin-bottom: 1.3rem; display: flex; gap: 0.6rem; align-items: flex-start; }
+    .um-locked { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; font-size: 0.8rem; color: var(--text-secondary); }
 </style>
 {% endblock %}
 
@@ -140,6 +165,10 @@
 
 {# Google "G" mark, reused by the script below #}
 <template id="googleIcon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg></template>
+
+{% if not is_head %}
+<div class="um-banner"><i class="fi fi-rr-info"></i><span>{{ head_name }} asked you to help manage the accounts of {{ school.school_name }}. You can edit details, reset passwords, and activate or deactivate accounts. A School Head's account stays with the School Head.</span></div>
+{% endif %}
 
 <!-- STATS -->
 <div class="um-stats">
@@ -167,7 +196,7 @@
         <h2><i class="fi fi-rr-users"></i> User Accounts</h2>
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
             <button type="button" class="btn-outline btn-sm" onclick="exportUsers()"><i class="fi fi-rr-download"></i> Export</button>
-            <button type="button" class="btn-primary btn-sm" onclick="openAddModal()"><i class="fi fi-rr-user-add"></i> Add Registrar</button>
+            {% if is_head %}<button type="button" class="btn-primary btn-sm" onclick="openAddModal()"><i class="fi fi-rr-user-add"></i> Add Registrar</button>{% endif %}
         </div>
     </div>
 
@@ -207,6 +236,33 @@
     </div>
     <div class="um-pager" id="pager"></div>
 </div>
+
+{% if is_head %}
+<!-- WHEN YOU ARE BUSY: who else can help with accounts. Folded: it is reading, not daily work. -->
+<details class="card um-busy">
+    <summary>
+        <span class="um-busy-title"><i class="fi fi-rr-users-gear"></i> When you are busy: let someone help with accounts</span>
+        <span class="um-busy-state">{% if delegates %}{{ delegates|length }} helper{{ delegates|length|pluralize }}{% else %}Nobody else yet{% endif %}</span>
+        <i class="fi fi-rr-angle-small-down um-chev" aria-hidden="true"></i>
+    </summary>
+    <div class="um-busy-body">
+        <div>
+            <p>A registrar or a teacher you trust (an ICT coordinator, say) can manage the school's accounts in their own portal: edit details, reset passwords, activate and deactivate. They never change your account, cannot add registrars and cannot pass this on. Open a person's actions and choose <strong>Let them manage accounts</strong>.</p>
+            <div class="um-delegates" aria-label="Staff who manage accounts">
+                {% for d in delegates %}<span class="um-delegate"><i class="fi fi-rr-user-gear"></i> {{ d.user.get_full_name }} <small>({{ d.get_role_display }})</small></span>{% empty %}<span class="um-hint">Nobody else manages accounts yet.</span>{% endfor %}
+            </div>
+        </div>
+        <div>
+            <h3><i class="fi fi-rr-life-ring"></i> Ways back in without you or the administrator</h3>
+            <ul class="um-ways">
+                <li><i class="fi fi-rr-envelope"></i><span>Anyone can reset a forgotten password from the sign-in page with a code sent to their email.</span></li>
+                <li><i class="fi fi-rr-bell"></i><span>When a staff member asks for sign-in help on the website, you and the staff above get a notification, not only the System Administrator.</span></li>
+                <li><i class="fi fi-rr-chalkboard-user"></i><span>Registrars create and reset teacher accounts on their Teachers page.</span></li>
+            </ul>
+        </div>
+    </div>
+</details>
+{% endif %}
 
 <!-- ADD REGISTRAR -->
 <div class="um-modal" id="addModal">
@@ -316,7 +372,7 @@
     var GOOGLE = document.getElementById('googleIcon').innerHTML;
     var DESIGNATIONS = JSON.parse(document.getElementById('designationData').textContent);
     var ROLE_LABELS = {schoolhead: 'School Head', registrar: 'Registrar', teacher: 'Teacher', guidance: 'Guidance Counselor'};
-    var csrf = getCookie('csrftoken');
+    var csrf = decodeURIComponent((document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || '');
     var page = 1, perPage = 10, searchTimer = null, resetId = null;
     document.getElementById('statGoogleIcon').innerHTML = GOOGLE;
 
@@ -420,7 +476,8 @@
             var email = u.email ? esc(u.email).replace('@', '<wbr>@') : '—';
             return '<tr class="' + (active ? '' : 'um-off') + '">' +
                 '<td class="um-c-user"><div class="um-user"><div class="um-avatar ' + (active ? '' : 'off') + '">' + esc(initials) + '</div><div class="um-who">' +
-                    '<div class="um-name">' + esc(u.name) + (u.is_self ? ' <span class="badge badge-info">You</span>' : '') + '</div>' +
+                    '<div class="um-name">' + esc(u.name) + (u.is_self ? ' <span class="badge badge-info">You</span>' : '') +
+                    (u.manages_accounts ? ' <span class="badge badge-info" title="Helps manage the school accounts">Manages accounts</span>' : '') + '</div>' +
                     '<div class="um-sub">' + email + '</div></div></div></td>' +
                 '<td class="um-c-signin" data-label="Sign-in">' + signinMarkup(u) + '</td>' +
                 '<td class="um-c-role" data-label="Role"><span class="badge badge-info">' + esc(u.role_display) + '</span>' +
@@ -429,6 +486,8 @@
                 '<td class="um-c-seen" data-label="Last active">' + lastActiveMarkup(u.last_active) + '</td>' +
                 '<td class="um-c-menu"><button type="button" class="um-kebab" data-id="' + u.id + '" data-name="' + esc(u.name) + '"' +
                     ' data-active="' + (active ? '1' : '0') + '" data-self="' + (u.is_self ? '1' : '0') + '"' +
+                    ' data-editable="' + (u.editable ? '1' : '0') + '" data-delegable="' + (u.delegable ? '1' : '0') + '"' +
+                    ' data-delegate="' + (u.manages_accounts ? '1' : '0') + '"' +
                     ' aria-haspopup="menu" aria-expanded="false" aria-label="Actions for ' + esc(u.name) + '" title="Actions">' +
                     '<i class="fi fi-rr-menu-dots-vertical"></i></button></td></tr>';
         }).join('');
@@ -460,8 +519,16 @@
     var menuOwner = null;
 
     function menuItems(owner) {
+        if (owner.dataset.editable !== '1') {   // a School Head's account stays with the School Head
+            return '<div class="um-locked"><i class="fi fi-rr-lock"></i> Only the School Head changes this account.</div>';
+        }
         var html = '<button type="button" class="um-menu-item" role="menuitem" data-act="edit"><i class="fi fi-rr-pencil"></i> Edit details</button>' +
                    '<button type="button" class="um-menu-item" role="menuitem" data-act="reset"><i class="fi fi-rr-key"></i> Reset password</button>';
+        if (owner.dataset.delegable === '1') {
+            html += owner.dataset.delegate === '1'
+                ? '<button type="button" class="um-menu-item" role="menuitem" data-act="delegate"><i class="fi fi-rr-user-lock"></i> Stop letting them manage accounts</button>'
+                : '<button type="button" class="um-menu-item" role="menuitem" data-act="delegate"><i class="fi fi-rr-user-gear"></i> Let them manage accounts</button>';
+        }
         if (owner.dataset.self !== '1') {   // nobody deactivates their own account
             html += '<div class="um-menu-sep" role="separator"></div>' + (owner.dataset.active === '1'
                 ? '<button type="button" class="um-menu-item danger" role="menuitem" data-act="toggle"><i class="fi fi-rr-ban"></i> Deactivate account</button>'
@@ -486,7 +553,8 @@
         menu.hidden = false;
         owner.setAttribute('aria-expanded', 'true');
         placeMenu();
-        menu.querySelector('[role="menuitem"]').focus();
+        var first = menu.querySelector('[role="menuitem"]');
+        if (first) first.focus();
     }
     function closeMenu(returnFocus) {
         if (!menuOwner) return;
@@ -509,6 +577,7 @@
         if (item.dataset.act === 'edit') openEdit(owner.dataset.id);
         if (item.dataset.act === 'reset') openReset(owner.dataset.id, owner.dataset.name);
         if (item.dataset.act === 'toggle') toggleStatus(owner.dataset.id, owner.dataset.name, owner.dataset.active === '1');
+        if (item.dataset.act === 'delegate') toggleDelegate(owner.dataset.id, owner.dataset.name, owner.dataset.delegate === '1');
     });
     menu.addEventListener('keydown', function(e) {
         var items = [].slice.call(menu.querySelectorAll('[role="menuitem"]'));
@@ -657,6 +726,20 @@
             post("{% url 'heads-user-toggle-status' 0 %}".replace('/0/', '/' + id + '/')).then(function(res) {
                 showToast(res.success ? res.message : (res.error || 'Could not update the account.'), res.success ? 'success' : 'error');
                 if (res.success) loadUsers();
+            });
+        });
+    }
+
+    function toggleDelegate(id, name, isDelegate) {
+        var question = isDelegate
+            ? 'Stop letting ' + name + ' manage the school accounts? They keep their own account.'
+            : 'Let ' + name + ' manage the school accounts? They can edit details, reset passwords, and activate or deactivate accounts, but never yours.';
+        ARMS.confirm(question, {title: isDelegate ? 'Stop account management' : 'Let them manage accounts', danger: isDelegate,
+                                confirmText: isDelegate ? 'Stop' : 'Let them'}).then(function(yes) {
+            if (!yes) return;
+            post("{% url 'heads-user-toggle-delegate' 0 %}".replace('/0/', '/' + id + '/')).then(function(res) {
+                showToast(res.success ? res.message : (res.error || 'Could not update the account.'), res.success ? 'success' : 'error');
+                if (res.success) window.location.reload();      // the helpers card lists the delegates
             });
         });
     }

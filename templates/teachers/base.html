@@ -21,6 +21,7 @@
 <li class="nav-item"><a href="{% url 'teachers:class_record_list' %}" class="nav-link {% if request.resolver_match.url_name == 'class_record_list' %}active{% endif %}"><i class="fi fi-rr-folder"></i><span>Class Records</span></a></li>
 <li class="nav-item"><a href="{% url 'teachers:upload_class_record' %}" class="nav-link {% if request.resolver_match.url_name == 'upload_class_record' or request.resolver_match.url_name == 'upload_review' %}active{% endif %}"><i class="fi fi-rr-upload"></i><span>Upload Grades</span></a></li>
 <li class="nav-item"><a href="{% url 'assessments:list' %}" class="nav-link {% if 'assessments' in request.path %}active{% endif %}"><i class="fi fi-rr-list-check"></i><span>Assessments</span></a></li>
+{% if request.user.profile.can_manage_accounts %}<li class="nav-item"><a href="{% url 'heads-user-management' %}" class="nav-link {% if request.resolver_match.url_name == 'heads-user-management' %}active{% endif %}"><i class="fi fi-rr-users-gear"></i><span>Accounts</span></a></li>{% endif %}
 {% endblock %}
 
 {% block top_bar_actions %}

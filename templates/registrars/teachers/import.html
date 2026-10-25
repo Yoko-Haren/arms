@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}Import Teachers - ARMS{% endblock %}
-{% block subtitle %}Teachers &bull; Import from CSV{% endblock %}
+{% block subtitle %}Teachers &bull; Import{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -10,6 +10,13 @@
     .up-form { padding: 1.15rem 1.25rem 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
     .up-actions { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
     .cols td code { background: var(--soft); padding: 0.12rem 0.45rem; border-radius: 6px; font-family: Consolas, 'Courier New', monospace; font-size: 0.78rem; }
+    details.csv { padding: 0; }
+    details.csv > summary { list-style: none; cursor: pointer; padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; }
+    details.csv > summary::-webkit-details-marker { display: none; }
+    details.csv[open] > summary .chev { transform: rotate(180deg); }
+    .chev { transition: transform 0.2s; color: var(--muted); }
+    .csv-body { padding: 0 1.25rem 1.25rem; }
+    .file-guide [role="tabpanel"] > .hint { margin-top: 0.75rem; }
 </style>
 {% endblock %}
 
@@ -18,21 +25,21 @@
     <section class="card tp-head">
         <div>
             <h2><i class="fi fi-rr-users-medical" style="color:#123499;"></i> Import teachers</h2>
-            <p class="hint">Upload a list of teachers and review it before any account is made. Each teacher gets an account for {{ school.school_name }} with a temporary password.</p>
+            <p class="hint">Upload the school's SF7 or the ARMS teacher template, and review the list before any account is made. Each teacher gets an account for {{ school.school_name }} with a temporary password.</p>
         </div>
         <div class="actions">
             <a class="btn btn-line btn-sm" href="{% url 'registrars:teacher_list' %}"><i class="fi fi-rr-arrow-small-left"></i> Teachers</a>
-            <a class="btn btn-line btn-sm" href="?template=1"><i class="fi fi-rr-download"></i> Download template</a>
+            <a class="btn btn-line btn-sm" href="?template=xlsx"><i class="fi fi-rr-download"></i> Teacher template</a>
         </div>
     </section>
 
     <form class="card up-form" method="POST" enctype="multipart/form-data" id="upForm">
         {% csrf_token %}
         <label class="drop" id="drop">
-            <input type="file" name="csv_file" id="csvFile" accept=".csv" required>
-            <i class="fi fi-rr-file-upload big"></i>
-            <b>Drop the teacher list here, or choose it</b>
-            <small>A CSV (.csv) file with up to 500 teachers.</small>
+            <input type="file" name="csv_file" id="csvFile" accept=".xlsx,.xls,.csv" required>
+            <i class="fi fi-rr-file-excel big"></i>
+            <b>Drop the SF7 or the teacher list here, or choose it</b>
+            <small>Excel (.xlsx or .xls, up to 5 MB) or CSV (up to 1 MB), with up to 500 teachers.</small>
             <div class="picked" id="picked"></div>
         </label>
         <div class="up-actions">
@@ -41,9 +48,47 @@
         </div>
     </form>
 
-    <section class="card panel">
-        <div class="panel-head"><h3><i class="fi fi-rr-document" style="color:#123499;"></i> Columns</h3></div>
-        <div style="overflow-x:auto;">
+    <section class="card file-guide" aria-labelledby="guideTitle">
+        <div class="file-guide-head">
+            <h3 id="guideTitle"><i class="fi fi-rr-picture" style="color:#123499;"></i> Which file to upload</h3>
+            <div class="seg" role="tablist" aria-label="Kind of file" data-guide-tabs>
+                <button type="button" role="tab" id="tabSf7" aria-selected="true" aria-controls="panelSf7">School Form 7</button>
+                <button type="button" role="tab" id="tabTemplate" aria-selected="false" aria-controls="panelTemplate" tabindex="-1">ARMS template</button>
+            </div>
+        </div>
+        <div role="tabpanel" id="panelSf7" aria-labelledby="tabSf7">
+            <p class="hint">The School Personnel Assignment List and Basic Profile that the school prepares each school year. Teaching staff get accounts; anyone else is listed as left out on the review page.</p>
+            <button type="button" class="guide-shot" data-guide-open="guideSf7" aria-label="Enlarge the SF7 picture">
+                <img src="{% static 'shared/guides/sf7-personnel.png' %}" width="911" height="627" loading="lazy"
+                     alt="The personnel table of an SF7: employee number (1), name (2), position (3) and major (4) are marked.">
+                <span><i class="fi fi-rr-expand"></i> Enlarge</span>
+            </button>
+            {% include 'registrars/teachers/_sf7_keys.html' %}
+        </div>
+        <div role="tabpanel" id="panelTemplate" aria-labelledby="tabTemplate" hidden>
+            <p class="hint">For a school without an SF7 file, or to add a few teachers: one row per teacher. <a href="?template=xlsx">Download the template</a>.</p>
+            <button type="button" class="guide-shot" data-guide-open="guideTemplate" aria-label="Enlarge the template picture">
+                <img src="{% static 'shared/guides/teacher-template.png' %}" width="1379" height="166" loading="lazy"
+                     alt="The ARMS teacher template: first and last name (1), email (2), and employee number, position and teaching area (3) are marked.">
+                <span><i class="fi fi-rr-expand"></i> Enlarge</span>
+            </button>
+            {% include 'registrars/teachers/_template_keys.html' %}
+        </div>
+        <ul class="guide-steps">
+            <li><b>Nothing is created until you confirm.</b> The next page lists every teacher; a row with a problem is shown and left out.</li>
+            <li><b>Each teacher gets a temporary password,</b> shown once with a download of everyone's sign-in details. They set their own password the first time they sign in.</li>
+        </ul>
+    </section>
+
+    <details class="card csv">
+        <summary>
+            <div>
+                <h3><i class="fi fi-rr-document" style="color:#123499;"></i> Using a CSV instead</h3>
+                <p class="hint">The same columns as the template, with these headings. <a href="?template=csv">Download a CSV example</a>.</p>
+            </div>
+            <i class="fi fi-rr-angle-small-down chev"></i>
+        </summary>
+        <div class="csv-body" style="overflow-x:auto;">
             <table class="table cols">
                 <thead><tr><th>Column</th><th>Needed</th><th>What goes in it</th></tr></thead>
                 <tbody>
@@ -56,11 +101,40 @@
                 </tbody>
             </table>
         </div>
-    </section>
+    </details>
+
+    <div class="tp-modal" id="guideSf7" role="dialog" aria-modal="true" aria-labelledby="guideSf7Title" hidden>
+        <div class="tp-modal-card guide-modal" tabindex="-1">
+            <div class="tp-modal-head">
+                <div><h3 id="guideSf7Title">School Form 7: the columns ARMS reads</h3><p class="hint">The personnel table, from its headings down. The numbers match the list below the picture.</p></div>
+                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
+            </div>
+            <div class="tp-modal-body">
+                <div class="guide-big"><img src="{% static 'shared/guides/sf7-personnel.png' %}" width="911" height="627" loading="lazy" style="max-width:911px;"
+                     alt="The personnel table of an SF7: employee number (1), name (2), position (3) and major (4) are marked."></div>
+                {% include 'registrars/teachers/_sf7_keys.html' %}
+            </div>
+        </div>
+    </div>
+    <div class="tp-modal" id="guideTemplate" role="dialog" aria-modal="true" aria-labelledby="guideTemplateTitle" hidden>
+        <div class="tp-modal-card guide-modal" tabindex="-1">
+            <div class="tp-modal-head">
+                <div><h3 id="guideTemplateTitle">ARMS teacher template</h3><p class="hint">One row per teacher. The numbers match the list below the picture.</p></div>
+                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
+            </div>
+            <div class="tp-modal-body">
+                <div class="guide-big"><img src="{% static 'shared/guides/teacher-template.png' %}" width="1379" height="166" loading="lazy"
+                     alt="The ARMS teacher template: first and last name (1), email (2), and employee number, position and teaching area (3) are marked."></div>
+                {% include 'registrars/teachers/_template_keys.html' %}
+                <p class="guide-files"><a class="btn btn-main btn-sm" href="?template=xlsx"><i class="fi fi-rr-download"></i> Download the template</a></p>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'shared/js/file-guide.js' %}"></script>
 <script>
 (function () {
     var drop = document.getElementById('drop'), input = document.getElementById('csvFile'), go = document.getElementById('upGo');

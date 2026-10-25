@@ -169,9 +169,9 @@
                     </span>
                     {% endif %}
                 </div>
-                <div class="fact" title="{% for cut, key, name in honors_legend %}{{ name }}: {% if key == 'highest' %}{{ status.honors_by.highest }}{% elif key == 'high' %}{{ status.honors_by.high }}{% else %}{{ status.honors_by.honors }}{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                <div class="fact" title="{% for name, n in status.honors_by %}{{ name }}: {{ n }}{% if not forloop.last %}, {% endif %}{% endfor %}. {{ awards.period_rule }}">
                     <b>{{ status.honors }}</b>
-                    <span>With honors ({{ status.honors_rate }}%)</span>
+                    <span>{{ awards.label }} ({{ status.honors_rate }}%)</span>
                 </div>
                 <div class="fact">
                     <b>{% if status.attendance is not None %}{{ status.attendance }}%{% else %}&mdash;{% endif %}</b>
@@ -286,7 +286,7 @@
                 {% endfor %}
             </tbody>
         </table>
-        <p class="footnote explain">Honors follow DepEd Order No. 36, s. 2016: a quarterly average of 90 to 94 (With Honors), 95 to 97 (With High Honors) or 98 to 100 (With Highest Honors), rounded to a whole number, with every learning area passed. Attendance counts school days present in {{ period_name }}.</p>
+        <p class="footnote explain">{{ awards.period_rule }} Averages are rounded to a whole number. Attendance counts school days present in {{ period_name }}.</p>
     </section>
     {% else %}
     <section class="card empty-card">

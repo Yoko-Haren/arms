@@ -17,8 +17,10 @@ from enrollment.models import Enrollment
 from grades.models import GradeComponent
 from ml_engine import forecast as ml
 
+from core import grading_policy as policy
+
 from . import insights
-from .insights import LEVELS, PASSING
+from .insights import PASSING
 
 # categorical slots in a fixed order, checked for color-vision deficiency on the white card surface;
 # an entity keeps its slot whatever else is shown, and the overall line of a chart is drawn in ink
@@ -93,7 +95,9 @@ def method_note(meta):
     return {'kind': 'model', 'version': meta['version'],
             'text': f'Forecast by the ARMS grade model (XGBoost), trained on {meta["samples"]:,} grade records. On the latest '
                     f'quarter it had not seen, a learner\'s grade was off by {latest["model"]["mae"]:.1f} points on average '
-                    f'and class averages stayed within {class_range:.1f} points 9 times out of 10.'}
+                    f'and class averages stayed within {class_range:.1f} points 9 times out of 10. Diamonds are its one-step '
+                    'forecasts for periods that already have grades; it learned from those grades, so they look closer '
+                    'than a forecast of a new period will be.'}
 
 
 def chart(*, table, meta, periods, items, reference=None, level='group', step_sd=2.5, selected=None, period_name=str):
@@ -124,7 +128,7 @@ def chart(*, table, meta, periods, items, reference=None, level='group', step_sd
         'periods': [{'p': q.quarter_number, 'label': q.quarter_label, 'name': period_name(q)} for q in periods],
         'series': series, 'selected': selected, 'threshold': PASSING,
         'levels': [{'key': lv['key'], 'name': lv['name'], 'short': lv['short'], 'letter': lv['letter'], 'min': lv['min']}
-                   for lv in LEVELS],
+                   for lv in policy.levels()],
         'method': method_note(meta),
     }
 

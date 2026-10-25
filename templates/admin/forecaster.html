@@ -1,0 +1,113 @@
+{% extends 'admin/base.html' %}
+{% block title %}Grade Forecaster{% endblock %}
+{% block page_title %}Grade Forecaster{% endblock %}
+
+{% block extra_css %}
+<style>
+    .gf-head p { color: #4a5568; font-size: 0.9rem; margin: 0.2rem 0 0; max-width: 60rem; }
+    .gf-card { padding: 1.1rem 1.2rem; border: 1px solid #e6e9f3; border-radius: 16px; background: #fff; margin-top: 1rem; }
+    .gf-card h3 { font-size: 1rem; font-weight: 700; color: #0b1230; margin: 0 0 0.6rem; display: flex; gap: 0.5rem; align-items: center; }
+    .gf-card h3 i { color: #123499; }
+    .gf-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.7rem; }
+    @media (max-width: 900px) { .gf-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .gf-fact { background: #f6f7fc; border-radius: 12px; padding: 0.7rem 0.85rem; }
+    .gf-fact b { display: block; font-size: 1.25rem; color: #0b1230; font-variant-numeric: tabular-nums; }
+    .gf-fact span { font-size: 0.8rem; color: #4a5568; }
+    .gf-run { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .gf-state { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.2rem 0.7rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700; }
+    .gf-state.s-running { background: #eef1fd; color: #123499; } .gf-state.s-done { background: #f2f4f7; color: #344054; }
+    .gf-state.s-failed, .gf-state.s-stopped { background: #fef3f2; color: #b42318; } .gf-state.s-idle { background: #f2f4f7; color: #475467; }
+    .gf-run p { margin: 0.35rem 0 0; color: #4a5568; font-size: 0.86rem; }
+    .gf-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+    .gf-table th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #4a5568; background: #f6f7fc; padding: 0.5rem 0.6rem; }
+    .gf-table td { padding: 0.55rem 0.6rem; border-bottom: 1px solid #f0f3f7; }
+    .gf-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .gf-lean { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+    .gf-lean li { display: grid; grid-template-columns: minmax(0, 16rem) minmax(0, 1fr) 3rem; gap: 0.7rem; align-items: center; font-size: 0.86rem; color: #344054; }
+    .gf-bar { height: 8px; border-radius: 4px; background: #eef1fd; overflow: hidden; }
+    .gf-bar i { display: block; height: 100%; background: #123499; border-radius: 4px; }
+    .gf-lean b { text-align: right; font-variant-numeric: tabular-nums; }
+    .gf-log { margin: 0.6rem 0 0; padding: 0.7rem 0.85rem; border-radius: 10px; background: #f6f7fc; color: #344054; font-size: 0.78rem;
+              max-height: 14rem; overflow: auto; white-space: pre-wrap; }
+    .gf-note { color: #4a5568; font-size: 0.82rem; margin: 0.6rem 0 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gf-head">
+    <h2 class="h5 mb-0">The grade forecaster</h2>
+    <p>Every forecast on the School Head pages comes from this model: an XGBoost model that learns from the grades of every school in ARMS. Retraining it is yours as the System Administrator, because one run learns from all schools at once. ARMS also retrains it by itself whenever a registrar locks a grading period, since locked grades are final.</p>
+</div>
+
+<section class="gf-card" aria-labelledby="gfRun">
+    <div class="gf-run">
+        <div>
+            <h3 id="gfRun"><i class="fi fi-rr-refresh"></i> Retraining</h3>
+            <span class="gf-state s-{{ run.state }}" id="gfState">{% if run.state == 'running' %}Running{% elif run.state == 'done' %}Last run finished{% elif run.state == 'failed' %}Last run failed{% elif run.state == 'stopped' %}Last run stopped without reporting{% else %}Not run from here yet{% endif %}</span>
+            <p>{% if run.reason %}{{ run.reason }}{% if run.by %} &middot; {{ run.by }}{% endif %}{% if run.started %} &middot; started {{ run.started|date:"M j, Y g:i A" }}{% endif %}{% if run.finished %} &middot; ended {{ run.finished|date:"g:i A" }}{% endif %}.{% endif %}
+               {% if run.detail %}{{ run.detail }}{% endif %}</p>
+        </div>
+        <form method="post" action="{% url 'admin_panel:forecaster_retrain' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary" {% if run.state == 'running' %}disabled{% endif %}><i class="fi fi-rr-refresh"></i> Retrain now</button>
+        </form>
+    </div>
+    {% if log %}<pre class="gf-log" aria-label="Last lines of the training log">{{ log|join:"
+" }}</pre>{% endif %}
+    <p class="gf-note">A run takes about {% if model.seconds %}{{ model.seconds|floatformat:0 }} seconds{% else %}a minute{% endif %} and never blocks the pages: they keep the current model until the new one is saved, then use it at once.</p>
+</section>
+
+{% if model %}
+<section class="gf-card" aria-labelledby="gfModel">
+    <h3 id="gfModel"><i class="fi fi-rr-chart-line-up"></i> The model in use</h3>
+    <div class="gf-facts">
+        <div class="gf-fact"><b>{{ model.trained_at|date:"M j, Y" }}</b><span>Trained {{ model.trained_at|date:"g:i A" }} &middot; version {{ model.version }}</span></div>
+        <div class="gf-fact"><b>{{ model.samples_text }}</b><span>Training records from {{ model.learners }} learners over {{ model.school_years }} school year{{ model.school_years|pluralize }}</span></div>
+        <div class="gf-fact"><b>{{ model.latest.mae|floatformat:1 }}</b><span>Points off on average for a learner ({{ model.latest.split }}); a simple {{ model.latest.rule }} rule: {{ model.latest.rule_mae|floatformat:1 }}</span></div>
+        <div class="gf-fact"><b>{{ model.latest.within_5|floatformat:0 }}%</b><span>Of forecasts within 5 points; class averages within {{ model.class_range|floatformat:1 }} points 9 times out of 10</span></div>
+    </div>
+</section>
+
+<section class="gf-card" aria-labelledby="gfTests">
+    <h3 id="gfTests"><i class="fi fi-rr-list-check"></i> Tested on grading periods it had not seen</h3>
+    <table class="gf-table">
+        <thead><tr><th scope="col">Held-out period</th><th scope="col" class="num">Grades</th><th scope="col" class="num">Off on average</th>
+            <th scope="col" class="num">Within 2 points</th><th scope="col" class="num">Within 5 points</th>
+            <th scope="col" class="num">Below-75 warnings right</th><th scope="col">Best simple rule</th></tr></thead>
+        <tbody>
+            {% for e in model.evaluations %}
+            <tr><td>{{ e.split }}</td><td class="num">{{ e.n }}</td><td class="num">{{ e.mae|floatformat:2 }}</td><td class="num">{{ e.within_2|floatformat:0 }}%</td>
+                <td class="num">{{ e.within_5|floatformat:0 }}%</td><td class="num">{{ e.precision|floatformat:0 }}% (found {{ e.recall|floatformat:0 }}%)</td>
+                <td>{{ e.rule }}: off by {{ e.rule_mae|floatformat:2 }}, warnings right {{ e.rule_precision|floatformat:0 }}%</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p class="gf-note">"Below-75 warnings right" is how often a learner the model flagged as heading below 75 really ended below 75; "found" is the share of those learners it flagged.</p>
+</section>
+
+<section class="gf-card" aria-labelledby="gfLean">
+    <h3 id="gfLean"><i class="fi fi-rr-scale"></i> What the forecasts lean on most</h3>
+    <ul class="gf-lean">
+        {% for f in model.lean %}<li><span>{{ f.name }}</span><span class="gf-bar"><i style="width: {{ f.share }}%"></i></span><b>{{ f.share }}%</b></li>{% endfor %}
+    </ul>
+</section>
+{% else %}
+<section class="gf-card"><p class="mb-0">No model is trained yet. Retrain now to build it; until then the School Head pages project each average with a damped trend.</p></section>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if run.state == 'running' %}
+<script>
+// while a run is going, check every 5 seconds and reload the page once it ends
+(function () {
+    var timer = setInterval(function () {
+        fetch('{% url "admin_panel:forecaster_status" %}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { if (d.state !== 'running') { clearInterval(timer); window.location.reload(); } })
+            .catch(function () { clearInterval(timer); });
+    }, 5000);
+})();
+</script>
+{% endif %}
+{% endblock %}
