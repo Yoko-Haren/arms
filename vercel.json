@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["icn1"],
+  "buildCommand": "python manage.py collectstatic --noinput && (python manage.py train_ml_models --model forecast || echo 'Forecaster not trained; pages use the trend rule')",
+  "functions": {
+    "config/wsgi.py": {
+      "maxDuration": 60
+    }
+  }
+}

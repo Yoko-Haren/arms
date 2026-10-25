@@ -908,6 +908,8 @@ def forecaster_retrain(request):
     if training.start('Started by the System Administrator', by=request.user.get_full_name() or request.user.username):
         messages.success(request, 'Retraining started. It takes about a minute, and this page updates when it ends.')
         _log_admin_action(request, 'RETRAIN_MODEL', 'Started retraining the grade forecaster')
+    elif getattr(settings, 'ON_VERCEL', False):
+        messages.info(request, 'On Vercel the model is retrained with each deployment: redeploy the project to retrain it.')
     else:
         messages.info(request, 'A retraining run is already going.')
     return redirect('admin_panel:forecaster')

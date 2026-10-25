@@ -29,7 +29,10 @@ load_dotenv(BASE_DIR / '.env')
 
 # Never commit an application secret. Local development can use a temporary
 # key, while every non-debug deployment must provide DJANGO_SECRET_KEY.
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('1', 'true', 'yes')
+# On Vercel (VERCEL=1) the app runs as a serverless function: a read-only disk except /tmp, no background
+# processes, HTTPS in front. Settings below that say "on Vercel" adjust for that; locally nothing changes.
+ON_VERCEL = bool(os.environ.get('VERCEL'))
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False' if ON_VERCEL else 'True').lower() in ('1', 'true', 'yes')
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 if not SECRET_KEY:
     if DEBUG:
@@ -142,6 +145,12 @@ except ValueError as exc:
 if DATABASES['default']['ENGINE'] != 'django.db.backends.postgresql':
     raise ImproperlyConfigured('DATABASE_URL must use PostgreSQL; SQLite is disabled.')
 
+# Supabase's transaction pooler (port 6543) shares connections between requests, so it cannot keep prepared
+# statements or server-side cursors. Use it on Vercel: the session pooler (5432) allows only a few clients.
+if str(DATABASES['default'].get('PORT')) == '6543':
+    DATABASES['default'].setdefault('OPTIONS', {})['prepare_threshold'] = None
+    DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
+
 # Supabase credentials are intentionally environment-only. The anon key is
 # used for user-facing Auth requests; keep the service-role key server-only.
 SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
@@ -160,6 +169,10 @@ SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
 REDIS_URL = os.environ.get('REDIS_URL', '').strip()
 if REDIS_URL:
     _shared_cache = {'BACKEND': 'django.core.cache.backends.redis.RedisCache', 'LOCATION': REDIS_URL}
+elif ON_VERCEL:
+    # no writable disk: each function instance keeps its own memory cache
+    _shared_cache = {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache', 'LOCATION': 'arms-shared',
+                     'OPTIONS': {'MAX_ENTRIES': 5000}}
 else:
     _shared_cache = {
         'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
@@ -175,12 +188,16 @@ CACHES = {
 }
 
 # Set PAGE_CACHE=False in .env to switch the per-user page cache off (for troubleshooting).
-PAGE_CACHE_ENABLED = os.environ.get('PAGE_CACHE', 'True').lower() in ('1', 'true', 'yes')
+# On Vercel without Redis each instance has its own cache, so a cached page could miss another instance's
+# change: page caching is off there unless REDIS_URL is set.
+_page_cache_default = 'False' if ON_VERCEL and not REDIS_URL else 'True'
+PAGE_CACHE_ENABLED = os.environ.get('PAGE_CACHE', _page_cache_default).lower() in ('1', 'true', 'yes')
 
 # Sessions are read from the cache and written through to the database, so a
 # request does not need a database query for its session and any app server can
-# serve any user.
-SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+# serve any user. Without a shared cache (Vercel, no Redis) they live in the database only, so signing out
+# on one instance signs out everywhere.
+SESSION_ENGINE = 'django.contrib.sessions.backends.db' if ON_VERCEL and not REDIS_URL else 'django.contrib.sessions.backends.cached_db'
 
 # Loads the user and profile together (one query per request instead of two).
 AUTHENTICATION_BACKENDS = ['accounts.backends.ProfileBackend']
@@ -319,8 +336,11 @@ SECURE_BROWSER_XSS_FILTER = True
 
 # HTTPS-related — all False for localhost development.
 # Set these to True when you deploy behind SSL.
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = ON_VERCEL
+CSRF_COOKIE_SECURE = ON_VERCEL
+if ON_VERCEL:
+    # Vercel ends HTTPS at its edge and says so in this header
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = False
 SECURE_HSTS_SECONDS = 0
 

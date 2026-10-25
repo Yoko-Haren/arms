@@ -55,10 +55,14 @@ def running():
 
 
 def start(reason, by=''):
-    """Start a background run unless one is going. True when it started."""
-    if running():
+    """Start a background run unless one is going. True when it started. Never on Vercel: there the disk is read-only
+    and nothing runs after a request ends, so the model is trained during each deployment instead (vercel.json)."""
+    if getattr(settings, 'ON_VERCEL', False) or running():
         return False
-    _write({'state': 'running', 'reason': reason, 'by': by, 'started_at': timezone.now().isoformat()})
+    try:
+        _write({'state': 'running', 'reason': reason, 'by': by, 'started_at': timezone.now().isoformat()})
+    except OSError:                                  # no writable model folder: skip, never fail the caller
+        return False
     flags = (subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP) if os.name == 'nt' else 0
     try:
         with open(LOG_FILE, 'w', encoding='utf-8') as log:
