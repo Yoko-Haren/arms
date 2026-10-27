@@ -30,4 +30,4 @@ class Command(BaseCommand):
                                   encoding='utf-8', errors='replace')
         if done.returncode != 0:
             raise CommandError((done.stderr or done.stdout).strip()[-500:] or 'ollama create failed.')
-        self.stdout.write(self.style.SUCCESS(f'"{conf["MODEL"]}" is ready. Poro writes the School Head\'s briefs with it.'))
+        self.stdout.write(self.style.SUCCESS(f'"{conf["MODEL"]}" is ready. Poro rewords the School Head\'s recommendations with it.'))

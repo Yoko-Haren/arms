@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views, views_records
+from . import views, views_advisory, views_records
 
 app_name = 'teachers'
 
@@ -15,6 +15,9 @@ urlpatterns = [
     path('class-records/<int:assignment_id>/class-list.csv', views_records.class_csv, name='class_csv'),
     path('class-records/<int:assignment_id>/mapeh-final-grades/', views_records.class_mapeh_final, name='class_mapeh_final'),
     path('advisory/<int:section_id>/school-form/', views_records.advisory_form, name='advisory_form'),
+
+    # My Advisory: every subject's grades for the section the teacher advises, and each learner's record
+    path('advisory/', views_advisory.advisory, name='advisory'),
 
     # Notification bell
     path('api/updates/', views_records.updates, name='updates'),

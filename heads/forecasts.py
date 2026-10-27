@@ -142,14 +142,3 @@ def _series(item, values, color):
         'future': {p: [round(v, 1), round(lo, 1), round(hi, 1)] for p, (v, lo, hi) in future.items()},
         'back': {p: round(v, 1) for p, v in back.items()},
     }
-
-
-def learner_outlook(table, meta, key, period):
-    """The forecaster's view of one learner-subject after `period`: (next grade, chance below 75) or (None, None)."""
-    row = table.get(key)
-    if not row or not meta or row['origin'] != period:
-        return None, None
-    nxt = row['future'].get(period + 1)
-    if nxt is None:
-        return None, None
-    return round(nxt, 1), ml.chance_below(nxt, 1, meta)

@@ -11,24 +11,24 @@ from django.urls import reverse
 from django.utils import timezone
 
 from assessments import quizzes as Q
+from core import grading_policy as policy
 from core import periods as P
 from grades.models import GradeComponent
 
 from . import records as R
 
-# DepEd Order No. 8, s. 2015 descriptors, highest first
-DESCRIPTORS = (
-    ('outstanding', 'Outstanding', 90, '#2E7D32'),
-    ('very_satisfactory', 'Very satisfactory', 85, '#123499'),
-    ('satisfactory', 'Satisfactory', 80, '#1565C0'),
-    ('fairly_satisfactory', 'Fairly satisfactory', 75, '#E65100'),
-    ('did_not_meet', 'Did not meet expectations', 0, '#C62828'),
-)
+# one color per level slot, lowest to highest, whatever the school's DepEd order names the level (as on the School Head pages)
+LEVEL_COLORS = {'advanced': '#2E7D32', 'proficient': '#123499', 'approaching': '#1565C0', 'developing': '#E65100', 'beginning': '#C62828'}
 DROP = 5        # points down from the previous period that are worth a look even when the grade still passes
 
 
+def descriptors():
+    """The descriptors of the school's DepEd order (core/grading_policy.py), highest first: (key, name, lowest grade, color)."""
+    return [(lv['key'], lv['name'], lv['min'], LEVEL_COLORS[lv['key']]) for lv in policy.levels()]
+
+
 def descriptor(grade):
-    return next(key for key, _, low, _ in DESCRIPTORS if grade >= low)
+    return policy.level_of(grade)['key']
 
 
 def _where(a):
@@ -76,7 +76,7 @@ def build(user, school, periods, current, assignments):
             'below': sum(1 for v in values if v < passing), 'graded': cur['graded'] if cur else 0, 'total': cur['total'] if cur else row['learners'],
             'state': row['state'], 'state_label': label, 'state_tone': tone, 'state_hint': hint,
             'levels': [{'key': key, 'label': name, 'color': color, 'count': n, 'percent': round(n * 100 / len(values), 1) if values else 0}
-                       for key, name, low, color in DESCRIPTORS for n in [sum(1 for v in values if descriptor(v) == key)]],
+                       for key, name, low, color in descriptors() for n in [sum(1 for v in values if descriptor(v) == key)]],
         })
         for e_id, value in (g[focus.id].items() if focus else []):
             prev = g[before.id].get(e_id) if before else None
@@ -109,8 +109,8 @@ def build(user, school, periods, current, assignments):
         'submitted_classes': sum(1 for c in overview if c['state'] in ('submitted', 'validated', 'locked')),
         'class_count': len(overview), 'days_left': days_left, 'overdue': overdue,
         'deadline': current.grade_encoding_deadline if current else None, 'current_name': P.name(current),
-        'descriptors': [{'label': name, 'color': color, 'range': f'{low}–{(DESCRIPTORS[i - 1][2] - 1) if i else 100}' if low else 'below 75'}
-                        for i, (key, name, low, color) in enumerate(DESCRIPTORS)],
+        'descriptors': [{'label': lv['name'], 'color': LEVEL_COLORS[lv['key']], 'range': lv['range'].replace(' to ', '–')}
+                        for lv in policy.levels()],
         'passing': passing,
     }
 

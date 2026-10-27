@@ -1,5 +1,5 @@
 /*
- * Forecast charts for the School Head pages (Academic Dashboard, section brief, School Performance).
+ * Forecast charts for the School Head pages (Academic Dashboard, Honors Outlook, School Performance).
  *
  * The server builds one spec per chart (heads/forecasts.py) into a JSON script tag; an element with
  * data-forecast="<id of that tag>" becomes the chart. Three views, as on Our World in Data: Line (one

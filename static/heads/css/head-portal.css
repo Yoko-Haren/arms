@@ -104,11 +104,6 @@ body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; 
 .fact span { font-size: 0.76rem; color: var(--muted); }
 .fact .chg { display: inline-flex; align-items: center; gap: 0.15rem; font-size: 0.74rem; font-weight: 650; font-style: normal; }
 .fact.alert b { color: #C62828; }
-.poro-line { display: flex; gap: 0.75rem; align-items: flex-start; margin-top: 0.95rem; padding: 0.85rem 0.95rem; border-radius: 14px;
-             background: linear-gradient(135deg, #f0f4ff, #e8eeff); border: 1px solid rgba(18,52,153,0.14); }
-.poro-line img { width: 38px; height: 38px; border-radius: 11px; object-fit: cover; flex-shrink: 0; }
-.poro-line p { margin: 0; font-size: 0.86rem; color: var(--ink); line-height: 1.6; }
-.poro-tag { display: block; font-size: 0.68rem; font-weight: 700; color: var(--brand); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.15rem; }
 
 /* ---------- small figure tiles with an icon ---------- */
 .tiles { display: grid; grid-template-columns: repeat(var(--tiles, 5), minmax(0, 1fr)); gap: 0.75rem; }
@@ -235,6 +230,7 @@ a.kp-link:hover, a.kp-link:focus-visible { background: #f3f6ff; outline: none; b
 .skel-grid.g-2-1 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
 .skel-grid.g-1-1 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .skel-grid.g-3-2 { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); }
+.skel-grid.g-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .skel-grid.g-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .skel-grid.g-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 @media (max-width: 1100px) { .skel-grid.g-2-1, .skel-grid.g-3-2, .skel-grid.g-1-1 { grid-template-columns: 1fr; } .skel-grid.g-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
@@ -294,7 +290,9 @@ html[data-explain="off"] .hp .explain { display: none !important; }
 .hp details.fold > summary:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
 .hp details.fold > summary .sum-note { font-weight: 500; color: var(--muted); font-size: 0.78rem; }
 
-/* ---------- where each item stands: the five proficiency levels side by side ---------- */
+/* ---------- where each item stands: the five proficiency levels side by side ----------
+   Each column lists its first three items on one line each (the full name on hover); "Show all" opens the rest in a
+   dialog, so no column grows past the others however long the names or the list. */
 .ladder { margin-top: 0.95rem; }
 .ladder-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.55rem; }
 .ladder-head h4 { margin: 0; font-size: 0.82rem; font-weight: 650; color: var(--ink); }
@@ -311,17 +309,21 @@ html[data-explain="off"] .hp .explain { display: none !important; }
 .ladder-bar i { display: block; height: 100%; border-radius: 4px; background: var(--lv); }
 .ladder-count { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.35rem; }
 .ladder-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; }
-.ladder-items a, .ladder-items span.item { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 0.4rem; align-items: baseline; padding: 0.26rem 0.45rem;
+.ladder-items a, .ladder-items span.item { display: flex; justify-content: space-between; gap: 0.4rem; align-items: baseline; padding: 0.26rem 0.45rem;
                                            border-radius: 8px; background: #fff; border: 1px solid var(--line); text-decoration: none;
                                            color: var(--ink); font-size: 0.76rem; min-width: 0; }
 .ladder-items a:hover, .ladder-items a:focus-visible { border-color: var(--lv); outline: none; }
-.ladder-items .nm { min-width: 0; overflow-wrap: break-word; line-height: 1.25; }
+.ladder-items .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.25; }
 .ladder-items .vl { font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; margin-left: auto; }
 .ladder-empty { font-size: 0.74rem; color: var(--muted); padding: 0.2rem 0.1rem; }
-.ladder-more { all: unset; cursor: pointer; font-size: 0.72rem; font-weight: 600; color: var(--brand); padding: 0.3rem 0.2rem 0; }
+.ladder-more { all: unset; cursor: pointer; font-size: 0.72rem; font-weight: 600; color: var(--brand); padding: 0.35rem 0.2rem 0; }
 .ladder-more:hover { text-decoration: underline; }
-.ladder-more[hidden], .ladder-items li[hidden] { display: none; }
+.ladder-items li[hidden] { display: none; }
 .ladder-more:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 4px; }
+/* every item of one level, in the "Show all" dialog: full names, a larger hit area */
+.ladder-all { gap: 0.4rem; }
+.ladder-all a, .ladder-all span.item { padding: 0.55rem 0.8rem; border-radius: 12px; font-size: 0.86rem; }
+.ladder-all .nm { white-space: normal; overflow: visible; font-weight: 600; }
 
 /* ---------- forecast charts (static/heads/js/forecast-chart.js) ---------- */
 .fc { position: relative; }

@@ -1,0 +1,260 @@
+{% extends 'teachers/base.html' %}
+{% load static %}
+
+{% block title %}My Advisory{% endblock %}
+{% block subtitle %}My Advisory{% if sy %} &bull; SY {{ sy.year_label }}{% endif %}{% if period_name %} &bull; {{ period_name }}{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Shared portal look is in static/shared/css/portal-pages.css. */
+    .adv-pick { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 0; }
+    .adv-pick select { width: auto; min-width: 10rem; }
+    .db-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+    @media (max-width: 1100px) { .db-grid { grid-template-columns: 1fr; } }
+    .lvl { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 20px; font-size: 0.72rem; font-weight: 650; white-space: nowrap;
+           background: var(--lv-bg); color: var(--lv); }
+    .level-advanced { --lv: #2E7D32; --lv-bg: #e8f5e9; } .level-proficient { --lv: #123499; --lv-bg: #e3f2fd; }
+    .level-approaching { --lv: #1565C0; --lv-bg: #e8eaf6; } .level-developing { --lv: #B45309; --lv-bg: #fff3e0; }
+    .level-beginning { --lv: #C62828; --lv-bg: #ffebee; }
+
+    /* learners below 75 */
+    .need { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+    .need button { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.25rem 0.8rem;
+                   align-items: center; padding: 0.55rem 0.8rem; border: 1px solid var(--line); border-radius: 12px; }
+    .need button:hover, .need button:focus-visible { border-color: var(--brand); background: #f7f9ff; }
+    .need .who { font-weight: 650; font-size: 0.86rem; }
+    .need .who small { font-weight: 500; color: var(--muted); font-size: 0.76rem; margin-left: 0.3rem; }
+    .need .chips { grid-column: 1; display: flex; flex-wrap: wrap; gap: 0.3rem; }
+    .need .chip { font-size: 0.7rem; font-weight: 650; padding: 0.1rem 0.45rem; border-radius: 10px; background: var(--risk-bg); color: var(--risk); }
+    .need .pill { grid-row: 1 / 3; grid-column: 2; }
+
+    /* subjects this period */
+    .subj { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+    .subj li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.3rem 0.8rem; align-items: center; padding: 0.55rem 0.75rem;
+               border: 1px solid var(--line); border-radius: 12px; }
+    .subj b { font-size: 0.84rem; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .subj small { font-size: 0.74rem; color: var(--muted); }
+    .subj .bar { grid-column: 1 / -1; }
+
+    /* grades by subject: learners down, subjects across; the name column stays in view */
+    .gwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+    .gtable th, .gtable td { white-space: nowrap; }
+    .gtable th.sub { text-align: center; }
+    .gtable th.sub small { display: block; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--faint); font-size: 0.66rem; }
+    .gtable td:first-child, .gtable th:first-child { position: sticky; left: 0; z-index: 1; background: #fff; box-shadow: 1px 0 0 var(--line); }
+    .gtable th:first-child { background: var(--soft); }
+    .gtable tbody tr { cursor: pointer; }
+    .gtable tbody tr:hover td { background: #f7f9ff; }
+    .gtable .who { font-weight: 600; }
+    .gtable .avg { font-weight: 700; }
+    .gtable tr[hidden] { display: none; }
+
+    /* a learner's record */
+    .rec-table td.cur, .rec-table th.cur { background: #f3f6ff; }
+    .rec-table tfoot td { font-weight: 700; border-top: 2px solid var(--line); }
+    .rec-parts { color: var(--muted); font-size: 0.76rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tp">
+    <section class="card tp-head">
+        <div>
+            <h2><i class="fi fi-rr-users-alt" style="color:#123499;"></i> {% if section %}My advisory: {{ section.grade_level.grade_name }} {{ section.section_name }}{% else %}My advisory{% endif %}</h2>
+            <p class="hint">{% if section %}Every subject's grades for your learners, uploaded by their subject teachers. Levels follow {{ grading.levels_order }}.{% else %}Follow your advisory class's grades in every subject here.{% endif %}</p>
+        </div>
+        {% if section %}
+        <form method="get" class="adv-pick">
+            {% if sections|length > 1 %}
+            <select name="section" aria-label="Advisory class" onchange="this.form.submit()">
+                {% for s in sections %}<option value="{{ s.id }}" {% if s.id == section.id %}selected{% endif %}>{{ s.grade_level.grade_name }} {{ s.section_name }}</option>{% endfor %}
+            </select>
+            {% endif %}
+            <select name="period" aria-label="Grading period" onchange="this.form.submit()">
+                {% for p in periods %}<option value="{{ p.id }}" {% if period and p.id == period.id %}selected{% endif %}>{{ p.quarter_label }}{% if current and p.id == current.id %} (current){% endif %}</option>{% endfor %}
+            </select>
+            <a class="btn btn-line btn-sm" href="{% url 'teachers:class_record_list' %}#advisory-{{ section.id }}"><i class="fi fi-rr-document"></i> School forms</a>
+        </form>
+        {% endif %}
+    </section>
+
+    {% if not section %}
+    <section class="card"><p class="empty"><i class="fi fi-rr-users-alt"></i>You do not advise a section this school year. The registrar assigns advisers.</p></section>
+    {% else %}
+
+    <div class="tiles" style="--tiles:4">
+        <div class="card tile"><span class="tile-ico"><i class="fi fi-rr-users-alt"></i></span>
+            <div><span>Learners</span><b>{{ learners|length }}</b><small>enrolled in {{ section.section_name }}</small></div></div>
+        <div class="card tile"><span class="tile-ico"><i class="fi fi-rr-chart-line-up"></i></span>
+            <div><span>Section average</span><b>{% if average is not None %}{{ average }}{% else %}&mdash;{% endif %}</b>
+                <small>{% if level %}<span class="lvl level-{{ level.key }}">{{ level.name }}</span>{% else %}no grades in {{ period_name }} yet{% endif %}</small></div></div>
+        <div class="card tile {% if below_count %}risk{% else %}good{% endif %}"><span class="tile-ico"><i class="fi fi-rr-user-time"></i></span>
+            <div><span>Below 75</span><b>{{ below_count }}</b><small>{% if retention %}{{ retention }} at risk of retention{% elif below_count %}learner{{ below_count|pluralize }} in one or more subjects{% else %}every learner passes{% endif %}</small></div></div>
+        <div class="card tile {% if columns and complete == columns|length %}good{% elif uploaded < columns|length %}warn{% endif %}"><span class="tile-ico"><i class="fi fi-rr-upload"></i></span>
+            <div><span>Subjects with grades</span><b>{{ uploaded }} <small style="display:inline;font-size:0.8rem;">of {{ columns|length }}</small></b><small>{{ complete }} complete for {{ period_name }}</small></div></div>
+    </div>
+
+    <div class="db-grid">
+        <section class="card panel" aria-labelledby="needTitle">
+            <div class="panel-head"><div><h3 id="needTitle"><i class="fi fi-rr-hand-holding-heart" style="color:#123499;"></i> Learners below 75</h3>
+                <p class="hint">In {{ period_name }}, the most subjects first. {% if senior %}Each needs remedial classes in those subjects.{% else %}One or two subjects mean remedial classes; three or more, a risk of retention.{% endif %} Open a name for the full record.</p></div></div>
+            {% if needs %}
+            <ul class="need">
+                {% for l in needs %}
+                <li><button type="button" data-learner="{{ l.index }}">
+                    <span class="who">{{ l.name }}<small>average {{ l.average }}</small></span>
+                    <span class="chips">{% for code in l.below %}<span class="chip">{{ code }}</span>{% endfor %}</span>
+                    <span class="pill {% if l.outlook == 'retention' %}risk{% else %}warn{% endif %}">{% if l.outlook == 'retention' %}Retention risk{% else %}Remedial{% endif %} &middot; {{ l.below|length }}</span>
+                </button></li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="empty"><i class="fi fi-rr-badge-check"></i>No learner is below 75 in {{ period_name }} so far.</p>
+            {% endif %}
+        </section>
+
+        <section class="card panel" aria-labelledby="subjTitle">
+            <div class="panel-head"><div><h3 id="subjTitle"><i class="fi fi-rr-books" style="color:#123499;"></i> Subjects in {{ period_name }}</h3>
+                <p class="hint">How far each subject teacher is with this section's grades.</p></div></div>
+            {% if columns %}
+            <ul class="subj">
+                {% for c in columns %}
+                <li>
+                    <span><b title="{{ c.name }}">{{ c.code }} &middot; {{ c.name }}</b><small>{{ c.teacher|default:"No teacher assigned" }} &middot; {{ c.graded }} of {{ c.total }} graded{% if c.average is not None %} &middot; average {{ c.average }}{% endif %}</small></span>
+                    <span class="pill {{ c.tone }}">{{ c.state_label }}</span>
+                    <div class="bar {% if c.graded >= c.total and c.total %}good{% elif c.graded %}warn{% endif %}" aria-hidden="true"><i style="width:{% widthratio c.graded c.total 100 %}%"></i></div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="empty"><i class="fi fi-rr-books"></i>No subject is scheduled for this section in {{ period_name }}.</p>
+            {% endif %}
+        </section>
+    </div>
+
+    <section class="card panel" aria-labelledby="gradesTitle">
+        <div class="panel-head">
+            <div><h3 id="gradesTitle"><i class="fi fi-rr-table-list" style="color:#123499;"></i> Grades by subject &middot; {{ period_name }}</h3>
+                <p class="hint">Quarterly grades as the subject teachers uploaded them. Open a learner for every subject and period.</p></div>
+            <div class="toolbar">
+                <label class="search"><i class="fi fi-rr-search"></i><input type="search" id="gSearch" placeholder="Find a learner or LRN" aria-label="Find a learner or LRN"></label>
+                <label class="sort">Sort by
+                    <select id="gSort">
+                        <option value="name">Surname A to Z</option>
+                        <option value="low">Lowest average first</option>
+                        <option value="high">Highest average first</option>
+                        <option value="below">Most subjects below 75</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+        {% if learners and columns %}
+        <div class="gwrap">
+            <table class="table gtable">
+                <thead><tr><th scope="col">Learner</th>
+                    {% for c in columns %}<th scope="col" class="sub" title="{{ c.name }}{% if c.teacher %} ({{ c.teacher }}){% endif %}">{{ c.code }}<small>{{ c.graded }}/{{ c.total }}</small></th>{% endfor %}
+                    <th scope="col" class="num">Average</th><th scope="col">Level</th></tr></thead>
+                <tbody id="gBody">
+                    {% for l in learners %}
+                    <tr tabindex="0" data-learner="{{ forloop.counter0 }}" data-name="{{ l.name|lower }}" data-lrn="{{ l.lrn }}" data-avg="{% if l.average is not None %}{{ l.average }}{% endif %}" data-below="{{ l.below|length }}">
+                        <td><span class="who">{{ l.name }}</span></td>
+                        {% for g in l.grades %}<td class="center">{% if g is None %}<span class="grade none">&mdash;</span>{% else %}<span class="grade {% if g >= 75 %}pass{% else %}fail{% endif %}">{{ g|floatformat:"-1" }}</span>{% endif %}</td>{% endfor %}
+                        <td class="num avg">{% if l.average is not None %}{{ l.average }}{% else %}&mdash;{% endif %}</td>
+                        <td>{% if l.level %}<span class="lvl level-{{ l.level.key }}">{{ l.level.short }}</span>{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="empty" id="gNone" hidden>No learner matches.</p>
+        {% else %}
+        <p class="empty"><i class="fi fi-rr-table-list"></i>{% if learners %}No subject has grades for {{ period_name }} yet.{% else %}No learner is enrolled in this section yet.{% endif %}</p>
+        {% endif %}
+    </section>
+
+    <div class="tp-modal" id="recModal" role="dialog" aria-modal="true" aria-labelledby="recTitle" hidden>
+        <div class="tp-modal-card" tabindex="-1">
+            <div class="tp-modal-head">
+                <div><h3 id="recTitle"></h3><p class="hint" id="recSub"></p></div>
+                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
+            </div>
+            <div class="tp-modal-body" id="recBody"></div>
+        </div>
+    </div>
+    {{ record|json_script:"recordData" }}
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+    var dataEl = document.getElementById('recordData');
+    if (!dataEl) return;
+    var data = JSON.parse(dataEl.textContent);
+    var comps = [{% for key, name, abbr in components %}{ abbr: '{{ abbr|escapejs }}', name: '{{ name|escapejs }}' }{% if not forloop.last %}, {% endif %}{% endfor %}];
+    var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+    var fmt = function (n) { return n == null ? '&mdash;' : (Number.isInteger(n) ? String(n) : n.toFixed(1)); };
+    var grade = function (n) { return n == null ? '<span class="grade none">&mdash;</span>' : '<span class="grade ' + (n >= 75 ? 'pass' : 'fail') + '">' + fmt(n) + '</span>'; };
+
+    // ---------- grades by subject: search and sort ----------
+    var body = document.getElementById('gBody');
+    if (body) {
+        var rows = Array.prototype.slice.call(body.querySelectorAll('tr'));
+        var search = document.getElementById('gSearch'), sort = document.getElementById('gSort');
+        var avg = function (r) { return r.dataset.avg === '' ? null : +r.dataset.avg; };
+        var SORTS = {
+            name: function (a, b) { return a.dataset.name.localeCompare(b.dataset.name); },
+            low: function (a, b) { return (avg(a) == null) - (avg(b) == null) || avg(a) - avg(b); },
+            high: function (a, b) { return (avg(a) == null) - (avg(b) == null) || avg(b) - avg(a); },
+            below: function (a, b) { return +b.dataset.below - +a.dataset.below || (avg(a) || 0) - (avg(b) || 0); }
+        };
+        var draw = function () {
+            var q = search.value.trim().toLowerCase(), shown = 0;
+            rows.sort(SORTS[sort.value] || SORTS.name).forEach(function (r) {
+                r.hidden = q && r.dataset.name.indexOf(q) === -1 && r.dataset.lrn.indexOf(q) === -1;
+                if (!r.hidden) shown++;
+                body.appendChild(r);
+            });
+            document.getElementById('gNone').hidden = shown > 0;
+        };
+        search.addEventListener('input', draw);
+        sort.addEventListener('change', draw);
+    }
+
+    // ---------- a learner's record: every subject and period, the components of the period shown, the general average ----------
+    var modal = document.getElementById('recModal'), last = null;
+    function open(i) {
+        var who = data.people[i], rec = data.learners[i];
+        if (!who || !rec) return;
+        var at = data.periods.map(function (p) { return p.label; }).indexOf(data.period);
+        var head = '<tr><th>Subject</th>' + data.periods.map(function (p, j) { return '<th class="center' + (j === at ? ' cur' : '') + '">' + esc(p.label) + '</th>'; }).join('') +
+            '<th class="center">Final</th>' + comps.map(function (c) { return '<th class="center" title="' + esc(c.name) + ', ' + esc(data.period) + '">' + esc(c.abbr) + '</th>'; }).join('') + '</tr>';
+        var rows = rec.rows.map(function (r) {
+            return '<tr><td><b>' + esc(r.code) + '</b> <span class="rec-parts">' + esc(r.name) + '</span></td>' +
+                r.grades.map(function (g, j) { return '<td class="center' + (j === at ? ' cur' : '') + '">' + grade(g) + '</td>'; }).join('') +
+                '<td class="center">' + grade(r.final) + '</td>' +
+                [0, 1, 2].map(function (k) { return '<td class="center rec-parts">' + (r.parts ? fmt(r.parts[k]) : '&mdash;') + '</td>'; }).join('') + '</tr>';
+        }).join('');
+        var foot = '<tr><td>General average</td>' + rec.averages.map(function (a, j) { return '<td class="center' + (j === at ? ' cur' : '') + '">' + fmt(a) + '</td>'; }).join('') +
+            '<td></td>' + comps.map(function () { return '<td></td>'; }).join('') + '</tr>';
+        document.getElementById('recTitle').textContent = who.name;
+        document.getElementById('recSub').textContent = (who.lrn ? 'LRN ' + who.lrn + ' · ' : '') + 'Quarterly grades of every subject this school year; ' +
+            comps.map(function (c) { return c.abbr; }).join(', ') + ' are the ' + data.period + ' component scores in percent.';
+        document.getElementById('recBody').innerHTML = '<div style="overflow-x:auto"><table class="table rec-table"><thead>' + head + '</thead><tbody>' + rows +
+            '</tbody><tfoot>' + foot + '</tfoot></table></div>';
+        last = document.activeElement;
+        modal.hidden = false;
+        modal.querySelector('.tp-modal-card').focus();
+    }
+    function close() { modal.hidden = true; if (last) last.focus(); }
+    document.querySelectorAll('[data-learner]').forEach(function (el) {
+        el.addEventListener('click', function () { open(+el.dataset.learner); });
+        el.addEventListener('keydown', function (e) { if (el.tagName === 'TR' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open(+el.dataset.learner); } });
+    });
+    modal.addEventListener('click', function (e) { if (e.target === modal || e.target.closest('[data-close]')) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !modal.hidden) close(); });
+})();
+</script>
+{% endblock %}

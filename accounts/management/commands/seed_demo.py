@@ -4,6 +4,8 @@
     python manage.py seed_demo --reset    remove it first, then create it again
     python manage.py seed_demo --remove   remove the demo school and everything that belongs to it
     python manage.py seed_demo --dry-run  do everything, show the totals, then undo it
+    python manage.py seed_demo --spread-levels   move each discipline of an existing demo school onto its level
+                                                 (LEVEL_TARGETS), so the dashboard shows every level
 
 Nothing outside the demo school is read or changed. Demo records are recognisable by:
 school ID DEMO-ARMS, usernames ending in @demo.arms.edu.ph, and student numbers starting 9999.
@@ -18,7 +20,7 @@ from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import Group, User
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from academics.models import (
@@ -73,17 +75,26 @@ INACTIVE_TEACHER = ('Gregorio', 'Salazar', 'Teacher III', 'Mathematics')  # deac
 
 # ----------------------------------------------------------------------------- curriculum
 FAMILIES = [
-    # code, name, colour, icon, grade offset (how hard the discipline tends to be)
-    ('MATH', 'Mathematics', '#123499', 'fi fi-rr-calculator', -2.5),
-    ('SCI', 'Science', '#1565C0', 'fi fi-rr-flask', -1.5),
-    ('ENG', 'English', '#6A1B9A', 'fi fi-rr-book-alt', -0.5),
-    ('FIL', 'Filipino', '#E65100', 'fi fi-rr-comment-alt', 0.5),
-    ('AP', 'Araling Panlipunan', '#2D6AFF', 'fi fi-rr-globe', 0.5),
-    ('MAPEH', 'MAPEH', '#C62828', 'fi fi-rr-music-alt', 2.5),
-    ('TLE', 'Technology and Livelihood Education', '#4a6fd4', 'fi fi-rr-tools', 2.0),
-    ('ESP', 'Edukasyon sa Pagpapakatao', '#764ba2', 'fi fi-rr-heart', 3.0),
-    ('HUMSS', 'Humanities and Social Sciences', '#667eea', 'fi fi-rr-users-alt', -0.5),
+    # code, name, colour, icon, grade offset (how hard the discipline tends to be; see LEVEL_TARGETS)
+    ('MATH', 'Mathematics', '#123499', 'fi fi-rr-calculator', -14.0),
+    ('SCI', 'Science', '#1565C0', 'fi fi-rr-flask', 9.5),
+    ('ENG', 'English', '#6A1B9A', 'fi fi-rr-book-alt', -7.0),
+    ('FIL', 'Filipino', '#E65100', 'fi fi-rr-comment-alt', -1.8),
+    ('AP', 'Araling Panlipunan', '#2D6AFF', 'fi fi-rr-globe', -0.6),
+    ('MAPEH', 'MAPEH', '#C62828', 'fi fi-rr-music-alt', 8.2),
+    ('TLE', 'Technology and Livelihood Education', '#4a6fd4', 'fi fi-rr-tools', 3.7),
+    ('ESP', 'Edukasyon sa Pagpapakatao', '#764ba2', 'fi fi-rr-heart', 4.8),
+    ('HUMSS', 'Humanities and Social Sciences', '#667eea', 'fi fi-rr-users-alt', -22.5),
 ]
+# Each discipline's average in the current school year: at least one discipline on every level of both DepEd orders,
+# so the School Head's dashboard and Poro's recommendations show the whole range.
+#   DepEd Order No. 015, s. 2026: Emerging (HUMSS), Developing (Mathematics), Connecting (English),
+#                                 Benchmarking (Filipino, AP, TLE, EsP), Advancing (MAPEH, Science)
+#   DepEd Order No. 8, s. 2015:   Did Not Meet Expectations (HUMSS, Mathematics), Fairly Satisfactory (English),
+#                                 Satisfactory (Filipino, AP), Very Satisfactory (TLE, EsP), Outstanding (MAPEH, Science)
+# HUMSS is the lowest because only the HUMSS strand takes it, so the rest of the school can still reach honors.
+LEVEL_TARGETS = {'HUMSS': 62.0, 'MATH': 70.5, 'ENG': 77.0, 'FIL': 82.0, 'AP': 83.0, 'TLE': 86.5, 'ESP': 88.0,
+                 'MAPEH': 92.0, 'SCI': 94.0}
 # Junior high: the same eight learning areas every year. (suffix, name, family, teacher by grade band, meetings/week)
 JHS_SUBJECTS = [
     ('FIL', 'Filipino', 'FIL', ('fil_a', 'fil_b'), 5),
@@ -200,6 +211,51 @@ def remove_demo():
         school.delete()                                                    # school years, quarters, grade levels, tracks
         removed['school'] = 1
     return removed
+
+
+# ============================================================================= levels of an existing demo school
+def spread_levels(log=print):
+    """Move each discipline of the existing demo school so its current-year average lands on LEVEL_TARGETS.
+
+    Every grade of the discipline (both school years) moves by the same whole number of points, so trends, the change
+    since last quarter and each learner's place in the class stay as they were; the written work, performance task
+    and assessment scores, the initial grade and the descriptor move with it. Only seeded learners change (LRNs
+    99990000...), never a learner the user imported. Returns {family code: (average before, average after)}.
+    """
+    school = School.objects.get(school_id=SCHOOL_ID)
+    current = SchoolYear.objects.get(school=school, is_current=True)
+    seeded = GradeComponent.objects.filter(enrollment__section__school=school, enrollment__student__lrn__startswith=LRN_PREFIX + '0000',
+                                           transmuted_grade__isnull=False)
+    clip = lambda value, low, high: max(low, min(high, value))
+    result = {}
+    for code, target in LEVEL_TARGETS.items():
+        family = seeded.filter(subject__subject_family__family_code=code)
+        mean_now = lambda: family.filter(quarter__school_year=current).aggregate(a=models.Avg('transmuted_grade'))['a']
+        before = mean_now()
+        if before is None:
+            continue
+        for _ in range(3):                                   # a grade that hits 60 or 100 stops moving: correct again
+            step = round(target - mean_now())
+            if not step:
+                break
+            rows = list(family)
+            for g in rows:
+                grade = clip(g.transmuted_grade + step, 60, 100)
+                moved = grade - g.transmuted_grade
+                for part, weight in (('written_work', '0.30'), ('performance_task', '0.50'), ('quarterly_assessment', '0.20')):
+                    value = Decimal(clip(float(getattr(g, f'{part}_percent') or grade) + moved, 0, 100))
+                    setattr(g, f'{part}_raw', value)
+                    setattr(g, f'{part}_percent', value)
+                    setattr(g, f'{part}_weighted', value * Decimal(weight))
+                g.transmuted_grade, g.initial_grade, g.descriptor = grade, Decimal(grade), _descriptor(grade)
+            GradeComponent.objects.bulk_update(rows, [
+                'written_work_raw', 'written_work_percent', 'written_work_weighted',
+                'performance_task_raw', 'performance_task_percent', 'performance_task_weighted',
+                'quarterly_assessment_raw', 'quarterly_assessment_percent', 'quarterly_assessment_weighted',
+                'initial_grade', 'transmuted_grade', 'descriptor'], batch_size=500)
+        result[code] = (float(before), float(mean_now()))
+        log(f'  {code:6} {result[code][0]:5.1f} -> {result[code][1]:5.1f} (target {target})')
+    return result
 
 
 # ============================================================================= seeding
@@ -476,7 +532,7 @@ class Seeder:
         family = self.subject_meta[code][0]
         value = (member['ability'] + entry['offset'] + self.family_offset[family]
                  + 0.4 * (quarter_number - 1) + self.rng.gauss(0, 2.4))
-        return int(max(62, min(99, round(value))))
+        return int(max(60, min(100, round(value))))          # a transmuted grade is 60 to 100
 
     def _component(self, member, code, quarter, grade, teacher, status, note='', when=None):
         rng = self.rng
@@ -657,9 +713,24 @@ class Command(BaseCommand):
         parser.add_argument('--remove', action='store_true', help='Remove the demo school and all of its data.')
         parser.add_argument('--reset', action='store_true', help='Remove the demo school first, then create it again.')
         parser.add_argument('--dry-run', action='store_true', help='Run everything, report, then undo it.')
+        parser.add_argument('--spread-levels', action='store_true',
+                            help='Move each discipline of the existing demo school onto its level (LEVEL_TARGETS).')
 
     def handle(self, *args, **options):
         exists = School.objects.filter(school_id=SCHOOL_ID).exists()
+
+        if options['spread_levels']:
+            if not exists:
+                raise CommandError('There is no demo school yet. Create it with: python manage.py seed_demo')
+            self.stdout.write('Average of each discipline this school year, before and after:')
+            with transaction.atomic():
+                spread_levels(self.stdout.write)
+                if options['dry_run']:
+                    transaction.set_rollback(True)
+            self._refresh_caches()
+            self.stdout.write(self.style.SUCCESS(('DRY RUN (nothing was saved). ' if options['dry_run'] else '') +
+                                                 'Retrain the forecaster next: python manage.py train_ml_models'))
+            return
 
         if options['remove']:
             with transaction.atomic():

@@ -4,15 +4,13 @@ from django.views.generic import RedirectView
 from . import views, views_academic, views_honors, views_performance, views_proposals, views_school_year, views_users
 
 urlpatterns = [
-    # Academic Dashboard (the principal's landing page) and the section brief
+    # Academic Dashboard (the principal's landing page) and Poro AI's recommendations on it
     path('ai-dashboard/', views_academic.academic_dashboard, name='heads-ai-dashboard'),
     path('ai-dashboard/export/', views_academic.dashboard_export, name='heads-ai-dashboard-export'),
-    path('ai-section/<int:section_id>/<int:subject_id>/<int:quarter_id>/',
-         views_academic.section_brief, name='heads-ai-section-detail'),
-    path('ai-section/<int:section_id>/<int:subject_id>/<int:quarter_id>/export/',
-         views_academic.section_export, name='heads-ai-section-export'),
-    path('api/poro/<str:token>/', views_academic.poro_narrative, name='heads-poro-narrative'),
-    path('api/poro-brief/<str:token>/', views_academic.poro_brief, name='heads-poro-brief'),
+    path('api/poro/<str:token>/', views_academic.poro_status, name='heads-poro'),
+    # The section brief moved to the advisers (teacher portal, My Advisory); old links open the subject on the dashboard.
+    path('ai-section/<int:section_id>/<int:subject_id>/<int:quarter_id>/', views_academic.section_moved),
+    path('ai-section/<int:section_id>/<int:subject_id>/<int:quarter_id>/export/', views_academic.section_moved),
 
     # Live updates (polled by every School Head page) and notifications
     path('api/updates/', views_academic.live_updates, name='heads-live-updates'),

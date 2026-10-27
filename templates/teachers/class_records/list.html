@@ -206,9 +206,10 @@
     </section>
 
     {% for adv in advisory %}
-    <section class="card adv" aria-labelledby="adv{{ adv.section.id }}">
+    <section class="card adv" id="advisory-{{ adv.section.id }}" aria-labelledby="adv{{ adv.section.id }}">
         <div class="panel-head">
             <h3 id="adv{{ adv.section.id }}"><i class="fi fi-rr-document" style="color:#123499;"></i> School forms of your advisory class: {{ adv.section.grade_level.grade_name }} {{ adv.section.section_name }}</h3>
+            <a class="btn btn-ghost btn-sm" href="{% url 'teachers:advisory' %}?section={{ adv.section.id }}">Every subject's grades <i class="fi fi-rr-angle-small-right"></i></a>
         </div>
         <p class="hint" style="margin:-0.35rem 0 0.8rem;">DepEd's templates filled from ARMS: the register, attendance and grades of your learners. Check them, sign and submit.</p>
         <div class="adv-forms">

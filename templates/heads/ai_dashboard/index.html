@@ -7,83 +7,53 @@
 
 {% block extra_css %}
 <style>
-    /* Shared parts (filters, status, tables, plots, dialogs, forecast charts, level ladder) are in static/heads/css/head-portal.css. */
+    /* Shared parts (filters, status, dialogs, forecast charts, level ladder) are in static/heads/css/head-portal.css. */
 
-    /* ---------- learners below 75 ---------- */
-    .watch { padding: 1.1rem 1.15rem 0.95rem; display: flex; flex-direction: column; }
-    .watch ul { list-style: none; margin: 0.75rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
-    .watch li a { display: flex; justify-content: space-between; gap: 0.6rem; padding: 0.5rem 0.7rem; border: 1px solid var(--line);
-                  border-radius: 10px; text-decoration: none; color: var(--ink); transition: border-color 0.15s, background 0.15s; }
-    .watch li a:hover, .watch li a:focus-visible { border-color: #C62828; background: #fffafa; outline: none; }
-    .watch .who { font-size: 0.84rem; font-weight: 600; }
-    .watch .where { display: block; font-size: 0.74rem; color: var(--muted); font-weight: 400; margin-top: 0.1rem; }
-    .watch .low { font-size: 0.84rem; font-weight: 700; color: #C62828; white-space: nowrap; font-variant-numeric: tabular-nums; }
-
-    /* ---------- Poro AI line: computed first, reworded by the local model when it passes the checks ---------- */
-    .poro-line p { transition: opacity 0.3s; }
-    .poro-line p.fading { opacity: 0.35; }
-    .poro-src { display: block; margin-top: 0.35rem; font-size: 0.72rem; color: var(--muted); }
-    .poro-src.ai { color: var(--brand); font-weight: 600; }
-
-    /* ---------- sections table ---------- */
-    .classes { padding: 1.1rem 1.25rem 0.95rem; container-type: inline-size; }
-    .comp-key { font-size: 0.76rem; color: var(--muted); }
-    .comp-key b { color: var(--ink); }
-    .sec-table col.c-section { width: 26%; } .sec-table col.c-learners { width: 11%; } .sec-table col.c-k { width: 9%; }
-    .sec-table col.c-avg { width: 13%; } .sec-table col.c-level { width: 16%; } .sec-table col.c-go { width: 4%; }
-    .sec-row { cursor: pointer; transition: background 0.15s; }
-    .sec-row:hover, .sec-row:focus-visible { background: #eef2ff; outline: none; box-shadow: inset 3px 0 0 var(--brand); }
-    .sec-name { font-weight: 650; color: var(--ink); text-decoration: none; }
-    .sec-row:hover .sec-name { color: var(--brand); }
-    .go { text-align: right; color: #a0aec0; }
-    .sec-row:hover .go { color: var(--brand); }
-    .row-low td:first-child { box-shadow: inset 4px 0 0 #C62828; }
-    /* narrow: each row becomes a small card, the text keeps its size */
-    @container (max-width: 760px) {
-        .sec-table, .sec-table tbody { display: block; }
-        .sec-table colgroup, .sec-table thead { display: none; }
-        .sec-table tr.sec-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.35rem 0.6rem; padding: 0.8rem 0.9rem;
-                                border: 1px solid var(--line); border-radius: 14px; margin-bottom: 0.6rem; }
-        .sec-table td { display: block; border: 0; padding: 0; text-align: left !important; }
-        .sec-table td[data-label]::before { content: attr(data-label); display: block; font-size: 0.68rem; font-weight: 650; color: var(--muted);
-                                            text-transform: uppercase; letter-spacing: 0.05em; }
-        .sec-table td.cell-section { grid-column: 1 / 3; grid-row: 1; } .sec-table td.cell-section::before { display: none; }
-        .sec-table td.cell-level { grid-column: 3 / 5; grid-row: 1; text-align: right !important; } .sec-table td.cell-level::before { display: none; }
-        .sec-table td.cell-avg { grid-column: 1 / 3; grid-row: 2; } .sec-table td.cell-learners { grid-column: 3 / 5; grid-row: 2; }
-        .sec-table td.cell-k { grid-row: 3; background: var(--soft); border-radius: 8px; padding: 0.3rem 0.5rem; white-space: nowrap; }
-        .sec-table td.cell-k::before { margin-bottom: 0.05rem; }
-        .sec-table .cell-section .sub { text-wrap: balance; }
-        .sec-table td.cell-learners .sub, .sec-table td.cell-avg .delta { display: inline; margin-left: 0.35rem; }
-        .sec-table td.go { display: none; }
-        .row-low td:first-child { box-shadow: none; } .sec-table tr.row-low { border-left: 4px solid #C62828; }
+    /* ---------- the status and the forecast on the left; Poro's recommendations beside both, kept in view ---------- */
+    .dash-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); grid-template-areas: "status advice" "chart advice";
+                 gap: 1rem; align-items: start; }
+    .dash-grid > .status, .dash-grid > .empty-card { grid-area: status; }
+    .dash-grid > .advice { grid-area: advice; position: sticky; top: 1rem; }
+    .dash-grid > .chart-card { grid-area: chart; }
+    .dash-grid.solo { grid-template-columns: minmax(0, 1fr); grid-template-areas: "status" "chart"; }
+    @media (max-width: 1100px) {
+        .dash-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "status" "advice" "chart"; }
+        .dash-grid > .advice { position: static; }
     }
 
-    /* ---------- one section's subjects (every-discipline view) ---------- */
-    .subj-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
-    .subj-list a { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 0.2rem 0.8rem; align-items: center; padding: 0.55rem 0.8rem;
-                   border: 1px solid var(--line); border-radius: 12px; text-decoration: none; color: var(--ink); }
-    .subj-list a:hover, .subj-list a:focus-visible { border-color: var(--brand); background: #f3f6ff; outline: none; }
-    .subj-list .nm { font-weight: 650; font-size: 0.88rem; min-width: 0; }
-    .subj-list .nm small { display: block; font-weight: 400; font-size: 0.76rem; color: var(--muted); }
-    .subj-list .av { font-weight: 700; font-variant-numeric: tabular-nums; }
-    .subj-list .lvl { justify-self: end; }
+    /* ---------- Poro AI recommends: one decision for each level, the lowest first ---------- */
+    .advice { padding: 1.1rem 1.15rem 0.95rem; display: flex; flex-direction: column; gap: 0.8rem; }
+    .advice-head { display: flex; gap: 0.7rem; align-items: center; }
+    .advice-head img { width: 40px; height: 40px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
+    .advice-head .hint { margin-top: 0.1rem; }
+    .advice-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+    .advice-list details { border: 1px solid var(--line); border-radius: 12px; background: #fff; transition: box-shadow 0.15s; }
+    .advice-list details[open] { box-shadow: inset 3px 0 0 var(--lv); background: #fcfdff; }
+    .advice-list summary { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.55rem 0.7rem; cursor: pointer; list-style: none; border-radius: 12px; }
+    .advice-list summary::-webkit-details-marker { display: none; }
+    .advice-list summary::after { content: '\203A'; margin-left: auto; padding-left: 0.3rem; color: var(--muted); font-size: 1.1rem; line-height: 1.3;
+                                  transition: transform 0.15s; }
+    .advice-list details[open] > summary::after { transform: rotate(90deg); }
+    .advice-list summary:hover { background: var(--soft); }
+    .advice-list summary:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+    .advice-badge { min-width: 26px; height: 26px; padding: 0 0.3rem; border-radius: 8px; background: var(--lv-bg); color: var(--lv); border: 1.5px solid var(--lv);
+                    font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .advice-sum { min-width: 0; display: flex; flex-direction: column; gap: 0.12rem; }
+    .advice-sum b { font-size: 0.84rem; font-weight: 650; color: var(--ink); line-height: 1.35; }
+    .advice-sum small { font-size: 0.74rem; color: var(--muted); line-height: 1.45; }
+    .advice-first { display: inline-block; margin-left: 0.25rem; padding: 0.05rem 0.45rem; border-radius: 10px; background: var(--risk-bg); color: var(--risk);
+                    font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; vertical-align: 1px; white-space: nowrap; }
+    .advice-list p { margin: 0; padding: 0.1rem 0.85rem 0.8rem 2.75rem; font-size: 0.84rem; line-height: 1.6; color: var(--ink); transition: opacity 0.25s; }
+    .advice-list p.fading { opacity: 0.35; }
+    .advice-foot { margin-top: auto; display: flex; flex-wrap: wrap; gap: 0.25rem 0.8rem; align-items: baseline; justify-content: space-between; }
+    .poro-src { font-size: 0.72rem; color: var(--muted); }
+    .poro-src.ai { color: var(--brand); font-weight: 600; }
+    .advice-foot .link-btn { padding: 0; font-size: 0.76rem; }
 
-    /* ---------- a long sections list: the lowest averages in the card, every row in the dialog ---------- */
-    .classes-foot { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap;
-                    margin-top: 0.7rem; font-size: 0.8rem; color: var(--muted); }
-    .sec-scroll { container-type: inline-size; }
-    .sec-scroll .sec-row[hidden] { display: none; }
-
-    /* ---------- every learner below 75 (dialog list) ---------- */
-    .watch-all { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
-    .watch-all a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.2rem 0.8rem; align-items: center; padding: 0.55rem 0.8rem;
-                   border: 1px solid var(--line); border-radius: 12px; text-decoration: none; color: var(--ink); }
-    .watch-all a:hover, .watch-all a:focus-visible { border-color: #C62828; background: #fffafa; outline: none; }
-    .watch-all .who { font-weight: 650; font-size: 0.88rem; }
-    .watch-all .where { font-size: 0.78rem; color: var(--muted); }
-    .watch-all .chips { grid-column: 1 / 2; display: flex; flex-wrap: wrap; gap: 0.3rem; }
-    .watch-all .chip { font-size: 0.72rem; font-weight: 650; padding: 0.12rem 0.5rem; border-radius: 12px; background: #ffebee; color: #C62828; }
-    .watch-all .low { grid-row: 1 / 3; grid-column: 2; font-size: 1rem; font-weight: 700; color: #C62828; font-variant-numeric: tabular-nums; }
+    /* the report download sits with "Start over" at the end of the filter summary */
+    .guide-summary .btn-outline { margin-left: auto; }
+    .guide-summary .btn-outline + .reset { margin-left: 0.4rem; }
+    .empty-card { padding: 1.1rem 1.25rem; }
 </style>
 {% endblock %}
 
@@ -151,13 +121,14 @@
             <i class="fi fi-rr-eye"></i>
             <span>Showing <strong>{{ scope_name }}</strong>{% if scope_detail %} &middot; {{ scope_detail }}{% endif %}{% if period_name %} &middot; {{ period_name }}{% endif %}{% if sy %} &middot; SY {{ sy.year_label }}{% endif %}</span>
             {% if all_periods %}<span class="explain">Each learner's grade is the average of their grading periods so far.</span>{% endif %}
+            {% if status %}<a class="btn-outline btn-sm" href="{{ export_url }}"><i class="fi fi-rr-download"></i> Download report</a>{% endif %}
             <a class="reset" href="?reset=1">Start over</a>
         </div>
     </section>
 
-    {% if status %}
-    <!-- 2. One status for the selection, where each item stands, and who needs help now -->
-    <div class="top-grid">
+    <!-- 2. One status for the selection with where each item stands, what to decide for each level, and the forecast -->
+    <div class="dash-grid{% if not status %} solo{% endif %}">
+        {% if status %}
         <section class="card status level-{{ status.level.key }}" aria-labelledby="statusTitle">
             <span class="eyebrow">School status &middot; {{ scope_name }}{% if scope_detail %} &middot; {{ scope_detail }}{% endif %} &middot; {{ period_name }}</span>
             <div class="status-main">
@@ -179,7 +150,7 @@
                 </div>
                 <div class="fact"><b>{{ status.passing_rate }}%</b><span>Passing (75 and above)</span></div>
                 <div class="fact {% if status.below %}alert{% endif %}"><b>{{ status.below }}</b><span>Learners below 75</span></div>
-                <div class="fact"><b>{{ status.learners }}</b><span>{% if sections_view %}Learners in {{ status.sections }} section{{ status.sections|pluralize }}{% else %}Learners in {{ status.classes }} class{{ status.classes|pluralize:"es" }}{% endif %}</span></div>
+                <div class="fact"><b>{{ status.learners }}</b><span>{% if all_families %}Learners in {{ status.sections }} section{{ status.sections|pluralize }}{% else %}Learners in {{ status.classes }} class{{ status.classes|pluralize:"es" }}{% endif %}</span></div>
             </div>
 
             {% if ladder %}
@@ -195,173 +166,104 @@
                         <div class="ladder-bar" aria-hidden="true"><i style="width: {{ step.share }}%"></i></div>
                         <div class="ladder-count">{{ step.count }} {{ ladder_word }}{{ step.count|pluralize }}</div>
                         {% if step.items %}
-                        <ul class="ladder-items" id="ladder-{{ step.level.key }}">
-                            {% for i in step.items %}
-                            <li{% if forloop.counter > 5 %} hidden{% endif %}>{% if i.url %}<a href="{{ i.url }}" title="{{ i.name }}: {{ i.average }}%"><span class="nm">{{ i.name }}</span><span class="vl">{{ i.average }}</span></a>{% else %}<span class="item"><span class="nm">{{ i.name }}</span><span class="vl">{{ i.average }}</span></span>{% endif %}</li>
-                            {% endfor %}
+                        <ul class="ladder-items">
+                            {% for i in step.items %}{% if forloop.counter <= ladder_rows %}
+                            <li>{% if i.url %}<a href="{{ i.url }}" title="{{ i.name }}: {{ i.average }}%"><span class="nm">{{ i.name }}</span><span class="vl">{{ i.average }}</span></a>{% else %}<span class="item" title="{{ i.name }}: {{ i.average }}%"><span class="nm">{{ i.name }}</span><span class="vl">{{ i.average }}</span></span>{% endif %}</li>
+                            {% endif %}{% endfor %}
                         </ul>
-                        {% if step.items|length > 5 %}<button type="button" class="ladder-more" aria-controls="ladder-{{ step.level.key }}" aria-expanded="false">Show {{ step.items|length|add:"-5" }} more</button>{% endif %}
+                        {% if step.more %}<button type="button" class="ladder-more" data-level="{{ step.level.key }}" aria-haspopup="dialog" aria-controls="ladderModal">Show all {{ step.count }}</button>{% endif %}
                         {% endif %}
                     </div>
                     {% endfor %}
                 </div>
             </div>
             {% endif %}
-
-            <div class="poro-line">
-                <img src="{% static 'shared/poro/Poro.png' %}" alt="" onerror="this.remove()">
-                <p><span class="poro-tag">Poro AI</span><span id="poroDash" data-token="{{ poro_token }}">{{ status.insight }}</span>
-                    <span class="poro-src" id="poroDashSrc">Computed from the grades</span></p>
-            </div>
         </section>
 
-        <aside class="card watch" id="watchCard" aria-labelledby="watchTitle">
-            <h3 id="watchTitle"><i class="fi fi-rr-user-time" style="color:#C62828;"></i> Learners below 75 {% if at_risk %}<span class="count">{{ at_risk|length }}</span>{% endif %}</h3>
-            {% if at_risk %}
-            <p class="hint explain">{{ grading.remediation }} Open a name to see the class.</p>
-            <ul>
-                {% for f in at_risk %}{% if forloop.counter <= 6 %}
-                <li>
-                    <a href="{{ f.url }}">
-                        <span class="who">{{ f.name }}<span class="where">{{ f.section }} &middot; {% for i in f.items %}{{ i.subject }}{% if not forloop.last %}, {% endif %}{% endfor %}</span></span>
-                        <span class="low">{{ f.lowest|floatformat:1 }}</span>
-                    </a>
+        <aside class="card advice" aria-labelledby="adviceTitle">
+            <div class="advice-head">
+                <img src="{% static 'shared/poro/Poro.png' %}" alt="" onerror="this.remove()">
+                <div>
+                    <h3 id="adviceTitle">Poro AI recommends</h3>
+                    <p class="hint">One decision for each level, the lowest first, aimed at each {{ ladder_word }}'s weakest grade component.</p>
+                </div>
+            </div>
+            <ol class="advice-list" id="adviceList" data-token="{{ poro_token }}">
+                {% for d in decisions %}
+                <li class="level-{{ d.level.key }}">
+                    <details{% if forloop.first %} open{% endif %}>
+                        <summary>
+                            <span class="advice-badge" aria-hidden="true">{{ d.level.letter }}</span>
+                            <span class="advice-sum">
+                                <b>{{ d.title }}{% if forloop.first and d.urgent %}<span class="advice-first">Act first</span>{% endif %}</b>
+                                <small>{{ d.level.name }}: {% for i in d.items %}{{ i.name }} {{ i.average }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}</small>
+                            </span>
+                        </summary>
+                        <p data-poro="decision-{{ forloop.counter0 }}">{{ d.text }}</p>
+                    </details>
                 </li>
-                {% endif %}{% endfor %}
-            </ul>
-            {% if at_risk|length > 6 %}<button type="button" class="link-btn" id="watchMore" aria-haspopup="dialog" aria-controls="watchModal">Show all {{ at_risk|length }} learners</button>{% endif %}
-            {% else %}
-            <p class="empty-good"><i class="fi fi-rr-check-circle"></i> No learner is below 75 for this selection.</p>
-            {% endif %}
+                {% endfor %}
+            </ol>
+            <div class="advice-foot">
+                <span class="poro-src" id="poroSrc">Decided from the grades by rules a person can check</span>
+                <button type="button" class="link-btn" id="poroSwitch" hidden>Show the computed wording</button>
+            </div>
         </aside>
-    </div>
+        {% else %}
+        <section class="card empty-card">
+            <p class="hint">No grades for this selection yet. Choose another discipline, subject or period.</p>
+        </section>
+        {% endif %}
 
-    {% if at_risk|length > 6 %}
-    <div class="ad-modal" id="watchModal" role="dialog" aria-modal="true" aria-labelledby="watchModalTitle" hidden>
+        {% if forecast and forecast.series %}
+        <!-- Averages over the school year, and the forecast for the periods ahead -->
+        <section class="card chart-card" aria-labelledby="fcTitle">
+            <div class="card-head" style="margin-bottom:0.3rem">
+                <div>
+                    <h3 id="fcTitle"><i class="fi fi-rr-chart-line-up" style="color:#123499;"></i> {{ scope_name }}: averages and forecast{% if sy %} &middot; SY {{ sy.year_label }}{% endif %}</h3>
+                    <p class="hint explain">One line per {{ forecast.word }}, and a thicker dark line for the whole selection. Solid lines are averages so far, dashed lines the forecast and the band its likely range; diamonds show what the model forecast a period earlier. Point at a period to read every line, or switch to Bar or Table.</p>
+                </div>
+            </div>
+            <div data-forecast="dashForecast"></div>
+        </section>
+        {% endif %}
+    </div>
+    {% if forecast and forecast.series %}{{ forecast|json_script:"dashForecast" }}{% endif %}
+
+    {% if status and ladder %}
+    <div class="ad-modal" id="ladderModal" role="dialog" aria-modal="true" aria-labelledby="ladderModalTitle" hidden>
         <div class="ad-modal-card" tabindex="-1">
             <div class="ad-modal-head">
                 <div>
-                    <h3 id="watchModalTitle"><i class="fi fi-rr-user-time" style="color:#C62828;"></i> Learners below 75 <span class="count">{{ at_risk|length }}</span></h3>
-                    <p class="hint">{{ scope_name }}{% if scope_detail %} &middot; {{ scope_detail }}{% endif %} &middot; {{ period_name }}. {{ grading.remediation }} Open a name to see the class.</p>
+                    <h3 id="ladderModalTitle"><span id="ladderModalName"></span> <span class="muted" id="ladderModalCount"></span></h3>
+                    <p class="hint">{{ scope_name }}{% if scope_detail %} &middot; {{ scope_detail }}{% endif %} &middot; {{ period_name }}.{% if ladder_word != 'section' %} Open one to review it.{% endif %}</p>
                 </div>
                 <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
             </div>
             <div class="ad-modal-tools">
-                <label class="ad-search"><i class="fi fi-rr-search"></i><input type="search" id="watchSearch" placeholder="Find a learner, section or subject" aria-label="Find a learner, section or subject"></label>
+                <label class="ad-search"><i class="fi fi-rr-search"></i><input type="search" id="ladderSearch" placeholder="Find a {{ ladder_word }}" aria-label="Find a {{ ladder_word }}"></label>
                 <label class="ad-sortby">Sort by
-                    <select id="watchSort">
-                        <option value="low">Lowest grade first</option>
+                    <select id="ladderSort">
+                        <option value="high">Highest average first</option>
+                        <option value="low">Lowest average first</option>
                         <option value="name">Name (A to Z)</option>
-                        <option value="section">Section</option>
                     </select>
                 </label>
-                <a class="btn-outline btn-sm" href="{{ export_url }}"><i class="fi fi-rr-download"></i> Download list</a>
-                <span class="tools-count" id="watchCount" aria-live="polite"></span>
+                <span class="tools-count" id="ladderCount" aria-live="polite"></span>
             </div>
             <div class="ad-modal-body">
-                <ul class="watch-all" id="watchAll">
-                    {% for f in at_risk %}
-                    <li data-name="{{ f.name|lower }}" data-section="{{ f.section|lower }}" data-low="{{ f.lowest }}"
-                        data-text="{{ f.name|lower }} {{ f.section|lower }} {% for i in f.items %}{{ i.subject|lower }} {% endfor %}">
-                        <a href="{{ f.url }}">
-                            <span><span class="who">{{ f.name }}</span> <span class="where">&middot; {{ f.section }}</span></span>
-                            <span class="chips">{% for i in f.items %}<span class="chip">{{ i.subject }} {{ i.grade|floatformat:1 }}</span>{% endfor %}</span>
-                            <span class="low">{{ f.lowest|floatformat:1 }}</span>
-                        </a>
-                    </li>
+                {% for step in ladder %}{% if step.more %}
+                <ul class="ladder-all ladder-items level-{{ step.level.key }}" data-level="{{ step.level.key }}"
+                    data-title="{{ step.level.name }} ({{ step.level.letter }}, {{ step.level.range }})" hidden>
+                    {% for i in step.items %}
+                    <li data-name="{{ i.name|lower }}" data-avg="{{ i.average }}">{% if i.url %}<a href="{{ i.url }}"><span class="nm">{{ i.name }}</span><span class="vl">{{ i.average }}</span></a>{% else %}<span class="item"><span class="nm">{{ i.name }}</span><span class="vl">{{ i.average }}</span></span>{% endif %}</li>
                     {% endfor %}
                 </ul>
-                <p class="ad-none" id="watchNone" hidden>No learner matches.</p>
+                {% endif %}{% endfor %}
+                <p class="ad-none" id="ladderNone" hidden>No {{ ladder_word }} matches.</p>
             </div>
         </div>
     </div>
-    {% endif %}
-    {% endif %}
-
-    <!-- 3. Sections: open a row to see its analysis; a long list shows its lowest averages here and every row in a dialog -->
-    <section class="card classes" id="classes" aria-labelledby="classesTitle">
-        <div class="card-head">
-            <div>
-                <h3 id="classesTitle"><i class="fi fi-rr-users-alt" style="color:#123499;"></i> Sections <span class="muted">{{ table|length }}</span></h3>
-                <p class="hint explain">{% if sections_view %}Each row is one section across every discipline; open it to see its subjects and their Poro AI briefs.{% else %}Open a row to see the section's Poro AI brief, trend and learners.{% endif %} Rows marked red average below 75.</p>
-            </div>
-            <div class="head-actions">
-                <span class="comp-key">{% for key, name, abbr in grading.components %}<b>{{ abbr }}</b> {{ name }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}</span>
-                {% if table %}<a class="btn-outline btn-sm" href="{{ export_url }}"><i class="fi fi-rr-download"></i> Download report</a>{% endif %}
-            </div>
-        </div>
-        {% if table_preview|length < table|length %}
-        {% include 'heads/ai_dashboard/_sections_table.html' with rows=table_preview table_id='secTable' sortable=False %}
-        <div class="classes-foot">
-            <span>{{ table_preview|length }} of {{ table|length }} {% if sections_view %}sections{% else %}classes{% endif %}: the lowest averages first</span>
-            <button type="button" class="btn-outline btn-sm" id="secMore" aria-haspopup="dialog" aria-controls="secModal"><i class="fi fi-rr-expand"></i> Show all {{ table|length }}</button>
-        </div>
-        {% else %}
-        {% include 'heads/ai_dashboard/_sections_table.html' with rows=table table_id='secTable' sortable=True %}
-        {% endif %}
-        {% if table %}<p class="footnote explain">{% for key, name, abbr in grading.components %}{{ abbr }} is the average {{ name|lower }} score{% if not forloop.last %}, {% endif %}{% endfor %} (in percent), from the uploaded class records. The average and level come from the grades ({{ grading.levels_order }}).</p>{% endif %}
-    </section>
-
-    {% if table_preview|length < table|length %}
-    <div class="ad-modal" id="secModal" role="dialog" aria-modal="true" aria-labelledby="secModalTitle" hidden>
-        <div class="ad-modal-card wide" tabindex="-1">
-            <div class="ad-modal-head">
-                <div>
-                    <h3 id="secModalTitle"><i class="fi fi-rr-users-alt" style="color:#123499;"></i> {% if sections_view %}Every section{% else %}Every class{% endif %} <span class="count">{{ table|length }}</span></h3>
-                    <p class="hint">{{ scope_name }}{% if scope_detail %} &middot; {{ scope_detail }}{% endif %} &middot; {{ period_name }}. Open a row to see {% if sections_view %}that section's subjects{% else %}that class's Poro AI brief{% endif %}.</p>
-                </div>
-                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
-            </div>
-            <div class="ad-modal-tools">
-                <label class="ad-search"><i class="fi fi-rr-search"></i><input type="search" id="secSearch" placeholder="Find a section, grade or subject" aria-label="Find a section, grade or subject"></label>
-                <label class="ad-sortby">Sort by
-                    <select id="secSort">
-                        <option value="low">Lowest average first</option>
-                        <option value="high">Highest average first</option>
-                        <option value="below">Most learners below 75</option>
-                        {% if prev_period_name %}<option value="drop">Biggest drop since {{ prev_period_name }}</option>{% endif %}
-                        <option value="grade">Grade level</option>
-                        <option value="name">Section name (A to Z)</option>
-                    </select>
-                </label>
-                <span class="tools-count" id="secCount" aria-live="polite"></span>
-            </div>
-            <div class="ad-modal-body sec-scroll">
-                {% include 'heads/ai_dashboard/_sections_table.html' with rows=table table_id='secAll' sortable=False %}
-                <p class="ad-none" id="secNone" hidden>No section matches.</p>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if sections_view and table %}
-    <div class="ad-modal" id="sectionModal" role="dialog" aria-modal="true" aria-labelledby="sectionModalTitle" hidden>
-        <div class="ad-modal-card" tabindex="-1">
-            <div class="ad-modal-head">
-                <div>
-                    <h3 id="sectionModalTitle"><i class="fi fi-rr-users-alt" style="color:#123499;"></i> <span id="sectionModalName"></span></h3>
-                    <p class="hint"><span id="sectionModalSummary"></span> Open a subject to see its Poro AI brief.</p>
-                </div>
-                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
-            </div>
-            <div class="ad-modal-body"><ul class="subj-list" id="sectionModalList"></ul></div>
-        </div>
-    </div>
-    {{ sections_json|json_script:"sectionsData" }}
-    {% endif %}
-
-    {% if forecast and forecast.series %}
-    <!-- 4. Averages over the school year, and the forecast for the periods ahead -->
-    <section class="card chart-card" aria-labelledby="fcTitle">
-        <div class="card-head" style="margin-bottom:0.3rem">
-            <div>
-                <h3 id="fcTitle"><i class="fi fi-rr-chart-line-up" style="color:#123499;"></i> {{ scope_name }}: averages and forecast{% if sy %} &middot; SY {{ sy.year_label }}{% endif %}</h3>
-                <p class="hint explain">One line per {{ forecast.word }}, and a thicker dark line for the whole selection. Solid lines are averages so far, dashed lines the forecast and the band its likely range; diamonds show what the model forecast a period earlier. Point at a period to read every line, or switch to Bar or Table.</p>
-            </div>
-        </div>
-        <div data-forecast="dashForecast"></div>
-    </section>
-    {{ forecast|json_script:"dashForecast" }}
     {% endif %}
 
 </div>
@@ -374,10 +276,6 @@
     var form = document.getElementById('filterForm');
     // navigation shows the skeleton of the next page while it loads (static/heads/js/head-skeleton.js)
     var go = function (f) { if (window.ArmsSkeleton) ArmsSkeleton.submit(f); else f.submit(); };
-    var open = function (href) { if (window.ArmsSkeleton) ArmsSkeleton.go(href); else window.location.href = href; };
-    var esc = function (v) {
-        return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    };
 
     // Filters: each change applies at once; switching between discipline and subject starts that picker fresh.
     document.querySelectorAll('.auto-submit').forEach(function (el) {
@@ -394,38 +292,51 @@
         });
     });
 
-    // ---------- a level with more than five items shows the rest on request ----------
-    document.querySelectorAll('.ladder-more').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            var list = document.getElementById(btn.getAttribute('aria-controls'));
-            list.querySelectorAll('li[hidden]').forEach(function (li) { li.hidden = false; });
-            btn.setAttribute('aria-expanded', 'true');
-            btn.hidden = true;
-        });
-    });
-
-    // ---------- Poro AI: the computed wording shows at once; Poro's wording replaces it when every check passes ----------
-    var poro = document.getElementById('poroDash'), poroSrc = document.getElementById('poroDashSrc');
-    if (poro && poro.dataset.token) {
-        var poroUrl = '{% url "heads-poro-narrative" "TOKEN" %}'.replace('TOKEN', poro.dataset.token), poroTries = 0;
-        poroSrc.textContent = 'Poro AI is wording the summary…';
-        var poroPoll = function () {
+    // ---------- Poro AI: the computed wording shows at once; each sentence Poro rewords replaces it once it passes ----------
+    var advice = document.getElementById('adviceList'), poroSrc = document.getElementById('poroSrc'), poroSwitch = document.getElementById('poroSwitch');
+    if (advice && advice.dataset.token) {
+        var poroUrl = '{% url "heads-poro" "TOKEN" %}'.replace('TOKEN', advice.dataset.token), tries = 0, showing = 'ai', fields = {};
+        advice.querySelectorAll('[data-poro]').forEach(function (p) { fields[p.dataset.poro] = { el: p, rules: p.textContent, ai: null }; });
+        var put = function (f, text) {
+            if (f.el.textContent === text) return;
+            f.el.classList.add('fading');
+            setTimeout(function () { f.el.textContent = text; f.el.classList.remove('fading'); }, 250);
+        };
+        var apply = function (d) {
+            Object.keys(d.fields || {}).forEach(function (k) {
+                var f = fields[k];
+                if (!f || f.ai === d.fields[k]) return;
+                f.ai = d.fields[k];
+                if (showing === 'ai') put(f, f.ai);
+            });
+        };
+        var poll = function () {
             fetch(poroUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(function (r) { return r.ok ? r.json() : null; })
                 .then(function (d) {
-                    if (d && d.state === 'writing' && ++poroTries <= 60) { setTimeout(poroPoll, 4000); return; }
-                    if (d && d.source === 'ai' && d.text) {
-                        poro.parentNode.classList.add('fading');
-                        setTimeout(function () { poro.textContent = d.text; poro.parentNode.classList.remove('fading'); }, 250);
+                    if (d && d.state === 'writing') {
+                        apply(d);
+                        poroSrc.textContent = 'Poro AI is wording the recommendations' + (d.total ? ' (' + (d.done || 0) + ' of ' + d.total + ' sentences)' : '') + '…';
+                        if (++tries <= 150) setTimeout(poll, 4000);
+                        return;
+                    }
+                    if (d && d.source === 'ai') {
+                        apply(d);
                         poroSrc.className = 'poro-src ai';
-                        poroSrc.textContent = 'Worded by Poro AI (' + d.model + '); every figure, name and level checked against the grades';
+                        poroSrc.textContent = 'Worded by Poro AI (' + d.model + '), ' + d.written + ' of ' + d.total + ' sentences; every number, name and level checked';
+                        poroSwitch.hidden = false;
                     } else {
-                        poroSrc.textContent = d && d.unavailable ? 'Computed from the grades (Poro AI is not running)' : 'Computed from the grades';
+                        poroSrc.textContent = d && d.unavailable ? 'Decided from the grades (Poro AI is not running)' : 'Decided from the grades by rules a person can check';
                     }
                 })
-                .catch(function () { poroSrc.textContent = 'Computed from the grades'; });
+                .catch(function () { poroSrc.textContent = 'Decided from the grades by rules a person can check'; });
         };
-        poroPoll();
+        poll();
+        poroSwitch.addEventListener('click', function () {
+            showing = showing === 'ai' ? 'rules' : 'ai';
+            Object.keys(fields).forEach(function (k) { var f = fields[k]; put(f, showing === 'ai' && f.ai ? f.ai : f.rules); });
+            poroSwitch.textContent = showing === 'ai' ? 'Show the computed wording' : "Show Poro AI's wording";
+        });
     }
 
     // ---------- dialogs: Esc or the backdrop closes them, focus stays inside and returns to the button ----------
@@ -450,119 +361,42 @@
         if (shown && !shown.contains(e.target)) shown.querySelector('.ad-modal-card').focus();
     });
 
-    // ---------- every discipline: a section row opens its subjects ----------
-    var sectionsEl = document.getElementById('sectionsData'), sectionModal = document.getElementById('sectionModal');
-    var sections = sectionsEl ? JSON.parse(sectionsEl.textContent) : {};
-    function openSection(href, from) {
-        var id = href.replace('#section-', ''), s = sections[id];
-        if (!s || !sectionModal) return false;
-        var shown = document.querySelector('.ad-modal:not([hidden])');          // one dialog at a time
-        if (shown) { shown.hidden = true; document.body.style.overflow = ''; }
-        document.getElementById('sectionModalName').textContent = s.name;
-        document.getElementById('sectionModalSummary').textContent = s.overall.toFixed(1) + '% across ' + s.subjects.length + ' subjects, ' + s.level + '.';
-        var list = document.getElementById('sectionModalList');
-        list.textContent = '';
-        s.subjects.forEach(function (c) {
-            var li = document.createElement('li'), a = document.createElement('a');
-            a.href = c.url;
-            var nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = c.name;
-            var sm = document.createElement('small'); sm.textContent = c.code + (c.below ? ' · ' + c.below + ' below 75' : ''); nm.appendChild(sm);
-            var av = document.createElement('span'); av.className = 'av'; av.textContent = c.overall.toFixed(1) + '%';
-            var lv = document.createElement('span'); lv.className = 'lvl level-' + c.level; lv.textContent = c.level_short + ' (' + c.letter + ')';
-            a.appendChild(nm); a.appendChild(av); a.appendChild(lv);
-            li.appendChild(a); list.appendChild(li);
-        });
-        openDialog(sectionModal, from);
-        return true;
-    }
-    function follow(href, from) {
-        if (href && href.indexOf('#section-') === 0) { openSection(href, from); return; }
-        if (href) open(href);
-    }
-
-    // Rows open the section brief, or the section's subjects (mouse, Enter or Space), in the card and in the dialog
-    document.querySelectorAll('.sec-row').forEach(function (row) {
-        row.addEventListener('click', function (e) { var a = e.target.closest('a'); if (a) { e.preventDefault(); } follow(row.dataset.href, row); });
-        row.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); follow(row.dataset.href, row); }
-        });
-    });
-
-    // Sorting the sections table (when the card shows every row)
-    var levelRank = { beginning: 1, developing: 2, approaching: 3, proficient: 4, advanced: 5 };
-    document.querySelectorAll('#secTable th button[data-sort]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            var th = btn.closest('th'), key = btn.dataset.sort, tbody = btn.closest('table').querySelector('tbody');
-            var dir = th.getAttribute('aria-sort') === 'ascending' ? 'descending' : 'ascending';
-            btn.closest('thead').querySelectorAll('th').forEach(function (t) { t.removeAttribute('aria-sort'); });
-            th.setAttribute('aria-sort', dir);
-            var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr.sec-row'));
-            var val = function (r) {
-                if (key === 'section') return +r.dataset.order;
-                if (key === 'learners') return +r.dataset.learners;
-                if (key === 'level') { var m = r.className.match(/level-(\w+)/); return levelRank[m ? m[1] : ''] || 0; }
-                return +r.dataset.overall;
-            };
-            rows.sort(function (a, b) { return dir === 'ascending' ? val(a) - val(b) : val(b) - val(a); });
-            rows.forEach(function (r) { tbody.appendChild(r); });
-        });
-    });
-
-    // ---------- every section: search and sort in the dialog ----------
-    var secModal = document.getElementById('secModal');
-    if (secModal) {
-        var secBody = document.querySelector('#secAll tbody'), secRows = Array.prototype.slice.call(secBody.querySelectorAll('tr.sec-row'));
-        var sSearch = document.getElementById('secSearch'), sSort = document.getElementById('secSort');
-        var num = function (r, k) { return r.dataset[k] === '' ? null : +r.dataset[k]; };
-        var SORTS = {
-            low: function (a, b) { return num(a, 'overall') - num(b, 'overall') || num(a, 'order') - num(b, 'order'); },
-            high: function (a, b) { return num(b, 'overall') - num(a, 'overall') || num(a, 'order') - num(b, 'order'); },
-            below: function (a, b) { return num(b, 'below') - num(a, 'below') || num(a, 'overall') - num(b, 'overall'); },
-            drop: function (a, b) { return (num(a, 'delta') === null) - (num(b, 'delta') === null) || (num(a, 'delta') || 0) - (num(b, 'delta') || 0); },
-            grade: function (a, b) { return num(a, 'order') - num(b, 'order'); },
-            name: function (a, b) { return a.dataset.name.localeCompare(b.dataset.name) || num(a, 'order') - num(b, 'order'); }
-        };
-        var showSections = function () {
-            var q = sSearch.value.trim().toLowerCase(), shown = 0;
-            secRows.sort(SORTS[sSort.value] || SORTS.low);
-            secRows.forEach(function (r) {
-                r.hidden = q && r.dataset.text.indexOf(q) === -1;
-                if (!r.hidden) shown++;
-                secBody.appendChild(r);
-            });
-            document.getElementById('secNone').hidden = shown > 0;
-            document.getElementById('secCount').textContent = 'Showing ' + shown + ' of ' + secRows.length;
-        };
-        sSearch.addEventListener('input', showSections);
-        sSort.addEventListener('change', showSections);
-        document.getElementById('secMore').addEventListener('click', function (e) { showSections(); openDialog(secModal, e.currentTarget); });
-    }
-
-    // ---------- every learner below 75 ----------
-    var watchModal = document.getElementById('watchModal');
-    if (watchModal) {
-        var list = document.getElementById('watchAll'), items = Array.prototype.slice.call(list.children);
-        var wSearch = document.getElementById('watchSearch'), wSort = document.getElementById('watchSort');
-        var showWatch = function () {
-            var q = wSearch.value.trim().toLowerCase(), key = wSort.value, shown = 0;
+    // ---------- a level with more items than the card shows: every one in a dialog, with search and sort ----------
+    var ladderModal = document.getElementById('ladderModal');
+    if (ladderModal) {
+        var lSearch = document.getElementById('ladderSearch'), lSort = document.getElementById('ladderSort'), list = null;
+        var showLevel = function () {
+            if (!list) return;
+            var q = lSearch.value.trim().toLowerCase(), key = lSort.value, shown = 0;
+            var items = Array.prototype.slice.call(list.children);
             items.sort(function (a, b) {
                 if (key === 'name') return a.dataset.name.localeCompare(b.dataset.name);
-                if (key === 'section') return a.dataset.section.localeCompare(b.dataset.section) || (+a.dataset.low - +b.dataset.low);
-                return (+a.dataset.low - +b.dataset.low) || a.dataset.name.localeCompare(b.dataset.name);
+                var d = (+a.dataset.avg) - (+b.dataset.avg);
+                return (key === 'low' ? d : -d) || a.dataset.name.localeCompare(b.dataset.name);
             });
             items.forEach(function (li) {
-                li.hidden = q && li.dataset.text.indexOf(q) === -1;
+                li.hidden = q && li.dataset.name.indexOf(q) === -1;
                 if (!li.hidden) shown++;
                 list.appendChild(li);
             });
-            document.getElementById('watchNone').hidden = shown > 0;
-            document.getElementById('watchCount').textContent = 'Showing ' + shown + ' of ' + items.length;
+            document.getElementById('ladderNone').hidden = shown > 0;
+            document.getElementById('ladderCount').textContent = 'Showing ' + shown + ' of ' + items.length;
         };
-        wSearch.addEventListener('input', showWatch);
-        wSort.addEventListener('change', showWatch);
-        document.getElementById('watchMore').addEventListener('click', function (e) { showWatch(); openDialog(watchModal, e.currentTarget); });
+        lSearch.addEventListener('input', showLevel);
+        lSort.addEventListener('change', showLevel);
+        document.querySelectorAll('.ladder-more[data-level]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                ladderModal.querySelectorAll('.ladder-all').forEach(function (ul) { ul.hidden = ul.dataset.level !== btn.dataset.level; });
+                list = ladderModal.querySelector('.ladder-all[data-level="' + btn.dataset.level + '"]');
+                ladderModal.querySelector('.ad-modal-card').className = 'ad-modal-card level-' + btn.dataset.level;
+                document.getElementById('ladderModalName').textContent = list.dataset.title;
+                document.getElementById('ladderModalCount').textContent = list.children.length;
+                lSearch.value = '';
+                showLevel();
+                openDialog(ladderModal, btn);
+            });
+        });
     }
-
 })();
 </script>
 {% endblock %}

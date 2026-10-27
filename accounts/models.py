@@ -180,6 +180,15 @@ class UserProfile(models.Model):
         return self.role == 'teacher'
 
     @property
+    def advises_a_section(self):
+        """A teacher who advises a section this school year (the teacher portal then shows My Advisory)."""
+        if self.role != 'teacher' or not self.school_id:
+            return False
+        from academics.models import Section
+        return Section.objects.filter(adviser_id=self.user_id, school_id=self.school_id, is_active=True,
+                                      school_year__is_current=True).exists()
+
+    @property
     def is_principal(self):
         return self.role == 'schoolhead'
     

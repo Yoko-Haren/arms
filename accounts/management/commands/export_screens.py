@@ -169,6 +169,9 @@ class Command(BaseCommand):
         self.add('teacher', 'settings', 'Account Settings', c, '/accounts/settings/', 'Name, email, password, Google.')
         self.add('teacher', 'dashboard-senior-high', 'Dashboard — Senior High teacher', self.client(shs_teacher), '/teachers/',
                  'Roberto Mendoza, 6 Senior High classes.')
+        if rosal.adviser_id:
+            self.add('teacher', 'my-advisory', 'My Advisory', self.client(rosal.adviser), '/teachers/advisory/',
+                     f'{rosal.adviser.get_full_name()}, adviser of Grade 7 Rosal: every subject\'s grades and each learner\'s record.')
 
         # ---------------- registrar
         c = self.client(registrar)
@@ -212,8 +215,6 @@ class Command(BaseCommand):
         self.add('head', 'academic-dashboard-discipline', 'Academic Dashboard — by discipline', c,
                  f'/heads/ai-dashboard/?view_mode=family&subject_family={math.id}&school_year={sy.id}&quarter=Q1&grade_level=all',
                  'All Mathematics subjects across the twelve sections.')
-        self.add('head', 'section-analysis', 'Section analysis', c, f'/heads/ai-section/{sampaguita.id}/{math7.id}/{q1.id}/',
-                 'Grade 7 Sampaguita, Mathematics 7.')
         self.add('head', 'school-performance', 'School Performance', c, f'/heads/performance/?school_year={sy.id}&quarter=Q1&grade_level=all', '')
         users = json.loads(c.get('/heads/users/data/?page=1&per_page=10').content)
         detail_id = next(u['id'] for u in users['users'] if u['role'] == 'registrar')

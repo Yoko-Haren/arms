@@ -27,7 +27,7 @@ from communication.notify import notify, sent_recently
 from core import periods as P
 
 from core.caching import cache_page_for_user, remember_filters
-from heads.notify import notify_school_heads
+from heads.notify import notify_school_heads, subject_view_url
 
 from . import dashboard as registrar_dashboard
 from . import views_enrollment
@@ -1070,8 +1070,7 @@ def _validate(request, assignment, period, tell_heads=True):
     if tell_heads:
         notify_school_heads(assignment.section.school, 'GRADE_VALIDATED', f'Grades validated: {where}',
                             f'{_who(request)} validated {P.name(period)} grades for {count} learners.',
-                            reverse('heads-ai-section-detail', args=[assignment.section_id, assignment.subject_id, period.id]),
-                            priority='Low')
+                            subject_view_url(assignment.subject_id, period), priority='Low')
     return count
 
 
@@ -1246,7 +1245,7 @@ def grade_class_detail(request, assignment_id, period_id):
                 notify_school_heads(school, 'GRADE_RETURNED', f'Grades returned: {where}',
                                     f'{_who(request)} returned {word} grades to '
                                     f'{review["teacher"] or "the teacher"} for correction: {note}',
-                                    reverse('heads-ai-section-detail', args=[assignment.section_id, assignment.subject_id, period.id]))
+                                    subject_view_url(assignment.subject_id, period))
                 messages.success(request, f'{count} grade{_plural(count, "s")} returned to {review["teacher"] or "the teacher"} with your note.')
         elif action == 'remind':
             text = _reminder_text(review, period)

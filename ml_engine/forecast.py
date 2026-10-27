@@ -214,7 +214,7 @@ def _baselines(book, meta):
         changes = [b - a for a, b in zip(grades, grades[1:])]
         cls, cls_prev = book.class_avg.get((s['section'], s['subject'], t)), book.class_avg.get((s['section'], s['subject'], t - 1))
         class_change = cls - cls_prev if cls is not None and cls_prev is not None else 0.0
-        w = len(changes) / (len(changes) + 3)                 # heads.insights.project_learners, carried h periods ahead
+        w = len(changes) / (len(changes) + 3)                 # the learner's own change, trusted more with each change seen
         step = w * (mean(changes) if changes else 0.0) + (1 - w) * class_change
         last.append(grades[-1])
         damped.append(_clamp(grades[-1] + step * sum(0.7 ** i for i in range(1, h + 1))))

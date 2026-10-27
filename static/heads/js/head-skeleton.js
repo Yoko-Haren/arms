@@ -15,13 +15,13 @@
     var GIVE_UP = 20000;        // a navigation that never happened (a download, a stop) gives the page back
     var ROUTES = [
         [/^\/heads\/(ai-dashboard\/)?$/, 'dashboard'],
-        [/^\/heads\/ai-section\/\d+\/\d+\/\d+\/$/, 'section'],
-        [/^\/heads\/notifications\/\d+\/open\/$/, 'section'],
+        [/^\/heads\/ai-section\/\d+\/\d+\/\d+\/$/, 'dashboard'],         // old section links open the dashboard
+        [/^\/heads\/notifications\/\d+\/open\/$/, 'generic'],
         [/^\/heads\/performance\/(\d+\/)?$/, 'performance'],
         [/^\/heads\/users\/$/, 'users'],
         [/^\/accounts\/settings\/$/, 'settings']
     ];
-    var NAV = { dashboard: 'dashboard', section: 'dashboard', performance: 'performance', users: 'users', settings: 'settings' };
+    var NAV = { dashboard: 'dashboard', performance: 'performance', users: 'users', settings: 'settings' };
     var wrap = document.querySelector('#mainContent .content-wrap');
     var timer = null, giveUp = null, active = null;
 

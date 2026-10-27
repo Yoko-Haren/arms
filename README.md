@@ -22,10 +22,10 @@ Each signed-in role has its own portal: System Administrator, School Head, Regis
   - one grade level, all of Junior High, all of Senior High, or every grade level;
   - one grading period, or the whole school year so far.
 
-  The page also shows where each discipline stands on the five levels, a sections table with each section's Written Work, Performance Tasks and Quarterly Assessment averages (the first rows, then all of them in a dialog with search and sorting), the learners below 75, and a forecast chart.
-- **Section briefs.** Each class has a summary, what stands out, and what to do next. A level-up plan takes every group of learners one level higher, aimed at the grade component that holds the group back. Poro AI rewords the brief (see below).
+  The page also shows where each discipline (or subject, or section) stands on the five levels, three to a level with the rest in a dialog, and a forecast chart.
+- **Poro AI recommends.** One decision for each level that has disciplines on it, the lowest level first: keep the top level there (contests, sharing practice at a LAC session), lift each passing level one level up, bring a failing level up to 75 with remediation, and act first on the lowest. Each decision names how far the discipline is from its goal and aims at the grade component it is weakest in. Poro AI rewords the decisions (see below). Following each section and learner is the advisers' work (the teacher's My Advisory), so the School Head's portal has no section pages.
 - **Honors Outlook.** Who is on track for an academic award this school year, now and with the forecasts; who is within 2 points of a cut-off; who is held back by one final grade. Every list downloads as Excel.
-- **School Performance.** It covers the promotion outlook, learning areas, grade levels, enrollment over the years and a comparison with last year.
+- **School Performance.** The whole school's year-end picture: the promotion outlook if the year ended now, the school performance forecast by grade level, each grade level's outlook, honors and attendance, enrollment over the years, and a comparison with the same period last year. The school's level and each discipline are on the dashboard.
 - **School Year.** The School Head can start a school year with its grading periods, make it current and adjust period dates, without waiting for the administrator. Here the school also chooses its DepEd grading rules.
 - **User Management.** When the School Head is busy, a registrar or a teacher (an ICT coordinator, say) can be allowed to manage the school's accounts from their own portal: edit details, reset passwords, activate and deactivate. They never touch a School Head's account, cannot add registrars and cannot pass the permission on. Sign-in help requests from the school's staff reach the School Head and these delegates, so the System Administrator is not the only way back in.
 - **Excel reports, and Page Proposals** (candidate pages to discuss next).
@@ -45,6 +45,7 @@ Each signed-in role has its own portal: System Administrator, School Head, Regis
   - Senior High: the Strengthened Senior High School (SSHS) record.
 - ARMS recomputes every grade from the raw scores, matches each row to a learner, and lets the teacher review it before saving.
 - Submits class records to the registrar. Advisers download their section's school forms.
+- **My Advisory** (advisers only). Every subject's grades for the adviser's section in one grading period, uploaded by the subject teachers: who is below 75 and in how many learning areas, which subjects still have no grades, and each learner's record for the school year (every subject and period, the grade components and the general average).
 - Gives online quizzes. Learners join with an access code at `/quiz/<code>/`.
 
 ### Public pages
@@ -56,14 +57,14 @@ Each signed-in role has its own portal: System Administrator, School Head, Regis
 ## Forecasts and Poro AI
 
 - **Grade forecaster** (`ml_engine/forecast.py`). An XGBoost model trained on every learner, subject and grading period in the database. It forecasts the next grading periods with a 90% likely range.
-  - Its forecasts appear on the dashboard, the section briefs, Honors Outlook and School Performance.
+  - Its forecasts appear on the dashboard, Honors Outlook and School Performance.
   - Each chart has Line, Bar and Table views. The administrator's Grade Forecaster page reports how the model did on grading periods it never saw.
   - On the demo data, for quarters it had not seen, it missed by about 2 points on average. A simple trend rule missed by about 3.
   - Train it with `python manage.py train_ml_models`. It also retrains itself in the background when the registrar locks a grading period, and the administrator can retrain it from the Grade Forecaster page. The trained files are not in git, so a fresh copy uses the trend rule until the model is trained once.
-- **Poro AI** (`heads/poro.py`). Every figure in a brief is computed in code by rules a person can check (`heads/insights.py`). Poro AI runs a local model through [Ollama](https://ollama.com): `poro` is Qwen 2.5 (3B) with Poro's persona (`ml_engine/poro/Modelfile`). In the background it rewords each sentence of a class brief, told what that sentence must keep.
-  - A reworded sentence is shown only when it keeps every number in the same order, says "higher", "below" and the like the same way, keeps every name, period, level, grade component and DepEd order, and brings in no new subject, advice or cause. A second reading by the model must then find the same meaning.
+- **Poro AI** (`heads/poro.py`). What Poro recommends is decided in code by rules a person can check (`heads/insights.py`, `school_decisions`). Poro AI runs a local model through [Ollama](https://ollama.com): `poro` is Qwen 2.5 (3B) with Poro's persona (`ml_engine/poro/Modelfile`). In the background it rewords each sentence of the recommendations, told what that sentence must keep.
+  - A reworded sentence is shown only when it keeps every number in the same order, says "higher", "below" and the like the same way, keeps every name, period, level, grade component and DepEd order, and brings in no new subject, cause or promise. A second reading by the model must then find the same meaning.
   - The other sentences keep the computed wording, and the School Head can switch between Poro's wording and the computed one.
-  - On a laptop without a graphics card, a brief takes about 4 to 6 minutes, and about a third to a half of its sentences pass every check. Each brief is kept until its grades change. Without Ollama, the computed wording is shown.
+  - It runs on the school's own computer and is off on Vercel, which cannot run Ollama. Each set of recommendations is kept until the grades change. Without Ollama, the computed wording is shown.
 
 ## DepEd basis
 
@@ -118,7 +119,7 @@ DepEd's Excel templates are filled by editing their cells in place (`core/xlsx_p
    python manage.py createsuperuser
    ```
 
-5. **Optional: load the demo school.** This creates school ID `DEMO-ARMS` with accounts for every role. Their usernames end in `@demo.arms.edu.ph`, and they share the password in `DEMO_PASSWORD`. The command has `--reset`, `--remove` and `--dry-run` options.
+5. **Optional: load the demo school.** This creates school ID `DEMO-ARMS` with accounts for every role. Their usernames end in `@demo.arms.edu.ph`, and they share the password in `DEMO_PASSWORD`. The command has `--reset`, `--remove` and `--dry-run` options, and `--spread-levels`, which moves each discipline's grades so the nine disciplines cover all five levels of either DepEd order (retrain the forecaster after it).
 
    ```bash
    python manage.py seed_demo
@@ -161,7 +162,7 @@ All settings come from `.env`. The full list with examples is in `.env.example`.
 | `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USE_TLS`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` | The mail account for verification and password-reset codes. For Gmail, use an App Password. |
 | `ARMS_CONTACT_EMAIL` | Where contact-form messages go. |
 | `DEMO_PASSWORD` | The password of the demo accounts. It is generated on the first `seed_demo` run if empty. |
-| `PORO_AI_ENABLED`, `OLLAMA_URL`, `PORO_AI_MODEL`, `PORO_AI_BASE_MODEL`, `PORO_AI_TIMEOUT`, `PORO_AI_WRITE_TIMEOUT`, `PORO_AI_STYLE` | Poro AI, its local model, and how it writes (`faithful` rewords each computed sentence; `free` writes from the facts, for a larger model). |
+| `PORO_AI_ENABLED`, `OLLAMA_URL`, `PORO_AI_MODEL`, `PORO_AI_BASE_MODEL`, `PORO_AI_WRITE_TIMEOUT` | Poro AI and its local model. `PORO_AI_ENABLED` is off by default on Vercel. |
 | `PAGE_CACHE` | `False` turns the per-user page cache off while troubleshooting. |
 | `REMEMBER_ME_DAYS` | How long Remember me keeps a user signed in. The default is 30. |
 | `REDIS_URL` | Optional shared cache when the app runs on several servers. |
@@ -174,7 +175,7 @@ All settings come from `.env`. The full list with examples is in `.env.example`.
 | `config/` | Settings and the main URLs |
 | `accounts/` | Sign-in, Google sign-in, password reset, account settings, the `seed_demo` command |
 | `admin_panel/` | The System Administrator portal |
-| `heads/` | The School Head portal: dashboard, section briefs (`insights.py`) and Poro AI (`poro.py`), forecast charts (`forecasts.py`), Honors Outlook, School Performance, School Year, User Management |
+| `heads/` | The School Head portal: dashboard, its decisions (`insights.py`) and Poro AI (`poro.py`), forecast charts (`forecasts.py`), Honors Outlook, School Performance, School Year, User Management |
 | `registrars/` | The Registrar portal: enrollment, sections, teachers and the teacher file reader (`teacher_import.py`), grade validation, School Forms |
 | `teachers/` | The Teacher portal: class records, e-class record uploads, adviser forms |
 | `assessments/` | Online quizzes |

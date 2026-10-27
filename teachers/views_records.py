@@ -14,6 +14,7 @@ from django.views.decorators.http import require_POST
 from academics.models import Quarter, SchoolYear
 from communication.models import Notification
 from communication.notify import notify, school_registrars
+from core import grading_policy as policy
 from core import periods as P
 from core.caching import bump_data_version
 from grades import ecr
@@ -32,6 +33,7 @@ def _teacher(request):
 def teacher_context(request):
     profile = _teacher(request)
     school = profile.school
+    policy.activate(school)          # the school's DepEd order names the levels on every teacher page
     sy = SchoolYear.objects.filter(school=school, is_current=True).first()
     periods = list(Quarter.objects.filter(school_year=sy).order_by('quarter_number')) if sy else []
     current = P.current(periods)

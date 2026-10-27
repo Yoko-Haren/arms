@@ -7,29 +7,32 @@
 
 {% block extra_css %}
 <style>
-    /* Shared parts (filters, status, tables, plots, dialogs) are in static/heads/css/head-portal.css. */
+    /* Shared parts (filters, status, tables, dialogs, forecast charts) are in static/heads/css/head-portal.css. */
     .guide-summary .btn-outline { margin-left: auto; }
     .guide-summary .btn-outline + .reset { margin-left: 0.7rem; }
 
-    /* promotion outlook */
-    .outlook { padding: 1.1rem 1.15rem 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    /* promotion outlook: the year-end picture if the year ended with this period's grades */
+    .outlook { display: flex; flex-direction: column; gap: 0.85rem; }
+    .outlook-head { display: flex; align-items: baseline; gap: 0.25rem 0.7rem; flex-wrap: wrap; margin-top: 0.55rem; }
+    .outlook-head b { font-size: 2rem; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .outlook-head > span { font-size: 0.95rem; font-weight: 600; color: var(--ink); }
+    .outlook-head .chg { font-size: 0.78rem; font-weight: 650; display: inline-flex; align-items: center; gap: 0.15rem; }
     .stack { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--soft); gap: 2px; }
     .stack span { display: block; height: 100%; min-width: 0; }
     .on_track-bg { background: #2E7D32; } .remedial-bg { background: #D97706; } .retention-bg { background: #C62828; }
     .on_track-fg { color: #2E7D32; } .remedial-fg { color: #B45309; } .retention-fg { color: #C62828; }
-    .outlook-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
-    .outlook-list li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 0.6rem; align-items: start; }
+    .outlook-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.55rem; }
+    @media (max-width: 640px) { .outlook-list { grid-template-columns: 1fr; } }
+    .outlook-list li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 0.55rem; align-items: start; background: var(--soft);
+                       border-radius: 12px; padding: 0.65rem 0.75rem; }
     .outlook-list .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 0.3rem; }
     .outlook-list b { font-size: 0.84rem; font-weight: 650; display: block; }
-    .outlook-list small { font-size: 0.74rem; color: var(--muted); line-height: 1.4; display: block; }
+    .outlook-list small { font-size: 0.72rem; color: var(--muted); line-height: 1.4; display: block; }
     .outlook-list .n { font-size: 1.05rem; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; line-height: 1.2; }
     .outlook-list .n em { display: block; font-style: normal; font-size: 0.72rem; font-weight: 500; color: var(--muted); }
-    .outlook .link-btn { padding-top: 0; }
-
-    /* learning areas: one dot per area, the bar spans its lowest to highest class */
-    .area-dot { background: var(--lv); }
-    .sp .kp { --name-w: 270px; }
-    .sp .kp-name b { white-space: normal; overflow: visible; line-height: 1.3; }
+    .status-facts.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .fact a { color: var(--brand); font-size: 0.74rem; font-weight: 600; text-decoration: none; display: inline-block; margin-top: 0.1rem; }
+    .fact a:hover { text-decoration: underline; }
 
     /* grade levels (or the sections of one grade level) */
     .levels { padding: 1.1rem 1.25rem 0.95rem; container-type: inline-size; }
@@ -62,9 +65,7 @@
         .lv-table td.go { display: none; }
     }
 
-    /* enrollment and the same period last year */
-    .sp .two-col { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 1rem; }
-    @media (max-width: 1100px) { .sp .two-col { grid-template-columns: 1fr; } }
+    /* the same period last year, and enrollment over the years */
     .trend-tools { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
     .chart-box { position: relative; height: 250px; margin-top: 0.6rem; }
     .trend-note { margin: 0.6rem 0 0; font-size: 0.8rem; color: var(--muted); }
@@ -84,19 +85,6 @@
         .cmp-table td { padding: 0.55rem 0.35rem; }
         .cmp-table td:first-child i { display: none; }
     }
-
-    /* learners who need support (dialog list) */
-    .need-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
-    .need-list li > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.25rem 0.8rem; align-items: center; padding: 0.55rem 0.8rem;
-                          border: 1px solid var(--line); border-radius: 12px; }
-    .need-list .who { font-weight: 650; font-size: 0.88rem; }
-    .need-list .where { font-size: 0.78rem; color: var(--muted); }
-    .need-list .chips { grid-column: 1 / 2; display: flex; flex-wrap: wrap; gap: 0.3rem; }
-    .need-list .chip { font-size: 0.72rem; font-weight: 650; padding: 0.12rem 0.5rem; border-radius: 12px; background: #ffebee; color: #C62828; font-variant-numeric: tabular-nums; }
-    .need-list .tag { grid-row: 1 / 3; grid-column: 2; font-size: 0.72rem; font-weight: 650; padding: 0.2rem 0.6rem; border-radius: 12px; white-space: nowrap; }
-    .need-list .tag.retention { background: #ffebee; color: #C62828; } .need-list .tag.remedial { background: #fff3e0; color: #B45309; }
-    .ad-filter { padding: 0.45rem 0.8rem; border: 1.5px solid #dfe4ec; border-radius: 20px; font: inherit; font-size: 0.84rem; background: var(--soft); color: var(--ink); }
-    .ad-filter:focus { outline: none; border-color: var(--brand); background: #fff; }
 
     .empty-card { padding: 2.2rem 1.5rem; text-align: center; }
     .empty-card i { font-size: 2rem; color: var(--brand); }
@@ -139,56 +127,20 @@
     </section>
 
     {% if status %}
-    <!-- 2. One status for the school (or grade level), and the promotion outlook -->
+    <!-- 2. Who would be promoted if the year ended now, and the same period last school year -->
     <div class="top-grid">
-        <section class="card status level-{{ status.level.key }}" aria-labelledby="statusTitle">
-            <span class="eyebrow">School status &middot; {{ scope_name }} &middot; {{ period_name }}</span>
-            <div class="status-main">
-                <div class="status-badge" aria-hidden="true">{{ status.level.letter }}</div>
-                <div>
-                    <div class="status-level" id="statusTitle">{{ status.level.name }}</div>
-                    <div class="status-meaning explain">{{ status.level.meaning }}</div>
-                </div>
+        <section class="card status outlook" aria-labelledby="outlookTitle">
+            <span class="eyebrow" id="outlookTitle">Promotion outlook &middot; {{ scope_name }} &middot; {{ period_name }}</span>
+            <div class="outlook-head">
+                <b>{{ status.passing_all }}%</b>
+                <span>of learners pass every learning area</span>
+                {% if status.passing_delta is not None %}
+                <span class="chg {% if status.passing_delta > 0 %}up{% elif status.passing_delta < 0 %}down{% else %}flat{% endif %}">
+                    {% if status.passing_delta > 0 %}<i class="fi fi-rr-caret-up"></i>{{ status.passing_delta }}{% elif status.passing_delta < 0 %}<i class="fi fi-rr-caret-down"></i>{{ status.passing_delta|stringformat:".1f"|slice:"1:" }}{% else %}no change{% endif %} vs {{ prev_period_name }}
+                </span>
+                {% endif %}
             </div>
-            <div class="status-facts">
-                <div class="fact">
-                    <b>{{ status.average }}%</b>
-                    <span>Average grade</span>
-                    {% if status.delta is not None %}
-                    <span class="chg {% if status.delta > 0 %}up{% elif status.delta < 0 %}down{% else %}flat{% endif %}">
-                        {% if status.delta > 0 %}<i class="fi fi-rr-caret-up"></i>{{ status.delta }}{% elif status.delta < 0 %}<i class="fi fi-rr-caret-down"></i>{{ status.delta|stringformat:".1f"|slice:"1:" }}{% else %}no change{% endif %} vs {{ prev_period_name }}
-                    </span>
-                    {% endif %}
-                </div>
-                <div class="fact">
-                    <b>{{ status.passing_all }}%</b>
-                    <span>Passing all subjects</span>
-                    {% if status.passing_delta is not None %}
-                    <span class="chg {% if status.passing_delta > 0 %}up{% elif status.passing_delta < 0 %}down{% else %}flat{% endif %}">
-                        {% if status.passing_delta > 0 %}<i class="fi fi-rr-caret-up"></i>{{ status.passing_delta }}{% elif status.passing_delta < 0 %}<i class="fi fi-rr-caret-down"></i>{{ status.passing_delta|stringformat:".1f"|slice:"1:" }}{% else %}no change{% endif %} vs {{ prev_period_name }}
-                    </span>
-                    {% endif %}
-                </div>
-                <div class="fact" title="{% for name, n in status.honors_by %}{{ name }}: {{ n }}{% if not forloop.last %}, {% endif %}{% endfor %}. {{ awards.period_rule }}">
-                    <b>{{ status.honors }}</b>
-                    <span>{{ awards.label }} ({{ status.honors_rate }}%)</span>
-                </div>
-                <div class="fact">
-                    <b>{% if status.attendance is not None %}{{ status.attendance }}%{% else %}&mdash;{% endif %}</b>
-                    <span>Attendance{% if status.attendance is None %} not recorded{% endif %}</span>
-                </div>
-            </div>
-            <div class="poro-line">
-                <img src="{% static 'shared/poro/Poro.png' %}" alt="" onerror="this.remove()">
-                <p><span class="poro-tag">Poro AI</span>{{ status.insight }}</p>
-            </div>
-        </section>
-
-        <aside class="card outlook" aria-labelledby="outlookTitle">
-            <div>
-                <h3 id="outlookTitle"><i class="fi fi-rr-graduation-cap" style="color:#123499;"></i> Promotion outlook</h3>
-                <p class="hint explain">If the year ended with {{ period_name }} grades. {{ status.learners }} of {{ status.enrolled }} learner{{ status.enrolled|pluralize }} graded (DepEd Order No. 8, s. 2015).</p>
-            </div>
+            <p class="hint explain">If the year ended with {{ period_name }} grades (DepEd Order No. 8, s. 2015). The school's level, each discipline and Poro AI's recommendations are on the Academic Dashboard.</p>
             <div class="stack" role="img" aria-label="{% for o in outlook %}{{ o.name }} {{ o.count }}{% if not forloop.last %}, {% endif %}{% endfor %}">
                 {% for o in outlook %}{% if o.count %}<span class="{{ o.key }}-bg" style="flex: {{ o.count }}" title="{{ o.name }}: {{ o.count }}"></span>{% endif %}{% endfor %}
             </div>
@@ -198,17 +150,52 @@
                     <span class="n">{{ o.count }}<em>{{ o.share }}%</em></span></li>
                 {% endfor %}
             </ul>
-            {% if needs %}<button type="button" class="link-btn" id="needsOpen" aria-haspopup="dialog" aria-controls="needsModal">See the {{ needs|length }} learner{{ needs|length|pluralize }} below 75</button>
-            {% else %}<p class="empty-good"><i class="fi fi-rr-check-circle"></i> Every learner passes every learning area.</p>{% endif %}
-        </aside>
+            <div class="status-facts three">
+                <div class="fact" title="{% for name, n in status.honors_by %}{{ name }}: {{ n }}{% if not forloop.last %}, {% endif %}{% endfor %}. {{ awards.period_rule }}">
+                    <b>{{ status.honors }}</b>
+                    <span>{{ awards.label }} ({{ status.honors_rate }}%)</span>
+                    <a href="{% url 'heads-honors' %}">Honors Outlook <i class="fi fi-rr-angle-small-right"></i></a>
+                </div>
+                <div class="fact">
+                    <b>{% if status.attendance is not None %}{{ status.attendance }}%{% else %}&mdash;{% endif %}</b>
+                    <span>Attendance{% if status.attendance is None %} not recorded{% endif %}</span>
+                </div>
+                <div class="fact">
+                    <b>{{ status.learners }}</b>
+                    <span>of {{ status.enrolled }} learner{{ status.enrolled|pluralize }} graded</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="card chart-card" aria-labelledby="cmpTitle">
+            <h3 id="cmpTitle"><i class="fi fi-rr-time-past" style="color:#123499;"></i> Compared with last school year</h3>
+            {% if last_year %}
+            <p class="hint">{{ period_name }} this year against {{ last_year.name }}{% if grade %}, {{ grade.grade_name }}{% endif %}.</p>
+            <table class="cmp-table">
+                <thead><tr><th>Measure</th><th>Last year</th><th>This year</th><th>Change</th></tr></thead>
+                <tbody>
+                    {% for row in last_year.rows %}
+                    <tr>
+                        <td><span><i class="fi {{ row.icon }}"></i>{{ row.name }}</span></td>
+                        <td>{% if row.then is not None %}{{ row.then }}{{ row.unit }}{% else %}&mdash;{% endif %}</td>
+                        <td class="now">{% if row.now is not None %}{{ row.now }}{{ row.unit }}{% else %}&mdash;{% endif %}</td>
+                        <td>{% if row.change is None %}&mdash;{% else %}<span class="{% if row.change > 0 %}up{% elif row.change < 0 %}down{% else %}flat{% endif %}">{% if row.change > 0 %}+{% endif %}{% if row.unit %}{{ row.change }}{% else %}{{ row.change|floatformat:0 }}{% endif %}</span>{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="hint">No grades for the same grading period last school year, so there is nothing to compare yet.</p>
+            {% endif %}
+        </section>
     </div>
 
     {% if forecast and forecast.series %}
-    <!-- School performance forecast: each grade level (or section) over the year, and the periods ahead -->
+    <!-- 3. School performance forecast: each grade level (or section) over the year, and the periods ahead -->
     <section class="card chart-card" aria-labelledby="spFcTitle">
         <div class="card-head" style="margin-bottom:0.3rem">
             <div>
-                <h3 id="spFcTitle"><i class="fi fi-rr-chart-line-up" style="color:#123499;"></i> {{ scope_name }}: performance forecast &middot; SY {{ sy.year_label }}</h3>
+                <h3 id="spFcTitle"><i class="fi fi-rr-chart-line-up" style="color:#123499;"></i> {{ scope_name }}: school performance forecast &middot; SY {{ sy.year_label }}</h3>
                 <p class="hint explain">One line per {{ forecast.word }} across every learning area, and a thicker dark line for {% if grade %}{{ grade.grade_name }}{% else %}the whole school{% endif %}. Solid lines are averages so far, dashed lines the forecast and the band its likely range; diamonds show what the model forecast a period earlier.</p>
             </div>
         </div>
@@ -217,29 +204,12 @@
     {{ forecast|json_script:"spForecast" }}
     {% endif %}
 
-    <!-- 3. Learning areas, lowest first; every subject in the dialog -->
-    <section class="card chart-card" aria-labelledby="areasTitle">
-        <div class="card-head">
-            <div>
-                <h3 id="areasTitle"><i class="fi fi-rr-book-open-cover" style="color:#123499;"></i> Learning areas</h3>
-                <p class="hint explain">One row per learning area: the dot is its average, the bar runs from its lowest to its highest class. Lowest first. Open a row to review it on the Academic Dashboard.</p>
-            </div>
-            {% if subjects %}<button type="button" class="btn-outline btn-sm" id="subjectsOpen" aria-haspopup="dialog" aria-controls="subjectsModal"><i class="fi fi-rr-expand"></i> View all {{ subjects|length }} subjects</button>{% endif %}
-        </div>
-        <div class="kp-legend" aria-hidden="true">
-            <span><i class="kp-key" style="background:#1565C0"></i>Average (colored by level)</span>
-            <span><i class="kp-key range"></i>Lowest to highest class</span>
-            <span><i class="kp-key pass"></i>Passing (75)</span>
-        </div>
-        <div class="kp" id="areaPlot" data-prev="{{ prev_period_name }}"></div>
-    </section>
-
     <!-- 4. Grade levels (or the sections of the chosen grade level) -->
     <section class="card levels" aria-labelledby="levelsTitle">
         <div class="card-head">
             <div>
                 <h3 id="levelsTitle"><i class="fi fi-rr-school" style="color:#123499;"></i> {% if grade %}Sections in {{ grade.grade_name }}{% else %}Grade levels{% endif %}</h3>
-                <p class="hint explain">{% if grade %}Every section's average, promotion outlook, honors and attendance in {{ period_name }}.{% else %}Open a grade level to see its sections, learning areas and learners.{% endif %}</p>
+                <p class="hint explain">{% if grade %}Every section's average, promotion outlook, honors and attendance in {{ period_name }}.{% else %}Open a grade level to see its sections.{% endif %}</p>
             </div>
             <div class="mini-key" aria-hidden="true">{% for o in outlook %}<i class="{{ o.key }}-fg">{{ o.name }}</i>{% endfor %}</div>
         </div>
@@ -296,134 +266,29 @@
     </section>
     {% endif %}
 
-    <!-- 5. Enrollment over the years, and the same period last school year -->
-    <div class="two-col">
-        <section class="card chart-card" aria-labelledby="trendTitle">
-            <div class="card-head" style="margin-bottom:0">
-                <div>
-                    <h3 id="trendTitle"><i class="fi fi-rr-users-alt" style="color:#123499;"></i> Enrollment over the years</h3>
-                    <p class="hint">{% if grade %}{{ grade.grade_name }} learners{% else %}Learners{% endif %} enrolled in each school year, up to SY {{ sy.year_label }}.</p>
-                </div>
-                <div class="trend-tools">
-                    <div class="seg small" role="radiogroup" aria-label="School years shown" id="trendRange" hidden></div>
-                    {% if not grade %}<div class="seg small" role="radiogroup" aria-label="Show" id="trendView">
-                        <button type="button" role="radio" data-view="total" aria-checked="true">Total</button>
-                        <button type="button" role="radio" data-view="levels" aria-checked="false">By grade level</button>
-                    </div>{% endif %}
-                </div>
+    <!-- 5. Enrollment over the years -->
+    <section class="card chart-card" aria-labelledby="trendTitle">
+        <div class="card-head" style="margin-bottom:0">
+            <div>
+                <h3 id="trendTitle"><i class="fi fi-rr-users-alt" style="color:#123499;"></i> Enrollment over the years</h3>
+                <p class="hint">{% if grade %}{{ grade.grade_name }} learners{% else %}Learners{% endif %} enrolled in each school year, up to SY {{ sy.year_label }}.</p>
             </div>
-            {% if trend %}
-            <div class="chart-box is-loading"><canvas id="trendChart" role="img" aria-label="Learners enrolled per school year"></canvas></div>
-            <p class="trend-note" id="trendNote"></p>
-            {% else %}
-            <p class="hint" style="margin-top:1rem">No enrollment recorded yet.</p>
-            {% endif %}
-        </section>
-
-        <section class="card chart-card" aria-labelledby="cmpTitle">
-            <h3 id="cmpTitle"><i class="fi fi-rr-time-past" style="color:#123499;"></i> Compared with last school year</h3>
-            {% if last_year %}
-            <p class="hint">{{ period_name }} this year against {{ last_year.name }}{% if grade %}, {{ grade.grade_name }}{% endif %}.</p>
-            <table class="cmp-table">
-                <thead><tr><th>Measure</th><th>Last year</th><th>This year</th><th>Change</th></tr></thead>
-                <tbody>
-                    {% for row in last_year.rows %}
-                    <tr>
-                        <td><span><i class="fi {{ row.icon }}"></i>{{ row.name }}</span></td>
-                        <td>{% if row.then is not None %}{{ row.then }}{{ row.unit }}{% else %}&mdash;{% endif %}</td>
-                        <td class="now">{% if row.now is not None %}{{ row.now }}{{ row.unit }}{% else %}&mdash;{% endif %}</td>
-                        <td>{% if row.change is None %}&mdash;{% else %}<span class="{% if row.change > 0 %}up{% elif row.change < 0 %}down{% else %}flat{% endif %}">{% if row.change > 0 %}+{% endif %}{% if row.unit %}{{ row.change }}{% else %}{{ row.change|floatformat:0 }}{% endif %}</span>{% endif %}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <p class="hint">No grades for the same grading period last school year, so there is nothing to compare yet.</p>
-            {% endif %}
-        </section>
-    </div>
-
-    {% if subjects %}
-    <div class="ad-modal" id="subjectsModal" role="dialog" aria-modal="true" aria-labelledby="subjectsTitle" hidden>
-        <div class="ad-modal-card wide" tabindex="-1">
-            <div class="ad-modal-head">
-                <div>
-                    <h3 id="subjectsTitle"><i class="fi fi-rr-book-open-cover" style="color:#123499;"></i> Every subject &middot; {{ subjects|length }}</h3>
-                    <p class="hint">{{ scope_name }} &middot; {{ period_name }}. The dot is the subject's average; the bar runs from its lowest to its highest class. Open a row to review the subject.</p>
-                </div>
-                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
-            </div>
-            <div class="ad-modal-tools">
-                <label class="ad-search"><i class="fi fi-rr-search"></i><input type="search" id="subjectsSearch" placeholder="Find a subject or grade level" aria-label="Find a subject or grade level"></label>
-                <label class="ad-sortby">Sort by
-                    <select id="subjectsSort">
-                        <option value="low">Lowest average first</option>
-                        <option value="high">Highest average first</option>
-                        <option value="below">Most learners below 75</option>
-                        <option value="spread">Widest gap between classes</option>
-                        {% if prev_period_name %}<option value="drop">Biggest drop since {{ prev_period_name }}</option>{% endif %}
-                        <option value="grade">Grade level</option>
-                        <option value="name">Subject name (A to Z)</option>
-                    </select>
-                </label>
-                <span class="tools-count" id="subjectsCount" aria-live="polite"></span>
-            </div>
-            <div class="ad-modal-body kp-body">
-                <div class="kp-legend" aria-hidden="true">
-                    <span><i class="kp-key" style="background:#1565C0"></i>Average (colored by level)</span>
-                    <span><i class="kp-key range"></i>Lowest to highest class</span>
-                    <span><i class="kp-key pass"></i>Passing (75)</span>
-                </div>
-                <div class="kp" id="subjectPlot"></div>
+            <div class="trend-tools">
+                <div class="seg small" role="radiogroup" aria-label="School years shown" id="trendRange" hidden></div>
+                {% if not grade %}<div class="seg small" role="radiogroup" aria-label="Show" id="trendView">
+                    <button type="button" role="radio" data-view="total" aria-checked="true">Total</button>
+                    <button type="button" role="radio" data-view="levels" aria-checked="false">By grade level</button>
+                </div>{% endif %}
             </div>
         </div>
-    </div>
-    {% endif %}
+        {% if trend %}
+        <div class="chart-box is-loading"><canvas id="trendChart" role="img" aria-label="Learners enrolled per school year"></canvas></div>
+        <p class="trend-note" id="trendNote"></p>
+        {% else %}
+        <p class="hint" style="margin-top:1rem">No enrollment recorded yet.</p>
+        {% endif %}
+    </section>
 
-    {% if needs %}
-    <div class="ad-modal" id="needsModal" role="dialog" aria-modal="true" aria-labelledby="needsTitle" hidden>
-        <div class="ad-modal-card" tabindex="-1">
-            <div class="ad-modal-head">
-                <div>
-                    <h3 id="needsTitle"><i class="fi fi-rr-user-time" style="color:#C62828;"></i> Learners below 75 <span class="count">{{ needs|length }}</span></h3>
-                    <p class="hint">{{ scope_name }} &middot; {{ period_name }}. Remedial classes are required (DepEd Order No. 8, s. 2015); three or more learning areas below 75 means retention in Grades 7 to 10.</p>
-                </div>
-                <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
-            </div>
-            <div class="ad-modal-tools">
-                <label class="ad-search"><i class="fi fi-rr-search"></i><input type="search" id="needsSearch" placeholder="Find a learner, section or subject" aria-label="Find a learner, section or subject"></label>
-                <select id="needsOutlook" class="ad-filter" aria-label="Outlook">
-                    <option value="">Remedial and retention risk</option>
-                    <option value="retention">At risk of retention</option>
-                    <option value="remedial">Remedial classes</option>
-                </select>
-                {% if not grade %}<select id="needsGrade" class="ad-filter" aria-label="Grade level">
-                    <option value="">All grade levels</option>
-                    {% for gl in grade_levels %}<option value="{{ gl.id }}">{{ gl.grade_name }}</option>{% endfor %}
-                </select>{% endif %}
-                <a class="btn-outline btn-sm" href="{{ export_url }}"><i class="fi fi-rr-download"></i> Download</a>
-                <span class="tools-count" id="needsCount" aria-live="polite"></span>
-            </div>
-            <div class="ad-modal-body">
-                <ul class="need-list" id="needsList">
-                    {% for n in needs %}
-                    <li data-outlook="{{ n.outlook }}" data-grade="{{ n.grade_level_id }}" data-text="{{ n.name|lower }} {{ n.section|lower }} {{ n.grade_level|lower }} {% for i in n.items %}{{ i.code|lower }} {% endfor %}">
-                        <div>
-                            <span><span class="who">{{ n.name }}</span> <span class="where">&middot; {{ n.grade_level }} {{ n.section }} &middot; average {{ n.average }}</span></span>
-                            <span class="chips">{% for i in n.items %}<span class="chip">{{ i.code }} {{ i.grade|floatformat:0 }}</span>{% endfor %}</span>
-                            <span class="tag {{ n.outlook }}">{% if n.outlook == 'retention' %}Retention risk &middot; {{ n.count }}{% else %}Remedial &middot; {{ n.count }}{% endif %}</span>
-                        </div>
-                    </li>
-                    {% endfor %}
-                </ul>
-                <p class="ad-none" id="needsNone" hidden>No learner matches.</p>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    {{ areas|json_script:"areaData" }}
-    {{ subjects|json_script:"subjectData" }}
     {{ trend|json_script:"trendData" }}
     {{ trend_levels|json_script:"trendLevels" }}
 </div>
@@ -451,114 +316,6 @@
             if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(row.dataset.href); }
         });
     });
-
-    // ---------- dialogs: Esc or the backdrop closes them, focus stays inside and returns to the button ----------
-    var opener = null;
-    function openDialog(dialog, from) {
-        opener = from; dialog.hidden = false; document.body.style.overflow = 'hidden';
-        dialog.querySelector('.ad-modal-card').focus();
-    }
-    function closeDialog(dialog) {
-        dialog.hidden = true; document.body.style.overflow = '';
-        if (opener) opener.focus();
-    }
-    document.querySelectorAll('.ad-modal').forEach(function (dialog) {
-        dialog.addEventListener('click', function (e) { if (e.target === dialog || e.target.closest('[data-close]')) closeDialog(dialog); });
-    });
-    document.addEventListener('keydown', function (e) {
-        var shown = document.querySelector('.ad-modal:not([hidden])');
-        if (shown && e.key === 'Escape') closeDialog(shown);
-    });
-    document.addEventListener('focusin', function (e) {
-        var shown = document.querySelector('.ad-modal:not([hidden])');
-        if (shown && !shown.contains(e.target)) shown.querySelector('.ad-modal-card').focus();
-    });
-
-    // ---------- one row per learning area or subject: a dot for the average, a bar from the lowest to the highest class ----------
-    var areas = data('areaData'), subjects = data('subjectData');
-    var prev = (document.getElementById('areaPlot') || {}).dataset ? document.getElementById('areaPlot').dataset.prev : '';
-    // each plot gets its own scale: from just below its lowest class (and 75) up to 100, labels every 10
-    function scaleFor(rows) {
-        var values = [75];
-        rows.forEach(function (r) { values.push(r.low, r.high, r.average); });
-        var lo = Math.max(0, Math.floor((Math.min.apply(null, values) - 2) / 5) * 5), hi = 100;
-        var at = function (v) { return ((v - lo) / (hi - lo) * 100).toFixed(2) + '%'; };
-        var ticks = '', grid = '';
-        for (var v = Math.ceil(lo / 10) * 10; v <= hi; v += 10) {
-            ticks += '<span style="left:' + at(v) + '">' + v + '</span>';
-            if (v > lo && v < hi) grid += '<span class="kp-grid" style="left:' + at(v) + '"></span>';
-        }
-        return { at: at, ticks: ticks, grid: grid };
-    }
-    function rowHtml(r, sc) {
-        var at = sc.at;
-        var said = r.name + ' (' + r.detail + '): average ' + r.average.toFixed(1) + ', ' + r.classes + ' classes from ' + r.low.toFixed(1) + ' to ' + r.high.toFixed(1) +
-            (r.below ? ', ' + r.below + ' learners below 75' : '') +
-            (r.delta ? ', ' + (r.delta > 0 ? 'up ' : 'down ') + Math.abs(r.delta).toFixed(1) + ' since ' + prev : '');
-        var change = r.delta ? '<span class="kp-delta ' + (r.delta > 0 ? 'up' : 'down') + '" title="Change since ' + esc(prev) + '">' +
-            '<i class="fi fi-rr-caret-' + (r.delta > 0 ? 'up' : 'down') + '"></i>' + Math.abs(r.delta).toFixed(1) + '</span>' : '';
-        var inner = '<span class="kp-name"><b>' + esc(r.name) + (r.below ? '<em class="kp-flag">' + r.below + ' below 75</em>' : '') + '</b>' +
-            '<small>' + esc(r.detail) + '</small></span>' +
-            '<span class="kp-track" aria-hidden="true">' + sc.grid +
-                '<span class="kp-pass" style="left:' + at(75) + '"></span>' +
-                '<span class="kp-range" style="left:' + at(r.low) + ';width:calc(' + at(r.high) + ' - ' + at(r.low) + ')" data-tip="Classes from ' + r.low.toFixed(1) + '% to ' + r.high.toFixed(1) + '%"></span>' +
-                '<span class="kp-dot area-dot" style="left:' + at(r.average) + '" data-tip="Average ' + r.average.toFixed(1) + '%"></span>' +
-            '</span>' +
-            '<span class="kp-val"><span class="lvl">' + r.average.toFixed(1) + '%</span>' + change + '</span>';
-        return '<li class="kp-row level-' + esc(r.level) + '">' + (r.url ? '<a class="kp-link" href="' + esc(r.url) + '" aria-label="' + esc(said) + '">' + inner + '</a>'
-                                                                       : '<div class="kp-link" aria-label="' + esc(said) + '">' + inner + '</div>') + '</li>';
-    }
-    function draw(box, list, empty, sc) {
-        if (!box) return;
-        box.innerHTML = '<div class="kp-axis" aria-hidden="true"><span class="kp-spacer">' + (box.id === 'areaPlot' ? 'Learning area' : 'Subject') +
-            '</span><span class="kp-ticks">' + sc.ticks + '</span><span class="kp-head-val">Average</span></div>' +
-            (list.length ? '<ol class="kp-rows">' + list.map(function (r) { return rowHtml(r, sc); }).join('') + '</ol>' : '<p class="kp-empty">' + empty + '</p>');
-    }
-    var subjectScale = scaleFor(subjects);
-    draw(document.getElementById('areaPlot'), areas, 'No grades for this selection.', scaleFor(areas));
-
-    var subjectsModal = document.getElementById('subjectsModal');
-    if (subjectsModal) {
-        var sSearch = document.getElementById('subjectsSearch'), sSort = document.getElementById('subjectsSort');
-        var byLowest = function (a, b) { return a.average - b.average || a.order - b.order; };
-        var SORTS = {
-            low: byLowest,
-            high: function (a, b) { return b.average - a.average || a.order - b.order; },
-            below: function (a, b) { return b.below - a.below || a.average - b.average; },
-            spread: function (a, b) { return (b.high - b.low) - (a.high - a.low) || a.average - b.average; },
-            drop: function (a, b) { return (a.delta == null) - (b.delta == null) || (a.delta || 0) - (b.delta || 0) || a.order - b.order; },
-            grade: function (a, b) { return a.order - b.order; },
-            name: function (a, b) { return a.name.localeCompare(b.name) || a.order - b.order; }
-        };
-        var showSubjects = function () {
-            var q = sSearch.value.trim().toLowerCase();
-            var list = subjects.filter(function (r) { return !q || (r.name + ' ' + r.detail).toLowerCase().indexOf(q) > -1; })
-                               .sort(SORTS[sSort.value] || byLowest);
-            draw(document.getElementById('subjectPlot'), list, 'No subject matches.', subjectScale);
-            document.getElementById('subjectsCount').textContent = 'Showing ' + list.length + ' of ' + subjects.length + ' subjects';
-        };
-        sSearch.addEventListener('input', showSubjects);
-        sSort.addEventListener('change', showSubjects);
-        document.getElementById('subjectsOpen').addEventListener('click', function (e) { showSubjects(); openDialog(subjectsModal, e.currentTarget); });
-    }
-
-    // ---------- learners below 75 ----------
-    var needsModal = document.getElementById('needsModal');
-    if (needsModal) {
-        var items = Array.prototype.slice.call(document.querySelectorAll('#needsList li'));
-        var nSearch = document.getElementById('needsSearch'), nOutlook = document.getElementById('needsOutlook'), nGrade = document.getElementById('needsGrade');
-        var showNeeds = function () {
-            var q = nSearch.value.trim().toLowerCase(), o = nOutlook.value, g = nGrade ? nGrade.value : '', shown = 0;
-            items.forEach(function (li) {
-                li.hidden = (q && li.dataset.text.indexOf(q) === -1) || (o && li.dataset.outlook !== o) || (g && li.dataset.grade !== g);
-                if (!li.hidden) shown++;
-            });
-            document.getElementById('needsNone').hidden = shown > 0;
-            document.getElementById('needsCount').textContent = 'Showing ' + shown + ' of ' + items.length;
-        };
-        [nSearch, nOutlook, nGrade].forEach(function (el) { if (el) el.addEventListener(el === nSearch ? 'input' : 'change', showNeeds); });
-        document.getElementById('needsOpen').addEventListener('click', function (e) { showNeeds(); openDialog(needsModal, e.currentTarget); });
-    }
 
     // ---------- enrollment over the years: any range, total or by grade level ----------
     var trend = data('trendData'), levels = data('trendLevels'), canvas = document.getElementById('trendChart');
