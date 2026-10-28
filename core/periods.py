@@ -1,8 +1,10 @@
 """Grading periods and grades, the way each school counts them.
 
-A school grades by quarter (Q1-Q4), trimester (T1-T3) or semester (S1-S2) (School.period_type);
-its periods are the Quarter rows of the school year. Every page, chart and report names and
-counts periods through these helpers instead of assuming four quarters.
+A school grades by quarter (Q1-Q4), term (T1-T3, trimestral) or semester (S1-S2) (School.period_type);
+its periods are the Quarter rows of the school year. A school may change its grading system with a new
+school year (DepEd moved from four quarters to three terms in SY 2026-2027), so a year's own period
+labels decide how its periods are named. Every page, chart and report names and counts periods through
+these helpers instead of assuming four quarters.
 
 The grade that counts (report card, passing at 75, proficiency level) is the quarterly grade:
 GradeComponent.transmuted_grade. Older records kept it in initial_grade only, so readers fall
@@ -14,7 +16,8 @@ from django.db.models import DecimalField, F, Q
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-PERIOD_WORDS = {'Q': ('Quarter', 'Quarters'), 'T': ('Trimester', 'Trimesters'), 'S': ('Semester', 'Semesters')}
+# A trimestral school's periods are its three terms, as DepEd Orders No. 009 and 015, s. 2026 and their e-class records name them
+PERIOD_WORDS = {'Q': ('Quarter', 'Quarters'), 'T': ('Term', 'Terms'), 'S': ('Semester', 'Semesters')}
 TYPE_PREFIX = {'QUARTERLY': 'Q', 'TRIMESTRAL': 'T', 'SEMESTRAL': 'S'}
 ORDINALS = {1: 'First', 2: 'Second', 3: 'Third', 4: 'Fourth'}
 
@@ -30,23 +33,23 @@ def grade_value(transmuted, initial):
 
 
 def prefix(school=None, periods=()):
-    """'Q', 'T' or 'S' for a school, read from its setting or from its periods' labels."""
+    """'Q', 'T' or 'S': the school year's own periods decide, else the school's setting."""
+    for p in periods:
+        if p.quarter_label and p.quarter_label[:1].upper() in PERIOD_WORDS:
+            return p.quarter_label[:1].upper()
     if school is not None and getattr(school, 'period_type', None) in TYPE_PREFIX:
         return TYPE_PREFIX[school.period_type]
-    for p in periods:
-        if p.quarter_label:
-            return p.quarter_label[:1].upper()
     return 'Q'
 
 
 def word(school=None, periods=(), plural=False):
-    """'Quarter', 'Trimester' or 'Semester' (or the plural)."""
+    """'Quarter', 'Term' or 'Semester' (or the plural)."""
     words = PERIOD_WORDS.get(prefix(school, periods), PERIOD_WORDS['Q'])
     return words[1] if plural else words[0]
 
 
 def name(period):
-    """'Quarter 2', 'Trimester 1', 'Semester 2'."""
+    """'Quarter 2', 'Term 1', 'Semester 2'."""
     if not period:
         return ''
     w = PERIOD_WORDS.get((period.quarter_label or 'Q')[:1].upper(), PERIOD_WORDS['Q'])[0]

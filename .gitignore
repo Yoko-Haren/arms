@@ -52,3 +52,6 @@ supabase/.branches/
 
 # Page snapshots made by `python manage.py export_screens` (rebuilt on demand; they hold account data)
 design/screens/
+
+# DepEd order PDFs kept locally (large)
+static/forms/research-paper/

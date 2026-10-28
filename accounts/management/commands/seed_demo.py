@@ -1,15 +1,23 @@
-"""Demo data for screenshots and design work: one self-contained demo school.
+"""Demo data for screenshots and design work: self-contained demo schools, one per grading system.
 
-    python manage.py seed_demo            create the demo school (refuses if it already exists)
+    python manage.py seed_demo            create the quarterly demo school (refuses if it already exists)
     python manage.py seed_demo --reset    remove it first, then create it again
     python manage.py seed_demo --remove   remove the demo school and everything that belongs to it
     python manage.py seed_demo --dry-run  do everything, show the totals, then undo it
     python manage.py seed_demo --spread-levels   move each discipline of an existing demo school onto its level
-                                                 (LEVEL_TARGETS), so the dashboard shows every level
+                                                 (its level targets), so the dashboard shows every level
+    python manage.py seed_demo --trimestral ...  the same for the trimestral demo school (any option above)
 
-Nothing outside the demo school is read or changed. Demo records are recognisable by:
-school ID DEMO-ARMS, usernames ending in @demo.arms.edu.ph, and student numbers starting 9999.
-All demo accounts share one password, kept in .env as DEMO_PASSWORD (never printed).
+Two schools, each with every role:
+- ARMS Demo National High School (DEMO-ARMS, @demo.arms.edu.ph, learners 9999...): four quarters,
+  DepEd Order No. 8, s. 2015 grading (the School Head may switch it to DO 015 on the School Year page).
+- ARMS Demo Three-Term High School (DEMO-TERM, @term.demo.arms.edu.ph, learners 9998...): last school
+  year in four quarters, this one in the three terms of DepEd Order No. 009, s. 2026, graded under
+  DepEd Order No. 015, s. 2026. Grade 11 follows the Strengthened SHS curriculum (Academic and
+  Technical-Professional tracks); Grade 12 finishes the earlier one.
+
+Nothing outside the chosen demo school is read or changed. All demo accounts share one password, kept in
+.env as DEMO_PASSWORD (never printed).
 """
 import random
 import secrets
@@ -40,7 +48,7 @@ DOMAIN = 'demo.arms.edu.ph'
 LRN_PREFIX = '9999'
 ACTIVE = ['Enrolled', 'Transferred_In']
 
-# ----------------------------------------------------------------------------- people
+# ============================================================================= the quarterly demo school
 HEADS = [
     # first, last, designation, showcase account?
     ('Antonio', 'Fernandez', 'Principal III', True),
@@ -73,7 +81,6 @@ TEACHERS = [
 NEW_TEACHER = ('Sofia', 'Marquez', 'Teacher I', 'Science')            # no classes yet, temporary password
 INACTIVE_TEACHER = ('Gregorio', 'Salazar', 'Teacher III', 'Mathematics')  # deactivated account
 
-# ----------------------------------------------------------------------------- curriculum
 FAMILIES = [
     # code, name, colour, icon, grade offset (how hard the discipline tends to be; see LEVEL_TARGETS)
     ('MATH', 'Mathematics', '#123499', 'fi fi-rr-calculator', -14.0),
@@ -106,7 +113,8 @@ JHS_SUBJECTS = [
     ('TLE', 'Technology and Livelihood Education', 'TLE', ('tle', 'tle'), 4),
     ('ESP', 'Edukasyon sa Pagpapakatao', 'ESP', ('esp', 'esp'), 2),
 ]
-# Senior high: (code, name, family, grade, strand or None for core, teacher, meetings/week)
+# Senior high: (code, name, family, grade, group, teacher, meetings/week). A section takes the subjects of its groups:
+# None is the core every strand of the earlier curriculum takes, a strand code its specialized subjects.
 SHS_SUBJECTS = [
     ('ORALCOM11', 'Oral Communication', 'ENG', 11, None, 'shs_eng', 4),
     ('KOMPAN11', 'Komunikasyon at Pananaliksik', 'FIL', 11, None, 'shs_fil', 4),
@@ -138,7 +146,7 @@ SECTIONS = [
     (11, 'STEM-A', 'STEM', 'shs_math', 26, 3.0), (11, 'HUMSS-A', 'HUMSS', 'shs_hum', 24, -0.5),
     (12, 'STEM-A', 'STEM', 'shs_sci', 25, 3.5), (12, 'HUMSS-A', 'HUMSS', 'shs_eng', 23, 0.0),
 ]
-# How far along each class is in the current (second) quarter, repeated over the classes: validated; submitted
+# How far along each class is in the current (second) period, repeated over the classes: validated; submitted
 # by the teacher and waiting for the registrar; complete but not submitted (drafts); encoding; returned; not started.
 Q2_STATES = (['validated'] * 9 + ['submitted'] * 3 + ['ready'] + ['incomplete'] * 3 + ['returned'] + ['not_started'] * 3)
 
@@ -154,6 +162,156 @@ LASTS = ['Abad', 'Agustin', 'Alvarez', 'Bautista', 'Belmonte', 'Cabrera', 'Castr
          'Ocampo', 'Padilla', 'Pangilinan', 'Perez', 'Quiambao', 'Rivera', 'Robles', 'Salvador', 'Samonte',
          'San Jose', 'Santiago', 'Soriano', 'Tolentino', 'Umali', 'Valdez', 'Velasco', 'Yap', 'Zamora']
 MIDDLES = ['A.', 'B.', 'C.', 'D.', 'E.', 'G.', 'L.', 'M.', 'P.', 'R.', 'S.', 'T.', 'V.']
+
+# DepEd Order No. 8, s. 2015: written work, performance tasks, quarterly assessment (the demo uses the languages' split)
+DO8_WEIGHTS = (Decimal('0.30'), Decimal('0.50'), Decimal('0.20'))
+# DepEd Order No. 015, s. 2026, Grades 4 to 10 and Senior High core: written/oral works, product/performance tasks,
+# examinations; MAPEH and EPP/TLE (and TechPro electives, close enough for a demo) weigh performance more
+DO15_WEIGHTS = (Decimal('0.20'), Decimal('0.50'), Decimal('0.30'))
+DO15_WEIGHTS_MAPEH_TLE = (Decimal('0.20'), Decimal('0.60'), Decimal('0.20'))
+
+
+class Profile:
+    """Everything that makes one demo school: its people, curriculum, calendar and grading system."""
+
+    def __init__(self, **values):
+        self.__dict__.update(values)
+
+    def weights(self, family):
+        if self.grading_policy == 'DO15_2026':
+            return DO15_WEIGHTS_MAPEH_TLE if family in ('MAPEH', 'TLE') else DO15_WEIGHTS
+        return DO8_WEIGHTS
+
+    def groups(self, grade, strand, current):
+        """The subject groups a Senior High section takes in a school year."""
+        return self.shs_groups(grade, strand, current) if self.shs_groups else (None, strand)
+
+
+def _quarters(*spans):
+    return [(start, end, current, locked) for start, end, current, locked in spans]
+
+
+QUARTERLY = Profile(
+    key='quarterly', school_id=SCHOOL_ID, domain=DOMAIN, lrn_prefix=LRN_PREFIX, seed=20261009,
+    school_name='ARMS Demo National High School', short_name='ADNHS', address='Demo Avenue, Davao City',
+    contact='(082) 555-0100', period_type='QUARTERLY', grading_policy=None,
+    heads=HEADS, registrars=REGISTRARS, teachers=TEACHERS, new_teacher=NEW_TEACHER, inactive_teacher=INACTIVE_TEACHER,
+    families=FAMILIES, level_targets=LEVEL_TARGETS, jhs_subjects=JHS_SUBJECTS, shs_subjects=SHS_SUBJECTS,
+    sections=SECTIONS, shs_groups=None,
+    tracks={'ACADEMIC': 'Academic Track'},
+    strands={'STEM': ('ACADEMIC', 'Science, Technology, Engineering and Mathematics'),
+             'HUMSS': ('ACADEMIC', 'Humanities and Social Sciences')},
+    years=[
+        ('2025-2026', date(2025, 6, 16), date(2026, 3, 31), False, 'Q', _quarters(
+            (date(2025, 6, 16), date(2025, 8, 22), False, True), (date(2025, 8, 25), date(2025, 10, 31), False, True),
+            (date(2025, 11, 3), date(2026, 1, 23), False, True), (date(2026, 1, 26), date(2026, 3, 31), False, True))),
+        ('2026-2027', date(2026, 6, 8), date(2027, 4, 8), True, 'Q', _quarters(
+            (date(2026, 6, 8), date(2026, 8, 21), False, True), (date(2026, 8, 24), date(2026, 11, 6), True, False),
+            (date(2026, 11, 9), date(2027, 1, 29), False, False), (date(2027, 2, 1), date(2027, 4, 8), False, False))),
+    ],
+    states=Q2_STATES, months_now=[(6, 17), (7, 23), (8, 21), (9, 22)],
+    quiz_teacher='math_a', quiz_subject='MATH7',
+)
+
+# ============================================================================= the trimestral demo school
+TERM_HEADS = [('Victoria', 'Salcedo', 'Principal II', True)]
+TERM_REGISTRARS = [('Ramon', 'Jacinto', 'School Registrar', True)]
+TERM_TEACHERS = [
+    ('math', 'Grace', 'Manalo', 'Teacher III', 'Mathematics', True),
+    ('sci', 'Noel', 'Sarmiento', 'Teacher II', 'Science', False),
+    ('eng', 'Lorna', 'Bernardo', 'Teacher II', 'English', False),
+    ('fil', 'Dante', 'Lacsamana', 'Teacher III', 'Filipino', False),
+    ('ap', 'Mylene', 'Cortez', 'Teacher I', 'Araling Panlipunan and Values Education', False),
+    ('mapeh', 'Rommel', 'Ilagan', 'Teacher II', 'MAPEH and TLE', False),
+    ('shs', 'Arnel', 'Pineda', 'Master Teacher I', 'Mathematics and Science (SHS)', True),
+    ('shs_lang', 'Cecilia', 'Montero', 'Teacher III', 'Languages and Humanities (SHS)', False),
+    ('shs_tech', 'Edgardo', 'Villamor', 'Teacher II', 'TechPro and PE (SHS)', False),
+]
+# where each discipline of this school lands this year: every level of DepEd Order No. 015, s. 2026, arranged
+# differently from the quarterly demo
+TERM_LEVEL_TARGETS = {'HUMSS': 63.0, 'MATH': 71.5, 'FIL': 77.5, 'ENG': 82.0, 'SCI': 84.5, 'AP': 86.0, 'ESP': 87.5,
+                      'MAPEH': 91.0, 'TLE': 93.0}
+TERM_FAMILIES = [(code, name, colour, icon, TERM_LEVEL_TARGETS[code] - 83.5) for code, name, colour, icon, _ in FAMILIES]
+# MATATAG Junior High: Values Education in place of EsP, MAPEH graded as Music and Arts with PE and Health
+TERM_JHS_SUBJECTS = [
+    ('FIL', 'Filipino', 'FIL', ('fil', 'fil'), 4),
+    ('ENG', 'English', 'ENG', ('eng', 'eng'), 4),
+    ('MATH', 'Mathematics', 'MATH', ('math', 'math'), 4),
+    ('SCI', 'Science', 'SCI', ('sci', 'sci'), 4),
+    ('AP', 'Araling Panlipunan', 'AP', ('ap', 'ap'), 3),
+    ('MAPEH', 'MAPEH', 'MAPEH', ('mapeh', 'mapeh'), 4),
+    ('TLE', 'Technology and Livelihood Education', 'TLE', ('mapeh', 'mapeh'), 4),
+    ('VE', 'Values Education', 'ESP', ('ap', 'ap'), 2),
+]
+TERM_SHS_SUBJECTS = [
+    # Grade 11, Strengthened SHS curriculum: five core subjects all year ('SSHS'), then the track electives
+    ('EFFCOM11', 'Effective Communication', 'ENG', 11, 'SSHS', 'shs_lang', 4),
+    ('MABKOM11', 'Mabisang Komunikasyon', 'FIL', 11, 'SSHS', 'shs_lang', 4),
+    ('GENMATH11', 'General Mathematics', 'MATH', 11, 'SSHS', 'shs', 4),
+    ('GENSCI11', 'General Science', 'SCI', 11, 'SSHS', 'shs', 4),
+    ('PKLP11', 'Pag-aaral ng Kasaysayan at Lipunang Pilipino', 'AP', 11, 'SSHS', 'shs_lang', 3),
+    ('LCS11', 'Life and Career Skills', 'ESP', 11, 'SSHS', 'shs_tech', 2),
+    ('PRECAL11', 'Pre-Calculus', 'MATH', 11, 'ACAD', 'shs', 4),
+    ('BIO11', 'Biology 1', 'SCI', 11, 'ACAD', 'shs', 4),
+    ('CSS11', 'Computer Systems Servicing (CSS) NC II', 'TLE', 11, 'TECHPRO', 'shs_tech', 4),
+    ('EIM11', 'Electrical Installation and Maintenance (EIM) NC II', 'TLE', 11, 'TECHPRO', 'shs_tech', 4),
+    # Grade 11 of the earlier curriculum, taken last school year by this year's Grade 12
+    ('ORALCOM11', 'Oral Communication', 'ENG', 11, None, 'shs_lang', 4),
+    ('KOMPAN11', 'Komunikasyon at Pananaliksik', 'FIL', 11, None, 'shs_lang', 4),
+    ('GMATH11', 'General Mathematics (2016 curriculum)', 'MATH', 11, None, 'shs', 4),
+    ('ELS11', 'Earth and Life Science', 'SCI', 11, None, 'shs', 4),
+    ('PEH11', 'Physical Education and Health 1', 'MAPEH', 11, None, 'shs_tech', 2),
+    ('PERDEV11', 'Personal Development', 'ESP', 11, None, 'shs_tech', 2),
+    ('GENBIO11', 'General Biology 1', 'SCI', 11, 'STEM', 'shs', 4),
+    ('DISS11', 'Disciplines and Ideas in the Social Sciences', 'HUMSS', 11, 'HUMSS', 'shs_lang', 4),
+    # Grade 12, finishing the earlier curriculum in the three-term calendar
+    ('LIT12', '21st Century Literature', 'ENG', 12, None, 'shs_lang', 4),
+    ('STAT12', 'Statistics and Probability', 'MATH', 12, None, 'shs', 4),
+    ('PHYSCI12', 'Physical Science', 'SCI', 12, None, 'shs', 4),
+    ('PEH12', 'Physical Education and Health 3', 'MAPEH', 12, None, 'shs_tech', 2),
+    ('UCSP12', 'Understanding Culture, Society and Politics', 'AP', 12, None, 'shs_lang', 4),
+    ('BASCAL12', 'Basic Calculus', 'MATH', 12, 'STEM', 'shs', 4),
+    ('CREWRI12', 'Creative Writing', 'HUMSS', 12, 'HUMSS', 'shs_lang', 4),
+    ('PPG12', 'Philippine Politics and Governance', 'HUMSS', 12, 'HUMSS', 'shs_lang', 4),
+]
+TERM_SECTIONS = [
+    (7, 'Amihan', None, 'math', 30, 1.5), (8, 'Habagat', None, 'sci', 29, -1.0),
+    (9, 'Bagwis', None, 'eng', 28, 1.0), (10, 'Dalisay', None, 'fil', 30, -1.5),
+    (11, 'Academic-A', 'ACAD', 'shs', 26, 2.5), (11, 'TechPro-A', 'TECHPRO', 'shs_tech', 24, -0.5),
+    (12, 'STEM-A', 'STEM', 'shs_lang', 25, 3.0), (12, 'HUMSS-A', 'HUMSS', 'ap', 23, 0.0),
+]
+
+
+def _term_groups(grade, strand, current):
+    """This year's Grade 11 takes the strengthened core and its track's electives; everyone else the earlier curriculum."""
+    return ('SSHS', strand) if grade == 11 and current else (None, strand)
+
+
+TERMS = Profile(
+    key='trimestral', school_id='DEMO-TERM', domain='term.demo.arms.edu.ph', lrn_prefix='9998', seed=20261028,
+    school_name='ARMS Demo Three-Term High School', short_name='ADTHS', address='Demo Avenue, Panabo City',
+    contact='(084) 555-0130', period_type='TRIMESTRAL', grading_policy='DO15_2026',
+    heads=TERM_HEADS, registrars=TERM_REGISTRARS, teachers=TERM_TEACHERS, new_teacher=None, inactive_teacher=None,
+    families=TERM_FAMILIES, level_targets=TERM_LEVEL_TARGETS, jhs_subjects=TERM_JHS_SUBJECTS, shs_subjects=TERM_SHS_SUBJECTS,
+    sections=TERM_SECTIONS, shs_groups=_term_groups,
+    tracks={'ACADEMIC': 'Academic Track', 'TECHPRO': 'Technical-Professional Track'},
+    strands={'STEM': ('ACADEMIC', 'Science, Technology, Engineering and Mathematics'),
+             'HUMSS': ('ACADEMIC', 'Humanities and Social Sciences'),
+             'ACAD': ('ACADEMIC', 'Academic Track (Strengthened SHS)'),
+             'TECHPRO': ('TECHPRO', 'Technical-Professional Track (Strengthened SHS)')},
+    years=[
+        # last school year in four quarters; this one in the three terms of DepEd Order No. 009, s. 2026
+        ('2025-2026', date(2025, 6, 16), date(2026, 3, 31), False, 'Q', _quarters(
+            (date(2025, 6, 16), date(2025, 8, 22), False, True), (date(2025, 8, 25), date(2025, 10, 31), False, True),
+            (date(2025, 11, 3), date(2026, 1, 23), False, True), (date(2026, 1, 26), date(2026, 3, 31), False, True))),
+        ('2026-2027', date(2026, 6, 8), date(2027, 4, 8), True, 'T', _quarters(
+            (date(2026, 6, 8), date(2026, 9, 15), False, True), (date(2026, 9, 16), date(2026, 12, 18), True, False),
+            (date(2027, 1, 4), date(2027, 4, 8), False, False))),
+    ],
+    states=Q2_STATES, months_now=[(6, 17), (7, 23), (8, 21), (9, 22), (10, 20)],
+    quiz_teacher='math', quiz_subject='MATH7',
+)
+PROFILES = {'quarterly': QUARTERLY, 'trimestral': TERMS}
 
 
 def _aware(d, hour=17):
@@ -189,11 +347,11 @@ def demo_password():
 
 
 # ============================================================================= removal
-def remove_demo():
-    """Delete the demo school and every record that belongs to it. Returns what was removed."""
+def remove_demo(profile=QUARTERLY):
+    """Delete one demo school and every record that belongs to it. Returns what was removed."""
     removed = {}
-    school = School.objects.filter(school_id=SCHOOL_ID).first()
-    users = User.objects.filter(username__endswith='@' + DOMAIN)
+    school = School.objects.filter(school_id=profile.school_id).first()
+    users = User.objects.filter(username__endswith='@' + profile.domain)
     if school:
         removed['grades'] = GradeComponent.objects.filter(enrollment__section__school=school).delete()[0]
         Assessment.objects.filter(school_year__school=school).delete()
@@ -202,8 +360,8 @@ def remove_demo():
         ClassAssignment.objects.filter(section__school=school).delete()
         Section.objects.filter(school=school).delete()
         Subject.objects.filter(school=school).delete()
-    removed['students'] = Student.objects.filter(lrn__startswith=LRN_PREFIX).count()
-    Student.objects.filter(lrn__startswith=LRN_PREFIX).delete()
+    removed['students'] = Student.objects.filter(lrn__startswith=profile.lrn_prefix).count()
+    Student.objects.filter(lrn__startswith=profile.lrn_prefix).delete()
     PasswordReset.objects.filter(user__in=users).delete()
     removed['accounts'] = users.count()
     users.delete()
@@ -214,26 +372,27 @@ def remove_demo():
 
 
 # ============================================================================= levels of an existing demo school
-def spread_levels(log=print):
-    """Move each discipline of the existing demo school so its current-year average lands on LEVEL_TARGETS.
+def spread_levels(log=print, profile=QUARTERLY):
+    """Move each discipline of an existing demo school so its current-year average lands on its level target.
 
     Every grade of the discipline (both school years) moves by the same whole number of points, so trends, the change
-    since last quarter and each learner's place in the class stay as they were; the written work, performance task
+    since last period and each learner's place in the class stay as they were; the written work, performance task
     and assessment scores, the initial grade and the descriptor move with it. Only seeded learners change (LRNs
-    99990000...), never a learner the user imported. Returns {family code: (average before, average after)}.
+    <prefix>0000...), never a learner the user imported. Returns {family code: (average before, average after)}.
     """
-    school = School.objects.get(school_id=SCHOOL_ID)
+    school = School.objects.get(school_id=profile.school_id)
     current = SchoolYear.objects.get(school=school, is_current=True)
-    seeded = GradeComponent.objects.filter(enrollment__section__school=school, enrollment__student__lrn__startswith=LRN_PREFIX + '0000',
+    seeded = GradeComponent.objects.filter(enrollment__section__school=school, enrollment__student__lrn__startswith=profile.lrn_prefix + '0000',
                                            transmuted_grade__isnull=False)
     clip = lambda value, low, high: max(low, min(high, value))
     result = {}
-    for code, target in LEVEL_TARGETS.items():
+    for code, target in profile.level_targets.items():
         family = seeded.filter(subject__subject_family__family_code=code)
         mean_now = lambda: family.filter(quarter__school_year=current).aggregate(a=models.Avg('transmuted_grade'))['a']
         before = mean_now()
         if before is None:
             continue
+        weights = profile.weights(code)
         for _ in range(3):                                   # a grade that hits 60 or 100 stops moving: correct again
             step = round(target - mean_now())
             if not step:
@@ -242,11 +401,11 @@ def spread_levels(log=print):
             for g in rows:
                 grade = clip(g.transmuted_grade + step, 60, 100)
                 moved = grade - g.transmuted_grade
-                for part, weight in (('written_work', '0.30'), ('performance_task', '0.50'), ('quarterly_assessment', '0.20')):
+                for part, weight in zip(('written_work', 'performance_task', 'quarterly_assessment'), weights):
                     value = Decimal(clip(float(getattr(g, f'{part}_percent') or grade) + moved, 0, 100))
                     setattr(g, f'{part}_raw', value)
                     setattr(g, f'{part}_percent', value)
-                    setattr(g, f'{part}_weighted', value * Decimal(weight))
+                    setattr(g, f'{part}_weighted', value * weight)
                 g.transmuted_grade, g.initial_grade, g.descriptor = grade, Decimal(grade), _descriptor(grade)
             GradeComponent.objects.bulk_update(rows, [
                 'written_work_raw', 'written_work_percent', 'written_work_weighted',
@@ -260,8 +419,9 @@ def spread_levels(log=print):
 
 # ============================================================================= seeding
 class Seeder:
-    def __init__(self, password, out):
-        self.rng = random.Random(20261009)
+    def __init__(self, password, out, profile=QUARTERLY):
+        self.p = profile
+        self.rng = random.Random(profile.seed)
         self.password_hash = make_password(password)
         self.out = out
         self.staff = {}          # key -> User
@@ -269,7 +429,7 @@ class Seeder:
 
     # ---------------------------------------------------------------- accounts
     def _account(self, first, last, role, designation, area='', linked=False, temporary=False, active=True, number=''):
-        username = f'{first}.{last}'.lower().replace(' ', '') + '@' + DOMAIN
+        username = f'{first}.{last}'.lower().replace(' ', '') + '@' + self.p.domain
         user = User.objects.create(
             username=username, email=username, first_name=first, last_name=last,
             password=self.password_hash, is_active=active,
@@ -297,44 +457,52 @@ class Seeder:
         return user
 
     def accounts(self):
+        tag = 'DEMO' if self.p is QUARTERLY else 'DEMOT'
         self.groups = {
             'schoolhead': Group.objects.get_or_create(name='Principal')[0],
             'registrar': Group.objects.get_or_create(name='Registrar')[0],
             'teacher': Group.objects.get_or_create(name='Teacher')[0],
         }
         self.showcase = []
-        for i, (first, last, designation, show) in enumerate(HEADS, 1):
-            user = self._account(first, last, 'schoolhead', designation, 'Administration', linked=True, number=f'DEMO-H-{i:03d}')
+        for i, (first, last, designation, show) in enumerate(self.p.heads, 1):
+            user = self._account(first, last, 'schoolhead', designation, 'Administration', linked=True, number=f'{tag}-H-{i:03d}')
             self.staff[f'head{i}'] = user
             if show:
                 self.showcase.append(('School Head', user))
-        for i, (first, last, designation, show) in enumerate(REGISTRARS, 1):
-            user = self._account(first, last, 'registrar', designation, 'Records', linked=show, temporary=not show, number=f'DEMO-R-{i:03d}')
+        for i, (first, last, designation, show) in enumerate(self.p.registrars, 1):
+            user = self._account(first, last, 'registrar', designation, 'Records', linked=show, temporary=not show, number=f'{tag}-R-{i:03d}')
             self.staff[f'registrar{i}'] = user
             if show:
                 self.showcase.append(('Registrar', user))
-        for i, (key, first, last, position, area, show) in enumerate(TEACHERS, 1):
+        for i, (key, first, last, position, area, show) in enumerate(self.p.teachers, 1):
             linked = show or i % 3 != 0            # most teachers linked, some still password-only
-            user = self._account(first, last, 'teacher', position, area, linked=linked, number=f'DEMO-T-{i:03d}')
+            user = self._account(first, last, 'teacher', position, area, linked=linked, number=f'{tag}-T-{i:03d}')
             self.staff[key] = user
             if show:
                 self.showcase.append(('Teacher', user))
-        first, last, position, area = NEW_TEACHER
-        self.staff['new'] = self._account(first, last, 'teacher', position, area, temporary=True, number='DEMO-T-098')
-        first, last, position, area = INACTIVE_TEACHER
-        self.staff['inactive'] = self._account(first, last, 'teacher', position, area, linked=True, active=False, number='DEMO-T-099')
+        if self.p.new_teacher:
+            first, last, position, area = self.p.new_teacher
+            self.staff['new'] = self._account(first, last, 'teacher', position, area, temporary=True, number=f'{tag}-T-098')
+        if self.p.inactive_teacher:
+            first, last, position, area = self.p.inactive_teacher
+            self.staff['inactive'] = self._account(first, last, 'teacher', position, area, linked=True, active=False, number=f'{tag}-T-099')
         self.registrar = self.staff['registrar1']
         self.totals['accounts'] = len(self.staff)
 
     # ---------------------------------------------------------------- school structure
     def structure(self):
         from admin_panel.forms import SchoolForm
+        from academics.school_years import PERIOD_CONFIG
 
         self.school = School.objects.create(
-            school_id=SCHOOL_ID, school_name='ARMS Demo National High School', short_name='ADNHS',
-            address='Demo Avenue, Davao City', contact_number='(082) 555-0100', email_domain='@' + DOMAIN,
-            grading_scale='PERCENTAGE', passing_grade=75.0, period_type='QUARTERLY', quarters_count=4,
+            school_id=self.p.school_id, school_name=self.p.school_name, short_name=self.p.short_name,
+            address=self.p.address, contact_number=self.p.contact, email_domain='@' + self.p.domain,
+            grading_scale='PERCENTAGE', passing_grade=75.0, period_type=self.p.period_type,
+            quarters_count=PERIOD_CONFIG[self.p.period_type]['count'],
         )
+        if self.p.grading_policy:
+            School.objects.filter(pk=self.school.pk).update(grading_policy=self.p.grading_policy)
+            self.school.grading_policy = self.p.grading_policy
         SchoolForm._create_default_schema(None, self.school, 'DEPED_INTEGRATED')
 
         self.levels = {}
@@ -344,15 +512,14 @@ class Seeder:
                 level_category='SHS' if n >= 11 else 'JHS', is_senior_high=n >= 11, sort_order=n,
             )
 
-        track = Track.objects.create(school=self.school, track_code='ACADEMIC', track_name='Academic Track')
-        self.strands = {
-            'STEM': Strand.objects.create(track=track, strand_code='STEM', strand_name='Science, Technology, Engineering and Mathematics'),
-            'HUMSS': Strand.objects.create(track=track, strand_code='HUMSS', strand_name='Humanities and Social Sciences'),
-        }
+        tracks = {code: Track.objects.create(school=self.school, track_code=code, track_name=name)
+                  for code, name in self.p.tracks.items()}
+        self.strands = {code: Strand.objects.create(track=tracks[track], strand_code=code, strand_name=name)
+                        for code, (track, name) in self.p.strands.items()}
 
         self.family_offset = {}
         families = {}
-        for order, (code, name, colour, icon, offset) in enumerate(FAMILIES, 1):
+        for order, (code, name, colour, icon, offset) in enumerate(self.p.families, 1):
             families[code] = SubjectFamily.objects.create(
                 school=self.school, family_code=code, family_name=name, color_hex=colour, icon_class=icon, sort_order=order,
             )
@@ -360,41 +527,44 @@ class Seeder:
 
         # subjects, with who teaches them and how often they meet
         self.subjects = {}          # code -> Subject
-        self.subject_meta = {}      # code -> (family, teacher key(s), meetings/week, strand)
+        self.subject_meta = {}      # code -> (family, teacher key(s), meetings/week, group)
         for n in range(7, 11):
-            for suffix, name, family, teachers, meetings in JHS_SUBJECTS:
+            for suffix, name, family, teachers, meetings in self.p.jhs_subjects:
                 code = f'{suffix}{n}'
                 self.subjects[code] = Subject.objects.create(
                     school=self.school, subject_code=code, subject_name=f'{name} {n}', subject_category='Core',
                     grade_level=self.levels[n], subject_family=families[family], hours_per_week=Decimal(meetings),
                 )
                 self.subject_meta[code] = (family, teachers[0] if n <= 8 else teachers[1], meetings, None)
-        for code, name, family, grade, strand, teacher, meetings in SHS_SUBJECTS:
+        for code, name, family, grade, group, teacher, meetings in self.p.shs_subjects:
+            specialized = group not in (None, 'SSHS')
             self.subjects[code] = Subject.objects.create(
                 school=self.school, subject_code=code, subject_name=name,
-                subject_category='Specialized' if strand else 'Core', grade_level=self.levels[grade],
-                subject_family=families[family], strand=self.strands.get(strand), hours_per_week=Decimal(meetings),
+                subject_category='Specialized' if specialized else 'Core', grade_level=self.levels[grade],
+                subject_family=families[family], strand=self.strands.get(group) if specialized else None,
+                hours_per_week=Decimal(meetings),
             )
-            self.subject_meta[code] = (family, teacher, meetings, strand)
+            self.subject_meta[code] = (family, teacher, meetings, group)
         self.totals['subjects'] = len(self.subjects)
 
-    def section_subjects(self, grade, strand):
+    def section_subjects(self, grade, strand, current=True):
         """Subject codes a section takes."""
         if grade <= 10:
-            return [f'{suffix}{grade}' for suffix, *_ in JHS_SUBJECTS]
-        return [code for code, _, _, g, s, _, _ in SHS_SUBJECTS if g == grade and s in (None, strand)]
+            return [f'{suffix}{grade}' for suffix, *_ in self.p.jhs_subjects]
+        groups = self.p.groups(grade, strand, current)
+        return [code for code, _, _, g, group, _, _ in self.p.shs_subjects if g == grade and group in groups]
 
     def calendar(self):
-        def make_year(label, start, end, current, quarters):
+        def make_year(label, start, end, current, prefix, periods):
             sy = SchoolYear.objects.create(
                 school=self.school, year_label=label, year_start=start.year, year_end=start.year + 1,
                 date_start=start, date_end=end, is_current=current, status='Active' if current else 'Completed',
                 enrollment_open_date=start - timedelta(days=45), enrollment_close_date=start - timedelta(days=3),
             )
             created = []
-            for number, (q_start, q_end, is_current, locked) in enumerate(quarters, 1):
+            for number, (q_start, q_end, is_current, locked) in enumerate(periods, 1):
                 created.append(Quarter.objects.create(
-                    school_year=sy, quarter_label=f'Q{number}', quarter_number=number, date_start=q_start, date_end=q_end,
+                    school_year=sy, quarter_label=f'{prefix}{number}', quarter_number=number, date_start=q_start, date_end=q_end,
                     grade_encoding_deadline=_aware(q_end + timedelta(days=7)),
                     grade_validation_deadline=_aware(q_end + timedelta(days=14)),
                     card_distribution_date=q_end + timedelta(days=21),
@@ -404,14 +574,7 @@ class Seeder:
                 ))
             return sy, created
 
-        self.prev_sy, self.prev_quarters = make_year('2025-2026', date(2025, 6, 16), date(2026, 3, 31), False, [
-            (date(2025, 6, 16), date(2025, 8, 22), False, True), (date(2025, 8, 25), date(2025, 10, 31), False, True),
-            (date(2025, 11, 3), date(2026, 1, 23), False, True), (date(2026, 1, 26), date(2026, 3, 31), False, True),
-        ])
-        self.sy, self.quarters = make_year('2026-2027', date(2026, 6, 8), date(2027, 4, 8), True, [
-            (date(2026, 6, 8), date(2026, 8, 21), False, True), (date(2026, 8, 24), date(2026, 11, 6), True, False),
-            (date(2026, 11, 9), date(2027, 1, 29), False, False), (date(2027, 2, 1), date(2027, 4, 8), False, False),
-        ])
+        (self.prev_sy, self.prev_quarters), (self.sy, self.quarters) = [make_year(*year) for year in self.p.years]
 
     # ---------------------------------------------------------------- sections, students, enrolment
     def people(self):
@@ -422,7 +585,7 @@ class Seeder:
         students, guardians = [], []
         serial = 0
 
-        for grade, name, strand, adviser, size, offset in SECTIONS:
+        for grade, name, strand, adviser, size, offset in self.p.sections:
             section = Section.objects.create(
                 school=self.school, grade_level=self.levels[grade], school_year=self.sy, section_name=name,
                 strand=self.strands.get(strand), adviser=self.staff[adviser], max_capacity=35, is_homeroom=True,
@@ -438,7 +601,7 @@ class Seeder:
                         break
                 serial += 1
                 student = Student(
-                    lrn=f'{LRN_PREFIX}{serial:08d}', first_name=first, last_name=last, middle_name=rng.choice(MIDDLES),
+                    lrn=f'{self.p.lrn_prefix}{serial:08d}', first_name=first, last_name=last, middle_name=rng.choice(MIDDLES),
                     sex=sex, birth_date=date(2026 - grade - 5, rng.randint(1, 12), rng.randint(1, 28)),
                     birth_place='Davao City', nationality='Filipino', mother_tongue='Cebuano',
                     is_4ps=rng.random() < 0.18, is_active=True, is_verified=True, created_by=self.registrar,
@@ -480,32 +643,45 @@ class Seeder:
             active = sum(1 for m in entry['members'] if m['status'] in ACTIVE)
             Section.objects.filter(pk=entry['section'].pk).update(current_enrollment_count=active)
 
-        # ---- last year: today's Grade 8-12 students were one grade lower, in sections of the same names
-        prev_enrollments = []
-        for entry in self.sections:
+        # ---- last year: today's Grade 8-12 learners were one grade lower. Junior High and this year's Grade 11 come
+        # from the section in the same place one grade lower; Grade 12 from its own section name in Grade 11.
+        prev_enrollments, made = [], {}
+        current = self.p.sections
+        for index, entry in enumerate(self.sections):
             if entry['grade'] == 7:
                 continue
             grade = entry['grade'] - 1
-            template = SECTIONS[self.sections.index(entry) - 2]    # same position, one grade lower
-            section = Section.objects.create(
-                school=self.school, grade_level=self.levels[grade], school_year=self.prev_sy, section_name=template[1],
-                strand=self.strands.get(template[2]), adviser=self.staff[template[3]], max_capacity=35, is_homeroom=True,
-            )
-            members = []
+            if entry['grade'] == 12:
+                same = next((s for s in current if s[0] == 11 and s[1] == current[index][1]), None)
+                name, strand, adviser = current[index][1], current[index][2], (same or current[index])[3]
+            else:
+                below = [s for s in current if s[0] == grade]
+                same_grade = [s for s in current if s[0] == entry['grade']]
+                template = below[min(same_grade.index(current[index]), len(below) - 1)]
+                name, strand, adviser = template[1], template[2], template[3]
+            if (grade, name) not in made:
+                section = Section.objects.create(
+                    school=self.school, grade_level=self.levels[grade], school_year=self.prev_sy, section_name=name,
+                    strand=self.strands.get(strand), adviser=self.staff[adviser], max_capacity=35, is_homeroom=True,
+                )
+                made[(grade, name)] = {'section': section, 'grade': grade, 'strand': strand, 'offset': entry['offset'],
+                                       'members': [], 'subjects': self.section_subjects(grade, strand, current=False)}
+                self.prev_sections.append(made[(grade, name)])
+            target = made[(grade, name)]
             for member in entry['members']:
                 if member['status'] == 'Transferred_In':
                     continue                                   # was in another school last year
                 previous = {'student': member['student'], 'ability': member['ability'] - rng.uniform(-1.0, 2.0), 'status': 'Enrolled'}
                 previous['enrollment'] = Enrollment(
-                    student=member['student'], section=section, school_year=self.prev_sy,
+                    student=member['student'], section=target['section'], school_year=self.prev_sy,
                     grade_level_at_entry=self.levels[grade], enrollment_date=date(2025, 5, rng.randint(19, 30)),
                     enrollment_type='New' if grade in (7, 11) else 'Continuing', status='Enrolled', created_by=self.registrar,
                 )
                 prev_enrollments.append(previous['enrollment'])
-                members.append(previous)
-            Section.objects.filter(pk=section.pk).update(current_enrollment_count=len(members))
-            self.prev_sections.append({'section': section, 'grade': grade, 'strand': template[2], 'offset': entry['offset'],
-                                       'members': members, 'subjects': self.section_subjects(grade, template[2])})
+                target['members'].append(previous)
+        for entry in self.prev_sections:             # two of this year's sections may come from one of last year's
+            Section.objects.filter(pk=entry['section'].pk).update(current_enrollment_count=len(entry['members']),
+                                                                  max_capacity=max(35, len(entry['members'])))
         Enrollment.objects.bulk_create(prev_enrollments, batch_size=500)
         self.totals['sections'] = f'{len(self.sections)} this year, {len(self.prev_sections)} last year'
         self.totals['enrolments'] = len(enrollments) + len(prev_enrollments)
@@ -539,16 +715,17 @@ class Seeder:
         ww = max(50, min(100, grade + rng.randint(-4, 4)))
         pt = max(50, min(100, grade + rng.randint(-3, 5)))
         qa = max(50, min(100, grade + rng.randint(-6, 3)))
+        w_ww, w_pt, w_qa = self.p.weights(self.subject_meta[code][0]) if quarter.quarter_label.startswith('T') else DO8_WEIGHTS
         locked = status == 'Finalized'
         checked = status in ('Validated', 'Finalized', 'Returned')
         return GradeComponent(
             enrollment=member['enrollment'], subject=self.subjects[code], quarter=quarter,
             written_work_raw=Decimal(ww), written_work_max=Decimal(100), written_work_percent=Decimal(ww),
-            written_work_weighted=Decimal(ww) * Decimal('0.30'),
+            written_work_weighted=Decimal(ww) * w_ww,
             performance_task_raw=Decimal(pt), performance_task_max=Decimal(100), performance_task_percent=Decimal(pt),
-            performance_task_weighted=Decimal(pt) * Decimal('0.50'),
+            performance_task_weighted=Decimal(pt) * w_pt,
             quarterly_assessment_raw=Decimal(qa), quarterly_assessment_max=Decimal(100), quarterly_assessment_percent=Decimal(qa),
-            quarterly_assessment_weighted=Decimal(qa) * Decimal('0.20'),
+            quarterly_assessment_weighted=Decimal(qa) * w_qa,
             initial_grade=Decimal(grade), transmuted_grade=grade, descriptor=_descriptor(grade),
             encoded_by=teacher, validation_status=status,
             validated_by=self.registrar if checked else None, validation_date=when if checked else None,
@@ -558,7 +735,7 @@ class Seeder:
 
     def grades(self):
         rows = []
-        # last year: every quarter complete and finalised
+        # last year: every period complete and finalised
         for entry in self.prev_sections:
             for code in entry['subjects']:
                 teacher = self.staff[self.subject_meta[code][1]]
@@ -567,7 +744,7 @@ class Seeder:
                     for member in entry['members']:
                         rows.append(self._component(member, code, quarter, self._grade(member, entry, code, quarter.quarter_number),
                                                     teacher, 'Finalized', when=when))
-        # this year: first quarter finalised; second quarter in progress, class by class
+        # this year: the first period finalised; the second in progress, class by class
         q1, q2 = self.quarters[0], self.quarters[1]
         self.q2_state = {}
         index = 0
@@ -576,17 +753,17 @@ class Seeder:
             for code in entry['subjects']:
                 teacher = self.staff[self.subject_meta[code][1]]
                 when = _aware(q1.date_end + timedelta(days=11))
-                for member in entry['members']:               # students who dropped later still have first-quarter grades
+                for member in entry['members']:               # learners who dropped later still have first-period grades
                     rows.append(self._component(member, code, q1, self._grade(member, entry, code, 1), teacher, 'Finalized', when=when))
 
-                state = Q2_STATES[index % len(Q2_STATES)]
+                state = self.p.states[index % len(self.p.states)]
                 index += 1
                 self.q2_state[(entry['section'].pk, code)] = state
                 if state == 'not_started':
                     continue
                 graded = active if state != 'incomplete' else active[:max(3, int(len(active) * self.rng.uniform(0.45, 0.8)))]
                 status = {'validated': 'Validated', 'submitted': 'Submitted', 'ready': 'Draft', 'incomplete': 'Draft', 'returned': 'Returned'}[state]
-                note = 'Two students have grades far below their first quarter. Please re-check the class record and re-upload.' if state == 'returned' else ''
+                note = 'Two learners have grades far below their first period. Please re-check the class record and re-upload.' if state == 'returned' else ''
                 when = timezone.now() - timedelta(days=self.rng.randint(1, 6))
                 for member in graded:
                     rows.append(self._component(member, code, q2, self._grade(member, entry, code, 2), teacher, status, note=note, when=when))
@@ -603,7 +780,7 @@ class Seeder:
                 for member in entry['members']:
                     if member['status'] not in ACTIVE:
                         continue
-                    careless = member['ability'] < 74                 # struggling students miss more days
+                    careless = member['ability'] < 74                 # struggling learners miss more days
                     for month, days in months:
                         absent = min(days, rng.choice([0, 0, 0, 1, 1, 2]) + (rng.randint(1, 4) if careless else 0))
                         rate = Decimal(absent * 100) / Decimal(days)
@@ -615,7 +792,7 @@ class Seeder:
                         ))
 
         add(self.prev_sections, self.prev_sy, [(6, 11), (7, 23), (8, 20), (9, 22), (10, 22), (11, 19), (12, 14), (1, 20), (2, 20), (3, 21)])
-        add(self.sections, self.sy, [(6, 17), (7, 23), (8, 21), (9, 22)])
+        add(self.sections, self.sy, self.p.months_now)
         AttendanceSummary.objects.bulk_create(rows, batch_size=1000)
         self.totals['attendance months'] = len(rows)
 
@@ -641,7 +818,7 @@ class Seeder:
 
     # ---------------------------------------------------------------- quizzes for the showcase teacher
     def assessments(self):
-        teacher = self.staff['math_a']
+        teacher = self.staff[self.p.quiz_teacher]
         section = self.sections[0]
         samples = [
             ('Quiz 1: Integers and Absolute Value', 'closed', self.quarters[0], [
@@ -667,7 +844,7 @@ class Seeder:
         made = 0
         for title, status, quarter, questions in samples:
             assessment = Assessment.objects.create(
-                teacher=teacher, subject=self.subjects['MATH7'], section=section['section'], school_year=self.sy,
+                teacher=teacher, subject=self.subjects[self.p.quiz_subject], section=section['section'], school_year=self.sy,
                 quarter=quarter, title=title, description='Demo assessment.', total_items=len(questions),
                 passing_score=Decimal('60'), time_limit_minutes=20, status=status,
                 access_code='DM' + secrets.token_hex(3).upper(),
@@ -707,24 +884,28 @@ class Seeder:
 
 
 class Command(BaseCommand):
-    help = 'Create (or remove) the self-contained ARMS demo school used for screenshots and design work.'
+    help = 'Create (or remove) a self-contained ARMS demo school: quarterly by default, or the trimestral one.'
 
     def add_arguments(self, parser):
+        parser.add_argument('--trimestral', action='store_true',
+                            help='Work on the trimestral demo school (three terms, DepEd Order No. 015, s. 2026).')
         parser.add_argument('--remove', action='store_true', help='Remove the demo school and all of its data.')
         parser.add_argument('--reset', action='store_true', help='Remove the demo school first, then create it again.')
         parser.add_argument('--dry-run', action='store_true', help='Run everything, report, then undo it.')
         parser.add_argument('--spread-levels', action='store_true',
-                            help='Move each discipline of the existing demo school onto its level (LEVEL_TARGETS).')
+                            help='Move each discipline of the existing demo school onto its level target.')
 
     def handle(self, *args, **options):
-        exists = School.objects.filter(school_id=SCHOOL_ID).exists()
+        profile = TERMS if options['trimestral'] else QUARTERLY
+        exists = School.objects.filter(school_id=profile.school_id).exists()
 
         if options['spread_levels']:
             if not exists:
-                raise CommandError('There is no demo school yet. Create it with: python manage.py seed_demo')
+                raise CommandError('There is no such demo school yet. Create it with: python manage.py seed_demo'
+                                   + (' --trimestral' if options['trimestral'] else ''))
             self.stdout.write('Average of each discipline this school year, before and after:')
             with transaction.atomic():
-                spread_levels(self.stdout.write)
+                spread_levels(self.stdout.write, profile)
                 if options['dry_run']:
                     transaction.set_rollback(True)
             self._refresh_caches()
@@ -734,7 +915,7 @@ class Command(BaseCommand):
 
         if options['remove']:
             with transaction.atomic():
-                removed = remove_demo()
+                removed = remove_demo(profile)
                 if options['dry_run']:
                     transaction.set_rollback(True)
             self._refresh_caches()
@@ -742,20 +923,22 @@ class Command(BaseCommand):
             return
 
         if exists and not options['reset']:
-            raise CommandError('The demo school already exists. Use --reset to rebuild it or --remove to delete it.')
+            raise CommandError('That demo school already exists. Use --reset to rebuild it or --remove to delete it.')
 
         password, created = demo_password()
         with transaction.atomic():
             if exists:
-                remove_demo()
-            seeder = Seeder(password, self.stdout)
+                remove_demo(profile)
+            seeder = Seeder(password, self.stdout, profile)
             seeder.build()
+            if profile is TERMS:                     # every level of DO 015 shows on the dashboard from the start
+                spread_levels(lambda line: None, profile)
             if options['dry_run']:
                 transaction.set_rollback(True)
         self._refresh_caches()
 
         self.stdout.write(self.style.SUCCESS(
-            ('DRY RUN (nothing was saved) — ' if options['dry_run'] else '') + 'ARMS Demo National High School is ready.'))
+            ('DRY RUN (nothing was saved) — ' if options['dry_run'] else '') + f'{profile.school_name} is ready.'))
         for name, value in seeder.totals.items():
             self.stdout.write(f'  {name}: {value}')
         self.stdout.write('\nSign in with these demo accounts (they skip the Google-link step):')
@@ -763,7 +946,9 @@ class Command(BaseCommand):
             self.stdout.write(f'  {role:<12} {user.username}')
         self.stdout.write('Password: the DEMO_PASSWORD value in your .env file'
                           + (' (just created there).' if created else '.'))
-        self.stdout.write('Remove everything again with: python manage.py seed_demo --remove')
+        self.stdout.write('Retrain the forecaster next: python manage.py train_ml_models')
+        self.stdout.write('Remove everything again with: python manage.py seed_demo --remove'
+                          + (' --trimestral' if options['trimestral'] else ''))
 
     @staticmethod
     def _refresh_caches():

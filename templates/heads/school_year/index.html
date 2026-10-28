@@ -54,6 +54,21 @@
     .field .err { color: #C62828; font-weight: 500; }
     .dialog-foot { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 0.9rem 1.25rem 1.1rem; border-top: 1px solid var(--line); }
     .empty-years { padding: 2rem 1.25rem; text-align: center; color: var(--muted); }
+    /* the grading system of a new school year: quarterly, trimestral or semestral */
+    .systems { border: 0; padding: 0; margin: 0 0 1rem; }
+    .systems legend { font-size: 0.74rem; font-weight: 650; color: var(--muted); margin-bottom: 0.45rem; padding: 0; }
+    .system-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; }
+    @media (max-width: 640px) { .system-options { grid-template-columns: 1fr; } }
+    .system-option { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.25rem 0.55rem; padding: 0.7rem 0.8rem; border: 1.5px solid #dfe4ec;
+                     border-radius: 12px; cursor: pointer; background: #fff; }
+    .system-option.is-on { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(18,52,153,0.08); }
+    .system-option input { margin-top: 0.2rem; accent-color: var(--brand); }
+    .system-name { font-weight: 700; font-size: 0.88rem; color: var(--ink); }
+    .system-name small { font-weight: 500; color: var(--muted); font-size: 0.74rem; margin-left: 0.2rem; }
+    .system-basis { grid-column: 2; font-size: 0.74rem; color: var(--muted); line-height: 1.4; }
+    .system-note { margin: 0.6rem 0 0; font-size: 0.78rem; color: #6a3606; background: var(--warn-bg); border-radius: 10px; padding: 0.5rem 0.7rem;
+                   display: flex; gap: 0.45rem; align-items: flex-start; }
+    .system-note[hidden] { display: none; }
 
     /* the DepEd order the school follows for levels and awards (folded; the summary names the one in use) */
     .policy-card { padding: 0; }
@@ -124,6 +139,7 @@
                         {% if y.is_current %}<span class="pill current"><i class="fi fi-rr-check-circle"></i> Current</span>{% endif %}
                         {% if y.status == 'Upcoming' %}<span class="pill upcoming">Upcoming</span>{% elif y.status == 'Completed' or y.status == 'Archived' %}<span class="pill completed">{{ y.status }}</span>{% endif %}
                         {% if y.running %}<span class="pill running">Classes running</span>{% endif %}
+                        <span class="pill completed" title="{{ y.cfg.basis }}">{{ y.cfg.name }} &middot; {{ y.cfg.count }} {{ y.cfg.plural|lower }}</span>
                     </div>
                     <div class="sy-dates">{{ y.date_start|date:"F j, Y" }} to {{ y.date_end|date:"F j, Y" }}</div>
                     <div class="sy-counts"><span><b>{{ y.n_sections }}</b> section{{ y.n_sections|pluralize }}</span><span><b>{{ y.n_learners }}</b> enrollment{{ y.n_learners|pluralize }}</span><span><b>{{ y.n_grades }}</b> grade{{ y.n_grades|pluralize }} recorded</span></div>
@@ -136,7 +152,7 @@
                     {% endif %}
                     {% if y.missing %}
                     <form method="post" action="{% url 'heads-school-year-periods' y.id %}">
-                        {% csrf_token %}<button type="submit" class="btn-plain"><i class="fi fi-rr-add"></i> Create the {{ y.missing }} missing {% if y.missing == 1 %}{{ cfg.noun|lower }}{% else %}{{ cfg.plural|lower }}{% endif %}</button>
+                        {% csrf_token %}<button type="submit" class="btn-plain"><i class="fi fi-rr-add"></i> Create the {{ y.missing }} missing {% if y.missing == 1 %}{{ y.cfg.noun|lower }}{% else %}{{ y.cfg.plural|lower }}{% endif %}</button>
                     </form>
                     {% endif %}
                     {% if y.deletable %}
@@ -187,18 +203,31 @@
             <div class="ad-modal-head">
                 <div>
                     <h3 id="newYearTitle"><i class="fi fi-rr-calendar" style="color:#123499;"></i> Start a new school year</h3>
-                    <p class="hint">Only the starting year and the class dates are needed; the rest follows, as in the admin panel.</p>
+                    <p class="hint">Choose how the year is graded, then the starting year and the class dates; the rest follows, as in the admin panel.</p>
                 </div>
                 <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fi fi-rr-cross-small"></i></button>
             </div>
             <div class="ad-modal-body">
                 {% if form_errors %}<div class="form-errors" role="alert">{{ form_errors }}</div>{% endif %}
+                <fieldset class="systems">
+                    <legend>Grading system</legend>
+                    <div class="system-options">
+                        {% for s in systems %}
+                        <label class="system-option{% if s.key == chosen_system %} is-on{% endif %}">
+                            <input type="radio" name="period_type" value="{{ s.key }}" data-count="{{ s.count }}" data-plural="{{ s.plural|lower }}" data-noun="{{ s.noun|lower }}" {% if s.key == chosen_system %}checked{% endif %}>
+                            <span class="system-name">{{ s.name }} <small>{{ s.count }} {{ s.plural|lower }}</small></span>
+                            <span class="system-basis">{{ s.basis }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% if policy_key != 'DO15_2026' %}<p class="system-note" id="termNote"{% if chosen_system != 'TRIMESTRAL' %} hidden{% endif %}><i class="fi fi-rr-info"></i> Three terms come with DepEd Order No. 015, s. 2026. The school follows {% for p in policies %}{% if p.key == policy_key %}{{ p.name }}{% endif %}{% endfor %} for its descriptors and awards; change it under DepEd grading rules above if it moves to DO 015.</p>{% endif %}
+                </fieldset>
                 <div class="new-form">
                     <label class="field">Starting year{{ form.year_start }}{% for e in form.year_start.errors %}<span class="err">{{ e }}</span>{% endfor %}</label>
                     <label class="field">First day of classes{{ form.date_start }}{% for e in form.date_start.errors %}<span class="err">{{ e }}</span>{% endfor %}</label>
                     <label class="field">Last day of classes{{ form.date_end }}{% for e in form.date_end.errors %}<span class="err">{{ e }}</span>{% endfor %}</label>
                     <div class="wide">
-                        <label class="check">{{ form.create_periods }} Create the {{ cfg.count }} {{ cfg.plural|lower }} now, split evenly over these dates</label>
+                        <label class="check">{{ form.create_periods }} <span>Create the <span id="periodCount">{% for s in systems %}{% if s.key == chosen_system %}{{ s.count }} {{ s.plural|lower }}{% endif %}{% endfor %}</span> now, split evenly over these dates</span></label>
                         <label class="check">{{ form.is_current }} Make it the current school year now</label>
                         <p class="hint explain">Leave it unticked to prepare the year ahead; make it current when classes start. The registrars are told either way.</p>
                     </div>
@@ -224,6 +253,16 @@
     modal.addEventListener('click', function (e) { if (e.target === modal || e.target.closest('[data-close]')) closeModalDialog(); });
     document.addEventListener('keydown', function (e) { if (!modal.hidden && e.key === 'Escape') closeModalDialog(); });
     if (!modal.hidden) { document.body.style.overflow = 'hidden'; }
+
+    // ---------- the new year's grading system: its card is highlighted and the period count follows it ----------
+    document.querySelectorAll('.system-option input').forEach(function (input) {
+        input.addEventListener('change', function () {
+            document.querySelectorAll('.system-option').forEach(function (o) { o.classList.toggle('is-on', o.contains(input)); });
+            document.getElementById('periodCount').textContent = input.dataset.count + ' ' + input.dataset.plural;
+            var note = document.getElementById('termNote');
+            if (note) note.hidden = input.value !== 'TRIMESTRAL';
+        });
+    });
 
     // ---------- the chosen DepEd order is highlighted until it is saved ----------
     document.querySelectorAll('.policy-option input').forEach(function (input) {

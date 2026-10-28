@@ -128,16 +128,11 @@ def component_tip(key):
             'qa': 'a review of the least-mastered competencies and practice in the test format'}[key]
 
 
-def weakest(parts, overall):
-    """The grade component an item is weakest in: the one furthest below the whole selection's average for it, or its
-    lowest when none is a point apart. parts, overall: {'ww', 'pt', 'qa'} average percents, None where missing."""
-    keys = [k for k in ('ww', 'pt', 'qa') if parts.get(k) is not None and overall.get(k) is not None]
-    if not keys:
-        return None
-    gaps = {k: parts[k] - overall[k] for k in keys}
-    if max(abs(g) for g in gaps.values()) >= 1:
-        return min(keys, key=lambda k: gaps[k])
-    return min(keys, key=lambda k: parts[k])
+def weakest(parts, overall=None):
+    """The grade component an item is weakest in: its lowest average score, the one the page shows marked.
+    parts: {'ww', 'pt', 'qa'} average percents, None where a component has no scores."""
+    keys = [k for k in ('ww', 'pt', 'qa') if parts.get(k) is not None]
+    return min(keys, key=lambda k: parts[k]) if keys else None
 
 
 # what the strongest learners of a discipline or subject can be put forward for, by a word in its name (the first
@@ -256,17 +251,65 @@ def school_decisions(items, *, next_period_name, item_word='discipline', topic='
             text = [f'Move {who} up to {target["name"]} {away(target["min"])} with targeted practice and a short check '
                     'every two weeks.']
         focus = _focus(group, who, item_word) if lv['key'] != top['key'] else ''
-        if focus:
-            text.append(focus)
-        out.append({'level': lv, 'items': group, 'title': title, 'text': ' '.join(text), 'urgent': not lv['passing']})
+        keys = {i['weak'] for i in group if i.get('weak')}
+        out.append({'level': lv, 'items': group, 'title': title, 'urgent': not lv['passing'],
+                    'text': ' '.join(text + ([focus] if focus else [])), 'step': ' '.join(text), 'focus': focus,
+                    'focus_key': next(iter(keys)) if len(keys) == 1 else None})
     return out
+
+
+def part_scores(parts, weak=None):
+    """The three grade component averages of an item or a whole selection, for the page: [{'key', 'abbr', 'name',
+    'value', 'weak'}] in the DepEd order's own words (WW, PT, and QA or EX)."""
+    return [{'key': key, 'abbr': abbr, 'name': name, 'value': parts.get(key), 'weak': key == weak}
+            for key, name, abbr in policy.components()]
+
+
+def main_decision(decisions, *, scope, average, overall, next_period_name):
+    """The first recommendation on the card: the one for the selection's own level (its status).
+
+    It says where the whole selection stands and how far the next level is, carries the decision for the items on
+    that level, and aims at the grade component the whole selection scores lowest in, with the three averages, so the
+    School Head sees which part of the class records holds the selection back. Returns (main, the other decisions);
+    main is None without an average.
+    """
+    if average is None:
+        return None, decisions
+    level = policy.level_of(round(average, 1))
+    own = next((d for d in decisions if d['level']['key'] == level['key']), None)
+    others = [d for d in decisions if d is not own]
+    target = _next_level(level)
+    text = [f'{scope} is at {level["name"]}, with an average of {average:.1f}%'
+            + (f'; {target["name"]} is {max(target["min"] - average, 0.1):.1f} points away.' if target else
+               f', {average - level["min"]:.1f} points above {level["min"]}.')]
+    names = {key: name for key, name in components()}
+    known = [(k, overall[k]) for k in ('ww', 'pt', 'qa') if overall.get(k) is not None]
+    weak = min(known, key=lambda kv: kv[1])[0] if len(known) == 3 else None
+    if own:
+        text.append(own['step'])
+        if own['focus'] and own['focus_key'] != weak:          # the same component as the whole school's is said once, below
+            text.append(own['focus'])
+    if weak:
+        weak, low = min(known, key=lambda kv: kv[1])
+        rest = [(k, v) for k, v in known if k != weak]
+        verb = 'are' if names[weak].endswith('s') else 'is'
+        across = 'the school' if scope == 'The school' else scope
+        text.append(f'Across {across}, {names[weak]} {verb} the lowest at {low:.1f}%, against '
+                    f'{_and(f"{names[k]} at {v:.1f}%" for k, v in rest)}; aim there first with {component_tip(weak)}.')
+    if target:
+        title = own['title'] if own else f'Up to {target["name"]}'
+    else:
+        title = own['title'] if own else f'Stay at {level["name"]}'
+    main = {'level': level, 'title': title, 'text': ' '.join(text), 'items': own['items'] if own else [],
+            'urgent': not level['passing'], 'parts': part_scores(overall, weak)}
+    return main, others
 
 
 # --------------------------------------------------------------------------------------------
 # Poro AI wording (heads/poro.py): the numbers a reworded sentence must keep, with period names and number words read
 # --------------------------------------------------------------------------------------------
 
-_PERIODS = re.compile(r'\b(?:quarter|trimester|semester|grade)\s*\d{1,2}\b|\b[qts][1-4]\b|\b(?:first|second|third|fourth)\s+(?:quarter|trimester|semester)\b', re.I)
+_PERIODS = re.compile(r'\b(?:quarter|term|trimester|semester|grade)\s*\d{1,2}\b|\b[qts][1-4]\b|\b(?:first|second|third|fourth)\s+(?:quarter|term|trimester|semester)\b', re.I)
 _NUMBER = re.compile(r'\d+(?:\.\d+)?')
 
 

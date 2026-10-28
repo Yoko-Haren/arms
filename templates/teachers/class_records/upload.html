@@ -55,11 +55,15 @@
                 <input type="file" name="file" id="upFile" accept=".xlsx,.xlsm,.csv" required>
                 <i class="fi fi-rr-file-excel big"></i>
                 <b>Drop the e-class record here, or choose it</b>
-                <small>The DepEd e-class record (.xlsx), or a CSV with LRN and quarterly grade. Up to 15 MB.</small>
+                <small>The DepEd e-class record (.xlsx), or a CSV with LRN and {% if terms %}term{% else %}quarterly{% endif %} grade. Up to 15 MB.</small>
                 <div class="picked" id="picked"></div>
             </label>
         </div>
+        {% if terms %}
+        <p class="hint" id="mapehHint" hidden><i class="fi fi-rr-info"></i> MAPEH: upload the three-term MAPEH record. A term grade is the average of Music and Arts and of PE and Health, the two sheets of that term.</p>
+        {% else %}
         <p class="hint" id="mapehHint" hidden><i class="fi fi-rr-info"></i> MAPEH: upload the quarter's MAPEH file. Its grade is the average of Music, Arts, PE and Health, so all four sheets need scores.</p>
+        {% endif %}
         <div class="up-actions">
             <span class="hint">Learners are matched to your class list by name (and LRN when ARMS made the file).</span>
             <button type="submit" class="btn btn-main" id="upGo"><i class="fi fi-rr-search"></i> Read and check the file</button>
@@ -69,6 +73,7 @@
     <section class="card file-guide" aria-labelledby="guideTitle">
         <h3 id="guideTitle"><i class="fi fi-rr-picture" style="color:#123499;"></i> Which file to upload</h3>
         <p class="hint">Your class's DepEd e-class record, the whole workbook. ARMS reads the sheet of the {{ period_word|lower }} you choose above; the picture shows a quarter sheet.</p>
+        {% if terms %}<p class="note"><i class="fi fi-rr-info"></i><span>SY {{ sy.year_label }} is graded in three terms, so Junior High classes use DepEd's <b>three-term e-class record</b> (DepEd Order No. 015, s. 2026): the same parts as the picture, with examinations in place of the quarterly assessment. Senior High classes keep the SSHS e-class record.</span></p>{% endif %}
         <button type="button" class="guide-shot" data-guide-open="guideEcr" aria-label="Enlarge the e-class record picture">
             <img src="{% static 'shared/guides/ecr-quarter.png' %}" width="1954" height="360" loading="lazy"
                  alt="A quarter sheet of the e-class record: learners' names (1), written works (2), performance tasks (3), quarterly assessment (4) and the grades (5) are marked.">

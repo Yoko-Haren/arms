@@ -1,7 +1,14 @@
 <ol class="guide-keys">
     <li><span><b>Learners' names.</b> Matched to your class list by name, and by LRN when ARMS made the file.</span></li>
+    {% if terms %}
+    <li><span><b>Written/oral works.</b> Each score, with the highest possible score row filled in.</span></li>
+    <li><span><b>Product/performance tasks.</b> Each score, with its highest possible score.</span></li>
+    <li><span><b>Examinations.</b> Summative Test 1, Summative Test 2 and the Term Examination (30, 30 and 40 of the examinations), each with its highest possible score.</span></li>
+    <li><span><b>Initial and term grade.</b> ARMS recomputes both with the weights and the adjusted transmutation table of DepEd Order No. 015, s. 2026 and shows any difference from your file.</span></li>
+    {% else %}
     <li><span><b>Written works.</b> Each score, with the highest possible score row filled in.</span></li>
     <li><span><b>Performance tasks.</b> Each score, with its highest possible score.</span></li>
     <li><span><b>Quarterly assessment.</b> The score and its highest possible score.</span></li>
     <li><span><b>Initial and quarterly grade.</b> ARMS recomputes both with the DepEd weights and transmutation table and shows any difference from your file.</span></li>
+    {% endif %}
 </ol>

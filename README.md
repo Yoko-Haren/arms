@@ -22,11 +22,11 @@ Each signed-in role has its own portal: System Administrator, School Head, Regis
   - one grade level, all of Junior High, all of Senior High, or every grade level;
   - one grading period, or the whole school year so far.
 
-  The page also shows where each discipline (or subject, or section) stands on the five levels, three to a level with the rest in a dialog, and a forecast chart.
-- **Poro AI recommends.** One decision for each level that has disciplines on it, the lowest level first: keep the top level there (contests, sharing practice at a LAC session), lift each passing level one level up, bring a failing level up to 75 with remediation, and act first on the lowest. Each decision names how far the discipline is from its goal and aims at the grade component it is weakest in. Poro AI rewords the decisions (see below). Following each section and learner is the advisers' work (the teacher's My Advisory), so the School Head's portal has no section pages.
+  The page also shows where each discipline (or subject, or section) stands on the five levels, three to a level with the rest in a dialog, and a forecast chart with every discipline in one chart.
+- **Poro AI recommends.** First the main recommendation, for the selection's own level (its status): how far the next level is, the step for the disciplines on that level, and the grade component the whole selection scores lowest in, with its written work, performance task and quarterly assessment (or examination) averages. Then one decision for every other level, the lowest first: keep the top level there (contests, sharing practice at a LAC session), lift each passing level one level up, bring a failing level up to 75 with remediation, and act first on the lowest. Each decision names how far the discipline is from its goal and aims at its lowest component, and shows each discipline's three component averages. Poro AI rewords the decisions (see below). Following each section and learner is the advisers' work (the teacher's My Advisory), so the School Head's portal has no section pages.
 - **Honors Outlook.** Who is on track for an academic award this school year, now and with the forecasts; who is within 2 points of a cut-off; who is held back by one final grade. Every list downloads as Excel.
 - **School Performance.** The whole school's year-end picture: the promotion outlook if the year ended now, the school performance forecast by grade level, each grade level's outlook, honors and attendance, enrollment over the years, and a comparison with the same period last year. The school's level and each discipline are on the dashboard.
-- **School Year.** The School Head can start a school year with its grading periods, make it current and adjust period dates, without waiting for the administrator. Here the school also chooses its DepEd grading rules.
+- **School Year.** The School Head can start a school year with its grading system (quarterly: four quarters; trimestral: the three terms of DepEd Order No. 009, s. 2026; or semestral: two semesters) and its grading periods, make it current and adjust period dates, without waiting for the administrator. Each year keeps the system it was started with, so a school can move from quarters to terms as DepEd did in SY 2026-2027. Here the school also chooses its DepEd grading rules.
 - **User Management.** When the School Head is busy, a registrar or a teacher (an ICT coordinator, say) can be allowed to manage the school's accounts from their own portal: edit details, reset passwords, activate and deactivate. They never touch a School Head's account, cannot add registrars and cannot pass the permission on. Sign-in help requests from the school's staff reach the School Head and these delegates, so the System Administrator is not the only way back in.
 - **Excel reports, and Page Proposals** (candidate pages to discuss next).
 
@@ -41,8 +41,10 @@ Each signed-in role has its own portal: System Administrator, School Head, Regis
 ### Teacher (`/teachers/`)
 
 - Uploads DepEd e-class records:
-  - Grades 7 to 10: one record per learning area; MAPEH has one per quarter.
+  - Grades 7 to 10, four quarters: one record per learning area; MAPEH has one per quarter.
+  - Grades 7 to 10, three terms (DepEd Order No. 015, s. 2026): the three-term records for the core learning areas, GMRC and Values Education (scored by domain), MAPEH (Music and Arts, PE and Health) and EPP/TLE (also kept per component). Examinations are two summative tests and a term examination (30, 30 and 40), and the term grade comes from DepEd's adjusted transmutation table for SY 2026-2027, computed exactly as the record does.
   - Senior High: the Strengthened Senior High School (SSHS) record.
+- Each class's record downloads from Class records with the learners and their LRNs filled in.
 - ARMS recomputes every grade from the raw scores, matches each row to a learner, and lets the teacher review it before saving.
 - Submits class records to the registrar. Advisers download their section's school forms.
 - **My Advisory** (advisers only). Every subject's grades for the adviser's section in one grading period, uploaded by the subject teachers: who is below 75 and in how many learning areas, which subjects still have no grades, and each learner's record for the school year (every subject and period, the grade components and the general average).
@@ -74,9 +76,14 @@ Each signed-in role has its own portal: System Administrator, School Head, Regis
 | Grade descriptors: Outstanding, Very Satisfactory, Satisfactory, Fairly Satisfactory, Did Not Meet Expectations | DepEd Order No. 8, s. 2015 |
 | Academic honors: With Honors, With High Honors, With Highest Honors | DepEd Order No. 36, s. 2016 |
 | Descriptors Advancing, Benchmarking, Connecting, Developing, Emerging, and the Academic Excellence Award | DepEd Order No. 015, s. 2026, for schools that choose it on the School Year page (`core/grading_policy.py`) |
+| Three terms a school year (Term 1 June to September, Term 2 September to December, Term 3 January to April) | DepEd Order No. 009, s. 2026 |
+| Three-term grading: written/oral works, product/performance tasks and examinations, weighed 20/50/30 (20/60/20 for MAPEH and EPP/TLE); examinations of two summative tests and a term examination (30/30/40); the adjusted transmutation table of SY 2026-2027; the final grade the average of the three term grades | DepEd Order No. 015, s. 2026 and DepEd's three-term e-class records (`grades/ecr.py`) |
 | School Forms SF1 to SF7 and e-class records | DepEd's official templates (`documentation/sf_templates/`, `grades/ecr_templates/`) |
+| Which discipline a subject belongs to, including the TVL / TechPro specializations (TESDA qualifications such as EIM NC II and SMAW NC I) under TLE | The K to 12, MATATAG and Strengthened SHS curricula (`academics/subject_catalog.py`) |
 
-KPUP (Knowledge, Process or Skills, Understanding, Products or Performances) and the levels Beginning to Advanced came from DepEd Order No. 73, s. 2012, which DepEd Order No. 8, s. 2015 replaced. ARMS no longer uses them. The e-class records follow DepEd Order No. 8, s. 2015 (four quarters); the three-term records of DepEd Order No. 015, s. 2026 are not in ARMS yet.
+KPUP (Knowledge, Process or Skills, Understanding, Products or Performances) and the levels Beginning to Advanced came from DepEd Order No. 73, s. 2012, which DepEd Order No. 8, s. 2015 replaced. ARMS no longer uses them. Senior High in a three-term year still uses the SSHS e-class record: DepEd had published no three-term Senior High record when this was built.
+
+Subjects get their discipline when they are added: ARMS reads the name (then the code) against the curriculum and puts the subject in the school's own family for it, or in the learning area that usually keeps it when the school has no such department (a school without ABM keeps Applied Economics in Araling Panlipunan). For subjects added earlier, preview with `python manage.py classify_subjects` and save with `--apply`.
 
 DepEd's Excel templates are filled by editing their cells in place (`core/xlsx_patch.py`), so their dropdowns, formulas and print setup stay as DepEd made them.
 
@@ -119,10 +126,11 @@ DepEd's Excel templates are filled by editing their cells in place (`core/xlsx_p
    python manage.py createsuperuser
    ```
 
-5. **Optional: load the demo school.** This creates school ID `DEMO-ARMS` with accounts for every role. Their usernames end in `@demo.arms.edu.ph`, and they share the password in `DEMO_PASSWORD`. The command has `--reset`, `--remove` and `--dry-run` options, and `--spread-levels`, which moves each discipline's grades so the nine disciplines cover all five levels of either DepEd order (retrain the forecaster after it).
+5. **Optional: load the demo schools.** `seed_demo` creates school ID `DEMO-ARMS`, graded by quarter, with accounts for every role; their usernames end in `@demo.arms.edu.ph`. `seed_demo --trimestral` creates `DEMO-TERM`, a three-term school under DepEd Order No. 015, s. 2026 (last year in quarters, this year in terms; Grade 11 on the Strengthened SHS curriculum), with usernames ending in `@term.demo.arms.edu.ph`. All demo accounts share the password in `DEMO_PASSWORD`. Both take `--reset`, `--remove` and `--dry-run`, and `--spread-levels`, which moves each discipline's grades so the nine disciplines cover all five levels (retrain the forecaster after it).
 
    ```bash
    python manage.py seed_demo
+   python manage.py seed_demo --trimestral
    ```
 
 6. **Train the forecaster.** Run it again after new grades come in.

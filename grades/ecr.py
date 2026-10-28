@@ -1,11 +1,13 @@
-"""DepEd E-Class Record reader for grade uploads (DepEd Order No. 8, s. 2015).
+"""DepEd E-Class Record reader for grade uploads (DepEd Orders No. 8, s. 2015 and No. 015, s. 2026).
 
 The official e-class record keeps one sheet per grading period. Each sheet holds every learner's
 written work, performance task and quarterly assessment scores, the highest possible scores
-(row 10; row 11 in the Senior High record) and the component weights. Two templates are read:
-the Grades 7 to 10 record (one per learning area, MAPEH with a sheet per component) and the
-Strengthened Senior High School (SSHS) record, whose weights follow the subject type chosen in
-INPUT DATA. This module reads such a workbook, recomputes each grade from
+(row 10; row 11 in the Senior High record) and the component weights. Three templates are read:
+the Grades 7 to 10 record of four quarters (one per learning area, MAPEH with a sheet per component),
+the Strengthened Senior High School (SSHS) record, whose weights follow the subject type chosen in
+INPUT DATA, and the three-term record of DepEd Order No. 015, s. 2026 (written/oral works, product/
+performance tasks, and examinations made of two summative tests and a term examination; MAPEH and
+TLE with two component sheets per term). This module reads such a workbook, recomputes each grade from
 the raw scores exactly as the template's formulas do (Excel rounding, then the transmutation
 table), checks the file against the class it is uploaded for, and matches every row to exactly
 one learner of that class. Nothing is saved here: the upload view shows the result, the teacher
@@ -43,7 +45,8 @@ _AREA_WORDS = (       # checked in order; EPP and EsP both start with EDUKASYON
     ('mapeh_tle', ('MAPEH', 'MUSIC', 'ARTS', 'PHYSICAL EDUCATION', 'HEALTH', 'TECHNOLOGY AND LIVELIHOOD', 'TLE', 'EPP',
                    'PANTAHANAN', 'PANGKABUHAYAN')),
     ('math_science', ('MATH', 'SCIENCE')),
-    ('languages', ('ENGLISH', 'FILIPINO', 'ARALING', 'PAGPAPAKATAO', 'ESP', 'MOTHER TONGUE', 'MTB')),
+    ('languages', ('ENGLISH', 'FILIPINO', 'ARALING', 'PAGPAPAKATAO', 'ESP', 'MOTHER TONGUE', 'MTB', 'GMRC',
+                   'GOOD MANNERS', 'VALUES EDUCATION', 'MAKABANSA')),
 )
 MAPEH_PARTS = ('MUSIC', 'ARTS', 'PE', 'HEALTH')
 # Senior High: INPUT DATA "SUBJECT TYPE" -> weights ('Helper(IMPORTANT!)'!CH2:CN6 of the SSHS template)
@@ -62,6 +65,25 @@ _ORDINAL = {'FIRST': 1, 'SECOND': 2, 'THIRD': 3, 'FOURTH': 4, '1ST': 1, '2ND': 2
 _SUFFIXES = {'JR', 'SR', 'II', 'III', 'IV', 'V'}
 DESCRIPTORS = ((90, 'Outstanding'), (85, 'Very_Satisfactory'), (80, 'Satisfactory'), (75, 'Fairly_Satisfactory'),
                (0, 'Did_Not_Meet_Expectations'))
+
+# ---- the three-term record of DepEd Order No. 015, s. 2026 (Grades 2 to 10)
+# HELPER!B8:D48 of the template: lowest initial grade of each band -> term grade (the adjusted table of SY 2026-2027)
+TERM_TRANSMUTATION = tuple((Decimal(str(low)), grade) for low, grade in (
+    (99.5, 100), (98.32, 99), (97.14, 98), (95.96, 97), (94.78, 96), (93.6, 95), (92.42, 94), (91.24, 93), (90.06, 92),
+    (88.88, 91), (87.7, 90), (86.52, 89), (85.34, 88), (84.16, 87), (82.98, 86), (81.8, 85), (80.62, 84), (79.44, 83),
+    (78.26, 82), (77.08, 81), (75.9, 80), (74.72, 79), (73.54, 78), (72.36, 77), (71.18, 76), (70, 75), (65.34, 74),
+    (60.67, 73), (56.01, 72), (51.34, 71), (46.67, 70), (42.01, 69), (37.34, 68), (32.68, 67), (28.01, 66), (23.35, 65),
+    (18.68, 64), (14.01, 63), (9.35, 62), (4.68, 61), (0, 60)))
+# Component weights for Grades 4 to 10 (written/oral works, product/performance tasks, examinations)
+TERM_AREA_WEIGHTS = {
+    'core': ('Languages, Mathematics, Science, Araling Panlipunan and GMRC/Values Education',
+             (Decimal('0.2'), Decimal('0.5'), Decimal('0.3'))),
+    'mapeh_tle': ('MAPEH and EPP/TLE', (Decimal('0.2'), Decimal('0.6'), Decimal('0.2'))),
+}
+TERM_FIRST_ROW = 11                 # INPUT DATA learner rows 11-60: males in K, females in N
+TERM_LRN_COLUMNS = ('AK', 'AL')     # hidden INPUT DATA columns of ARMS-made three-term records: male, female LRNs
+TERM_ICT_SHARE = Decimal('0.25')    # the TLE record kept per component: ICT counts 25%, the term's other area 75%
+TERM_MAPEH_PARTS = ('MA', 'PEH')    # Music and Arts; Physical Education and Health
 
 
 class EcrError(Exception):
@@ -308,7 +330,7 @@ def _is_sshs(inp):
 def read_workbook(uploaded):
     """Every grading-period sheet of an e-class record with its learners' scores.
 
-    Returns {'kind': 'JHS' | 'SSHS', 'meta': {...}, 'periods': {number: [sheet, ...]}} where each
+    Returns {'kind': 'JHS' | 'SSHS' | 'TERM', 'meta': {...}, 'periods': {number: [sheet, ...]}} where each
     sheet carries its layout, weights, highest possible scores and rows (sex, name, LRN if ARMS made
     the file, item scores and the grade the file itself shows).
     """
@@ -322,6 +344,8 @@ def read_workbook(uploaded):
         if not input_name:
             raise EcrError('This file has no INPUT DATA sheet, so it is not a DepEd e-class record.')
         inp = _grid(wb[input_name])
+        if _is_term(inp):
+            return _read_terms(wb, inp, input_name)
         sshs = _is_sshs(inp)
         if sshs:
             meta = _sshs_meta(inp)
@@ -555,6 +579,8 @@ def analyse(parsed, period_number, *, subject_names, senior_high, roster, mapeh=
       notes                plain facts (no quarterly assessment yet, so no grade)
       status, enrollment, candidates, reasons   from match_rows
     """
+    if parsed.get('kind') == 'TERM':
+        return _analyse_terms(parsed, period_number, subject_names=subject_names, roster=roster, mapeh=mapeh)
     sheets = parsed['periods'].get(period_number)
     if not sheets:
         found = ', '.join(str(n) for n in sorted(parsed['periods']))
@@ -703,7 +729,7 @@ _SUBJECT_KEYS = (       # Grades 7 to 10 learning areas and the ways their names
     ('ENGLISH', r'\bENGLISH\b'),
     ('FILIPINO', r'\bFILIPINO\b'),
     ('AP', r'\bARALING PANLIPUNAN\b|^AP\b'),
-    ('ESP', r'\bEDUKASYON SA PAGPAPAKATAO\b|^ESP\b|\bVALUES EDUCATION\b'),
+    ('ESP', r'\bEDUKASYON SA PAGPAPAKATAO\b|^ESP\b|\bVALUES EDUCATION\b|\bGMRC\b|\bGOOD MANNERS\b'),
     ('MAPEH', r'\bMAPEH\b|\bMUSIC\b|\bARTS?\b|\bPHYSICAL EDUCATION\b|\bHEALTH\b|^PE\b'),
     ('TLE', r'\bTECHNOLOGY AND LIVELIHOOD\b|\bTLE\b|\bEPP\b|\bEDUKASYONG PANTAHANAN\b'),
     ('MTB', r'\bMOTHER TONGUE\b|\bMTB\b'),
@@ -735,3 +761,330 @@ def same_subject(file_subject, *names, junior=True):
         if not key and (n in text or text in n):
             return True
     return False
+
+
+# ---------------------------------------------------------------------------------------------
+# the three-term record (DepEd Order No. 015, s. 2026)
+# ---------------------------------------------------------------------------------------------
+# A term sheet groups its score columns in blocks, each ending in Total, PS and WS on the numbered sub-header row: one
+# block per component, or (GMRC and Values Education) one per domain, cognitive, affective and behavioral, each with
+# its own weight. The examinations block holds Summative Test 1, Summative Test 2 and the Term Examination, which
+# count 30, 30 and 40 of its 100. No cell is rounded until the term grade, and ARMS computes the same way.
+
+_EXAM_NAMES = ('Summative test 1', 'Summative test 2', 'Term examination')
+_TERM_PART_NAMES = {'ww': 'Written/oral work', 'pt': 'Performance task'}
+
+
+def term_transmute(initial):
+    """The term grade of an initial grade, as the record's own formula finds it:
+    INDEX(HELPER!D8:D48, IF(IG >= 99.5, 1, MATCH(IG, HELPER!B8:B48, -1) + 1)).
+
+    MATCH(..., -1) finds the smallest band minimum at or above the initial grade and the band is the row after it, so
+    an initial grade exactly on a band's minimum lands a band lower (70.00 gives 74, not 75) and 0 gives no grade. The
+    template does this, so ARMS does too: the grade a file shows and the one ARMS computes always agree.
+    """
+    if initial is None:
+        return None
+    if initial >= TERM_TRANSMUTATION[0][0]:
+        return TERM_TRANSMUTATION[0][1]
+    at = None
+    for i, (low, _) in enumerate(TERM_TRANSMUTATION):
+        if low >= initial:
+            at = i
+        else:
+            break
+    if at is None or at + 1 >= len(TERM_TRANSMUTATION):
+        return None
+    return TERM_TRANSMUTATION[at + 1][1]
+
+
+def compute_term(blocks, values):
+    """One learner's term grade from the raw scores, cell by cell as the three-term record computes it.
+
+    blocks: the sheet's score blocks; values: one list of item scores (Decimal or None) per block. A block's percentage
+    is its total over its highest possible score (the examinations: each test's share of its own highest score, 30, 30
+    and 40), and its weighted score that times the block weight. The initial grade adds the weighted scores (a blank
+    block counts 0) once the learner has any score. Returns, per component ('ww', 'pt', 'qa'), the totals, percentage
+    and weighted score (a component of several blocks: their weighted average), the initial grade and the term grade.
+    """
+    out = {p: {'total': None, 'hps': None, 'ps': None, 'ws': None, 'weight': Decimal(0)} for p in ('ww', 'pt', 'qa')}
+    initial, scored = Decimal(0), False
+    for block, items in zip(blocks, values):
+        present = [v for v in items if v is not None]
+        scored = scored or bool(present)
+        part = out[block['part']]
+        part['weight'] += block['weight'] or Decimal(0)
+        hps_total = sum(h for h in block['hps'] if h) or None
+        total = sum(present) if present else None
+        if block['tests']:
+            shares = [v / h * t for v, h, t in zip(items, block['hps'], block['tests']) if v is not None and h and t is not None]
+            ps = sum(shares) if shares else None
+        else:
+            ps = total / hps_total * 100 if total is not None and hps_total else None
+        ws = ps * block['weight'] if ps is not None and block['weight'] is not None else None
+        if total is not None:
+            part['total'] = (part['total'] or Decimal(0)) + total
+        if hps_total:
+            part['hps'] = (part['hps'] or Decimal(0)) + hps_total
+        if ws is not None:
+            part['ws'] = (part['ws'] or Decimal(0)) + ws
+            initial += ws
+    for part in out.values():
+        part['ps'] = xround(part['ws'] / part['weight']) if part['ws'] is not None and part['weight'] else None
+        part['ws'] = xround(part['ws'])
+    raw = initial if scored else None
+    out.update(initial=xround(raw), quarterly=term_transmute(raw), missing=[])
+    return out
+
+
+def _is_term(inp):
+    return any(_text(_cell(inp, r, 3)).upper() == 'SUBJECT TEACHER' for r in range(1, min(len(inp), 40)))
+
+
+def _domain(grid, header, sub, col):
+    """'cognitive', 'affective' or 'behavioral' when the block sits under a domain label (GMRC and Values Education)."""
+    for r in range(header + 1, sub):
+        text = _text(_cell(grid, r, col)).upper()
+        if text.endswith('DOMAIN'):
+            return text.replace('DOMAIN', '').strip().lower()
+    return ''
+
+
+def _term_layout(grid):
+    """The score blocks of a term sheet, found from its headers and its numbered sub-header row."""
+    header = next((r for r in range(1, min(len(grid), 30))
+                   if any('WRITTEN' in str(v or '').upper() and 'ORAL' in str(v or '').upper() for v in grid[r])), None)
+    if header is None:
+        return None
+    cols = {}
+    for c, v in enumerate(grid[header]):
+        t = str(v or '').strip().upper()
+        if 'WRITTEN' in t and 'ww' not in cols:
+            cols['ww'] = c
+        elif 'PERFORMANCE' in t and 'pt' not in cols:
+            cols['pt'] = c
+        elif 'EXAMINATION' in t and 'qa' not in cols:
+            cols['qa'] = c
+        elif t.startswith('INITIAL'):
+            cols['initial'] = c
+        elif t.startswith('TERM GRADE'):
+            cols['term'] = c
+    if not {'ww', 'pt', 'qa', 'initial', 'term'} <= set(cols):
+        return None
+    hps_row = next((r for r in range(header + 1, min(len(grid), header + 8))
+                    if 'HIGHEST POSSIBLE' in _text(_cell(grid, r, 2)).upper()), None)
+    if hps_row is None:
+        return None
+    sub = hps_row - 1
+    blocks, items, tests = [], [], []
+    for c in range(cols['ww'], cols['initial']):
+        label = _text(_cell(grid, sub, c)).upper()
+        if re.fullmatch(r'\d+(\.0)?', label) or label in ('ST1', 'ST2', 'TE'):
+            items.append(c)
+        elif label.startswith('WS '):
+            tests.append(dec(_cell(grid, hps_row, c)))
+        elif label == 'WS':
+            part = 'ww' if c < cols['pt'] else ('pt' if c < cols['qa'] else 'qa')
+            if not items or (part == 'qa' and len(tests) != len(items)):
+                return None
+            blocks.append({'part': part, 'items': items, 'tests': tests if part == 'qa' else None,
+                           'weight': dec(_cell(grid, hps_row, c)), 'hps': [dec(_cell(grid, hps_row, i)) for i in items],
+                           'domain': _domain(grid, header, sub, items[0])})
+            items, tests = [], []
+    if {b['part'] for b in blocks} != {'ww', 'pt', 'qa'}:
+        return None
+    return {'blocks': blocks, 'initial': cols['initial'], 'term': cols['term'], 'hps_row': hps_row}
+
+
+def _read_terms(wb, inp, input_name):
+    """Every term sheet of a three-term record with its learners' scores (see read_workbook)."""
+    labels = {'REGION': 'region', 'DIVISION': 'division', 'SCHOOL ID': 'school_id', 'SCHOOL NAME': 'school',
+              'SCHOOL YEAR': 'school_year', 'SCHOOL HEAD': 'school_head', 'SUBJECT TEACHER': 'teacher', 'SUBJECT': 'subject',
+              'GRADE LEVEL': 'grade', 'SECTION': 'section_name'}
+    meta = {key: '' for key in labels.values()}
+    for r in range(1, min(len(inp), 40)):
+        key = labels.get(_text(_cell(inp, r, 3)).upper())
+        if key:
+            value = _cell(inp, r, _col('E'))
+            meta[key] = _text(int(value) if isinstance(value, float) and value.is_integer() else value)
+    grade = meta['grade']
+    meta['section'] = f'{grade} - {meta["section_name"]}' if grade and meta['section_name'] else meta['section_name']
+    names = {'M': [], 'F': []}
+    lrns = {'M': [], 'F': []}
+    for i in range(50):
+        r = TERM_FIRST_ROW + i
+        for sex, name_col, lrn_col in (('M', 'K', TERM_LRN_COLUMNS[0]), ('F', 'N', TERM_LRN_COLUMNS[1])):
+            names[sex].append(_text(_cell(inp, r, _col(name_col))))
+            lrns[sex].append(re.sub(r'\D', '', str(_cell(inp, r, _col(lrn_col)) or '')))
+
+    periods = {}
+    for name in wb.sheetnames:
+        m = re.match(r'\s*TERM\s*([1-3])\b(.*)$', name, re.I)
+        if name == input_name or not m or 'SUMMARY' in name.upper():
+            continue
+        ws = wb[name]
+        if getattr(ws, 'sheet_state', 'visible') == 'veryHidden':
+            continue
+        grid = _grid(ws)
+        layout = _term_layout(grid)
+        if not layout:
+            raise EcrError(f'Sheet "{name}" does not have the three-term e-class record columns (written/oral works, '
+                           'product/performance tasks, examinations). Use the official template.')
+        label = _text(_cell(grid, 10, 2))
+        number = _period_number(name, label) or int(m.group(1))
+        rows, sex, index = [], None, 0
+        for r in range(layout['hps_row'] + 1, len(grid)):
+            marker = _text(_cell(grid, r, 2)).upper()
+            if marker in ('MALE', 'FEMALE'):
+                sex, index = marker[0], 0
+                continue
+            if sex is None or not isinstance(_cell(grid, r, 2), (int, float)):
+                continue                           # learner rows are the numbered rows under MALE / FEMALE
+            i, index = index, index + 1
+            raw = [[_cell(grid, r, c) for c in b['items']] for b in layout['blocks']]
+            name_text = _text(_cell(grid, r, 3)) or (names[sex][i] if i < 50 else '')
+            if not name_text and not any(v not in (None, '') for vals in raw for v in vals):
+                continue
+            rows.append({'row': r, 'sex': sex, 'name': name_text, 'lrn': lrns[sex][i] if i < 50 else '', 'raw': raw,
+                         'file_initial': dec(_cell(grid, r, layout['initial'])),
+                         'file_quarterly': dec(_cell(grid, r, layout['term']))})
+        weights = tuple(sum((b['weight'] or Decimal(0)) for b in layout['blocks'] if b['part'] == p) for p in ('ww', 'pt', 'qa'))
+        periods.setdefault(number, []).append({'sheet': name, 'label': label, 'component': m.group(2).strip(), 'layout': layout,
+                                               'weights': weights, 'hps_row': layout['hps_row'], 'rows': rows})
+    if not periods:
+        raise EcrError('No term sheet was found. Upload the three-term e-class record (.xlsx) made from the DepEd template.')
+    return {'kind': 'TERM', 'meta': meta, 'periods': periods}
+
+
+def term_mapeh_part(name):
+    """'MA' (Music and Arts) or 'PEH' (Physical Education and Health) from a three-term MAPEH sheet's name."""
+    text = _clean(name)
+    if text.startswith('M AND A') or text.startswith('MUSIC'):
+        return 'MA'
+    if text.startswith('PE') or 'PHYSICAL' in text or 'HEALTH' in text:
+        return 'PEH'
+    return None
+
+
+def _term_values(raw, blocks, prefix, hps_row):
+    """Item scores of one learner as Decimals, block by block, with the reasons any score cannot be used."""
+    errors, values = [], []
+    for block, items in zip(blocks, raw):
+        out = []
+        for i, (value, top) in enumerate(zip(items, block['hps']), start=1):
+            if value in (None, ''):
+                out.append(None)
+                continue
+            number = dec(value)
+            if block['tests']:
+                name = prefix + _EXAM_NAMES[min(i, 3) - 1]
+            else:
+                name = prefix + _TERM_PART_NAMES[block['part']] + (f' ({block["domain"]})' if block['domain'] else '') + f' {i}'
+            if number is None:
+                errors.append(f'{name}: "{value}" is not a number.')
+            elif number < 0:
+                errors.append(f'{name}: {number} is below zero.')
+            elif top is None or top <= 0:
+                errors.append(f'{name}: has a score but no highest possible score in row {hps_row}.')
+            elif number > top:
+                errors.append(f'{name}: {number} is more than the highest possible score of {top}.')
+            out.append(number if number is not None and number >= 0 and top and top > 0 and number <= top else None)
+        values.append(out)
+    return values, errors
+
+
+def _analyse_terms(parsed, period_number, *, subject_names, roster, mapeh):
+    """analyse() for the three-term record: one term of one class, checked and matched (same result shape).
+
+    MAPEH keeps Music and Arts and Physical Education and Health on two sheets a term, and its term grade is their
+    rounded average. TLE kept per component has ICT and the term's other area (AFA, FCS or IA), weighed 25 and 75.
+    """
+    sheets = parsed['periods'].get(period_number)
+    if not sheets:
+        found = ', '.join(str(n) for n in sorted(parsed['periods']))
+        raise EcrError(f'The file has no sheet for Term {period_number} (it has Term {found}).')
+    combine = None
+    if mapeh:
+        parts = {term_mapeh_part(s['component'] or s['sheet']): s for s in sheets}
+        if not all(p in parts for p in TERM_MAPEH_PARTS):
+            raise EcrError('A MAPEH term grade needs the Music and Arts and the Physical Education and Health sheets of the '
+                           'three-term MAPEH record. Download it for this class from Class records.')
+        sheets, combine = [parts[p] for p in TERM_MAPEH_PARTS], 'mapeh'
+    elif len(sheets) == 2 and any(_clean(s['component']) == 'ICT' for s in sheets):
+        sheets, combine = sorted(sheets, key=lambda s: _clean(s['component']) != 'ICT'), 'tle'
+    elif len(sheets) > 1:
+        raise EcrError('The file has more than one subject for this term. Upload one subject per file.')
+
+    checks = []
+    area = learning_area(*subject_names)
+    key = 'mapeh_tle' if area == 'mapeh_tle' else ('core' if area else None)
+    for s in sheets:
+        w, row = s['weights'], s['hps_row']
+        if any(b['weight'] is None for b in s['layout']['blocks']) or abs(sum(w) - 1) > Decimal('0.0001'):
+            checks.append(('error', f'{s["sheet"]}: the component weights in row {row} do not add up to 100%.'))
+        elif key and w != TERM_AREA_WEIGHTS[key][1]:
+            label, expected = TERM_AREA_WEIGHTS[key]
+            checks.append(('error', f'{s["sheet"]} weighs written/oral works, performance tasks and examinations {_pct(w)}, '
+                                    f'but {label} use {_pct(expected)} (DepEd Order No. 015, s. 2026). This looks like the '
+                                    'template of another subject.'))
+        for block in s['layout']['blocks']:
+            if block['weight'] and not any(h for h in block['hps'] if h):
+                what = 'the examinations' if block['tests'] else _TERM_PART_NAMES[block['part']].lower() + 's'
+                checks.append(('warn', f'{s["sheet"]}: there is no highest possible score for {what} in row {row}.'))
+
+    rows = []
+    for base in sheets[0]['rows']:
+        entry = {'row': base['row'], 'sex': base['sex'], 'name': base['name'], 'lrn': base['lrn'],
+                 'errors': [], 'warnings': [], 'notes': [], 'parts': []}
+        for s in sheets:
+            blocks = s['layout']['blocks']
+            same = next((x for x in s['rows'] if x['row'] == base['row']), None)
+            prefix = f'{s["component"]}: ' if combine else ''
+            if same is None:
+                entry['parts'].append({'component': s['component'], 'has_scores': False,
+                                       'result': compute_term(blocks, [[None] * len(b['items']) for b in blocks])})
+                continue
+            values, errors = _term_values(same['raw'], blocks, prefix, s['hps_row'])
+            result = compute_term(blocks, values)
+            entry['errors'] += errors
+            if same['file_quarterly'] is not None and result['quarterly'] is not None and (
+                    same['file_quarterly'] != result['quarterly'] or
+                    (same['file_initial'] is not None and abs(same['file_initial'] - result['initial']) > Decimal('0.01'))):
+                entry['warnings'].append(f'{prefix}the file shows {same["file_quarterly"]}, but its scores give '
+                                         f'{result["quarterly"]} (initial grade {result["initial"]}). The formulas may have been changed.')
+            entry['parts'].append({'component': s['component'], 'result': result,
+                                   'has_scores': any(v is not None for vals in values for v in vals)})
+        results = [p['result'] for p in entry['parts']]
+        entry['has_scores'] = any(p['has_scores'] for p in entry['parts'])
+        graded = [r for r in results if r['quarterly'] is not None]
+        if combine == 'mapeh':                     # =IF(COUNT(F:G)=0,"",ROUND(AVERAGE(F:G),0))
+            entry['quarterly'] = int(xround(Decimal(sum(r['quarterly'] for r in graded)) / len(graded), 0)) if graded else None
+            entry['initial'] = xround(sum(r['initial'] for r in graded) / len(graded)) if graded else None
+            if len(graded) == 1:
+                entry['notes'].append('Only one MAPEH component has scores, so the record\'s term grade is that one alone.')
+        elif combine == 'tle':                     # =ROUND((ICT*0.25)+(other*0.75),0): both are needed
+            if len(graded) == 2:
+                ict, other = results
+                entry['quarterly'] = int(xround(ict['quarterly'] * TERM_ICT_SHARE + other['quarterly'] * (1 - TERM_ICT_SHARE), 0))
+                entry['initial'] = xround(ict['initial'] * TERM_ICT_SHARE + other['initial'] * (1 - TERM_ICT_SHARE))
+            else:
+                entry['quarterly'] = entry['initial'] = None
+                if graded:
+                    entry['notes'].append('A TLE term grade needs both of the term\'s components, so there is none yet.')
+        else:
+            entry['initial'], entry['quarterly'] = results[0]['initial'], results[0]['quarterly']
+        if entry['errors']:
+            entry['initial'] = entry['quarterly'] = None          # a score cannot be trusted, so neither can the grade
+        if entry['has_scores'] and not entry['name']:
+            entry['errors'].append('There are scores in this row but no learner name.')
+        rows.append(entry)
+
+    named = [e for e in rows if e['name']]
+    match_rows(named, roster)
+    for e in rows:
+        if not e['name']:
+            e.update(status='unmatched', enrollment=None, candidates=[], reasons=[])
+    other = sorted(n for n, ss in parsed['periods'].items() if n != period_number and
+                   any(any(v not in (None, '') for vals in r['raw'] for v in vals) for s in ss for r in s['rows']))
+    return {'sheets': [s['sheet'] for s in sheets], 'checks': checks, 'rows': rows, 'other_periods': other,
+            'weights': sheets[0]['weights']}

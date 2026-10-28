@@ -1,0 +1,12 @@
+{# The grade component averages behind one recommendation: each item's written work, performance task and quarterly #}
+{# assessment (or examination) scores, its weakest one marked, so the School Head sees what Poro aimed at. #}
+<table class="advice-table">
+    <thead><tr><th scope="col"><span class="sr-only">Name</span></th>{% for p in items.0.parts %}<th scope="col" title="{{ p.name }}">{{ p.abbr }}</th>{% endfor %}<th scope="col">Avg</th></tr></thead>
+    <tbody>
+        {% for i in items %}
+        <tr><th scope="row" title="{{ i.name }}">{{ i.name }}</th>
+            {% for p in i.parts %}<td{% if p.weak %} class="is-weak" title="Weakest: {{ p.name }}"{% endif %}>{% if p.value is not None %}{{ p.value }}{% else %}&mdash;{% endif %}</td>{% endfor %}
+            <td class="avg">{{ i.average }}</td></tr>
+        {% endfor %}
+    </tbody>
+</table>

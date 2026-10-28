@@ -43,8 +43,33 @@
     .advice-sum small { font-size: 0.74rem; color: var(--muted); line-height: 1.45; }
     .advice-first { display: inline-block; margin-left: 0.25rem; padding: 0.05rem 0.45rem; border-radius: 10px; background: var(--risk-bg); color: var(--risk);
                     font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; vertical-align: 1px; white-space: nowrap; }
-    .advice-list p { margin: 0; padding: 0.1rem 0.85rem 0.8rem 2.75rem; font-size: 0.84rem; line-height: 1.6; color: var(--ink); transition: opacity 0.25s; }
-    .advice-list p.fading { opacity: 0.35; }
+    .advice-list p { margin: 0; padding: 0.1rem 0.85rem 0.6rem 2.75rem; font-size: 0.84rem; line-height: 1.6; color: var(--ink); transition: opacity 0.25s; }
+    .advice-body p.fading { opacity: 0.35; }
+    .advice-body { display: flex; flex-direction: column; gap: 0.6rem; }
+    /* the main recommendation: the selection's own level, always open */
+    .advice-main { border: 1px solid var(--line); border-radius: 14px; padding: 0.75rem 0.85rem 0.8rem; background: #fcfdff;
+                   box-shadow: inset 3px 0 0 var(--lv); display: flex; flex-direction: column; gap: 0.45rem; }
+    .advice-tag { font-size: 0.66rem; font-weight: 700; color: var(--lv); text-transform: uppercase; letter-spacing: 0.06em; }
+    .advice-main-head { display: flex; gap: 0.55rem; align-items: center; }
+    .advice-main-head h4 { margin: 0; font-size: 0.92rem; font-weight: 700; color: var(--ink); line-height: 1.3; }
+    .advice-main p { margin: 0; font-size: 0.84rem; line-height: 1.6; color: var(--ink); transition: opacity 0.25s; }
+    .advice-parts { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .advice-parts li { font-size: 0.76rem; padding: 0.2rem 0.55rem; border-radius: 8px; background: var(--soft); color: var(--ink);
+                       font-variant-numeric: tabular-nums; }
+    .advice-parts li b { font-weight: 700; color: var(--muted); margin-right: 0.15rem; }
+    .advice-parts li.is-weak { background: var(--warn-bg); color: var(--warn); font-weight: 650; }
+    .advice-parts li.is-weak b { color: var(--warn); }
+    .advice-parts li em { font-style: normal; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em; margin-left: 0.3rem; }
+    .advice-sub { margin: 0.2rem 0 0; font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    /* each item's component averages under a recommendation, the weakest marked */
+    .advice-table { width: 100%; border-collapse: collapse; font-size: 0.74rem; font-variant-numeric: tabular-nums; table-layout: fixed; }
+    .advice-list .advice-table { width: calc(100% - 3.6rem); margin: 0 0.85rem 0.75rem 2.75rem; }
+    .advice-table th, .advice-table td { padding: 0.22rem 0.3rem; text-align: right; border-bottom: 1px solid #f0f3f7; }
+    .advice-table thead th { font-size: 0.66rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; width: 2.6rem; }
+    .advice-table thead th:first-child { width: auto; }
+    .advice-table tbody th { text-align: left; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .advice-table td.is-weak { color: var(--warn); font-weight: 700; background: var(--warn-bg); border-radius: 6px; }
+    .advice-table td.avg { font-weight: 700; }
     .advice-foot { margin-top: auto; display: flex; flex-wrap: wrap; gap: 0.25rem 0.8rem; align-items: baseline; justify-content: space-between; }
     .poro-src { font-size: 0.72rem; color: var(--muted); }
     .poro-src.ai { color: var(--brand); font-weight: 600; }
@@ -185,25 +210,45 @@
                 <img src="{% static 'shared/poro/Poro.png' %}" alt="" onerror="this.remove()">
                 <div>
                     <h3 id="adviceTitle">Poro AI recommends</h3>
-                    <p class="hint">One decision for each level, the lowest first, aimed at each {{ ladder_word }}'s weakest grade component.</p>
+                    <p class="hint">First for the selection's own level, then for every other level, the lowest first. Each aims at the grade component that scores lowest.</p>
                 </div>
             </div>
-            <ol class="advice-list" id="adviceList" data-token="{{ poro_token }}">
-                {% for d in decisions %}
-                <li class="level-{{ d.level.key }}">
-                    <details{% if forloop.first %} open{% endif %}>
-                        <summary>
-                            <span class="advice-badge" aria-hidden="true">{{ d.level.letter }}</span>
-                            <span class="advice-sum">
-                                <b>{{ d.title }}{% if forloop.first and d.urgent %}<span class="advice-first">Act first</span>{% endif %}</b>
-                                <small>{{ d.level.name }}: {% for i in d.items %}{{ i.name }} {{ i.average }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}</small>
-                            </span>
-                        </summary>
-                        <p data-poro="decision-{{ forloop.counter0 }}">{{ d.text }}</p>
-                    </details>
-                </li>
-                {% endfor %}
-            </ol>
+            <div class="advice-body" id="adviceList" data-token="{{ poro_token }}">
+                {% if main %}
+                <section class="advice-main level-{{ main.level.key }}" aria-labelledby="mainTitle">
+                    <span class="advice-tag">Main recommendation &middot; {{ main.level.name }}</span>
+                    <div class="advice-main-head">
+                        <span class="advice-badge" aria-hidden="true">{{ main.level.letter }}</span>
+                        <h4 id="mainTitle">{{ main.title }}</h4>
+                    </div>
+                    <p data-poro="main">{{ main.text }}</p>
+                    <ul class="advice-parts" aria-label="Average component scores of the whole selection">
+                        {% for p in main.parts %}{% if p.value is not None %}<li{% if p.weak %} class="is-weak"{% endif %} title="{{ p.name }}"><b>{{ p.abbr }}</b> {{ p.value }}{% if p.weak %}<em>lowest</em>{% endif %}</li>{% endif %}{% endfor %}
+                    </ul>
+                    {% if main.items %}{% include 'heads/ai_dashboard/_advice_parts.html' with items=main.items %}{% endif %}
+                </section>
+                {% endif %}
+                {% if decisions %}
+                <h4 class="advice-sub">Other recommendations</h4>
+                <ol class="advice-list">
+                    {% for d in decisions %}
+                    <li class="level-{{ d.level.key }}">
+                        <details>
+                            <summary>
+                                <span class="advice-badge" aria-hidden="true">{{ d.level.letter }}</span>
+                                <span class="advice-sum">
+                                    <b>{{ d.title }}{% if forloop.first and d.urgent %}<span class="advice-first">Act first</span>{% endif %}</b>
+                                    <small>{{ d.level.name }}: {% for i in d.items %}{{ i.name }} {{ i.average }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}</small>
+                                </span>
+                            </summary>
+                            <p data-poro="decision-{{ forloop.counter0 }}">{{ d.text }}</p>
+                            {% include 'heads/ai_dashboard/_advice_parts.html' with items=d.items %}
+                        </details>
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% endif %}
+            </div>
             <div class="advice-foot">
                 <span class="poro-src" id="poroSrc">Decided from the grades by rules a person can check</span>
                 <button type="button" class="link-btn" id="poroSwitch" hidden>Show the computed wording</button>

@@ -171,12 +171,12 @@ def upload(request):
         if error:
             return render(request, 'teachers/class_records/upload.html', {
                 'choices': choices, 'chosen_class': chosen_class, 'chosen_period': chosen_period, 'error': error,
-                'period_word': P.word(school, periods), 'sy': sy})
+                'period_word': P.word(school, periods), 'sy': sy, 'terms': P.prefix(school, periods) == 'T'})
         token = R.remember(request.user, {'assignment': assignment.id, 'period': period.id, 'file': uploaded.name, 'result': result})
         return redirect(f'{reverse("teachers:upload_review")}?token={token}')
     return render(request, 'teachers/class_records/upload.html', {
         'choices': choices, 'chosen_class': chosen_class, 'chosen_period': chosen_period,
-        'period_word': P.word(school, periods), 'sy': sy})
+        'period_word': P.word(school, periods), 'sy': sy, 'terms': P.prefix(school, periods) == 'T'})
 
 
 def _review_context(request, stash, token, problems=None):

@@ -21,7 +21,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from academics.models import Quarter, SchoolYear, Section
-from academics.school_years import generate_periods, has_records, period_config
+from academics.school_years import PERIOD_CONFIG, generate_periods, has_records, period_config, year_config
 from communication.notify import notify, school_registrars
 from core import grading_policy
 from enrollment.models import Enrollment
@@ -55,13 +55,15 @@ def _shift_year(day, years):
 
 
 def _defaults(school):
-    """The next school year after the latest one, with the same class dates a year later."""
+    """The next school year after the latest one, with the same class dates a year later and the same grading system."""
     latest = SchoolYear.objects.filter(school=school).order_by('-year_start').first()
+    kind = year_config(latest)['key'] if latest else period_config(school)['key']
     if latest:
         return {'year_start': latest.year_start + 1, 'date_start': _shift_year(latest.date_start, 1),
-                'date_end': _shift_year(latest.date_end, 1), 'create_periods': True}
+                'date_end': _shift_year(latest.date_end, 1), 'create_periods': True, 'period_type': kind}
     year = timezone.localdate().year
-    return {'year_start': year, 'date_start': date(year, 6, 16), 'date_end': date(year + 1, 3, 31), 'create_periods': True}
+    return {'year_start': year, 'date_start': date(year, 6, 16), 'date_end': date(year + 1, 3, 31), 'create_periods': True,
+            'period_type': kind}
 
 
 def _errors(form):
@@ -73,21 +75,26 @@ def school_year(request):
     school = _head_school(request)
     if school is None:
         return _denied(request)
-    cfg = period_config(school)
     form = SchoolYearStartForm(request.POST or None, school=school, initial=_defaults(school))
     if request.method == 'POST' and form.is_valid():
+        kind = form.cleaned_data['period_type']
+        cfg = PERIOD_CONFIG[kind]
         with transaction.atomic():
             if form.cleaned_data['is_current']:
                 SchoolYear.objects.filter(school=school, is_current=True, status='Active').update(status='Completed')
             sy = form.save()
-            created = generate_periods(sy)[0] if form.cleaned_data['create_periods'] else 0
+            # the school's grading system from now on: the new year's (its periods keep their own labels either way)
+            if school.period_type != kind:
+                school.period_type, school.quarters_count = kind, cfg['count']
+                school.save(update_fields=['period_type', 'quarters_count', 'updated_at'])
+            created = generate_periods(sy, kind)[0] if form.cleaned_data['create_periods'] else 0
             if created and sy.is_current:
                 today = timezone.localdate()
                 first = Quarter.objects.filter(school_year=sy, date_start__lte=today, date_end__gte=today).first() or \
                     Quarter.objects.filter(school_year=sy).order_by('quarter_number').first()
                 first.is_current_quarter = True
                 first.save()
-        made = f' with {created} {cfg["plural"].lower()}' if created else ''
+        made = f' with {created} {cfg["plural"].lower()} ({cfg["name"].lower()})' if created else f' ({cfg["name"].lower()})'
         messages.success(request, f'SY {sy.year_label} is set up{made}.' + (' It is now the current school year.' if sy.is_current else
                                                                             ' Make it current when classes start.'))
         _log(request, 'CREATE_SCHOOL_YEAR', sy.id, f'Started SY {sy.year_label}{made}' + (' as the current school year' if sy.is_current else ''))
@@ -110,12 +117,14 @@ def school_year(request):
     today = timezone.localdate()
     for y in years:
         y.periods = periods.get(y.id, [])
-        y.missing = max(cfg['count'] - len(y.periods), 0)
+        y.cfg = year_config(y, y.periods)
+        y.missing = max(y.cfg['count'] - len(y.periods), 0)
         y.n_sections, y.n_learners, y.n_grades = sections.get(y.id, 0), learners.get(y.id, 0), grades.get(y.id, 0)
         y.deletable = not (y.n_sections or y.n_learners or y.n_grades)
         y.running = y.date_start <= today <= y.date_end
     return render(request, 'heads/school_year/index.html', {
-        'school': school, 'years': years, 'form': form, 'cfg': cfg, 'open_form': request.method == 'POST',
+        'school': school, 'years': years, 'form': form, 'cfg': period_config(school), 'open_form': request.method == 'POST',
+        'systems': list(PERIOD_CONFIG.values()), 'chosen_system': form['period_type'].value() or period_config(school)['key'],
         'form_errors': _errors(form) if request.method == 'POST' else '',
         'policies': list(grading_policy.POLICIES.values()), 'policy_key': grading_policy.key_of(school),
     })
@@ -174,7 +183,7 @@ def school_year_periods(request, sy_id):
         return _denied(request)
     sy = get_object_or_404(SchoolYear.objects.select_related('school'), id=sy_id, school=school)
     created, existing = generate_periods(sy)
-    plural = period_config(school)['plural'].lower()
+    plural = year_config(sy)['plural'].lower()
     if created:
         messages.success(request, f'{created} {plural} created for SY {sy.year_label}, split evenly over its dates. Adjust any of them below.')
         _log(request, 'CREATE_PERIODS', sy.id, f'Created {created} {plural} for SY {sy.year_label}')

@@ -27,7 +27,7 @@ from .notify import subject_view_url
 
 ACTIVE = ['Enrolled', 'Transferred_In']
 VALIDATED = ('Validated', 'Finalized')
-PERIOD_WORD = {'Q': 'Quarter', 'T': 'Trimester', 'S': 'Semester'}
+PERIOD_WORD = {'Q': 'Quarter', 'T': 'Term', 'S': 'Semester'}
 GRADE_SCOPES = {'jhs': 'All Junior High', 'shs': 'All Senior High'}
 LADDER_ROWS = 3            # each level on the status card lists at most this many items; "Show all" opens every one
 
@@ -200,10 +200,11 @@ def _dashboard_data(params, school):
     overall = _parts(whole)
     items = []
     for k, g in groups.items():
-        avg = round(mean(g['grades']), 1)
-        items.append({'name': name_of(k), 'average': avg, 'level': level_of(avg), 'grades': len(g['grades']), **_parts(g),
+        avg, parts = round(mean(g['grades']), 1), _parts(g)
+        weak = insights.weakest(parts)
+        items.append({'name': name_of(k), 'average': avg, 'level': level_of(avg), 'grades': len(g['grades']), **parts,
                       'below': 100 * sum(1 for x in g['grades'] if x < PASSING) / len(g['grades']),
-                      'weak': insights.weakest(_parts(g), overall), 'url': link(k)})
+                      'weak': weak, 'parts': insights.part_scores(parts, weak), 'url': link(k)})
     ladder = _ladder(items) if items else []
 
     grades = whole['grades']
@@ -221,13 +222,20 @@ def _dashboard_data(params, school):
             'below': len({r['enrollment__student_id'] for r in rows if float(r['grade']) < PASSING}),
         }
 
-    # what the School Head should decide for each level, the lowest first, looking ahead to the next grading period
-    decisions = []
+    # what the School Head should decide: first for the selection's own level (its status), then for every other level
+    # that has items on it, the lowest first, looking ahead to the next grading period
+    decisions, main = [], None
     if items:
         after = next((q for q in periods if ref_period and q.quarter_number == ref_period.quarter_number + 1), None)
         decisions = insights.school_decisions(
             items, next_period_name=period_name(after), item_word=item_word,
             topic=subject_by_id[rows[0]['subject_id']].subject_name if item_word == 'section' else '')
+        if all_families:
+            scope_words = 'The school' if not grade_set else grade_label.replace('All ', '', 1)
+        else:
+            scope_words = scope_name + (f' in {grade_label}' if mode == 'family' and grade_set else '')
+        main, decisions = insights.main_decision(decisions, scope=scope_words, average=status['average'] if status else None,
+                                                 overall=overall, next_period_name=period_name(after))
 
     # the forecast chart: disciplines, grade levels or sections over the school year, with what comes next
     forecast_spec = None
@@ -276,17 +284,17 @@ def _dashboard_data(params, school):
         'grade_scopes': [{'value': k, 'name': _grade_scope(k, grade_levels)[2]} for k in GRADE_SCOPES
                          if any(bool(g.is_senior_high) == (k == 'shs') for g in grade_levels)],
         'scope_name': scope_name, 'scope_detail': scope_detail,
-        'status': status, 'levels': policy.levels(), 'items': items, 'decisions': decisions,
+        'status': status, 'levels': policy.levels(), 'items': items, 'main': main, 'decisions': decisions,
         'ladder': ladder, 'ladder_word': item_word if items else '', 'ladder_rows': LADDER_ROWS, 'forecast': forecast_spec,
     }
 
 
-def _poro_token(decisions):
-    """The token Poro AI rewords the decisions under (heads/poro.py), or '' when there are none."""
-    if not decisions:
+def _poro_token(main, decisions):
+    """The token Poro AI rewords the recommendations under (heads/poro.py), or '' when there are none."""
+    fields = ({'main': main['text']} if main else {}) | {f'decision-{i}': d['text'] for i, d in enumerate(decisions)}
+    if not fields:
         return ''
-    return poro.register({f'decision-{i}': d['text'] for i, d in enumerate(decisions)},
-                         keep=[i['name'] for d in decisions for i in d['items']])
+    return poro.register(fields, keep=[i['name'] for d in ([main] if main else []) + decisions for i in d['items']])
 
 
 @login_required
@@ -299,7 +307,7 @@ def academic_dashboard(request):
     data = _dashboard_data(request.GET, school)
     data['export_url'] = reverse('heads-ai-dashboard-export') + ('?' + request.GET.urlencode() if request.GET else '')
     data['live_fingerprint'] = school_fingerprint(school)
-    data['poro_token'] = _poro_token(data['decisions'])
+    data['poro_token'] = _poro_token(data['main'], data['decisions'])
     return render(request, 'heads/ai_dashboard/index.html', data)
 
 
@@ -322,12 +330,22 @@ def dashboard_export(request):
             ('Learners below 75', str(st['below']), 'risk' if st['below'] else 'good'),
         ])
         sh.paragraph(st['level']['meaning'], color='4A5568', size=10)
-        if d['decisions']:
+        if d['main'] or d['decisions']:
             sh.heading('Poro AI recommends')
-            written = poro.written(_poro_token(d['decisions']))
+            written = poro.written(_poro_token(d['main'], d['decisions']))
+            parts_line = lambda parts: ' · '.join(f'{p["abbr"]} {p["value"]:.1f}' + (' (weakest)' if p['weak'] else '')
+                                                  for p in parts if p['value'] is not None)
+            if d['main']:
+                m = d['main']
+                sh.paragraph(f'Main recommendation, {m["level"]["name"]} ({m["level"]["letter"]}): {m["title"]}', bold=True)
+                sh.paragraph(parts_line(m['parts']), color='4A5568', size=9.5, indent=1)
+                sh.paragraph(written.get('main') or m['text'], indent=1)
+            if d['decisions']:
+                sh.paragraph('Other recommendations, the lowest level first', bold=True, color='4A5568')
             for i, dec in enumerate(d['decisions']):
                 sh.paragraph(f'{dec["level"]["name"]} ({dec["level"]["letter"]}): {dec["title"]}', bold=True)
-                sh.paragraph(', '.join(f'{i["name"]} ({i["average"]:.1f})' for i in dec['items']), color='4A5568', size=9.5, indent=1)
+                sh.paragraph('; '.join(f'{i["name"]} {i["average"]:.1f} ({parts_line(i["parts"])})' for i in dec['items']),
+                             color='4A5568', size=9.5, indent=1)
                 sh.paragraph(written.get(f'decision-{i}') or dec['text'], indent=1)
             sh.paragraph('Decided from the grades by rules a person can check' + (
                 '; worded by Poro AI, every number, name and level checked against the computed wording.' if written else '.'),
@@ -345,8 +363,8 @@ def dashboard_export(request):
         items = report.sheet(title, [36, 10, 9, 9, 9, 10, 26, 12, 30], subtitle=scope, meta=meta,
                              title=f'{title}: levels and grade components')
         items.paragraph(', '.join(f'{abbr} is the average {name.lower()} score' for _, name, abbr in parts)
-                        + ' in percent, from the uploaded class records. The weakest part is the component furthest below the '
-                        'whole selection\'s average for it.', color='4A5568', size=9)
+                        + ' in percent, from the uploaded class records. The weakest part is the lowest of the three.',
+                        color='4A5568', size=9)
         items.table([{'title': title[:-1], 'wrap': True}, {'title': 'Grades', 'format': 'int'}]
                     + [{'title': abbr, 'format': 'grade'} for _, _, abbr in parts]
                     + [{'title': 'Average', 'format': 'grade'}, {'title': 'Level'}, {'title': 'Below 75', 'format': 'percent'},

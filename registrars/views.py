@@ -343,12 +343,20 @@ def _preview_class_list(school, current_sy, parsed):
         counts[state] += 1
         rows.append({**s, 'state': state, 'note': note})
 
+    # the discipline the subject counts under on the School Head's pages: its own, or the one a new subject will get
+    from academics.subject_catalog import DISCIPLINES, explain, family_for
+    if subject and subject.subject_family_id:
+        discipline = {'name': subject.subject_family.family_name, 'why': 'The subject already belongs to it.'}
+    else:
+        family, match = family_for(school, parsed['subject_name'], parsed['subject_code'])
+        discipline = {'name': family.family_name if family else DISCIPLINES[match.key][0], 'why': explain(match, family)} if match else None
     return {
         'grade_level': grade_level,
         'subject': subject,
         'section': section,
         'rows': rows,
         'counts': counts,
+        'discipline': discipline,
         'matched_teacher': _match_instructor(school, parsed['instructor_name']) if parsed['instructor_name'] else None,
     }
 
@@ -377,6 +385,8 @@ def _import_class_list(request, school, current_sy, parsed, teacher_user):
                 subject_code=parsed['subject_code'], school=school,
                 subject_name=parsed['subject_name'], grade_level=grade_level, is_active=True,
             )
+        elif not subject.subject_family_id:
+            subject.save()                       # saving gives it its discipline (academics/subject_catalog.py)
 
         action = 'updated'
         if not section:

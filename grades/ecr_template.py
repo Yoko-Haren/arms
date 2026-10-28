@@ -12,6 +12,11 @@ Senior High: the Strengthened SHS e-class record (SSHS.xlsx). It leans on Excel 
 (dynamic-array helper formulas, dropdowns that read other sheets), so it is filled cell by cell in
 its XML (core.xlsx_patch) and every other part of DepEd's file stays exactly as it is. The subject
 type that sets the weights comes from the template's own subject list, else from the ARMS subject.
+
+Grades 7 to 10 of a school year graded in three terms: DepEd's three-term record of DepEd Order No. 015,
+s. 2026 (TERM_*.xlsx): one for the core learning areas, one for GMRC and Values Education, one for
+MAPEH (Music and Arts, PE and Health on two sheets a term) and one for EPP/TLE, filled in its XML the
+same way, so its protected sheets and array formulas stay as DepEd made them.
 """
 import functools
 import io
@@ -28,6 +33,8 @@ from . import ecr
 TEMPLATE_DIR = Path(__file__).resolve().parent / 'ecr_templates'
 FILES = {'MATH': 'MATH.xlsx', 'SCIENCE': 'SCIENCE.xlsx', 'ENGLISH': 'ENGLISH.xlsx', 'FILIPINO': 'FILIPINO.xlsx',
          'AP': 'AP.xlsx', 'ESP': 'ESP.xlsx', 'TLE': 'TLE.xlsx'}
+TERM_FILES = {'MATH': 'TERM_CORE.xlsx', 'SCIENCE': 'TERM_CORE.xlsx', 'ENGLISH': 'TERM_CORE.xlsx', 'FILIPINO': 'TERM_CORE.xlsx',
+              'AP': 'TERM_CORE.xlsx', 'ESP': 'TERM_GMRC.xlsx', 'TLE': 'TERM_TLE.xlsx', 'MAPEH': 'TERM_MAPEH.xlsx'}
 SSHS_FILE = 'SSHS.xlsx'
 SSHS_OTHER = 'Other Elective and Special Curricular Program'
 _TECHPRO_STRANDS = {'ICT', 'HE', 'IA', 'AFA', 'TVL'}
@@ -142,6 +149,8 @@ def build(assignment, roster, teacher, period=None):
         raise TemplateUnavailable('The e-class record has room for 50 male and 50 female learners; this class has more. Use the class list (CSV).')
     if assignment.section.grade_level.is_senior_high:
         return _build_sshs(assignment, males, females, teacher, path)
+    if prefix == 'T':
+        return _build_term(assignment, males, females, teacher)
 
     wb = load_workbook(path)
     inp = next(ws for ws in wb.worksheets if 'INPUT' in ws.title.upper())
@@ -212,6 +221,44 @@ def _build_sshs(assignment, males, females, teacher, path):
     code = re.sub(r'[^A-Za-z0-9]+', '-', subject.subject_code).strip('-')
     name = re.sub(r'[^A-Za-z0-9]+', '-', section.section_name).strip('-')
     return content, f'ECR_{code}_{name}_SY{sy.year_label}.xlsx'
+
+
+def _build_term(assignment, males, females, teacher):
+    """DepEd's three-term record (DepEd Order No. 015, s. 2026) with the class in INPUT DATA; the rest untouched."""
+    section, subject, sy = assignment.section, assignment.subject, assignment.school_year
+    school = section.school
+    family = subject.subject_family.family_name if subject.subject_family_id else ''
+    key = 'MAPEH' if _is_mapeh(assignment) else (ecr.subject_key(subject.subject_name) or ecr.subject_key(family))
+    if key not in TERM_FILES:
+        raise TemplateUnavailable(f'There is no DepEd three-term e-class record for {subject.subject_name}. '
+                                  'Download the class list (CSV) instead.')
+    path = TEMPLATE_DIR / TERM_FILES[key]
+    if not path.exists():
+        raise TemplateUnavailable('The three-term e-class record template is missing on the server. Ask the administrator to '
+                                  'restore grades/ecr_templates.')
+    from accounts.models import UserProfile
+    head = UserProfile.objects.filter(school=school, role='schoolhead', is_active=True, user__is_active=True).select_related('user').first()
+    place = school_header.get(school)
+    cells = {
+        'E10': school_header.region_label(place['region']) or None, 'E11': place['division'] or None,
+        'E13': school.school_id, 'E14': school.school_name.upper(), 'E15': sy.year_label,
+        'E16': (head.user.get_full_name() or head.user.username).upper() if head else None,
+        'E23': (teacher.get_full_name() or teacher.username).upper(), 'E24': subject.subject_name,
+        'E25': section.grade_level.grade_name, 'E26': section.section_name.upper(),
+    }
+    male_lrn, female_lrn = ecr.TERM_LRN_COLUMNS
+    cells[f'{male_lrn}{ecr.TERM_FIRST_ROW - 1}'] = 'LRN (male, do not edit)'
+    cells[f'{female_lrn}{ecr.TERM_FIRST_ROW - 1}'] = 'LRN (female, do not edit)'
+    for name_col, lrn_col, people in (('K', male_lrn, males), ('N', female_lrn, females)):
+        for i in range(50):
+            r = ecr.TERM_FIRST_ROW + i
+            p = people[i] if i < len(people) else None
+            cells[f'{name_col}{r}'] = learner_name(p) if p else None
+            cells[f'{lrn_col}{r}'] = str(p['lrn'] or '') if p else None
+    content = xlsx_patch.patch(path.read_bytes(), {'INPUT DATA': cells})
+    code = re.sub(r'[^A-Za-z0-9]+', '-', subject.subject_code).strip('-')
+    name = re.sub(r'[^A-Za-z0-9]+', '-', section.section_name).strip('-')
+    return content, f'ECR_{code}_{name}_3Term_SY{sy.year_label}.xlsx'
 
 
 def _relabel(wb, sheets, mapeh, prefix, word, count, number):

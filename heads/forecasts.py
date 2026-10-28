@@ -113,13 +113,18 @@ def chart(*, table, meta, periods, items, reference=None, level='group', step_sd
         if values:
             entries.append((i, item, values))
     if len(entries) > len(PALETTE):
-        # more than eight only ever shows as small panels, one series each, so a ninth may repeat a slot
+        # more than eight in one chart (every discipline): a ninth repeats a slot, drawn with square points, so its
+        # line differs by color and shape; the label at its end names it
         colors = [PALETTE[i % len(PALETTE)] for i, _, _ in entries]
     else:
         # an entity keeps its own slot; one past the eighth borrows a slot nobody in this chart uses
         free = [k for k in range(len(PALETTE)) if k not in {i for i, _, _ in entries}]
         colors = [PALETTE[i] if i < len(PALETTE) else PALETTE[free.pop(0)] for i, _, _ in entries]
-    series = [_series(item, values, color) for (i, item, values), color in zip(entries, colors)]
+    seen = set()
+    series = []
+    for (i, item, values), color in zip(entries, colors):
+        series.append(dict(_series(item, values, color), marker='square' if color in seen else 'circle'))
+        seen.add(color)
     if reference:
         values = series_values(table, reference['keys'], numbers, level if not items else 'group', meta, step_sd)
         if values:

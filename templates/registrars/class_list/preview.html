@@ -35,7 +35,8 @@
             <div><small>Section</small><b>{{ parsed.section_name }}</b>
                 {% if preview.section %}<span class="pill info">Existing section</span>{% else %}<span class="pill good">Will be created</span>{% endif %}</div>
             <div><small>Subject</small><b>{{ parsed.subject_code }}</b><span>{{ parsed.subject_name }}</span><br>
-                {% if preview.subject %}<span class="pill info">Existing subject</span>{% else %}<span class="pill good">Will be created</span>{% endif %}</div>
+                {% if preview.subject %}<span class="pill info">Existing subject</span>{% else %}<span class="pill good">Will be created</span>{% endif %}
+                {% if preview.discipline %}<br><span class="hint" title="{{ preview.discipline.why }}">Discipline: <b>{{ preview.discipline.name }}</b>{% if not preview.subject %} (from DepEd's curriculum){% endif %}</span>{% endif %}</div>
             <div><small>Grade level</small><b>{{ preview.grade_level.grade_name|default:parsed.grade_name }}</b><span>File says: {{ parsed.header.year_level|default:"—" }}</span></div>
             <div><small>Term and schedule</small><b>{{ parsed.header.semester|default:"—" }}</b><span>{{ parsed.header.schedule|default:"No schedule in the file" }}</span></div>
         </div>

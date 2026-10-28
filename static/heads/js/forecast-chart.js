@@ -3,7 +3,7 @@
  *
  * The server builds one spec per chart (heads/forecasts.py) into a JSON script tag; an element with
  * data-forecast="<id of that tag>" becomes the chart. Three views, as on Our World in Data: Line (one
- * chart, or one small panel per series when there are more than six), Bar (every series at one
+ * chart, or one small panel per series when there are more than ten), Bar (every series at one
  * grading period) and Table (every value). Solid lines are averages so far, dashed lines the
  * forecast, the band its 90% likely range, and hollow diamonds what the model forecast one period
  * earlier. Colors follow the series, never their rank; labels and values stay in ink.
@@ -11,7 +11,7 @@
 (function () {
     'use strict';
     var SVG = 'http://www.w3.org/2000/svg';
-    var MAX_LINES = 6;
+    var MAX_LINES = 10;             // every discipline in one chart; more than ten become small panels
     var LINE_H = 310, PANEL_H = 150;
 
     function remember(key, value) {
@@ -203,8 +203,14 @@
                     el('path', { d: 'M' + bx + ',' + (by - r) + 'L' + (bx + r) + ',' + by + 'L' + bx + ',' + (by + r) + 'L' + (bx - r) + ',' + by + 'Z',
                                  stroke: se.color, 'class': 'fc-back' }, g);
                 }
-                if (pt.actual !== null) el('circle', { cx: X(i), cy: Y(pt.actual), r: opts.compact ? 3.5 : 4.5, fill: se.color, 'class': 'fc-dot' }, g);
-                else if (pt.forecast !== null) el('circle', { cx: X(i), cy: Y(pt.forecast), r: opts.compact ? 3.5 : 4.5, style: 'stroke:' + se.color, 'class': 'fc-dot is-fc' }, g);
+                var r0 = opts.compact ? 3.5 : 4.5, cy = pt.actual !== null ? Y(pt.actual) : (pt.forecast !== null ? Y(pt.forecast) : null);
+                if (cy === null) return;
+                // a series that shares its color with an earlier one has square points (color and shape tell them apart)
+                var dot = se.marker === 'square'
+                    ? el('rect', { x: X(i) - r0, y: cy - r0, width: 2 * r0, height: 2 * r0, rx: 1 }, g)
+                    : el('circle', { cx: X(i), cy: cy, r: r0 }, g);
+                if (pt.actual !== null) { dot.setAttribute('fill', se.color); dot.setAttribute('class', 'fc-dot'); }
+                else { dot.setAttribute('style', 'stroke:' + se.color); dot.setAttribute('class', 'fc-dot is-fc'); }
             });
         });
 
@@ -477,7 +483,9 @@
             if (state.view === 'table') { drawTable(stage, spec, spec.series); return; }
             if (state.view === 'bar') { drawBars(stage, spec, visible, state.period, host, tip); return; }
             if (!panels) {
-                drawLines(stage, spec, { list: visible, dom: domain(spec, visible), height: LINE_H, labels: true, showBack: true,
+                // a taller chart for many lines, so the labels at their ends keep apart
+                drawLines(stage, spec, { list: visible, dom: domain(spec, visible), height: LINE_H + Math.max(0, visible.length - 6) * 16,
+                                         labels: true, showBack: true,
                                          host: host, tip: tip, label: label });
                 return;
             }

@@ -2,12 +2,14 @@
 from django import forms
 
 from academics.models import Quarter, SchoolYear
+from academics.school_years import PERIOD_CONFIG
 
 
 class SchoolYearStartForm(forms.ModelForm):
-    """A new school year of the head's own school. Only the starting year and the class dates are entered;
-    the label, end year and status follow, as in the admin panel."""
+    """A new school year of the head's own school: its grading system (quarterly, trimestral or semestral), the
+    starting year and the class dates. The label, end year and status follow, as in the admin panel."""
 
+    period_type = forms.ChoiceField(choices=[(key, cfg['name']) for key, cfg in PERIOD_CONFIG.items()], widget=forms.RadioSelect)
     create_periods = forms.BooleanField(required=False, initial=True)
 
     class Meta:

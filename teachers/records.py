@@ -140,12 +140,21 @@ def analyse_upload(uploaded, assignment, period, school):
         result['source'] = 'csv'
     elif name.endswith(('.xlsx', '.xlsm')):
         parsed = ecr.read_workbook(uploaded)
+        terms = (period.quarter_label or '').upper().startswith('T')      # the school year is graded in three terms
         if senior and parsed['kind'] != 'SSHS':
-            raise ecr.EcrError('This is the Grades 7 to 10 e-class record. Senior High classes use the SSHS e-class record: '
+            raise ecr.EcrError('This is a Grades 7 to 10 e-class record. Senior High classes use the SSHS e-class record: '
                                'download it for this class from Class records (the menu on the class).')
         if not senior and parsed['kind'] == 'SSHS':
             raise ecr.EcrError('This is the Senior High (SSHS) e-class record. Grades 7 to 10 classes use the e-class record '
                                'of their learning area: download it for this class from Class records.')
+        if not senior and terms and parsed['kind'] == 'JHS':
+            raise ecr.EcrError(f'SY {assignment.school_year.year_label} is graded in three terms (DepEd Order No. 015, s. 2026), '
+                               'but this is the four-quarter e-class record. Download the three-term record of this class '
+                               'from Class records.')
+        if not senior and not terms and parsed['kind'] == 'TERM':
+            raise ecr.EcrError(f'This is the three-term e-class record of DepEd Order No. 015, s. 2026, but SY '
+                               f'{assignment.school_year.year_label} is graded by {P.word(assignment.section.school, [period]).lower()}. '
+                               'Download the e-class record of this class from Class records.')
         from grades.ecr_template import sshs_subject_type
         result = ecr.analyse(parsed, period.quarter_number, subject_names=[assignment.subject.subject_name, family],
                              senior_high=senior, roster=people, mapeh=is_mapeh(assignment) and not senior,
